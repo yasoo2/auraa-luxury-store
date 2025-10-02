@@ -250,7 +250,7 @@ const CheckoutPage = () => {
                 </div>
                 
                 <div className="space-y-4">
-                  <Select value={formData.paymentMethod} onValueChange={(value) => setFormData({...formData, paymentMethod: value})}>
+                  <Select value={formData.paymentMethod || "card"} onValueChange={(value) => setFormData({...formData, paymentMethod: value})}>
                     <SelectTrigger data-testid="payment-method">
                       <SelectValue />
                     </SelectTrigger>

@@ -380,6 +380,22 @@ async def get_categories():
 # Initialize admin user and sample data
 @api_router.post("/init-data")
 async def initialize_sample_data():
+    # Create admin user if doesn't exist
+    admin_user = await db.users.find_one({"email": "admin@auraa.com"})
+    if not admin_user:
+        admin_data = {
+            "email": "admin@auraa.com",
+            "first_name": "Admin",
+            "last_name": "Auraa",
+            "phone": "+966501234567",
+            "password": get_password_hash("admin123"),
+            "is_admin": True
+        }
+        admin_obj = User(**{k: v for k, v in admin_data.items() if k != "password"})
+        admin_doc = admin_obj.dict()
+        admin_doc["password"] = admin_data["password"]
+        await db.users.insert_one(admin_doc)
+    
     # Check if products already exist
     existing_products = await db.products.find_one({})
     if existing_products:

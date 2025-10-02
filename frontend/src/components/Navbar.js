@@ -50,19 +50,16 @@ const Navbar = () => {
     <nav className="nav-glass sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
-            <div className="relative">
-              <div className="w-16 h-16 gradient-luxury rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300 border-2 border-gold logo-glow">
-                <span className="luxury-text font-display text-2xl font-black drop-shadow-lg">A</span>
+          {/* Logo (always English, aligned far left), remove side badge */}
+          <Link to="/" className={`flex items-center space-x-4`} style={{direction: 'ltr'}}>
+            <div className="flex flex-col leading-none">
+              <div className="flex items-end space-x-2">
+                <span className="font-display text-2xl md:text-3xl font-black luxury-text tracking-tight">Auraa</span>
+                <span className="font-display text-xs md:text-sm font-semibold text-gray-700 tracking-widest">LUXURY</span>
               </div>
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-br from-yellow-300 to-amber-600 rounded-full animate-pulse shadow-lg"></div>
-              <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full animate-ping"></div>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-display text-2xl md:text-3xl font-black luxury-text leading-tight drop-shadow-md">Auraa</span>
-              <span className="font-display text-xs md:text-sm font-semibold text-gray-500 leading-none -mt-1 tracking-wider">LUXURY</span>
-              <span className="text-xs font-medium text-brand leading-none tracking-widest">اكسيسوري</span>
+              <span className="block text-[10px] md:text-xs text-gray-600 tracking-[0.35em] mt-1 uppercase" style={{borderTop: '1px solid rgba(0,0,0,0.2)', paddingTop: '2px'}}>
+                ACCESSORIES
+              </span>
             </div>
           </Link>
 

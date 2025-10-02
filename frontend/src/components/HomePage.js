@@ -74,43 +74,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Categories Section */}
-      <section className="py-16 bg-gradient-to-br from-amber-50 to-orange-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-4" data-testid="categories-title">
-              تسوق حسب الفئة
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              اكتشف مجموعتنا المتنوعة من الاكسسوارات الفاخرة
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {categories.map((category) => (
-              <Link 
-                key={category.id} 
-                to={`/products?category=${category.id}`}
-                className="group"
-                data-testid={`category-${category.id}`}
-              >
-                <Card className="luxury-card p-6 text-center h-full hover:shadow-xl transition-all duration-300">
-                  <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">
-                    {category.icon}
-                  </div>
-                  <h3 className="font-bold text-lg text-gray-900 mb-1">
-                    {category.name}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {category.name_en}
-                  </p>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Featured Products */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

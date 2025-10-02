@@ -1,53 +1,213 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import axios from 'axios';
+import './App.css';
 
+// Import components
+import HomePage from './components/HomePage';
+import ProductsPage from './components/ProductsPage';
+import ProductDetailPage from './components/ProductDetailPage';
+import CartPage from './components/CartPage';
+import CheckoutPage from './components/CheckoutPage';
+import AuthPage from './components/AuthPage';
+import ProfilePage from './components/ProfilePage';
+import AdminPage from './components/AdminPage';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import { Toaster } from './components/ui/sonner';
+
+// API Configuration
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const Home = () => {
-  const helloWorldApi = async () => {
+// Create Auth Context
+const AuthContext = createContext();
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+// Auth Provider Component
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+
+  // Set up axios interceptor
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }, [token]);
+
+  // Check if user is logged in on app start
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (token) {
+        try {
+          const response = await axios.get(`${API}/auth/me`);
+          setUser(response.data);
+        } catch (error) {
+          console.error('Auth check failed:', error);
+          logout();
+        }
+      }
+      setLoading(false);
+    };
+    checkAuth();
+  }, [token]);
+
+  const login = async (email, password) => {
     try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
+      const response = await axios.post(`${API}/auth/login`, {
+        email,
+        password
+      });
+      const { access_token, user: userData } = response.data;
+      setToken(access_token);
+      setUser(userData);
+      localStorage.setItem('token', access_token);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Login failed'
+      };
     }
   };
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
+  const register = async (userData) => {
+    try {
+      const response = await axios.post(`${API}/auth/register`, userData);
+      const { access_token, user: newUser } = response.data;
+      setToken(access_token);
+      setUser(newUser);
+      localStorage.setItem('token', access_token);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Registration failed'
+      };
+    }
+  };
+
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+  };
+
+  const value = {
+    user,
+    token,
+    login,
+    register,
+    logout,
+    loading
+  };
 
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
   );
 };
 
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-amber-600"></div>
+      </div>
+    );
+  }
+  
+  return user ? children : <Navigate to="/auth" />;
+};
+
+// Admin Route Component
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-amber-600"></div>
+      </div>
+    );
+  }
+  
+  return user?.is_admin ? children : <Navigate to="/" />;
+};
+
+// Initialize sample data
+const initializeSampleData = async () => {
+  try {
+    await axios.post(`${API}/init-data`);
+  } catch (error) {
+    console.error('Failed to initialize sample data:', error);
+  }
+};
+
 function App() {
+  useEffect(() => {
+    initializeSampleData();
+  }, []);
+
   return (
-    <div className="App">
+    <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
+        <div className="App min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+          <Navbar />
+          <main className="flex-grow">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/product/:id" element={<ProductDetailPage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route 
+                path="/checkout" 
+                element={
+                  <ProtectedRoute>
+                    <CheckoutPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin" 
+                element={
+                  <AdminRoute>
+                    <AdminPage />
+                  </AdminRoute>
+                } 
+              />
+            </Routes>
+          </main>
+          <Footer />
+          <Toaster />
+        </div>
       </BrowserRouter>
-    </div>
+    </AuthProvider>
   );
 }
 

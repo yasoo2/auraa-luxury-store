@@ -313,8 +313,8 @@ body {
 
 /* Navigation */
 .nav-glass {
-  background: linear-gradient(90deg, var(--color-gold), var(--color-silver));
-  backdrop-filter: blur(12px);
+  background: linear-gradient(90deg, var(--color-gold) 0%, var(--color-silver) 100%);
+  backdrop-filter: blur(6px);
   border-bottom: 2px solid #000000;
   border-top: 2px solid #000000;
   box-shadow: 0 2px 0 #000000;

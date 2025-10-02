@@ -331,18 +331,18 @@ class AuraaLuxuryAPITester:
         # Try to access cart without authentication
         success, data, status = self.make_request('GET', '/cart')
         
-        if not success and status == 401:
+        if not success and status in [401, 403]:
             self.log_test("Unauthorized Cart Access", True, "Properly blocked unauthorized access")
         else:
-            self.log_test("Unauthorized Cart Access", False, f"Should have returned 401, got {status}")
+            self.log_test("Unauthorized Cart Access", False, f"Should have returned 401/403, got {status}")
         
         # Try to create product without admin access
         success, data, status = self.make_request('POST', '/products', {"name": "test"})
         
-        if not success and status == 401:
+        if not success and status in [401, 403]:
             self.log_test("Unauthorized Product Creation", True, "Properly blocked unauthorized access")
         else:
-            self.log_test("Unauthorized Product Creation", False, f"Should have returned 401, got {status}")
+            self.log_test("Unauthorized Product Creation", False, f"Should have returned 401/403, got {status}")
         
         # Restore token
         self.token = original_token

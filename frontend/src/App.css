@@ -49,7 +49,11 @@ body {
 }
 
 .gradient-luxury {
-  background: linear-gradient(135deg, #000000 0%, #c0c0c0 25%, #fbbf24 50%, #c0c0c0 75%, #000000 100%);
+  background: linear-gradient(135deg, #000000 0%, #c0c0c0 20%, #ffd700 40%, #ffffff 60%, #ffd700 80%, #000000 100%);
+  box-shadow: 
+    0 0 20px rgba(255, 215, 0, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Glass morphism effect */

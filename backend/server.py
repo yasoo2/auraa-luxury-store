@@ -12,7 +12,6 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
 from passlib.context import CryptContext
-import bcrypt
 from enum import Enum
 
 ROOT_DIR = Path(__file__).parent

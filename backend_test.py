@@ -343,6 +343,221 @@ class AuraaLuxuryAPITester:
         
         # Restore token
         self.token = original_token
+
+    def test_admin_integrations_get(self):
+        """Test GET /api/admin/integrations with admin token"""
+        if not self.admin_token:
+            self.log_test("Admin Integrations GET", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        success, data, status = self.make_request('GET', '/admin/integrations')
+        
+        if success and data.get('type') == 'integrations' and data.get('id'):
+            # Check if ID is UUID string
+            import uuid
+            try:
+                uuid.UUID(data['id'])
+                self.log_test("Admin Integrations GET", True, f"Retrieved IntegrationSettings with ID: {data['id']}")
+            except ValueError:
+                self.log_test("Admin Integrations GET", False, f"ID is not a valid UUID: {data['id']}")
+        else:
+            self.log_test("Admin Integrations GET", False, f"Status: {status}, Response: {data}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_admin_integrations_post(self):
+        """Test POST /api/admin/integrations with specific payload"""
+        if not self.admin_token:
+            self.log_test("Admin Integrations POST", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        payload = {
+            "aliexpress_app_key": "AK_TEST",
+            "aliexpress_app_secret": "SECRET_TEST_VALUE",
+            "aliexpress_refresh_token": "REFRESH_TOKEN_TEST",
+            "amazon_access_key": "AMZ_ACCESS",
+            "amazon_secret_key": "AMZ_SECRET",
+            "amazon_partner_tag": "partner-20",
+            "amazon_region": "us-east-1"
+        }
+        
+        success, data, status = self.make_request('POST', '/admin/integrations', payload)
+        
+        if success and data.get('type') == 'integrations':
+            # Check if all fields are saved (no masking in POST response expected)
+            if (data.get('aliexpress_app_key') == 'AK_TEST' and 
+                data.get('aliexpress_app_secret') == 'SECRET_TEST_VALUE' and
+                data.get('amazon_access_key') == 'AMZ_ACCESS'):
+                self.log_test("Admin Integrations POST", True, "Settings saved successfully")
+                
+                # Now test GET to verify masking
+                get_success, get_data, get_status = self.make_request('GET', '/admin/integrations')
+                if get_success:
+                    # Check if secrets are masked in GET response
+                    if ('***' in str(get_data.get('aliexpress_app_secret', '')) and
+                        '***' in str(get_data.get('amazon_secret_key', ''))):
+                        self.log_test("Admin Integrations GET Masking", True, "Secrets properly masked in GET response")
+                    else:
+                        self.log_test("Admin Integrations GET Masking", False, f"Secrets not properly masked: {get_data}")
+                else:
+                    self.log_test("Admin Integrations GET Masking", False, f"GET failed after POST: {get_status}")
+            else:
+                self.log_test("Admin Integrations POST", False, f"Data not saved correctly: {data}")
+        else:
+            self.log_test("Admin Integrations POST", False, f"Status: {status}, Response: {data}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_integrations_permissions(self):
+        """Test permissions for integrations endpoints"""
+        # Test without token
+        original_token = self.token
+        self.token = None
+        
+        success, data, status = self.make_request('GET', '/admin/integrations')
+        if not success and status == 401:
+            self.log_test("Integrations No Token", True, "Properly blocked access without token")
+        else:
+            self.log_test("Integrations No Token", False, f"Should return 401, got {status}")
+        
+        # Test with non-admin token (regular user)
+        if original_token:  # Use regular user token
+            self.token = original_token
+            success, data, status = self.make_request('GET', '/admin/integrations')
+            if not success and status == 403:
+                self.log_test("Integrations Non-Admin Token", True, "Properly blocked non-admin access")
+            else:
+                self.log_test("Integrations Non-Admin Token", False, f"Should return 403, got {status}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_regression_categories(self):
+        """Regression test: GET /api/categories returns 6 categories"""
+        success, data, status = self.make_request('GET', '/categories')
+        
+        if success and isinstance(data, list) and len(data) == 6:
+            self.log_test("Regression Categories", True, f"Returns exactly 6 categories")
+        else:
+            self.log_test("Regression Categories", False, f"Expected 6 categories, got {len(data) if isinstance(data, list) else 'invalid response'}")
+
+    def test_regression_products(self):
+        """Regression test: GET /api/products returns > 0 products"""
+        success, data, status = self.make_request('GET', '/products')
+        
+        if success and isinstance(data, list) and len(data) > 0:
+            self.log_test("Regression Products", True, f"Returns {len(data)} products")
+            
+            # Test limit parameter
+            success_limit, data_limit, status_limit = self.make_request('GET', '/products?limit=6')
+            if success_limit and isinstance(data_limit, list) and len(data_limit) <= 6:
+                self.log_test("Regression Products Limit", True, f"Limit works, returned {len(data_limit)} products")
+            else:
+                self.log_test("Regression Products Limit", False, f"Limit not working properly")
+        else:
+            self.log_test("Regression Products", False, f"Expected > 0 products, got {len(data) if isinstance(data, list) else 'invalid response'}")
+
+    def test_regression_cart_flow(self):
+        """Regression test: Cart flow with admin token"""
+        if not self.admin_token or not self.test_product_id:
+            self.log_test("Regression Cart Flow", False, "Missing admin token or product ID")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        # GET /api/cart (creates if missing)
+        success, data, status = self.make_request('GET', '/cart')
+        if success:
+            initial_total = data.get('total_amount', 0)
+            self.log_test("Regression Cart GET", True, f"Cart retrieved, total: {initial_total}")
+            
+            # POST /api/cart/add
+            success_add, data_add, status_add = self.make_request('POST', f'/cart/add?product_id={self.test_product_id}&quantity=2')
+            if success_add:
+                self.log_test("Regression Cart ADD", True, "Item added to cart")
+                
+                # Check cart total updated
+                success_check, data_check, status_check = self.make_request('GET', '/cart')
+                if success_check and data_check.get('total_amount', 0) > initial_total:
+                    self.log_test("Regression Cart Total Update", True, f"Total updated to: {data_check.get('total_amount')}")
+                    
+                    # DELETE /api/cart/remove
+                    success_remove, data_remove, status_remove = self.make_request('DELETE', f'/cart/remove/{self.test_product_id}')
+                    if success_remove:
+                        self.log_test("Regression Cart REMOVE", True, "Item removed from cart")
+                        
+                        # Check total updated after removal
+                        success_final, data_final, status_final = self.make_request('GET', '/cart')
+                        if success_final and data_final.get('total_amount', 0) < data_check.get('total_amount', 0):
+                            self.log_test("Regression Cart Total After Remove", True, f"Total updated to: {data_final.get('total_amount')}")
+                        else:
+                            self.log_test("Regression Cart Total After Remove", False, "Total not updated after removal")
+                    else:
+                        self.log_test("Regression Cart REMOVE", False, f"Remove failed: {status_remove}")
+                else:
+                    self.log_test("Regression Cart Total Update", False, "Total not updated after add")
+            else:
+                self.log_test("Regression Cart ADD", False, f"Add failed: {status_add}")
+        else:
+            self.log_test("Regression Cart GET", False, f"Cart GET failed: {status}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_integration_updated_at(self):
+        """Edge check: Verify IntegrationSettings updated_at changes on POST update"""
+        if not self.admin_token:
+            self.log_test("Integration Updated At", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        # Get initial updated_at
+        success, data, status = self.make_request('GET', '/admin/integrations')
+        if success:
+            initial_updated_at = data.get('updated_at')
+            
+            # Wait a moment and update
+            import time
+            time.sleep(1)
+            
+            update_payload = {
+                "aliexpress_app_key": "UPDATED_KEY"
+            }
+            
+            success_update, data_update, status_update = self.make_request('POST', '/admin/integrations', update_payload)
+            if success_update:
+                # Get updated data
+                success_check, data_check, status_check = self.make_request('GET', '/admin/integrations')
+                if success_check:
+                    new_updated_at = data_check.get('updated_at')
+                    if new_updated_at != initial_updated_at:
+                        self.log_test("Integration Updated At", True, "updated_at field changes on POST update")
+                    else:
+                        self.log_test("Integration Updated At", False, "updated_at field not updated")
+                else:
+                    self.log_test("Integration Updated At", False, "Failed to get updated data")
+            else:
+                self.log_test("Integration Updated At", False, f"Update failed: {status_update}")
+        else:
+            self.log_test("Integration Updated At", False, f"Initial GET failed: {status}")
+        
+        # Restore token
+        self.token = original_token
     
     def run_all_tests(self):
         """Run all tests in sequence"""

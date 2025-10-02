@@ -4,7 +4,7 @@ import { ArrowLeft, Star, TrendingUp, Shield, Truck, Clock } from 'lucide-react'
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { useLanguage } from '../context/LanguageContext';
-import ExternalStoresSection from './ExternalStoresSection';
+// import ExternalStoresSection from './ExternalStoresSection';
 import FashionModelsCarousel from './FashionModelsCarousel';
 import axios from 'axios';
 

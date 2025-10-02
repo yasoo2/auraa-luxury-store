@@ -1,0 +1,1 @@
+ExternalStoresPage.js will be removed from the codebase as per user request. The route was already disabled. This marker file will be deleted after cleanup.

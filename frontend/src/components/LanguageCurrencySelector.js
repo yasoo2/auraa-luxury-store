@@ -25,7 +25,7 @@ const LanguageCurrencySelector = () => {
   const currentCurrency = currencies.find(curr => curr.code === currency);
 
   return (
-    <div className=\"flex items-center space-x-2\">
+    <div className="flex items-center space-x-2">
       {/* Language Selector */}
       <div className=\"relative\">
         <Button

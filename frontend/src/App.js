@@ -178,7 +178,7 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/products" element={<ProductsPage />} />
                 <Route path="/product/:id" element={<ProductDetailPage />} />
-                <Route path="/external-stores" element={<ExternalStoresPage />} />
+                {/* <Route path="/external-stores" element={<ExternalStoresPage />} /> */}
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route 

@@ -101,7 +101,9 @@ const Navbar = () => {
           </form>
 
           {/* Right Side Actions */}
-          <div className="flex items-center space-x-4">
+          <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
+            {/* Language & Currency Selector */}
+            <LanguageCurrencySelector />
             {/* Cart */}
             <Link 
               to="/cart" 

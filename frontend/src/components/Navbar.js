@@ -34,7 +34,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
             <div className="relative">
-              <div className="w-16 h-16 gradient-luxury rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300 border-2 border-amber-400">
+              <div className="w-16 h-16 gradient-luxury rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300 border-2 border-amber-400 logo-glow">
                 <span className="luxury-text font-display text-2xl font-black drop-shadow-lg">A</span>
               </div>
               <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-br from-yellow-300 to-amber-600 rounded-full animate-pulse shadow-lg"></div>

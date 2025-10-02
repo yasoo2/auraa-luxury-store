@@ -82,7 +82,9 @@ const LanguageCurrencySelector = () => {
                   switchCurrency(curr.code);
                   setShowCurrencies(false);
                 }}
-                className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between text-sm first:rounded-t-lg last:rounded-b-lg ${\n                  currency === curr.code ? 'bg-amber-50 text-amber-700' : 'text-gray-700'\n                }`}
+                className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between text-sm first:rounded-t-lg last:rounded-b-lg ${
+                  currency === curr.code ? 'bg-amber-50 text-amber-700' : 'text-gray-700'
+                }`}
               >
                 <span>{curr.name}</span>
                 <span className="font-medium">{curr.symbol}</span>

@@ -109,7 +109,7 @@ const FashionModelsCarousel = () => {
             
             {/* Image Caption */}
             <div className="absolute bottom-8 left-8 text-white z-20">
-              <h3 className="text-3xl md:text-4xl font-display font-bold mb-2 luxury-text drop-shadow-lg">
+              <h3 className="text-3xl md:text-4xl font-display font-bold mb-2 carousel-luxury-text drop-shadow-lg">
                 {image.caption}
               </h3>
               <p className="text-lg opacity-90">

@@ -72,7 +72,7 @@ const Navbar = () => {
             <div className="flex flex-col leading-none">
               <div className="flex items-end space-x-2">
                 <span className="font-display text-3xl md:text-4xl font-black luxury-text tracking-tight">Auraa</span>
-                <span className="font-display text-[6px] md:text-[8px] font-semibold text-gray-700 tracking-[0.2em]">LUXURY</span>
+                <span className="font-display text-[5px] md:text-[7px] font-semibold text-gray-700 tracking-[0.2em]">LUXURY</span>
               </div>
               <span className="block text-[9px] md:text-[11px] text-gray-600 tracking-[0.45em] mt-1 uppercase" style={{borderTop: '1px solid rgba(0,0,0,0.25)', paddingTop: '2px'}}>
                 ACCESSORIES

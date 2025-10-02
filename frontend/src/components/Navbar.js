@@ -54,8 +54,8 @@ const Navbar = () => {
           <Link to="/" className={`flex items-center space-x-4`} style={{direction: 'ltr'}}>
             <div className="flex flex-col leading-none">
               <div className="flex items-end space-x-2">
-                <span className="font-display text-2xl md:text-3xl font-black luxury-text tracking-tight">Auraa</span>
-                <span className="font-display text-xs md:text-sm font-semibold text-gray-700 tracking-widest">LUXURY</span>
+                <span className="font-display text-3xl md:text-4xl font-black luxury-text tracking-tight">Auraa</span>
+                <span className="font-display text-sm md:text-base font-semibold text-gray-700 tracking-widest">LUXURY</span>
               </div>
               <span className="block text-[10px] md:text-xs text-gray-600 tracking-[0.35em] mt-1 uppercase" style={{borderTop: '1px solid rgba(0,0,0,0.2)', paddingTop: '2px'}}>
                 ACCESSORIES

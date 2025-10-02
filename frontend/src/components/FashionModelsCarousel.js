@@ -108,11 +108,11 @@ const FashionModelsCarousel = () => {
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/40"></div>
             
             {/* Image Caption */}
-            <div className="absolute bottom-8 left-8 text-white z-20">
-              <h3 className="text-3xl md:text-4xl font-display font-bold mb-2 carousel-luxury-text drop-shadow-lg">
+            <div className="absolute bottom-4 sm:bottom-8 left-4 sm:left-8 text-white z-20 max-w-xs sm:max-w-md">
+              <h3 className="text-xl sm:text-2xl lg:text-4xl font-display font-bold mb-2 carousel-luxury-text drop-shadow-lg">
                 {image.caption}
               </h3>
-              <p className="text-lg opacity-90">
+              <p className="text-sm sm:text-lg opacity-90">
                 {isRTL ? 'مجموعة Auraa Luxury الفاخرة' : 'Auraa Luxury Premium Collection'}
               </p>
             </div>

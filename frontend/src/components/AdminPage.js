@@ -241,7 +241,7 @@ const AdminPage = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">الفئة</label>
-                        <Select value={newProduct.category} onValueChange={(value) => setNewProduct({...newProduct, category: value})}>
+                        <Select value={newProduct.category || ""} onValueChange={(value) => setNewProduct({...newProduct, category: value})}>
                           <SelectTrigger data-testid="product-category-select">
                             <SelectValue placeholder="اختر الفئة" />
                           </SelectTrigger>

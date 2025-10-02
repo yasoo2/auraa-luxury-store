@@ -53,33 +53,6 @@ const HomePage = () => {
       {/* Fashion Models Carousel - Full Width */}
       <FashionModelsCarousel />
 
-      {/* Models Section */}
-      <section className="py-16 bg-gradient-to-r from-gray-900 via-black to-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-4 luxury-text">
-              {t('luxury_collection')} 
-            </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              {isRTL ? 'عارضاتنا يرتدين أجمل قطع المجوهرات الفاخرة' : 'Our models wearing the finest luxury jewelry pieces'}
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {modelImages.map((image, index) => (
-              <div key={index} className="relative group overflow-hidden rounded-lg">
-                <img 
-                  src={image}
-                  alt={`Luxury Model ${index + 1}`}
-                  className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Features Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

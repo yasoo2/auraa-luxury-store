@@ -255,7 +255,13 @@ const ProductsPage = () => {
                           className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       </Link>
+                      {/* Discount badge */}
                       {product.discount_percentage && (
+                        <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 rounded-full text-sm font-bold">
+                          -{product.discount_percentage}%
+                        </div>
+                      )}
+                      
                       {/* Badges (example: hot/new/sale) */}
                       <div className="absolute bottom-4 right-4 flex space-x-2">
                         {product.discount_percentage && (
@@ -280,11 +286,6 @@ const ProductsPage = () => {
                           إضافة سريعة
                         </Button>
                       </div>
-
-                        <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 rounded-full text-sm font-bold">
-                          -{product.discount_percentage}%
-                        </div>
-                      )}
                       <button className="absolute top-4 left-4 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
                         <Heart className="h-4 w-4 text-gray-600 hover:text-red-500" />
                       </button>

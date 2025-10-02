@@ -364,8 +364,8 @@ async def create_order(
         user_id=current_user.id,
         items=cart["items"],
         total_amount=cart["total_amount"],
-        shipping_address=shipping_address,
-        payment_method=payment_method
+        shipping_address=order_data.shipping_address,
+        payment_method=order_data.payment_method
     )
     
     await db.orders.insert_one(order.dict())

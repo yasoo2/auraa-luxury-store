@@ -107,25 +107,34 @@ body {
   background: linear-gradient(45deg, #ffd700, #000000);
 }
 
+/* New Auraa Luxury Color Palette */
+:root {
+  --color-gold: #D6B651;
+  --color-pearl: #F8F7F3;
+  --color-ivory: #EFECE6;
+  --color-silver: #C9CCD3;
+  --color-white: #FFFFFF;
+}
+
 /* Gradient backgrounds */
 .gradient-primary {
-  background: linear-gradient(135deg, #c0c0c0 0%, #fbbf24 50%, #000000 100%);
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-silver) 50%, var(--color-pearl) 100%);
 }
 
 .gradient-secondary {
-  background: linear-gradient(135deg, #f5f5f5 0%, #fef3c7 100%);
+  background: linear-gradient(135deg, var(--color-ivory) 0%, var(--color-pearl) 100%);
 }
 
 .gradient-accent {
-  background: linear-gradient(135deg, #2d2d2d 0%, #c0c0c0 50%, #fbbf24 100%);
+  background: linear-gradient(135deg, var(--color-silver) 0%, var(--color-gold) 50%, var(--color-ivory) 100%);
 }
 
 .gradient-luxury {
-  background: linear-gradient(135deg, #000000 0%, #c0c0c0 20%, #ffd700 40%, #ffffff 60%, #ffd700 80%, #000000 100%);
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-pearl) 30%, var(--color-silver) 70%, var(--color-gold) 100%);
   box-shadow: 
-    0 0 20px rgba(255, 215, 0, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.2),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+    0 0 20px rgba(214, 182, 81, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 4px rgba(201, 204, 211, 0.2);
 }
 
 /* Glass morphism effect */

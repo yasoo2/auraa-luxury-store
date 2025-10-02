@@ -257,9 +257,8 @@
 
 ## test_plan:
   current_focus:
-    - "ProductsPage direct navigation issue"
-  stuck_tasks:
-    - "ProductsPage filters and add to cart flow"
+    - "ProductsPage direct navigation issue - RESOLVED"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 

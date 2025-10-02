@@ -137,6 +137,7 @@ const translations = {
     newsletter_title: 'Subscribe to Our Newsletter',
     newsletter_subtitle: 'Get the latest offers and new products',
     subscribe: 'Subscribe',
+    luxury_collection: 'Luxury Collection',
     
     // Products
     all_products: 'All Products',

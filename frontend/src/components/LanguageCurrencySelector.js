@@ -84,7 +84,8 @@ const LanguageCurrencySelector = () => {
               >
                 <span>{curr.name}</span>
                 <span className="font-medium">{curr.symbol}</span>
-              </button>\n            ))}
+              </button>
+            ))}
           </div>
         )}
       </div>

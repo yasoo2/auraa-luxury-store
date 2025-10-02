@@ -175,7 +175,6 @@
 
 ## test_plan:
   current_focus:
-    - "Backend: /api/admin/integrations GET/POST happy path (requires admin auth)"
     - "Frontend: Admin Integrations tab renders and can save settings"
   stuck_tasks: []
   test_all: false

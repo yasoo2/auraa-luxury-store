@@ -30,7 +30,7 @@ const LanguageCurrencySelector = () => {
       <div className="relative">
         <Button
           variant="ghost"
-          size=\"sm\"
+          size="sm"
           onClick={() => setShowLanguages(!showLanguages)}
           className=\"flex items-center space-x-1 hover:bg-gray-100\"
         >
@@ -62,7 +62,7 @@ const LanguageCurrencySelector = () => {
       <div className="relative">
         <Button
           variant="ghost"
-          size=\"sm\"
+          size="sm"
           onClick={() => setShowCurrencies(!showCurrencies)}
           className=\"flex items-center space-x-1 hover:bg-gray-100\"
         >

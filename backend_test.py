@@ -568,17 +568,29 @@ class AuraaLuxuryAPITester:
         # Basic API tests
         self.test_root_endpoint()
         self.test_initialize_sample_data()
-        self.test_get_categories()
+        
+        # Authentication tests (need to be early for tokens)
+        self.test_user_registration()
+        self.test_admin_login()
+        self.test_user_profile()
+        
+        # NEW INTEGRATION TESTS (Priority)
+        print("\n🔧 INTEGRATION TESTS (NEW FEATURES)")
+        self.test_admin_integrations_get()
+        self.test_admin_integrations_post()
+        self.test_integrations_permissions()
+        self.test_integration_updated_at()
+        
+        # REGRESSION TESTS
+        print("\n🔄 REGRESSION TESTS")
+        self.test_regression_categories()
+        self.test_regression_products()
+        self.test_regression_cart_flow()
         
         # Product tests
         self.test_get_products()
         self.test_get_single_product()
         self.test_product_filtering()
-        
-        # Authentication tests
-        self.test_user_registration()
-        self.test_admin_login()
-        self.test_user_profile()
         
         # Cart and order tests
         self.test_cart_operations()

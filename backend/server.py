@@ -447,7 +447,7 @@ async def get_categories():
 def _mask_secret(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
-    if len(value) &lt;= 6:
+    if len(value) <= 6:
         return "***"
     return value[:3] + "***" + value[-3:]
 

@@ -222,66 +222,74 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-gray-200">
-            <div className="px-2 pt-2 pb-3 space-y-1">
+          <div className="lg:hidden border-t border-gray-200 bg-white">
+            <div className="px-4 pt-4 pb-4 space-y-2 max-h-96 overflow-y-auto">
               {/* Mobile Search */}
               <form onSubmit={handleSearch} className="mb-4">
                 <div className="relative">
                   <Input
                     type="text"
-                    placeholder="ابحث عن المنتجات..."
+                    placeholder={t('search_placeholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pr-10"
-                    dir="rtl"
+                    className="w-full pr-10 text-sm"
+                    dir={isRTL ? "rtl" : "ltr"}
                   />
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400`} />
                 </div>
               </form>
 
               <Link 
                 to="/" 
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
+                className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
               >
-                الرئيسية
+                {t('home')}
               </Link>
+              
+              {/* Categories in Mobile */}
+              <div className="border-t border-gray-100 pt-2">
+                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  {isRTL ? 'تسوق حسب الفئة' : 'Shop by Category'}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {categories.map((category) => (
+                    <Link
+                      key={category.id}
+                      to={`/products?category=${category.id}`}
+                      className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <span className="text-base mr-2">{category.icon}</span>
+                      <span className="truncate">{category.name}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+              
               <Link 
                 to="/products" 
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
+                className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
               >
-                المنتجات
+                {t('products')}
               </Link>
+              
               <Link 
-                to="/products?category=necklaces" 
+                to="/external-stores" 
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
+                className="flex items-center px-3 py-3 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
               >
-                قلادات
-              </Link>
-              <Link 
-                to="/products?category=earrings" 
-                onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
-              >
-                أقراط
-              </Link>
-              <Link 
-                to="/products?category=rings" 
-                onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-colors"
-              >
-                خواتم
+                🌍 <span className="ml-2">{isRTL ? 'متاجر عالمية' : 'Global Stores'}</span>
               </Link>
               
               {!user && (
                 <Link 
                   to="/auth" 
                   onClick={() => setIsMenuOpen(false)}
-                  className="block px-3 py-2 text-base font-medium text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-md hover:from-amber-600 hover:to-orange-600 transition-all"
+                  className="block px-3 py-3 text-base font-medium text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all text-center"
                 >
-                  دخول / تسجيل
+                  {t('login')}
                 </Link>
               )}
             </div>

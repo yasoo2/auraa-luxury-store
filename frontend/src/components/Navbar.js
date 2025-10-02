@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
+import { useLanguage } from '../context/LanguageContext';
 import { ShoppingCart, User, Search, Menu, X, Heart, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import LanguageCurrencySelector from './LanguageCurrencySelector';
 
 const Navbar = () => {
   const { user, logout } = useAuth();

@@ -32,7 +32,7 @@ const LanguageCurrencySelector = () => {
           variant="ghost"
           size="sm"
           onClick={() => setShowLanguages(!showLanguages)}
-          className=\"flex items-center space-x-1 hover:bg-gray-100\"
+          className="flex items-center space-x-1 hover:bg-gray-100"
         >
           <Globe className=\"h-4 w-4\" />
           <span className=\"text-sm\">{currentLanguage?.flag}</span>
@@ -64,7 +64,7 @@ const LanguageCurrencySelector = () => {
           variant="ghost"
           size="sm"
           onClick={() => setShowCurrencies(!showCurrencies)}
-          className=\"flex items-center space-x-1 hover:bg-gray-100\"
+          className="flex items-center space-x-1 hover:bg-gray-100"
         >
           <DollarSign className=\"h-4 w-4\" />
           <span className=\"text-sm font-medium\">{currentCurrency?.symbol}</span>

@@ -86,12 +86,21 @@ body {
 
 /* Animated gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #d97706, #f59e0b, #fbbf24, #f59e0b, #d97706);
-  background-size: 200% 200%;
+  background: linear-gradient(135deg, #000000, #c0c0c0, #fbbf24, #c0c0c0, #000000);
+  background-size: 300% 300%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: gradientShift 3s ease infinite;
+  animation: gradientShift 4s ease infinite;
+}
+
+.luxury-text {
+  background: linear-gradient(135deg, #fbbf24 0%, #c0c0c0 50%, #000000 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 @keyframes gradientShift {

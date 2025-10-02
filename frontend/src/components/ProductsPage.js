@@ -256,6 +256,31 @@ const ProductsPage = () => {
                         />
                       </Link>
                       {product.discount_percentage && (
+                      {/* Badges (example: hot/new/sale) */}
+                      <div className="absolute bottom-4 right-4 flex space-x-2">
+                        {product.discount_percentage && (
+                          <span className="badge badge-sale">خصم</span>
+                        )}
+                        {product.rating >= 4.8 && (
+                          <span className="badge badge-hot">الأكثر مبيعًا</span>
+                        )}
+                        {(() => {
+                          const created = new Date(product.created_at);
+                          const diffDays = (Date.now() - created.getTime()) / (1000*60*60*24);
+                          return diffDays < 30;
+                        })() && (
+                          <span className="badge badge-new">جديد</span>
+                        )}
+                      </div>
+
+                      {/* Quick add bar */}
+                      <div className="quick-add bg-white/90 backdrop-blur-sm p-3">
+                        <Button onClick={() => addToCart(product.id)} className="w-full">
+                          <ShoppingCart className="h-4 w-4 ml-2" />
+                          إضافة سريعة
+                        </Button>
+                      </div>
+
                         <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 rounded-full text-sm font-bold">
                           -{product.discount_percentage}%
                         </div>

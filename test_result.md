@@ -167,6 +167,29 @@
         agent: "main"
         comment: "Introduced --color-gold, --color-ivory, --color-pearl, --color-silver and utilities (text-brand, bg-brand, etc.)."
 
+  - task: "Remove ExternalStoresPage and all global stores exposure"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/ExternalStoresPage.js (deleted)"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Route disabled and file removed; all links removed from Navbar and HomePage."
+  - task: "Header UI adjustments (logo sizes, show cart & wishlist)"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/Navbar.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Scaled Luxury smaller, kept Accessories under; cart & wishlist re-enabled with dynamic cart badge."
+
 ## metadata:
   created_by: "main_agent"
   version: "1.0"

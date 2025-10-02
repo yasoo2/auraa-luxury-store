@@ -160,15 +160,13 @@ const Navbar = () => {
               </span>
             </Link>
 
-            {/* Wishlist */}
-            {user && (
-              <Link 
-                to="/wishlist" 
-                className="p-2 text-gray-700 hover-text-brand transition-colors duration-200"
-              >
-                <Heart className="h-6 w-6" />
-              </Link>
-            )}
+            {/* Wishlist - always visible; if not logged in, go to auth */}
+            <Link 
+              to={user ? "/wishlist" : "/auth"}
+              className="p-2 text-gray-700 hover-text-brand transition-colors duration-200"
+            >
+              <Heart className="h-6 w-6" />
+            </Link>
 
             {/* User Menu */}
             {user ? (

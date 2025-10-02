@@ -313,9 +313,11 @@ body {
 
 /* Navigation */
 .nav-glass {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(214, 182, 81, 0.3);
+  background: linear-gradient(90deg, var(--color-gold), var(--color-silver));
+  backdrop-filter: blur(12px);
+  border-bottom: 2px solid #000000;
+  border-top: 2px solid #000000;
+  box-shadow: 0 2px 0 #000000;
 }
 
 /* Search animation */

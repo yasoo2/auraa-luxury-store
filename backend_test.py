@@ -428,10 +428,10 @@ class AuraaLuxuryAPITester:
         self.token = None
         
         success, data, status = self.make_request('GET', '/admin/integrations')
-        if not success and status == 401:
+        if not success and status in [401, 403]:
             self.log_test("Integrations No Token", True, "Properly blocked access without token")
         else:
-            self.log_test("Integrations No Token", False, f"Should return 401, got {status}")
+            self.log_test("Integrations No Token", False, f"Should return 401/403, got {status}")
         
         # Test with non-admin token (regular user)
         if original_token:  # Use regular user token

@@ -150,25 +150,8 @@ const Navbar = () => {
           <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
             {/* Language & Currency Selector */}
             <LanguageCurrencySelector />
-            {/* Cart */}
-            <Link 
-              to="/cart" 
-              className="relative p-2 text-gray-700 hover-text-brand transition-colors duration-200"
-              data-testid="cart-link"
-            >
-              <ShoppingCart className="h-6 w-6" />
-              <span className="cart-badge absolute -top-1 -right-1 bg-brand text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                0
-              </span>
-            </Link>
-
-            {/* Wishlist - always visible; if not logged in, go to auth */}
-            <Link 
-              to={user ? "/wishlist" : "/auth"}
-              className="p-2 text-gray-700 hover-text-brand transition-colors duration-200"
-            >
-              <Heart className="h-6 w-6" />
-            </Link>
+            {/* Cart - hidden for now per request */}
+            {/* Wishlist - hidden for now per request */}
 
             {/* User Menu */}
             {user ? (

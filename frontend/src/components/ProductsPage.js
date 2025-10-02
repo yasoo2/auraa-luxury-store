@@ -135,12 +135,12 @@ const ProductsPage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   الفئة
                 </label>
-                <Select value={filters.category || ""} onValueChange={(value) => handleFilterChange('category', value)}>
+                <Select value={filters.category || "all"} onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الفئة" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">جميع الفئات</SelectItem>
+                    <SelectItem value="all">جميع الفئات</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}

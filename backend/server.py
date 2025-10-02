@@ -344,11 +344,14 @@ async def remove_from_cart(product_id: str, current_user: User = Depends(get_cur
     
     return {"message": "Item removed from cart"}
 
+class OrderCreate(BaseModel):
+    shipping_address: Dict[str, Any]
+    payment_method: str
+
 # Orders routes
 @api_router.post("/orders")
 async def create_order(
-    shipping_address: Dict[str, Any],
-    payment_method: str,
+    order_data: OrderCreate,
     current_user: User = Depends(get_current_user)
 ):
     # Get cart

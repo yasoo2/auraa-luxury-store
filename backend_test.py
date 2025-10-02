@@ -469,9 +469,18 @@ class AuraaLuxuryAPITester:
 
     def test_regression_cart_flow(self):
         """Regression test: Cart flow with admin token"""
-        if not self.admin_token or not self.test_product_id:
-            self.log_test("Regression Cart Flow", False, "Missing admin token or product ID")
+        if not self.admin_token:
+            self.log_test("Regression Cart Flow", False, "Missing admin token")
             return
+        
+        # Get a product ID if we don't have one
+        if not self.test_product_id:
+            success, data, status = self.make_request('GET', '/products?limit=1')
+            if success and len(data) > 0:
+                self.test_product_id = data[0]['id']
+            else:
+                self.log_test("Regression Cart Flow", False, "No products available for testing")
+                return
         
         # Use admin token
         original_token = self.token

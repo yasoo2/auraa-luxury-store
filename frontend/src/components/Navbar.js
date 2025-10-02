@@ -32,11 +32,17 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A</span>
+          <Link to="/" className={`flex items-center ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
+            <div className="relative">
+              <div className="w-12 h-12 gradient-luxury rounded-full flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300">
+                <span className="luxury-text font-display text-xl font-black">A</span>
+              </div>
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full animate-pulse"></div>
             </div>
-            <span className="font-display text-2xl font-bold gradient-text">Auraa Luxury</span>
+            <div className="flex flex-col">
+              <span className="font-display text-2xl font-black luxury-text leading-tight">Auraa</span>
+              <span className="font-display text-lg font-medium text-gray-600 leading-none -mt-1">Luxury</span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}

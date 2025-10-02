@@ -67,51 +67,69 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className={`hidden md:flex items-center ${isRTL ? 'space-x-reverse space-x-8' : 'space-x-8'}`}>
+          <div className={`hidden lg:flex items-center ${isRTL ? 'space-x-reverse space-x-6' : 'space-x-6'}`}>
             <Link 
               to="/" 
-              className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
+              className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium text-sm"
             >
               {t('home')}
             </Link>
+            
+            {/* Categories Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowCategories(!showCategories)}
+                className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium flex items-center text-sm"
+                onBlur={() => setTimeout(() => setShowCategories(false), 200)}
+              >
+                {isRTL ? 'تسوق حسب الفئة' : 'Shop by Category'}
+                <ChevronDown className={`h-4 w-4 ${isRTL ? 'mr-1' : 'ml-1'} transform transition-transform ${showCategories ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {showCategories && (
+                <div className={`absolute top-full ${isRTL ? 'right-0' : 'left-0'} mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden`}>
+                  <div className="py-2">
+                    {categories.map((category) => (
+                      <Link
+                        key={category.id}
+                        to={`/products?category=${category.id}`}
+                        className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                        onClick={() => setShowCategories(false)}
+                      >
+                        <span className="text-lg mr-3">{category.icon}</span>
+                        <div>
+                          <div className="font-medium">{category.name}</div>
+                          <div className="text-xs text-gray-500">{category.name_en}</div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="border-t border-gray-200 py-2">
+                    <Link
+                      to="/products"
+                      className="flex items-center px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 font-medium"
+                      onClick={() => setShowCategories(false)}
+                    >
+                      {isRTL ? 'عرض جميع المنتجات' : 'View All Products'}
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+            
             <Link 
               to="/products" 
-              className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
+              className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium text-sm"
             >
               {t('products')}
             </Link>
-            <div className="relative">
-              <Link 
-                to="/products?category=necklaces" 
-                className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
-              >
-                {t('necklaces')}
-              </Link>
-            </div>
-            <div className="relative">
-              <Link 
-                to="/products?category=earrings" 
-                className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
-              >
-                {t('earrings')}
-              </Link>
-            </div>
-            <div className="relative">
-              <Link 
-                to="/products?category=rings" 
-                className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
-              >
-                {t('rings')}
-              </Link>
-            </div>
-            <div className="relative">
-              <Link 
-                to="/external-stores" 
-                className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium flex items-center"
-              >
-                🌍 {isRTL ? 'متاجر عالمية' : 'Global Stores'}
-              </Link>
-            </div>
+            
+            <Link 
+              to="/external-stores" 
+              className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium flex items-center text-sm"
+            >
+              🌍 {isRTL ? 'متاجر عالمية' : 'Global Stores'}
+            </Link>
           </div>
 
           {/* Search Bar */}

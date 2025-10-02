@@ -128,6 +128,31 @@ body {
 .bg-ivory { background-color: var(--color-ivory); }
 .bg-pearl { background-color: var(--color-pearl); }
 .hover-text-brand:hover { color: var(--color-gold); }
+/* Product badges */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+.badge-new { background: linear-gradient(135deg, #10b981, #059669); }
+.badge-hot { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.badge-sale { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+.quick-add {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  transform: translateY(100%);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+.group:hover .quick-add {
+  transform: translateY(0);
+  opacity: 1;
+}
+
 
 /* Gradient backgrounds */
 .gradient-primary {

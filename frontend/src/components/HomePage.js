@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { useLanguage } from '../context/LanguageContext';
 import ExternalStoresSection from './ExternalStoresSection';
+import FashionModelsCarousel from './FashionModelsCarousel';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;

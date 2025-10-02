@@ -250,13 +250,7 @@ const Navbar = () => {
                 {t('products')}
               </Link>
               
-              <Link 
-                to="/external-stores" 
-                onClick={() => setIsMenuOpen(false)}
-                className="flex items-center px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors"
-              >
-                🌍 <span className="ml-2">{isRTL ? 'متاجر عالمية' : 'Global Stores'}</span>
-              </Link>
+              {/* Global Stores link removed per request */}
               
               {!user && (
                 <Link 

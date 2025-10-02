@@ -344,6 +344,21 @@ body {
 }
 
 /* Mobile responsiveness */
+@media (max-width: 640px) {
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  
+  .luxury-card {
+    padding: 12px;
+  }
+  
+  .font-display {
+    font-size: clamp(1.5rem, 5vw, 2rem);
+  }
+}
+
 @media (max-width: 768px) {
   .product-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -351,11 +366,48 @@ body {
   }
   
   .search-expand:focus {
-    width: 200px;
+    width: 180px;
   }
   
   .luxury-card {
     padding: 16px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+  }
+  
+  .search-expand:focus {
+    width: 250px;
+  }
+}
+
+/* Enhanced responsive navbar */
+@media (max-width: 1024px) {
+  .nav-glass {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Responsive carousel for mobile */
+@media (max-width: 640px) {
+  .carousel-luxury-text {
+    font-size: clamp(2rem, 8vw, 3rem);
+  }
+  
+  .carousel-slide-content {
+    padding: 1rem;
+  }
+}
+
+/* Ultra-wide screen support */
+@media (min-width: 1536px) {
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 28px;
   }
 }
 

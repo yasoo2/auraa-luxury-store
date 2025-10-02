@@ -27,7 +27,7 @@ const LanguageCurrencySelector = () => {
   return (
     <div className="flex items-center space-x-2">
       {/* Language Selector */}
-      <div className=\"relative\">
+      <div className="relative">
         <Button
           variant=\"ghost\"
           size=\"sm\"
@@ -59,7 +59,7 @@ const LanguageCurrencySelector = () => {
       </div>
 
       {/* Currency Selector */}
-      <div className=\"relative\">
+      <div className="relative">
         <Button
           variant=\"ghost\"
           size=\"sm\"

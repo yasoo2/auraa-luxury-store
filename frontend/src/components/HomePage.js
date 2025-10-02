@@ -53,23 +53,23 @@ const HomePage = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-black/40 to-transparent"></div>
         <div className="relative z-10 text-center text-white px-4">
           <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight" data-testid="hero-title">
-            مرحباً بك في
-            <span className="block gradient-text bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-amber-300 to-orange-300">
+            {t('welcome_message')}
+            <span className="block luxury-text bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-silver-300 to-black">
               Auraa Luxury
             </span>
           </h1>
           <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto leading-relaxed opacity-90">
-            اكتشف مجموعتنا الفاخرة من الاكسسوارات والمجوهرات الراقية
+            {t('hero_subtitle')}
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className={`flex flex-col sm:flex-row gap-4 justify-center items-center ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
             <Link to="/products">
               <Button 
                 size="lg" 
                 className="btn-luxury text-lg px-8 py-4 transform hover:scale-105 transition-all duration-300"
                 data-testid="shop-now-button"
               >
-                تسوق الآن
-                <ArrowLeft className="ml-2 h-5 w-5" />
+                {t('shop_now')}
+                <ArrowLeft className={`${isRTL ? 'mr-2' : 'ml-2'} h-5 w-5`} />
               </Button>
             </Link>
             <Link to="/products?category=sets">
@@ -78,7 +78,7 @@ const HomePage = () => {
                 size="lg" 
                 className="text-lg px-8 py-4 bg-white/20 backdrop-blur border-white/30 text-white hover:bg-white/30 transition-all duration-300"
               >
-                الأطقم المميزة
+                {t('featured_sets')}
               </Button>
             </Link>
           </div>

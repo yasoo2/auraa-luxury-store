@@ -143,8 +143,8 @@ const HomePage = () => {
               <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Clock className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-900">دعم 24/7</h3>
-              <p className="text-gray-600">فريق خدمة العملاء متاح على مدار الساعة</p>
+              <h3 className="text-xl font-bold mb-2 text-gray-900">{t('support_247')}</h3>
+              <p className="text-gray-600">{t('support_247_desc')}</p>
             </div>
           </div>
         </div>

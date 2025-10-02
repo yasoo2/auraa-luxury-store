@@ -78,6 +78,8 @@ const Navbar = () => {
                 onClick={() => setShowCategories(!showCategories)}
                 className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium flex items-center text-sm"
                 onBlur={() => setTimeout(() => setShowCategories(false), 200)}
+                aria-haspopup="true" aria-expanded={showCategories}
+                data-testid="categories-dropdown"
               >
                 {isRTL ? 'تسوق حسب الفئة' : 'Shop by Category'}
                 <ChevronDown className={`h-4 w-4 ${isRTL ? 'mr-1' : 'ml-1'} transform transition-transform ${showCategories ? 'rotate-180' : ''}`} />

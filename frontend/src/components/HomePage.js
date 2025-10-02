@@ -129,8 +129,8 @@ const HomePage = () => {
               <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Truck className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-900">شحن مجاني</h3>
-              <p className="text-gray-600">شحن مجاني لجميع الطلبات فوق 200 ريال</p>
+              <h3 className="text-xl font-bold mb-2 text-gray-900">{t('free_shipping')}</h3>
+              <p className="text-gray-600">{t('free_shipping_desc')}</p>
             </div>
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">

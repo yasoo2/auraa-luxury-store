@@ -17,15 +17,7 @@ const HomePage = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Model images for the store
-  const modelImages = [
-    "https://images.unsplash.com/photo-1659682695085-6b66aa8bfef2",
-    "https://images.unsplash.com/photo-1658910453954-6ca847bb7470",
-    "https://images.unsplash.com/photo-1658910452951-68bd93e558ca",
-    "https://images.pexels.com/photos/458766/pexels-photo-458766.jpeg",
-    "https://images.pexels.com/photos/247287/pexels-photo-247287.jpeg",
-    "https://images.pexels.com/photos/34113318/pexels-photo-34113318.jpeg"
-  ];
+  // Model images removed - no longer needed
 
   useEffect(() => {
     const fetchData = async () => {

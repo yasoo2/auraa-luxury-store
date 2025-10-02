@@ -172,8 +172,8 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* External Stores Section */}
-      <ExternalStoresSection />
+      {/* External Stores Section - Removed per request */}
+      {/* <ExternalStoresSection /> */}
 
       {/* Newsletter Section */}
       <section className="py-16 bg-gradient-to-r from-amber-600 to-orange-600 text-white">

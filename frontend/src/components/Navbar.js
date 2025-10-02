@@ -165,7 +165,7 @@ const Navbar = () => {
             {/* Cart */}
             <Link 
               to="/cart" 
-              className="relative p-2 text-gray-700 hover-text-brand transition-colors duration-200"
+              className="relative p-2 text-black hover-text-brand transition-colors duration-200"
               data-testid="cart-link"
             >
               <ShoppingCart className="h-6 w-6" />

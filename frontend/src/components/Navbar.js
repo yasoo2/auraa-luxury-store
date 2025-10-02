@@ -8,12 +8,30 @@ import { Input } from './ui/input';
 import LanguageCurrencySelector from './LanguageCurrencySelector';
 import axios from 'axios';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { t, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
+  const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Fetch categories for dropdown
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${API}/categories`);
+        setCategories(response.data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();

@@ -178,7 +178,7 @@ const ProductsPage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   ترتيب حسب
                 </label>
-                <Select value={filters.sortBy} onValueChange={(value) => handleFilterChange('sortBy', value)}>
+                <Select value={filters.sortBy || "newest"} onValueChange={(value) => handleFilterChange('sortBy', value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

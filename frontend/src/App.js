@@ -171,7 +171,7 @@ function App() {
     <LanguageProvider>
       <AuthProvider>
         <BrowserRouter>
-          <div className="App min-h-screen bg-gradient-to-br from-gray-50 via-amber-50 to-gray-100">
+          <div className="App min-h-screen app-bg">
             <Navbar />
             <main className="flex-grow">
               <Routes>

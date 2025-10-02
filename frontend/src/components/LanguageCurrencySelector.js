@@ -66,7 +66,7 @@ const LanguageCurrencySelector = () => {
           onClick={() => setShowCurrencies(!showCurrencies)}
           className="flex items-center space-x-1 hover:bg-gray-100"
         >
-          <DollarSign className=\"h-4 w-4\" />
+          <DollarSign className="h-4 w-4" />
           <span className=\"text-sm font-medium\">{currentCurrency?.symbol}</span>
           <ChevronDown className="h-3 w-3" />
         </Button>

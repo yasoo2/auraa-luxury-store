@@ -85,3 +85,9 @@ android-sdk/ -e
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
+AuraaLuxury_Manual_Install.zip
+frontend/public/AuraaLuxury_Manual_Install.zip

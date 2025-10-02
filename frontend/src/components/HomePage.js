@@ -72,7 +72,7 @@ const HomePage = () => {
             </div>
           </div>
         </div>
-      </section>
+      {/* </section> */}
 
       {/* Featured Products */}
       <section className="py-16 bg-white">

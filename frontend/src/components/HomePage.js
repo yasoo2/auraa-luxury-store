@@ -256,13 +256,13 @@ const HomePage = () => {
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                        <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
                           <span className="price-highlight text-2xl font-bold text-amber-600">
-                            {product.price} ر.س
+                            {formatPrice(product.price)}
                           </span>
                           {product.original_price && (
                             <span className="text-lg text-gray-500 line-through">
-                              {product.original_price} ر.س
+                              {formatPrice(product.original_price)}
                             </span>
                           )}
                         </div>

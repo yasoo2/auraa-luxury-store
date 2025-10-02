@@ -44,6 +44,7 @@ const translations = {
     newsletter_title: 'اشترك في نشرتنا الإخبارية',
     newsletter_subtitle: 'احصل على أحدث العروض والمنتجات الجديدة',
     subscribe: 'اشتراك',
+    luxury_collection: 'مجموعة فاخرة',
     
     // Products
     all_products: 'جميع المنتجات',

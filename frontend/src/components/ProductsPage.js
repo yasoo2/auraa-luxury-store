@@ -135,7 +135,7 @@ const ProductsPage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   الفئة
                 </label>
-                <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
+                <Select value={filters.category || ""} onValueChange={(value) => handleFilterChange('category', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الفئة" />
                   </SelectTrigger>

@@ -4,6 +4,7 @@ import { ArrowLeft, Star, TrendingUp, Shield, Truck, Clock } from 'lucide-react'
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { useLanguage } from '../context/LanguageContext';
+import ExternalStoresSection from './ExternalStoresSection';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;

@@ -377,7 +377,7 @@ async def get_categories():
         {"id": "sets", "name": "أطقم", "name_en": "Sets", "icon": "✨"}
     ]
 
-# Sample data initialization
+# Initialize admin user and sample data
 @api_router.post("/init-data")
 async def initialize_sample_data():
     # Check if products already exist

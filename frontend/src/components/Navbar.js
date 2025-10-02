@@ -57,7 +57,7 @@ const Navbar = () => {
                 <span className="font-display text-3xl md:text-4xl font-black luxury-text tracking-tight">Auraa</span>
                 <span className="font-display text-sm md:text-base font-semibold text-gray-700 tracking-widest">LUXURY</span>
               </div>
-              <span className="block text-[10px] md:text-xs text-gray-600 tracking-[0.35em] mt-1 uppercase" style={{borderTop: '1px solid rgba(0,0,0,0.2)', paddingTop: '2px'}}>
+              <span className="block text-[9px] md:text-[11px] text-gray-600 tracking-[0.45em] mt-1 uppercase" style={{borderTop: '1px solid rgba(0,0,0,0.25)', paddingTop: '2px'}}>
                 ACCESSORIES
               </span>
             </div>

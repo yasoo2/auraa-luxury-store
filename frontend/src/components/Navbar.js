@@ -90,13 +90,13 @@ const Navbar = () => {
             <div className="relative">
               <Input
                 type="text"
-                placeholder="ابحث عن المنتجات..."
+                placeholder={t('search_placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 pr-10 search-expand focus-ring"
-                dir="rtl"
+                dir={isRTL ? "rtl" : "ltr"}
               />
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400`} />
             </div>
           </form>
 

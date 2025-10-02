@@ -35,7 +35,7 @@ const LanguageCurrencySelector = () => {
           className="flex items-center space-x-1 hover:bg-gray-100"
         >
           <Globe className="h-4 w-4" />
-          <span className=\"text-sm\">{currentLanguage?.flag}</span>
+          <span className="text-sm">{currentLanguage?.flag}</span>
           <ChevronDown className=\"h-3 w-3\" />
         </Button>
         

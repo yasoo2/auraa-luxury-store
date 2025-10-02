@@ -41,9 +41,9 @@ const Navbar = () => {
               <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-gradient-to-br from-gray-300 to-gray-500 rounded-full animate-ping"></div>
             </div>
             <div className="flex flex-col">
-              <span className="font-display text-3xl font-black luxury-text leading-tight drop-shadow-md">Auraa</span>
-              <span className="font-display text-sm font-semibold text-gray-500 leading-none -mt-1 tracking-wider">LUXURY</span>
-              <span className="text-xs font-medium text-amber-600 leading-none uppercase tracking-widest">Accessories</span>
+              <span className="font-display text-2xl md:text-3xl font-black luxury-text leading-tight drop-shadow-md">Auraa</span>
+              <span className="font-display text-xs md:text-sm font-semibold text-gray-500 leading-none -mt-1 tracking-wider">LUXURY</span>
+              <span className="text-xs font-medium text-amber-600 leading-none tracking-widest">اكسيسوري</span>
             </div>
           </Link>
 

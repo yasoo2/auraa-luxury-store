@@ -9,6 +9,7 @@ import LanguageCurrencySelector from './LanguageCurrencySelector';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const { t, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

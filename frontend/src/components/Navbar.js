@@ -19,6 +19,7 @@ const Navbar = () => {
   const [showCategories, setShowCategories] = useState(false);
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [cartCount, setCartCount] = useState(0);
 
   // Fetch categories for dropdown
   useEffect(() => {

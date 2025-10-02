@@ -72,7 +72,7 @@ const LanguageCurrencySelector = () => {
         </Button>
         
         {showCurrencies && (
-          <div className=\"absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px]\">
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px]">
             {currencies.map((curr) => (
               <button
                 key={curr.code}

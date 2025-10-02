@@ -32,6 +32,8 @@ const Navbar = () => {
       }
     };
     fetchCategories();
+  }, []);
+
   // Optional: fetch cart count if user logged in
   useEffect(() => {
     const fetchCart = async () => {
@@ -47,8 +49,6 @@ const Navbar = () => {
     };
     fetchCart();
   }, [user]);
-
-  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();

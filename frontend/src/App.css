@@ -17,6 +17,57 @@ body {
   font-family: 'Playfair Display', serif;
 }
 
+/* Fashion Carousel Styles */
+.carousel-slide-enter {
+  opacity: 0;
+  transform: translateX(100%) scale(0.9);
+}
+
+.carousel-slide-enter-active {
+  opacity: 1;
+  transform: translateX(0%) scale(1);
+  transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.carousel-slide-exit {
+  opacity: 1;
+  transform: translateX(0%) scale(1);
+}
+
+.carousel-slide-exit-active {
+  opacity: 0;
+  transform: translateX(-100%) scale(1.1);
+  transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Parallax effect for carousel */
+.carousel-parallax {
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* Enhanced luxury text for carousel */
+.carousel-luxury-text {
+  background: linear-gradient(135deg, #ffd700 0%, #ffffff 20%, #c0c0c0 40%, #ffd700 60%, #000000 80%, #ffd700 100%);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: luxuryShimmer 4s ease-in-out infinite;
+  filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+}
+
+@keyframes luxuryShimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 /* Logo specific styles */
 .logo-glow {
   animation: logoGlow 3s ease-in-out infinite alternate;

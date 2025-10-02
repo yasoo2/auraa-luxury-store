@@ -85,6 +85,14 @@ const Navbar = () => {
                 {t('rings')}
               </Link>
             </div>
+            <div className="relative">
+              <Link 
+                to="/external-stores" 
+                className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium flex items-center"
+              >
+                🌍 {isRTL ? 'متاجر عالمية' : 'Global Stores'}
+              </Link>
+            </div>
           </div>
 
           {/* Search Bar */}

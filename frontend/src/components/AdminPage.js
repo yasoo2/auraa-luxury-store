@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Package, Users, ShoppingCart, DollarSign } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Users, ShoppingCart, DollarSign, KeyRound, ShieldCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
@@ -35,9 +35,22 @@ const AdminPage = () => {
     external_url: ''
   });
 
+  // Integrations state
+  const [integrations, setIntegrations] = useState({
+    aliexpress_app_key: '',
+    aliexpress_app_secret: '',
+    aliexpress_refresh_token: '',
+    amazon_access_key: '',
+    amazon_secret_key: '',
+    amazon_partner_tag: '',
+    amazon_region: ''
+  });
+  const [savingIntegrations, setSavingIntegrations] = useState(false);
+
   useEffect(() => {
     fetchProducts();
     fetchStats();
+    fetchIntegrations();
   }, []);
 
   const fetchProducts = async () => {
@@ -54,8 +67,6 @@ const AdminPage = () => {
 
   const fetchStats = async () => {
     try {
-      // This would normally fetch real stats from the backend
-      // For now, we'll use mock data
       setStats({
         totalProducts: products.length,
         totalOrders: 47,
@@ -64,6 +75,43 @@ const AdminPage = () => {
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchIntegrations = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/integrations`);
+      setIntegrations({
+        aliexpress_app_key: res.data.aliexpress_app_key || '',
+        aliexpress_app_secret: res.data.aliexpress_app_secret || '',
+        aliexpress_refresh_token: res.data.aliexpress_refresh_token || '',
+        amazon_access_key: res.data.amazon_access_key || '',
+        amazon_secret_key: res.data.amazon_secret_key || '',
+        amazon_partner_tag: res.data.amazon_partner_tag || '',
+        amazon_region: res.data.amazon_region || ''
+      });
+    } catch (error) {
+      console.error('Error fetching integrations:', error);
+    }
+  };
+
+  const handleIntegrationsChange = (e) => {
+    const { name, value } = e.target;
+    setIntegrations(prev => ({ ...prev, [name]: value }));
+  };
+
+  const saveIntegrations = async (e) => {
+    e.preventDefault();
+    setSavingIntegrations(true);
+    try {
+      await axios.post(`${API}/admin/integrations`, integrations);
+      toast.success('تم حفظ إعدادات التكامل بنجاح');
+      fetchIntegrations();
+    } catch (error) {
+      console.error('Error saving integrations:', error);
+      toast.error('فشل في حفظ إعدادات التكامل');
+    } finally {
+      setSavingIntegrations(false);
     }
   };
 
@@ -137,8 +185,7 @@ const AdminPage = () => {
   const deleteProduct = async (productId) => {
     if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
       try {
-        // This would be implemented in the backend
-        toast.info('هص ميزة غير متاحة في النسخة التجريبية');
+        toast.info('هذه الميزة غير متاحة في النسخة التجريبية');
       } catch (error) {
         toast.error('فشل في حذف المنتج');
       }
@@ -206,10 +253,11 @@ const AdminPage = () => {
         </div>
 
         <Tabs defaultValue="products" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
             <TabsTrigger value="products" data-testid="products-tab">المنتجات</TabsTrigger>
             <TabsTrigger value="orders">الطلبات</TabsTrigger>
             <TabsTrigger value="users">العملاء</TabsTrigger>
+            <TabsTrigger value="integrations">التكاملات</TabsTrigger>
           </TabsList>
 
           {/* Products Tab */}
@@ -409,6 +457,69 @@ const AdminPage = () => {
                 هذه الميزة قيد التطوير
               </p>
             </Card>
+          </TabsContent>
+
+          {/* Integrations Tab */}
+          <TabsContent value="integrations">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="luxury-card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">AliExpress Dropshipping</h3>
+                  <ShieldCheck className="h-6 w-6 text-green-600" />
+                </div>
+                <p className="text-gray-600 mb-4">أدخل مفاتيح AliExpress لتفعيل الاستيراد وإنشاء الطلبات.</p>
+                <form onSubmit={saveIntegrations} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">App Key</label>
+                    <Input name="aliexpress_app_key" value={integrations.aliexpress_app_key} onChange={handleIntegrationsChange} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">App Secret</label>
+                    <Input name="aliexpress_app_secret" value={integrations.aliexpress_app_secret} onChange={handleIntegrationsChange} type="password" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Refresh Token (OAuth)</label>
+                    <Input name="aliexpress_refresh_token" value={integrations.aliexpress_refresh_token} onChange={handleIntegrationsChange} type="password" />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button disabled={savingIntegrations} className="btn-luxury">
+                      {savingIntegrations ? 'جاري الحفظ...' : 'حفظ'}
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+
+              <Card className="luxury-card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">Amazon PA-API (كتالوج)</h3>
+                  <KeyRound className="h-6 w-6 text-gray-500" />
+                </div>
+                <p className="text-gray-600 mb-4">إعداد أولي. سيتم التفعيل بعد تزويد المفاتيح.</p>
+                <form onSubmit={saveIntegrations} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Access Key</label>
+                    <Input name="amazon_access_key" value={integrations.amazon_access_key} onChange={handleIntegrationsChange} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Secret Key</label>
+                    <Input name="amazon_secret_key" value={integrations.amazon_secret_key} onChange={handleIntegrationsChange} type="password" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Associate/Partner Tag</label>
+                    <Input name="amazon_partner_tag" value={integrations.amazon_partner_tag} onChange={handleIntegrationsChange} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                    <Input name="amazon_region" value={integrations.amazon_region} onChange={handleIntegrationsChange} placeholder="eg. us-east-1" />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button disabled={savingIntegrations} className="btn-luxury">
+                      {savingIntegrations ? 'جاري الحفظ...' : 'حفظ'}
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>

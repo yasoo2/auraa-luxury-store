@@ -53,7 +53,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
             <div className="relative">
-              <div className="w-16 h-16 gradient-luxury rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300 border-2 border-amber-400 logo-glow">
+              <div className="w-16 h-16 gradient-luxury rounded-full flex items-center justify-center shadow-2xl transform hover:scale-110 transition-all duration-300 border-2 border-gold logo-glow">
                 <span className="luxury-text font-display text-2xl font-black drop-shadow-lg">A</span>
               </div>
               <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-br from-yellow-300 to-amber-600 rounded-full animate-pulse shadow-lg"></div>
@@ -62,7 +62,7 @@ const Navbar = () => {
             <div className="flex flex-col">
               <span className="font-display text-2xl md:text-3xl font-black luxury-text leading-tight drop-shadow-md">Auraa</span>
               <span className="font-display text-xs md:text-sm font-semibold text-gray-500 leading-none -mt-1 tracking-wider">LUXURY</span>
-              <span className="text-xs font-medium text-amber-600 leading-none tracking-widest">اكسيسوري</span>
+              <span className="text-xs font-medium text-brand leading-none tracking-widest">اكسيسوري</span>
             </div>
           </Link>
 
@@ -70,7 +70,7 @@ const Navbar = () => {
           <div className={`hidden lg:flex items-center ${isRTL ? 'space-x-reverse space-x-6' : 'space-x-6'}`}>
             <Link 
               to="/" 
-              className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium text-sm"
+              className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm"
             >
               {t('home')}
             </Link>
@@ -79,7 +79,7 @@ const Navbar = () => {
             <div className="relative">
               <button
                 onClick={() => setShowCategories(!showCategories)}
-                className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium flex items-center text-sm"
+                className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium flex items-center text-sm"
                 onBlur={() => setTimeout(() => setShowCategories(false), 200)}
               >
                 {isRTL ? 'تسوق حسب الفئة' : 'Shop by Category'}
@@ -93,7 +93,7 @@ const Navbar = () => {
                       <Link
                         key={category.id}
                         to={`/products?category=${category.id}`}
-                        className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                        className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-amber-50 hover-text-brand transition-colors"
                         onClick={() => setShowCategories(false)}
                       >
                         <span className="text-lg mr-3">{category.icon}</span>
@@ -107,7 +107,7 @@ const Navbar = () => {
                   <div className="border-t border-gray-200 py-2">
                     <Link
                       to="/products"
-                      className="flex items-center px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 font-medium"
+                      className="flex items-center px-4 py-2 text-sm text-brand hover:bg-amber-50 font-medium"
                       onClick={() => setShowCategories(false)}
                     >
                       {isRTL ? 'عرض جميع المنتجات' : 'View All Products'}
@@ -119,14 +119,14 @@ const Navbar = () => {
             
             <Link 
               to="/products" 
-              className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium text-sm"
+              className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm"
             >
               {t('products')}
             </Link>
             
             <Link 
               to="/external-stores" 
-              className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium flex items-center text-sm"
+              className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium flex items-center text-sm"
             >
               🌍 {isRTL ? 'متاجر عالمية' : 'Global Stores'}
             </Link>
@@ -154,11 +154,11 @@ const Navbar = () => {
             {/* Cart */}
             <Link 
               to="/cart" 
-              className="relative p-2 text-gray-700 hover:text-amber-600 transition-colors duration-200"
+              className="relative p-2 text-gray-700 hover-text-brand transition-colors duration-200"
               data-testid="cart-link"
             >
               <ShoppingCart className="h-6 w-6" />
-              <span className="cart-badge absolute -top-1 -right-1 bg-amber-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              <span className="cart-badge absolute -top-1 -right-1 bg-brand text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 0
               </span>
             </Link>
@@ -167,7 +167,7 @@ const Navbar = () => {
             {user && (
               <Link 
                 to="/wishlist" 
-                className="p-2 text-gray-700 hover:text-amber-600 transition-colors duration-200"
+                className="p-2 text-gray-700 hover-text-brand transition-colors duration-200"
               >
                 <Heart className="h-6 w-6" />
               </Link>
@@ -178,7 +178,7 @@ const Navbar = () => {
               <div className="flex items-center space-x-2">
                 <Link 
                   to="/profile" 
-                  className="p-2 text-gray-700 hover:text-amber-600 transition-colors duration-200"
+                  className="p-2 text-gray-700 hover-text-brand transition-colors duration-200"
                   data-testid="profile-link"
                 >
                   <User className="h-6 w-6" />
@@ -187,7 +187,7 @@ const Navbar = () => {
                   onClick={handleLogout}
                   variant="ghost"
                   size="sm"
-                  className="p-2 text-gray-700 hover:text-amber-600"
+                  className="p-2 text-gray-700 hover-text-brand"
                   data-testid="logout-button"
                 >
                   <LogOut className="h-4 w-4" />
@@ -195,7 +195,7 @@ const Navbar = () => {
                 {user.is_admin && (
                   <Link 
                     to="/admin" 
-                    className="px-3 py-1 text-sm bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors"
+                    className="px-3 py-1 text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors"
                   >
                     إدارة
                   </Link>
@@ -212,7 +212,7 @@ const Navbar = () => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 text-gray-700 hover:text-amber-600 transition-colors duration-200"
+              className="lg:hidden p-2 text-gray-700 hover-text-brand transition-colors duration-200"
               data-testid="mobile-menu-button"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -242,7 +242,7 @@ const Navbar = () => {
               <Link 
                 to="/" 
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors"
               >
                 {t('home')}
               </Link>
@@ -257,7 +257,7 @@ const Navbar = () => {
                     <Link
                       key={category.id}
                       to={`/products?category=${category.id}`}
-                      className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <span className="text-base mr-2">{category.icon}</span>
@@ -270,7 +270,7 @@ const Navbar = () => {
               <Link 
                 to="/products" 
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-3 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors"
               >
                 {t('products')}
               </Link>
@@ -278,7 +278,7 @@ const Navbar = () => {
               <Link 
                 to="/external-stores" 
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center px-3 py-3 text-base font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                className="flex items-center px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors"
               >
                 🌍 <span className="ml-2">{isRTL ? 'متاجر عالمية' : 'Global Stores'}</span>
               </Link>

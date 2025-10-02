@@ -135,6 +135,21 @@ class Wishlist(BaseModel):
     product_ids: List[str] = []
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# New: Integration settings model
+class IntegrationSettings(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str = "integrations"
+    # AliExpress (Dropshipping OAuth)
+    aliexpress_app_key: Optional[str] = None
+    aliexpress_app_secret: Optional[str] = None
+    aliexpress_refresh_token: Optional[str] = None
+    # Amazon PA-API groundwork
+    amazon_access_key: Optional[str] = None
+    amazon_secret_key: Optional[str] = None
+    amazon_partner_tag: Optional[str] = None
+    amazon_region: Optional[str] = None
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # Helper functions
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -427,6 +442,55 @@ async def get_categories():
         {"id": "sets", "name": "أطقم", "name_en": "Sets", "icon": "✨"}
     ]
 
+# Admin: Integration settings routes (no external calls yet)
+
+def _mask_secret(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    if len(value) &lt;= 6:
+        return "***"
+    return value[:3] + "***" + value[-3:]
+
+@api_router.get("/admin/integrations", response_model=IntegrationSettings)
+async def get_integration_settings(current_user: User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    doc = await db.settings.find_one({"type": "integrations"})
+    if not doc:
+        settings = IntegrationSettings()
+        await db.settings.insert_one(settings.dict())
+        return settings
+    # Mask secrets in response
+    masked = {**doc}
+    masked["aliexpress_app_secret"] = _mask_secret(doc.get("aliexpress_app_secret"))
+    masked["aliexpress_refresh_token"] = _mask_secret(doc.get("aliexpress_refresh_token"))
+    masked["amazon_secret_key"] = _mask_secret(doc.get("amazon_secret_key"))
+    return IntegrationSettings(**masked)
+
+class IntegrationSettingsUpdate(BaseModel):
+    aliexpress_app_key: Optional[str] = None
+    aliexpress_app_secret: Optional[str] = None
+    aliexpress_refresh_token: Optional[str] = None
+    amazon_access_key: Optional[str] = None
+    amazon_secret_key: Optional[str] = None
+    amazon_partner_tag: Optional[str] = None
+    amazon_region: Optional[str] = None
+
+@api_router.post("/admin/integrations", response_model=IntegrationSettings)
+async def upsert_integration_settings(payload: IntegrationSettingsUpdate, current_user: User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    existing = await db.settings.find_one({"type": "integrations"})
+    if not existing:
+        settings = IntegrationSettings(**payload.dict(exclude_unset=True))
+        await db.settings.insert_one(settings.dict())
+        return settings
+    updates = payload.dict(exclude_unset=True)
+    updates["updated_at"] = datetime.now(timezone.utc)
+    await db.settings.update_one({"id": existing["id"]}, {"$set": updates})
+    updated = await db.settings.find_one({"id": existing["id"]})
+    return IntegrationSettings(**updated)
+
 # Initialize admin user and sample data
 @api_router.post("/init-data")
 async def initialize_sample_data():
@@ -460,7 +524,7 @@ async def initialize_sample_data():
             "discount_percentage": 25,
             "category": "necklaces",
             "images": [
-                "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTQxOTg4M3ww&ixlib=rb-4.1.0&q=85"
+                "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?crop=entropy&amp;cs=srgb&amp;fm=jpg&amp;ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTQxOTg4M3ww&amp;ixlib=rb-4.1.0&amp;q=85"
             ],
             "rating": 4.8,
             "reviews_count": 124
@@ -473,7 +537,7 @@ async def initialize_sample_data():
             "discount_percentage": 25,
             "category": "earrings",
             "images": [
-                "https://images.unsplash.com/photo-1636619608432-77941d282b32?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk0MTk4ODl8MA&ixlib=rb-4.1.0&q=85"
+                "https://images.unsplash.com/photo-1636619608432-77941d282b32?crop=entropy&amp;cs=srgb&amp;fm=jpg&amp;ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk0MTk4ODl8MA&amp;ixlib=rb-4.1.0&amp;q=85"
             ],
             "rating": 4.9,
             "reviews_count": 89
@@ -486,7 +550,7 @@ async def initialize_sample_data():
             "discount_percentage": 25,
             "category": "rings",
             "images": [
-                "https://images.unsplash.com/photo-1606623546924-a4f3ae5ea3e8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTQxOTg4M3ww&ixlib=rb-4.1.0&q=85"
+                "https://images.unsplash.com/photo-1606623546924-a4f3ae5ea3e8?crop=entropy&amp;cs=srgb&amp;fm=jpg&amp;ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTQxOTg4M3ww&amp;ixlib=rb-4.1.0&amp;q=85"
             ],
             "rating": 5.0,
             "reviews_count": 67
@@ -499,7 +563,7 @@ async def initialize_sample_data():
             "discount_percentage": 24,
             "category": "bracelets",
             "images": [
-                "https://images.unsplash.com/photo-1586878340506-af074f2ee999?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHw0fHxsdXh1cnklMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk0MTk4ODl8MA&ixlib=rb-4.1.0&q=85"
+                "https://images.unsplash.com/photo-1586878340506-af074f2ee999?crop=entropy&amp;cs=srgb&amp;fm=jpg&amp;ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHw0fHxsdXh1cnklMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk0MTk4ODl8MA&amp;ixlib=rb-4.1.0&amp;q=85"
             ],
             "rating": 4.7,
             "reviews_count": 156
@@ -512,7 +576,7 @@ async def initialize_sample_data():
             "discount_percentage": 25,
             "category": "watches",
             "images": [
-                "https://images.unsplash.com/photo-1758297679778-d308606a3f51?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk0MTk4ODl8MA&ixlib=rb-4.1.0&q=85"
+                "https://images.unsplash.com/photo-1758297679778-d308606a3f51?crop=entropy&amp;cs=srgb&amp;fm=jpg&amp;ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk0MTk4ODl8MA&amp;ixlib=rb-4.1.0&amp;q=85"
             ],
             "rating": 4.9,
             "reviews_count": 234

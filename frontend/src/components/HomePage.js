@@ -53,52 +53,6 @@ const HomePage = () => {
       {/* Fashion Models Carousel - Full Width */}
       <FashionModelsCarousel />
 
-      {/* Hero Section */}
-      <section className="hero-bg min-h-[80vh] flex items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-black/40 to-transparent"></div>
-        <div className="relative z-10 text-center text-white px-4">
-          <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight" data-testid="hero-title">
-            {t('welcome_message')}
-            <span className="block luxury-text bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-silver-300 to-black">
-              Auraa Luxury
-            </span>
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto leading-relaxed opacity-90">
-            {t('hero_subtitle')}
-          </p>
-          <div className={`flex flex-col sm:flex-row gap-4 justify-center items-center ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
-            <Link to="/products">
-              <Button 
-                size="lg" 
-                className="btn-luxury text-lg px-8 py-4 transform hover:scale-105 transition-all duration-300"
-                data-testid="shop-now-button"
-              >
-                {t('shop_now')}
-                <ArrowLeft className={`${isRTL ? 'mr-2' : 'ml-2'} h-5 w-5`} />
-              </Button>
-            </Link>
-            <Link to="/products?category=sets">
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="text-lg px-8 py-4 bg-white/20 backdrop-blur border-white/30 text-white hover:bg-white/30 transition-all duration-300"
-              >
-                {t('featured_sets')}
-              </Button>
-            </Link>
-          </div>
-        </div>
-        
-        {/* Hero Background Image */}
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTQxOTg4M3ww&ixlib=rb-4.1.0&q=85"
-            alt="Luxury Jewelry Background"
-            className="w-full h-full object-cover"
-          />
-        </div>
-      </section>
-
       {/* Models Section */}
       <section className="py-16 bg-gradient-to-r from-gray-900 via-black to-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

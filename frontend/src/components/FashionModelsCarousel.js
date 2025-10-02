@@ -177,7 +177,7 @@ const FashionModelsCarousel = () => {
           <div className="flex flex-col items-center">
             <div className="font-display font-black carousel-luxury-text leading-none">
               <span className="block text-3xl sm:text-5xl lg:text-7xl">Auraa</span>
-              <span className="block text-[10px] sm:text-sm lg:text-base text-gray-200 tracking-[0.3em] mt-1">LUXURY</span>
+              <span className="block text-[8px] sm:text-[10px] lg:text-[12px] text-gray-200 tracking-[0.25em] mt-1">LUXURY</span>
             </div>
             <p className="text-white/90 text-xs sm:text-base lg:text-lg font-light tracking-wider mt-2">
               {isRTL ? 'اكسسوارات فاخرة' : 'ACCESSORIES'}

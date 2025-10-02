@@ -169,8 +169,8 @@ const Navbar = () => {
               data-testid="cart-link"
             >
               <ShoppingCart className="h-6 w-6" />
-              <span className="cart-badge absolute -top-1 -right-1 bg-brand text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                0
+              <span className="cart-badge absolute -top-1 -right-1 bg-brand text-white text-[10px] rounded-full h-5 min-w-[1.1rem] px-1 flex items-center justify-center">
+                {cartCount}
               </span>
             </Link>
 

@@ -123,12 +123,7 @@ const Navbar = () => {
               {t('products')}
             </Link>
             
-            <Link 
-              to="/external-stores" 
-              className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium flex items-center text-sm"
-            >
-              🌍 {isRTL ? 'متاجر عالمية' : 'Global Stores'}
-            </Link>
+            {/* Global Stores link removed per request */}
           </div>
 
           {/* Search Bar */}

@@ -174,7 +174,7 @@ const FashionModelsCarousel = () => {
       {/* Luxury Brand Overlay */}
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-20 pointer-events-none">
         <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
-          <h1 className="font-display text-5xl md:text-7xl font-black luxury-text mb-2">
+          <h1 className="font-display text-5xl md:text-7xl font-black carousel-luxury-text mb-2">
             Auraa Luxury
           </h1>
           <p className="text-white/90 text-lg md:text-xl font-light tracking-wider">

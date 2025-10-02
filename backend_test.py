@@ -251,19 +251,22 @@ class AuraaLuxuryAPITester:
         # First add item to cart
         self.make_request('POST', f'/cart/add?product_id={self.test_product_id}&quantity=1')
         
-        # Create order
+        # Create order - need to send as query parameters based on FastAPI signature
+        shipping_address = {
+            "firstName": "Test",
+            "lastName": "User",
+            "email": "test@test.com",
+            "phone": "+966501234567",
+            "street": "Test Street 123",
+            "city": "Riyadh",
+            "state": "Riyadh",
+            "zipCode": "12345",
+            "country": "SA"
+        }
+        
+        # The endpoint expects both as body parameters according to the function signature
         order_data = {
-            "shipping_address": {
-                "firstName": "Test",
-                "lastName": "User",
-                "email": "test@test.com",
-                "phone": "+966501234567",
-                "street": "Test Street 123",
-                "city": "Riyadh",
-                "state": "Riyadh",
-                "zipCode": "12345",
-                "country": "SA"
-            },
+            "shipping_address": shipping_address,
             "payment_method": "cod"
         }
         

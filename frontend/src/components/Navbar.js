@@ -32,6 +32,22 @@ const Navbar = () => {
       }
     };
     fetchCategories();
+  // Optional: fetch cart count if user logged in
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        if (!user) return;
+        const res = await axios.get(`${API}/cart`);
+        const items = res.data.items || [];
+        const count = items.reduce((sum, it) => sum + it.quantity, 0);
+        setCartCount(count);
+      } catch (e) {
+        // ignore silently for now
+      }
+    };
+    fetchCart();
+  }, [user]);
+
   }, []);
 
   const handleSearch = (e) => {

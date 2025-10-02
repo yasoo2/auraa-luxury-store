@@ -364,6 +364,57 @@ async def get_orders(current_user: User = Depends(get_current_user)):
     orders = await db.orders.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
     return [Order(**order) for order in orders]
 
+# External Products (Simulated API integration)
+@api_router.get("/external-products")
+async def get_external_products(
+    store: Optional[str] = None,
+    category: Optional[str] = None,
+    limit: int = 20
+):
+    """Simulated external products from AliExpress and Amazon"""
+    mock_products = [
+        {
+            "id": "ali_001",
+            "name": "Gold Plated Pearl Earrings Set", 
+            "name_ar": "طقم أقراط لؤلؤية مطلية بالذهب",
+            "price": 25.99,
+            "original_price": 45.99,
+            "rating": 4.7,
+            "reviews": 1523,
+            "source": "aliexpress",
+            "category": "earrings",
+            "image": "https://images.unsplash.com/photo-1635767798638-3e25273a8236?w=400",
+            "external_url": "https://aliexpress.com/item/example",
+            "free_shipping": True,
+            "delivery_time": "7-15 days"
+        },
+        {
+            "id": "amazon_001",
+            "name": "Sterling Silver Chain Necklace",
+            "name_ar": "قلادة فضية استرلينية أنيقة", 
+            "price": 89.99,
+            "original_price": 129.99,
+            "rating": 4.8,
+            "reviews": 892,
+            "source": "amazon",
+            "category": "necklaces",
+            "image": "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400",
+            "external_url": "https://amazon.com/dp/example",
+            "free_shipping": True,
+            "delivery_time": "2-5 days"
+        }
+    ]
+    
+    # Filter by store if specified
+    if store:
+        mock_products = [p for p in mock_products if p["source"] == store]
+    
+    # Filter by category if specified  
+    if category:
+        mock_products = [p for p in mock_products if p["category"] == category]
+    
+    return mock_products[:limit]
+
 # Categories route
 @api_router.get("/categories")
 async def get_categories():

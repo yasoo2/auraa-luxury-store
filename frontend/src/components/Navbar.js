@@ -46,25 +46,25 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className={`hidden md:flex items-center ${isRTL ? 'space-x-reverse space-x-8' : 'space-x-8'}`}>
             <Link 
               to="/" 
               className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
             >
-              الرئيسية
+              {t('home')}
             </Link>
             <Link 
               to="/products" 
               className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
             >
-              المنتجات
+              {t('products')}
             </Link>
             <div className="relative">
               <Link 
                 to="/products?category=necklaces" 
                 className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
               >
-                قلادات
+                {t('necklaces')}
               </Link>
             </div>
             <div className="relative">
@@ -72,7 +72,7 @@ const Navbar = () => {
                 to="/products?category=earrings" 
                 className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
               >
-                أقراط
+                {t('earrings')}
               </Link>
             </div>
             <div className="relative">
@@ -80,7 +80,7 @@ const Navbar = () => {
                 to="/products?category=rings" 
                 className="text-gray-700 hover:text-amber-600 transition-colors duration-200 font-medium"
               >
-                خواتم
+                {t('rings')}
               </Link>
             </div>
           </div>

@@ -136,8 +136,8 @@ const HomePage = () => {
               <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="h-8 w-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-900">ضمان الجودة</h3>
-              <p className="text-gray-600">ضمان شامل على جميع منتجاتنا لمدة سنة كاملة</p>
+              <h3 className="text-xl font-bold mb-2 text-gray-900">{t('quality_guarantee')}</h3>
+              <p className="text-gray-600">{t('quality_guarantee_desc')}</p>
             </div>
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">

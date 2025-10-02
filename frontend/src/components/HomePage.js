@@ -45,34 +45,7 @@ const HomePage = () => {
       {/* Fashion Models Carousel - Full Width */}
       <FashionModelsCarousel />
 
-      {/* Features Section moved to bottom - will render later */}
-      {/* <section className="py-16 bg-white"> */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Truck className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-900">{t('free_shipping')}</h3>
-              <p className="text-gray-600">{t('free_shipping_desc')}</p>
-            </div>
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-900">{t('quality_guarantee')}</h3>
-              <p className="text-gray-600">{t('quality_guarantee_desc')}</p>
-            </div>
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-900">{t('support_247')}</h3>
-              <p className="text-gray-600">{t('support_247_desc')}</p>
-            </div>
-          </div>
-        </div>
-      {/* </section> */}
+      {/* Features Section moved to bottom - removed here */}
 
       {/* Featured Products */}
       <section className="py-16 bg-white">

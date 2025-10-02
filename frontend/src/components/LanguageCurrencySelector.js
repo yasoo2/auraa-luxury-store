@@ -48,7 +48,9 @@ const LanguageCurrencySelector = () => {
                   switchLanguage(lang.code);
                   setShowLanguages(false);
                 }}
-                className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2 text-sm first:rounded-t-lg last:rounded-b-lg ${\n                  language === lang.code ? 'bg-amber-50 text-amber-700' : 'text-gray-700'\n                }`}
+                className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2 text-sm first:rounded-t-lg last:rounded-b-lg ${
+                  language === lang.code ? 'bg-amber-50 text-amber-700' : 'text-gray-700'
+                }`}
               >
                 <span>{lang.flag}</span>
                 <span>{lang.name}</span>

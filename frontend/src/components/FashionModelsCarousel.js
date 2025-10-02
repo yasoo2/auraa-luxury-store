@@ -84,7 +84,7 @@ const FashionModelsCarousel = () => {
 
   return (
     <div 
-      className="relative w-full h-[70vh] overflow-hidden bg-black"
+      className="relative w-full h-[50vh] sm:h-[60vh] lg:h-[70vh] overflow-hidden bg-black"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

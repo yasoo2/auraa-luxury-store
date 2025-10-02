@@ -50,6 +50,9 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen">
+      {/* Fashion Models Carousel - Full Width */}
+      <FashionModelsCarousel />
+
       {/* Hero Section */}
       <section className="hero-bg min-h-screen flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-black/40 to-transparent"></div>

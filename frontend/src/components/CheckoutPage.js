@@ -225,7 +225,7 @@ const CheckoutPage = () => {
                     />
                   </div>
                   <div>
-                    <Select value={formData.country} onValueChange={(value) => setFormData({...formData, country: value})}>
+                    <Select value={formData.country || "SA"} onValueChange={(value) => setFormData({...formData, country: value})}>
                       <SelectTrigger data-testid="shipping-country">
                         <SelectValue placeholder="اختر الدولة" />
                       </SelectTrigger>

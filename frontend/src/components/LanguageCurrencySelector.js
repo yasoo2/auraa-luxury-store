@@ -36,7 +36,7 @@ const LanguageCurrencySelector = () => {
         >
           <Globe className="h-4 w-4" />
           <span className="text-sm">{currentLanguage?.flag}</span>
-          <ChevronDown className=\"h-3 w-3\" />
+          <ChevronDown className="h-3 w-3" />
         </Button>
         
         {showLanguages && (
@@ -68,7 +68,7 @@ const LanguageCurrencySelector = () => {
         >
           <DollarSign className=\"h-4 w-4\" />
           <span className=\"text-sm font-medium\">{currentCurrency?.symbol}</span>
-          <ChevronDown className=\"h-3 w-3\" />
+          <ChevronDown className="h-3 w-3" />
         </Button>
         
         {showCurrencies && (

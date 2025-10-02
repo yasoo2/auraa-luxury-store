@@ -54,7 +54,7 @@ const HomePage = () => {
       <FashionModelsCarousel />
 
       {/* Hero Section */}
-      <section className="hero-bg min-h-screen flex items-center justify-center relative overflow-hidden">
+      <section className="hero-bg min-h-[80vh] flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-black/40 to-transparent"></div>
         <div className="relative z-10 text-center text-white px-4">
           <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight" data-testid="hero-title">

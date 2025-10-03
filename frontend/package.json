@@ -22,10 +22,5 @@
   "devDependencies": {
     "eslint": "8.57.0",
     "eslint-config-react-app": "7.0.1"
-  },
-  "overrides": {
-    "date-fns": "2.30.0",
-    "ajv": "6.12.6",
-    "ajv-keywords": "3.5.2"
   }
 }

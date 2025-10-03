@@ -9,14 +9,19 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "date-fns": "2.29.3",
-    "react-day-picker": "8.10.1",
     "next": "13.5.6",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "date-fns": "2.30.0",
+    "react-day-picker": "8.10.1",
+    "ajv": "8.17.1",
+    "ajv-keywords": "5.1.0"
   },
   "devDependencies": {
     "eslint": "8.56.0",
     "eslint-config-next": "13.5.6"
+  },
+  "overrides": {
+    "date-fns": "2.30.0"
   }
 }

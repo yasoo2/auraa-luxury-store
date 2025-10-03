@@ -14,8 +14,8 @@
     "react-dom": "18.2.0",
     "date-fns": "2.30.0",
     "react-day-picker": "8.10.1",
-    "ajv": "8.17.1",
-    "ajv-keywords": "5.1.0"
+    "ajv": "6.12.6",
+    "ajv-keywords": "3.5.2"
   },
   "devDependencies": {
     "eslint": "8.56.0",
@@ -23,5 +23,8 @@
   },
   "overrides": {
     "date-fns": "2.30.0"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }

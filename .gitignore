@@ -97,3 +97,7 @@ frontend/public/AuraaLuxury_Manual_Install.zip
 *.env.*
 frontend/public/AuraaLuxury_Production_Bundle.zip
 AuraaLuxury_Production_Bundle.zip
+-e 
+# Environment files
+*.env
+*.env.*

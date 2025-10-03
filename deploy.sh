@@ -43,7 +43,7 @@ fi
 APEX="${DOMAIN/www./}"
 
 echo "==> DOMAIN: ${DOMAIN}"
-++++echo "==> APEX:   ${APEX}"
+echo "==> APEX:   ${APEX}"
 
 need_cmd() { command -v "$1" >/dev/null 2>&1; }
 

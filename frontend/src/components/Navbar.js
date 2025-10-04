@@ -71,8 +71,10 @@ const Navbar = () => {
           {/* Logo (default inline left) */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
             <Link to="/" className="flex flex-col items-start overflow-hidden max-h-16">
-              <span className="font-display text-3xl md:text-4xl font-black logo-aurra-contrast leading-none tracking-tight whitespace-nowrap">Auraa</span>
-              <span className="font-display text-[8px] md:text-[10px] font-thin text-gray-700 tracking-[0.25em] mt-0.5 whitespace-nowrap">LUXURY</span>
+              <div className="font-display font-black carousel-luxury-text leading-none">
+                <span className="block text-3xl md:text-4xl logo-aurra-contrast leading-none whitespace-nowrap">Auraa</span>
+                <span className="block text-[8px] md:text-[10px] font-thin text-gray-600 tracking-[0.25em] mt-0.5 whitespace-nowrap">LUXURY</span>
+              </div>
               <span className="block text-[9px] md:text-[11px] text-gray-600 tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
             </Link>
           )}

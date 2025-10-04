@@ -68,7 +68,7 @@ const HomePage = () => {
                     <picture>
                       <source srcSet={`${p.images?.[0]}?format=avif`} type="image/avif" />
                       <source srcSet={`${p.images?.[0]}?format=webp`} type="image/webp" />
-                      <img src={p.images?.[0]} alt={p.name} className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" style={{ aspectRatio: '4 / 3' }} />
+                      <img src={p.images?.[0]} alt={p.name} className="w-full h-64 img-product-card group-hover:scale-110 transition-transform duration-500" style={{ aspectRatio: '4 / 3' }} />
                     </picture>
                   </Link>
                   <div className="p-6">

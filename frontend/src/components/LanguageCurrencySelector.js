@@ -39,8 +39,8 @@ const LanguageCurrencySelector = () => {
         </Button>
         
         {showLanguages && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[120px]">
-            {languages.map((lang) => (
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px] max-h-[300px] overflow-y-auto">
+            {languagesList.map((lang) => (
               <button
                 key={lang.code}
                 onClick={() => {

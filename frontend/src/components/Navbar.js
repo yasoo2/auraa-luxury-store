@@ -70,10 +70,12 @@ const Navbar = () => {
         <div className="relative flex justify-between items-center h-16" style={{ direction: 'ltr' }}>
           {/* Logo (default inline left) */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
-            <Link to="/" className={`flex items-end space-x-2`}>
-              <span className="font-display text-4xl md:text-5xl font-black logo-aurra-contrast leading-none tracking-tight">Auraa</span>
-              <span className="font-display text-[2px] md:text-[3px] font-normal text-gray-600 tracking-[0.15em]">LUXURY</span>
-              <span className="block text-[9px] md:text-[11px] text-gray-600 tracking-[0.45em] ml-2 border-t border-black/20 pt-0.5 uppercase">ACCESSORIES</span>
+            <Link to="/" className={`flex flex-col items-start`}>
+              <div className="flex items-end space-x-2">
+                <span className="font-display text-4xl md:text-5xl font-black logo-aurra-contrast leading-none tracking-tight">Auraa</span>
+                <span className="font-display text-[2px] md:text-[3px] font-normal text-gray-600 tracking-[0.15em]">LUXURY</span>
+              </div>
+              <span className="block text-[9px] md:text-[11px] text-gray-600 tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase">ACCESSORIES</span>
             </Link>
           )}
 

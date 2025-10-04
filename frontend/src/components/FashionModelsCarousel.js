@@ -46,9 +46,9 @@ const FashionModelsCarousel = () => {
     },
     {
       id: 5,
-      url: 'https://images.pexels.com/photos/34132256/pexels-photo-34132256.jpeg',
-      alt_ar: 'عارضة بفستان أحمر تحمل أكسسوارات',
-      alt_en: 'Model in red holding accessories',
+      url: 'https://images.pexels.com/photos/34132253/pexels-photo-34132253.jpeg?w=1920&cs=srgb&dl=pexels-photo-34132253.jpeg&fm=jpg',
+      alt_ar: 'عارضة بحضور قوي مع إكسسوارات فاخرة',
+      alt_en: 'Model with bold presence and luxury accessories',
       caption_ar: 'حضور لافت',
       caption_en: 'Bold Presence'
     },

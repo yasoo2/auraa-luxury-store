@@ -126,7 +126,7 @@ const ProductDetailPage = () => {
               <picture>
                 <source srcSet={`${product.images[selectedImage]}?format=avif`} type="image/avif" />
                 <source srcSet={`${product.images[selectedImage]}?format=webp`} type="image/webp" />
-                <img src={product.images[selectedImage]} alt={product.name} className="w-full h-96 lg:h-[500px] object-cover" data-testid="product-main-image" style={{ aspectRatio: '4 / 3' }} />
+                <img src={product.images[selectedImage]} alt={product.name} className="w-full h-96 lg:h-[500px] img-product-card" data-testid="product-main-image" style={{ aspectRatio: '4 / 3' }} />
               </picture>
             </Card>
             {product.images.length > 1 && (

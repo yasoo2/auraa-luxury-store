@@ -14,9 +14,9 @@ const FashionModelsCarousel = () => {
     // New curated images
     {
       id: 1,
-      url: 'https://images.unsplash.com/photo-1624708530650-15863e927ed4?w=1920&q=85',
-      alt_ar: 'عارضة تحمل مجوهرات بشكل فاخر',
-      alt_en: 'Model holding luxury jewelry',
+      url: 'https://images.unsplash.com/photo-1647780954399-a220fd047916?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5JTIwbW9kZWx8ZW58MHx8fHwxNzU5NTQxNTQ4fDA&ixlib=rb-4.1.0&q=85&w=1920',
+      alt_ar: 'عارضة بأقراط أنيقة بأسلوب تحريري فاخر',
+      alt_en: 'Model with elegant earrings in luxury editorial style',
       caption_ar: 'مجوهرات فاخرة',
       caption_en: 'Luxury Jewelry'
     },

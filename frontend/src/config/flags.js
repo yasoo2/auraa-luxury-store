@@ -11,6 +11,9 @@ export const FLAGS = {
   IMG_OPT: readBool('FEATURE_IMG_OPT'),
   LOGO_BOTTOM_RIGHT: readBool('FEATURE_LOGO_BOTTOM_RIGHT'),
   ANALYTICS: readBool('FEATURE_ANALYTICS'),
+  MULTI_LANG_EXTENDED: readBool('FEATURE_MULTI_LANG_EXTENDED') || true, // Default ON
+  GCC_CURRENCIES: readBool('FEATURE_GCC_CURRENCIES') || true, // Default ON
+  IMG_NO_CROP: readBool('FEATURE_IMG_NO_CROP') || true, // Default ON
 };
 
 export default FLAGS;

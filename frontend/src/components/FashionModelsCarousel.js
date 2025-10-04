@@ -13,45 +13,51 @@ const FashionModelsCarousel = () => {
   const modelImages = [
     {
       id: 1,
-      url: 'https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?w=1920&q=85',
-      alt: 'Elegant Fashion Model 1',
-      caption: isRTL ? 'أناقة استثنائية' : 'Exceptional Elegance'
+      url: 'https://images.unsplash.com/photo-1624708530650-15863e927ed4?w=1920&q=85',
+      alt_ar: 'عارضة تحمل مجوهرات بشكل فاخر',
+      alt_en: 'Model holding luxury jewelry',
+      caption_ar: 'مجوهرات فاخرة',
+      caption_en: 'Luxury Jewelry'
     },
     {
       id: 2,
-      url: 'https://images.unsplash.com/photo-1562572159-4efc207f5aff?w=1920&q=85',
-      alt: 'Stylish Fashion Model 2',
-      caption: isRTL ? 'أسلوب فاخر' : 'Luxury Style'
+      url: 'https://images.unsplash.com/photo-1758716021044-37738384c00e?w=1920&q=85',
+      alt_ar: 'عارضة بقطعة مجوهرات أنيقة',
+      alt_en: 'Model with elegant jewelry',
+      caption_ar: 'أناقة لافتة',
+      caption_en: 'Striking Elegance'
     },
     {
       id: 3,
-      url: 'https://images.unsplash.com/photo-1611042553484-d61f84d22784?w=1920&q=85',
-      alt: 'Sophisticated Model 3',
-      caption: isRTL ? 'رقي وجمال' : 'Sophistication & Beauty'
+      url: 'https://images.unsplash.com/photo-1614353921776-5141cd008973?w=1920&q=85',
+      alt_ar: 'تركيز على الخواتم والأكسسوارات',
+      alt_en: 'Focus on rings and accessories',
+      caption_ar: 'تفاصيل مبهرة',
+      caption_en: 'Exquisite Details'
     },
     {
       id: 4,
-      url: 'https://images.unsplash.com/photo-1616837874254-8d5aaa63e273?w=1920&q=85',
-      alt: 'Luxury Jewelry Model 4',
-      caption: isRTL ? 'مجوهرات فاخرة' : 'Luxury Jewelry'
+      url: 'https://images.unsplash.com/photo-1759090987847-7d2b25beb2f0?w=1920&q=85',
+      alt_ar: 'عارضة بفستان أسود ومجوهرات',
+      alt_en: 'Model in black dress with jewelry',
+      caption_ar: 'إطلالة فاخرة',
+      caption_en: 'Opulent Look'
     },
     {
       id: 5,
-      url: 'https://images.unsplash.com/photo-1727784892059-c85b4d9f763c?w=1920&q=85',
-      alt: 'Golden Accessories Model 5',
-      caption: isRTL ? 'اكسسوارات ذهبية' : 'Golden Accessories'
+      url: 'https://images.pexels.com/photos/34132256/pexels-photo-34132256.jpeg',
+      alt_ar: 'عارضة بفستان أحمر تحمل أكسسوارات',
+      alt_en: 'Model in red holding accessories',
+      caption_ar: 'حضور لافت',
+      caption_en: 'Bold Presence'
     },
     {
       id: 6,
-      url: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?w=1920&cs=srgb&dl=pexels-photo-1926769.jpeg&fm=jpg',
-      alt: 'Professional Model 6',
-      caption: isRTL ? 'إطلالة احترافية' : 'Professional Look'
-    },
-    {
-      id: 7,
-      url: 'https://images.pexels.com/photos/2584269/pexels-photo-2584269.jpeg?w=1920&cs=srgb&dl=pexels-photo-2584269.jpeg&fm=jpg',
-      alt: 'Elegant Style Model 7',
-      caption: isRTL ? 'أناقة مميزة' : 'Distinguished Elegance'
+      url: 'https://images.unsplash.com/photo-1743127187686-e6145b08658b?w=1920&q=85',
+      alt_ar: 'سوار فاخر بأحجار زرقاء',
+      alt_en: 'Luxury bracelet with blue gemstones',
+      caption_ar: 'سوار فاخر',
+      caption_en: 'Luxury Bracelet'
     }
   ];
 

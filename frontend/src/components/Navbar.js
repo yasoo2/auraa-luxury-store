@@ -67,7 +67,7 @@ const Navbar = () => {
   return (
     <nav className="nav-glass sticky top-0" style={{ zIndex: 200 }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative flex justify-between items-center h-16" style={{ direction: 'ltr' }}>
+        <div className="relative flex justify-between items-center min-h-20 py-2" style={{ direction: 'ltr' }}>
           {/* Logo (default inline left) */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
             <Link to="/" className="flex flex-col items-start py-2">

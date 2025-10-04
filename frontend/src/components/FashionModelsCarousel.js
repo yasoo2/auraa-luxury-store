@@ -122,7 +122,7 @@ const FashionModelsCarousel = () => {
             {/* Image Caption (no brand text) */}
             <div className="absolute bottom-4 sm:bottom-8 left-4 sm:left-8 text-white z-20 max-w-xs sm:max-w-md">
               <h3 className="text-xl sm:text-2xl lg:text-4xl font-display font-bold mb-2 drop-shadow-lg">
-                {image.caption}
+                {isRTL ? image.caption_ar : image.caption_en}
               </h3>
             </div>
           </div>

@@ -2,27 +2,27 @@ import React, { useState } from 'react';
 import { Globe, DollarSign, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';
+import FLAGS from '../config/flags';
 
 const LanguageCurrencySelector = () => {
-  const { language, currency, switchLanguage, switchCurrency, t } = useLanguage();
+  const { language, currency, switchLanguage, switchCurrency, languages, currencies } = useLanguage();
   const [showLanguages, setShowLanguages] = useState(false);
   const [showCurrencies, setShowCurrencies] = useState(false);
 
-  const languages = [
-    { code: 'ar', name: 'العربية', flag: '🇸🇦' },
-    { code: 'en', name: 'English', flag: '🇺🇸' }
-  ];
+  // Convert languages object to array
+  const languagesList = Object.entries(languages).map(([code, info]) => ({
+    code,
+    ...info
+  }));
 
-  const currencies = [
-    { code: 'SAR', name: t('sar'), symbol: 'ر.س' },
-    { code: 'USD', name: t('usd'), symbol: '$' },
-    { code: 'EUR', name: t('eur'), symbol: '€' },
-    { code: 'GBP', name: t('gbp'), symbol: '£' },
-    { code: 'AED', name: t('aed'), symbol: 'د.إ' }
-  ];
+  // Convert currencies object to array
+  const currenciesList = Object.entries(currencies).map(([code, info]) => ({
+    code,
+    ...info
+  }));
 
-  const currentLanguage = languages.find(lang => lang.code === language);
-  const currentCurrency = currencies.find(curr => curr.code === currency);
+  const currentLanguage = languagesList.find(lang => lang.code === language);
+  const currentCurrency = currenciesList.find(curr => curr.code === currency);
 
   return (
     <div className="flex items-center space-x-2">
@@ -39,8 +39,8 @@ const LanguageCurrencySelector = () => {
         </Button>
         
         {showLanguages && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[120px]">
-            {languages.map((lang) => (
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px] max-h-[300px] overflow-y-auto">
+            {languagesList.map((lang) => (
               <button
                 key={lang.code}
                 onClick={() => {
@@ -72,8 +72,8 @@ const LanguageCurrencySelector = () => {
         </Button>
         
         {showCurrencies && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px]">
-            {currencies.map((curr) => (
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+            {currenciesList.map((curr) => (
               <button
                 key={curr.code}
                 onClick={() => {
@@ -84,7 +84,7 @@ const LanguageCurrencySelector = () => {
                   currency === curr.code ? 'bg-amber-50 text-amber-700' : 'text-gray-700'
                 }`}
               >
-                <span>{curr.name}</span>
+                <span>{language === 'ar' ? curr.name_ar : curr.name_en}</span>
                 <span className="font-medium">{curr.symbol}</span>
               </button>
             ))}

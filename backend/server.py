@@ -498,6 +498,11 @@ async def upsert_integration_settings(payload: IntegrationSettingsUpdate, curren
 # Initialize admin user and sample data
 @api_router.post("/init-data")
 async def initialize_sample_data():
+    return {"message": "Disabled seeding in production"}
+
+# Disabled legacy initializer kept for reference below
+# @api_router.post("/init-data")
+# async def initialize_sample_data():
     # Create admin user if doesn't exist
     admin_user = await db.users.find_one({"email": "admin@auraa.com"})
     if not admin_user:

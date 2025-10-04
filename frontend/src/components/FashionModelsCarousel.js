@@ -11,47 +11,111 @@ const FashionModelsCarousel = () => {
 
   // High-quality fashion model images
   const modelImages = [
+    // New curated images
     {
       id: 1,
-      url: 'https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?w=1920&q=85',
-      alt: 'Elegant Fashion Model 1',
-      caption: isRTL ? 'أناقة استثنائية' : 'Exceptional Elegance'
+      url: 'https://images.unsplash.com/photo-1647780954399-a220fd047916?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5JTIwbW9kZWx8ZW58MHx8fHwxNzU5NTQxNTQ4fDA&ixlib=rb-4.1.0&q=85&w=1920',
+      alt_ar: 'عارضة بأقراط أنيقة بأسلوب تحريري فاخر',
+      alt_en: 'Model with elegant earrings in luxury editorial style',
+      caption_ar: 'مجوهرات فاخرة',
+      caption_en: 'Luxury Jewelry'
     },
     {
       id: 2,
-      url: 'https://images.unsplash.com/photo-1562572159-4efc207f5aff?w=1920&q=85',
-      alt: 'Stylish Fashion Model 2',
-      caption: isRTL ? 'أسلوب فاخر' : 'Luxury Style'
+      url: 'https://images.unsplash.com/photo-1758716021044-37738384c00e?w=1920&q=85',
+      alt_ar: 'عارضة بقطعة مجوهرات أنيقة',
+      alt_en: 'Model with elegant jewelry',
+      caption_ar: 'أناقة لافتة',
+      caption_en: 'Striking Elegance'
     },
     {
       id: 3,
-      url: 'https://images.unsplash.com/photo-1611042553484-d61f84d22784?w=1920&q=85',
-      alt: 'Sophisticated Model 3',
-      caption: isRTL ? 'رقي وجمال' : 'Sophistication & Beauty'
+      url: 'https://images.unsplash.com/photo-1614353921776-5141cd008973?w=1920&q=85',
+      alt_ar: 'تركيز على الخواتم والأكسسوارات',
+      alt_en: 'Focus on rings and accessories',
+      caption_ar: 'تفاصيل مبهرة',
+      caption_en: 'Exquisite Details'
     },
     {
       id: 4,
-      url: 'https://images.unsplash.com/photo-1616837874254-8d5aaa63e273?w=1920&q=85',
-      alt: 'Luxury Jewelry Model 4',
-      caption: isRTL ? 'مجوهرات فاخرة' : 'Luxury Jewelry'
+      url: 'https://images.unsplash.com/photo-1759090987847-7d2b25beb2f0?w=1920&q=85',
+      alt_ar: 'عارضة بفستان أسود ومجوهرات',
+      alt_en: 'Model in black dress with jewelry',
+      caption_ar: 'إطلالة فاخرة',
+      caption_en: 'Opulent Look'
     },
     {
       id: 5,
-      url: 'https://images.unsplash.com/photo-1727784892059-c85b4d9f763c?w=1920&q=85',
-      alt: 'Golden Accessories Model 5',
-      caption: isRTL ? 'اكسسوارات ذهبية' : 'Golden Accessories'
+      url: 'https://images.pexels.com/photos/34132253/pexels-photo-34132253.jpeg?w=1920&cs=srgb&dl=pexels-photo-34132253.jpeg&fm=jpg',
+      alt_ar: 'عارضة بحضور قوي مع إكسسوارات فاخرة',
+      alt_en: 'Model with bold presence and luxury accessories',
+      caption_ar: 'حضور لافت',
+      caption_en: 'Bold Presence'
     },
     {
       id: 6,
-      url: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?w=1920&cs=srgb&dl=pexels-photo-1926769.jpeg&fm=jpg',
-      alt: 'Professional Model 6',
-      caption: isRTL ? 'إطلالة احترافية' : 'Professional Look'
+      url: 'https://images.unsplash.com/photo-1743127187686-e6145b08658b?w=1920&q=85',
+      alt_ar: 'سوار فاخر بأحجار زرقاء',
+      alt_en: 'Luxury bracelet with blue gemstones',
+      caption_ar: 'سوار فاخر',
+      caption_en: 'Luxury Bracelet'
     },
+    // Previous images kept (mapped to localized fields)
     {
       id: 7,
+      url: 'https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?w=1920&q=85',
+      alt_ar: 'عارضة بأناقة استثنائية',
+      alt_en: 'Elegant Fashion Model 1',
+      caption_ar: 'أناقة استثنائية',
+      caption_en: 'Exceptional Elegance'
+    },
+    {
+      id: 8,
+      url: 'https://images.unsplash.com/photo-1562572159-4efc207f5aff?w=1920&q=85',
+      alt_ar: 'عارضة بإطلالة فاخرة',
+      alt_en: 'Stylish Fashion Model 2',
+      caption_ar: 'أسلوب فاخر',
+      caption_en: 'Luxury Style'
+    },
+    {
+      id: 9,
+      url: 'https://images.unsplash.com/photo-1611042553484-d61f84d22784?w=1920&q=85',
+      alt_ar: 'عارضة برقي وجمال',
+      alt_en: 'Sophisticated Model 3',
+      caption_ar: 'رقي وجمال',
+      caption_en: 'Sophistication & Beauty'
+    },
+    {
+      id: 10,
+      url: 'https://images.unsplash.com/photo-1616837874254-8d5aaa63e273?w=1920&q=85',
+      alt_ar: 'عارضة مع مجوهرات فاخرة',
+      alt_en: 'Luxury Jewelry Model 4',
+      caption_ar: 'مجوهرات فاخرة',
+      caption_en: 'Luxury Jewelry'
+    },
+    {
+      id: 11,
+      url: 'https://images.unsplash.com/photo-1727784892059-c85b4d9f763c?w=1920&q=85',
+      alt_ar: 'أكسسوارات ذهبية',
+      alt_en: 'Golden Accessories Model 5',
+      caption_ar: 'اكسسوارات ذهبية',
+      caption_en: 'Golden Accessories'
+    },
+    {
+      id: 12,
+      url: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?w=1920&cs=srgb&dl=pexels-photo-1926769.jpeg&fm=jpg',
+      alt_ar: 'إطلالة احترافية',
+      alt_en: 'Professional Model 6',
+      caption_ar: 'إطلالة احترافية',
+      caption_en: 'Professional Look'
+    },
+    {
+      id: 13,
       url: 'https://images.pexels.com/photos/2584269/pexels-photo-2584269.jpeg?w=1920&cs=srgb&dl=pexels-photo-2584269.jpeg&fm=jpg',
-      alt: 'Elegant Style Model 7',
-      caption: isRTL ? 'أناقة مميزة' : 'Distinguished Elegance'
+      alt_ar: 'أناقة مميزة',
+      alt_en: 'Elegant Style Model 7',
+      caption_ar: 'أناقة مميزة',
+      caption_en: 'Distinguished Elegance'
     }
   ];
 
@@ -84,7 +148,8 @@ const FashionModelsCarousel = () => {
 
   return (
     <div 
-      className="relative w-full h-[50vh] sm:h-[60vh] lg:h-[70vh] overflow-hidden bg-black"
+      className="relative w-screen h-[50vh] sm:h-[60vh] lg:h-[70vh] overflow-hidden bg-black"
+      style={{ marginLeft: '0', marginRight: '0', maxWidth: '100vw' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -99,22 +164,25 @@ const FashionModelsCarousel = () => {
                 : 'opacity-0 scale-105'
             }`}
           >
-            <img
-              src={image.url}
-              alt={image.alt}
-              className="w-full h-full object-cover object-center"
-            />
+            <picture>
+              <source srcSet={`${image.url}&format=avif`} type="image/avif" />
+              <source srcSet={`${image.url}&format=webp`} type="image/webp" />
+              <img
+                src={image.url}
+                alt={isRTL ? image.alt_ar : image.alt_en}
+                className="w-full h-full object-cover object-center"
+                loading={index === currentSlide ? 'eager' : 'lazy'}
+                fetchpriority={index === currentSlide ? 'high' : 'auto'}
+              />
+            </picture>
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/40"></div>
             
-            {/* Image Caption */}
+            {/* Image Caption (no brand text) */}
             <div className="absolute bottom-4 sm:bottom-8 left-4 sm:left-8 text-white z-20 max-w-xs sm:max-w-md">
-              <h3 className="text-xl sm:text-2xl lg:text-4xl font-display font-bold mb-2 carousel-luxury-text drop-shadow-lg">
-                {image.caption}
+              <h3 className="text-xl sm:text-2xl lg:text-4xl font-display font-bold mb-2 drop-shadow-lg">
+                {isRTL ? image.caption_ar : image.caption_en}
               </h3>
-              <p className="text-sm sm:text-lg opacity-90">
-                {isRTL ? 'مجموعة Auraa Luxury الفاخرة' : 'Auraa Luxury Premium Collection'}
-              </p>
             </div>
           </div>
         ))}
@@ -171,20 +239,8 @@ const FashionModelsCarousel = () => {
         />
       </div>
 
-      {/* Luxury Brand Overlay */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-20 pointer-events-none px-4">
-        <div className="bg-black/30 backdrop-blur-sm rounded-2xl p-4 sm:p-6 lg:p-8 border border-white/20 max-w-xs sm:max-w-md lg:max-w-lg">
-          <div className="flex flex-col items-center">
-            <div className="font-display font-black carousel-luxury-text leading-none">
-              <span className="block text-4xl sm:text-6xl lg:text-8xl logo-aurra-contrast leading-none">Auraa</span>
-              <span className="block text-[8px] sm:text-[10px] lg:text-[12px] text-gray-200 tracking-[0.25em] mt-1">LUXURY</span>
-            </div>
-            <p className="text-white/90 text-xs sm:text-base lg:text-lg font-light tracking-wider mt-2">
-              {isRTL ? 'اكسسوارات فاخرة' : 'ACCESSORIES'}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Brand Overlay removed per request */}
+
 
       {/* Animated Background Elements */}
       <div className="absolute inset-0 pointer-events-none">

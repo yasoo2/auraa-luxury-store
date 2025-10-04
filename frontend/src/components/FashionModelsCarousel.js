@@ -105,11 +105,17 @@ const FashionModelsCarousel = () => {
                 : 'opacity-0 scale-105'
             }`}
           >
-            <img
-              src={image.url}
-              alt={image.alt}
-              className="w-full h-full object-cover object-center"
-            />
+            <picture>
+              <source srcSet={`${image.url}&format=avif`} type="image/avif" />
+              <source srcSet={`${image.url}&format=webp`} type="image/webp" />
+              <img
+                src={image.url}
+                alt={isRTL ? image.alt_ar : image.alt_en}
+                className="w-full h-full object-cover object-center"
+                loading={index === currentSlide ? 'eager' : 'lazy'}
+                fetchpriority={index === currentSlide ? 'high' : 'auto'}
+              />
+            </picture>
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/40"></div>
             

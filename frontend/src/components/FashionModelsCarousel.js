@@ -169,7 +169,7 @@ const FashionModelsCarousel = () => {
               <img
                 src={image.url}
                 alt={isRTL ? image.alt_ar : image.alt_en}
-                className="w-full h-full img-carousel object-center"
+                className="w-full h-full object-cover object-center"
                 loading={index === currentSlide ? 'eager' : 'lazy'}
                 fetchpriority={index === currentSlide ? 'high' : 'auto'}
               />

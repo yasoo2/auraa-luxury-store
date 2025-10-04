@@ -574,3 +574,31 @@ body {
     background-position: -200% 0;
   }
 }
+
+/* Responsive Image Utilities - No Hard Crop */
+.img-responsive {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  background: #f9fafb;
+}
+
+/* Mobile: contain to show full accessory */
+@media (max-width: 768px) {
+  .img-product-card {
+    object-fit: contain !important;
+  }
+}
+
+/* Desktop: can use cover for better layout */
+@media (min-width: 769px) {
+  .img-product-card {
+    object-fit: cover;
+  }
+}
+
+/* Carousel images - always show full image */
+.img-carousel {
+  object-fit: contain;
+  object-position: center;
+}

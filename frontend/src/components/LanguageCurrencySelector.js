@@ -72,8 +72,8 @@ const LanguageCurrencySelector = () => {
         </Button>
         
         {showCurrencies && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px]">
-            {currencies.map((curr) => (
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+            {currenciesList.map((curr) => (
               <button
                 key={curr.code}
                 onClick={() => {
@@ -84,7 +84,7 @@ const LanguageCurrencySelector = () => {
                   currency === curr.code ? 'bg-amber-50 text-amber-700' : 'text-gray-700'
                 }`}
               >
-                <span>{curr.name}</span>
+                <span>{language === 'ar' ? curr.name_ar : curr.name_en}</span>
                 <span className="font-medium">{curr.symbol}</span>
               </button>
             ))}

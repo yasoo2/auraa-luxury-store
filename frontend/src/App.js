@@ -153,20 +153,7 @@ const AdminRoute = ({ children }) => {
   return user?.is_admin ? children : <Navigate to="/" />;
 };
 
-// Initialize sample data
-const initializeSampleData = async () => {
-  try {
-    await axios.post(`${API}/init-data`);
-  } catch (error) {
-    console.error('Failed to initialize sample data:', error);
-  }
-};
-
 function App() {
-  useEffect(() => {
-    initializeSampleData();
-  }, []);
-
   return (
     <LanguageProvider>
       <AuthProvider>

@@ -7,14 +7,24 @@ import FashionModelsCarousel from './FashionModelsCarousel';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';
+import { setSEO } from '../utils/seo';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const HomePage = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setSEO({
+      title: language === 'ar' ? 'Auraa Luxury | متجر الإكسسوارات الفاخرة' : 'Auraa Luxury | Luxury Accessories Store',
+      description: language === 'ar' ? 'تسوّق أفضل الإكسسوارات الفاخرة بجودة عالية وشحن سريع.' : 'Shop premium luxury accessories with top quality and fast shipping.',
+      lang: language,
+      canonical: 'https://www.auraaluxury.com/',
+    });
+  }, [language]);
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -55,7 +65,11 @@ const HomePage = () => {
               {products.map((p) => (
                 <Card key={p.id} className="product-card overflow-hidden group">
                   <Link to={`/product/${p.id}`}>
-                    <img src={p.images?.[0]} alt={p.name} className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <picture>
+                      <source srcSet={`${p.images?.[0]}?format=avif`} type="image/avif" />
+                      <source srcSet={`${p.images?.[0]}?format=webp`} type="image/webp" />
+                      <img src={p.images?.[0]} alt={p.name} className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" style={{ aspectRatio: '4 / 3' }} />
+                    </picture>
                   </Link>
                   <div className="p-6">
                     <Link to={`/product/${p.id}`}>

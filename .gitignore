@@ -129,3 +129,7 @@ AuraaLuxury_Production_Bundle.zip
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*

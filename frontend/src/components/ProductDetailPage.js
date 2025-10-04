@@ -136,7 +136,7 @@ const ProductDetailPage = () => {
                     <picture>
                       <source srcSet={`${image}?format=avif`} type="image/avif" />
                       <source srcSet={`${image}?format=webp`} type="image/webp" />
-                      <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
+                      <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full img-product-card" />
                     </picture>
                   </button>
                 ))}

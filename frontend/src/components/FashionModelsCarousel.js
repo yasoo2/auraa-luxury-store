@@ -103,9 +103,9 @@ const FashionModelsCarousel = () => {
     },
     {
       id: 12,
-      url: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?w=1920&cs=srgb&dl=pexels-photo-1926769.jpeg&fm=jpg',
-      alt_ar: 'إطلالة احترافية',
-      alt_en: 'Professional Model 6',
+      url: 'https://images.pexels.com/photos/34132253/pexels-photo-34132253.jpeg?w=1920&cs=srgb&fm=jpg',
+      alt_ar: 'عارضة بفستان أحمر وعقد لؤلؤ',
+      alt_en: 'Model in red dress with pearl necklace',
       caption_ar: 'إطلالة احترافية',
       caption_en: 'Professional Look'
     },

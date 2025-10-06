@@ -87,9 +87,9 @@ const FashionModelsCarousel = () => {
     },
     {
       id: 10,
-      url: 'https://images.unsplash.com/photo-1616837874254-8d5aaa63e273?w=1920&q=85',
-      alt_ar: 'عارضة مع مجوهرات فاخرة',
-      alt_en: 'Luxury Jewelry Model 4',
+      url: 'https://images.unsplash.com/photo-1614353921776-5141cd008973?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwzfHxmYXNoaW9uJTIwbW9kZWwlMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTc1MzM4Mnww&ixlib=rb-4.1.0&q=85&w=1920',
+      alt_ar: 'خاتم فضي فاخر بحجر أسود',
+      alt_en: 'Luxury silver ring with black gemstone',
       caption_ar: 'مجوهرات فاخرة',
       caption_en: 'Luxury Jewelry'
     },

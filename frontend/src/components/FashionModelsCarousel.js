@@ -116,6 +116,47 @@ const FashionModelsCarousel = () => {
       alt_en: 'Elegant Style Model 7',
       caption_ar: 'أناقة مميزة',
       caption_en: 'Distinguished Elegance'
+    },
+    // Hijabi women with accessories
+    {
+      id: 14,
+      url: 'https://images.unsplash.com/photo-1758140970703-2dd27a6e0fa4?w=1920&q=85',
+      alt_ar: 'محجبة بحجاب أخضر وإكسسوارات فاخرة',
+      alt_en: 'Hijabi woman in green hijab with luxury accessories',
+      caption_ar: 'أناقة محتشمة',
+      caption_en: 'Modest Elegance'
+    },
+    {
+      id: 15,
+      url: 'https://images.unsplash.com/photo-1635770607507-beb7d7972491?w=1920&q=85',
+      alt_ar: 'خلخال فضي أنيق على القدم',
+      alt_en: 'Elegant silver ankle bracelet',
+      caption_ar: 'خلخال رقيق',
+      caption_en: 'Delicate Anklet'
+    },
+    {
+      id: 16,
+      url: 'https://images.pexels.com/photos/8182320/pexels-photo-8182320.jpeg?w=1920&cs=srgb&fm=jpg',
+      alt_ar: 'زنار ذهبي رقيق على الخصر',
+      alt_en: 'Delicate gold waist chain',
+      caption_ar: 'زنار ذهبي',
+      caption_en: 'Gold Waist Chain'
+    },
+    {
+      id: 17,
+      url: 'https://images.unsplash.com/photo-1758314243385-9af94851a559?w=1920&q=85',
+      alt_ar: 'محجبة بزي تقليدي وإكسسوارات',
+      alt_en: 'Hijabi woman in traditional outfit with accessories',
+      caption_ar: 'تراث وأناقة',
+      caption_en: 'Heritage & Elegance'
+    },
+    {
+      id: 18,
+      url: 'https://images.unsplash.com/photo-1758141247275-3edd55934e4d?w=1920&q=85',
+      alt_ar: 'عروس محجبة بمجوهرات فاخرة',
+      alt_en: 'Bridal hijabi with luxury jewelry',
+      caption_ar: 'عروس فاخرة',
+      caption_en: 'Luxury Bridal'
     }
   ];
 

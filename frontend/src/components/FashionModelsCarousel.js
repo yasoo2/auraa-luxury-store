@@ -63,17 +63,17 @@ const FashionModelsCarousel = () => {
     // Previous images kept (mapped to localized fields)
     {
       id: 7,
-      url: 'https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?w=1920&q=85',
-      alt_ar: 'عارضة بأناقة استثنائية',
-      alt_en: 'Elegant Fashion Model 1',
+      url: 'https://images.unsplash.com/photo-1624708530650-15863e927ed4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxmYXNoaW9uJTIwbW9kZWwlMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTc1MzM4Mnww&ixlib=rb-4.1.0&q=85&w=1920',
+      alt_ar: 'عارضة أزياء بمجوهرات تقليدية فاخرة',
+      alt_en: 'Fashion model with luxury traditional jewelry',
       caption_ar: 'أناقة استثنائية',
       caption_en: 'Exceptional Elegance'
     },
     {
       id: 8,
-      url: 'https://images.unsplash.com/photo-1562572159-4efc207f5aff?w=1920&q=85',
-      alt_ar: 'عارضة بإطلالة فاخرة',
-      alt_en: 'Stylish Fashion Model 2',
+      url: 'https://images.pexels.com/photos/34132256/pexels-photo-34132256.jpeg?w=1920&cs=srgb&fm=jpg',
+      alt_ar: 'عارضة بفستان أحمر وإكسسوارات ذهبية',
+      alt_en: 'Model in red dress with gold accessories',
       caption_ar: 'أسلوب فاخر',
       caption_en: 'Luxury Style'
     },

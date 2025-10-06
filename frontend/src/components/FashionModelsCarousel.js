@@ -154,15 +154,11 @@ const FashionModelsCarousel = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Main Image Container */}
-      <div className="relative w-full h-full">
+      <div className="relative w-full">
         {modelImages.map((image, index) => (
           <div
             key={image.id}
-            className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
-              index === currentSlide 
-                ? 'opacity-100 scale-100' 
-                : 'opacity-0 scale-105'
-            }`}
+            className={`${index === currentSlide ? 'block' : 'hidden'} transition-all duration-1000 ease-in-out`}
           >
             <picture>
               <source srcSet={`${image.url}&format=avif`} type="image/avif" />
@@ -170,7 +166,8 @@ const FashionModelsCarousel = () => {
               <img
                 src={image.url}
                 alt={isRTL ? image.alt_ar : image.alt_en}
-                className="w-full h-full object-contain object-center"
+                className="w-full h-auto object-contain object-center"
+                style={{ maxHeight: '80vh' }}
                 loading={index === currentSlide ? 'eager' : 'lazy'}
                 fetchpriority={index === currentSlide ? 'high' : 'auto'}
               />

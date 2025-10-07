@@ -159,45 +159,54 @@ function App() {
     <LanguageProvider>
       <AuthProvider>
         <BrowserRouter>
-          <div className="App min-h-screen app-bg">
-            <Navbar />
-            <main className="flex-grow">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/products" element={<ProductsPage />} />
-                <Route path="/product/:id" element={<ProductDetailPage />} />
-                {/* <Route path="/external-stores" element={<ExternalStoresPage />} /> */}
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route 
-                  path="/checkout" 
-                  element={
-                    <ProtectedRoute>
-                      <CheckoutPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/profile" 
-                  element={
-                    <ProtectedRoute>
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin/*" 
-                  element={
-                    <AdminRoute>
-                      <AdminDashboard />
-                    </AdminRoute>
-                  } 
-                />
-              </Routes>
-            </main>
-            <Footer />
-            <Toaster />
-          </div>
+          <Routes>
+            {/* Admin Routes (no Navbar/Footer) */}
+            <Route 
+              path="/admin/*" 
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              } 
+            />
+
+            {/* Public Routes (with Navbar/Footer) */}
+            <Route 
+              path="*" 
+              element={
+                <div className="App min-h-screen app-bg">
+                  <Navbar />
+                  <main className="flex-grow">
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/products" element={<ProductsPage />} />
+                      <Route path="/product/:id" element={<ProductDetailPage />} />
+                      <Route path="/cart" element={<CartPage />} />
+                      <Route path="/auth" element={<AuthPage />} />
+                      <Route 
+                        path="/checkout" 
+                        element={
+                          <ProtectedRoute>
+                            <CheckoutPage />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/profile" 
+                        element={
+                          <ProtectedRoute>
+                            <ProfilePage />
+                          </ProtectedRoute>
+                        } 
+                      />
+                    </Routes>
+                  </main>
+                  <Footer />
+                  <Toaster />
+                </div>
+              }
+            />
+          </Routes>
         </BrowserRouter>
       </AuthProvider>
     </LanguageProvider>

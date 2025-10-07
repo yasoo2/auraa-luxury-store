@@ -42,6 +42,16 @@ const AdminDashboard = () => {
       icon: Users
     },
     {
+      name: isRTL ? 'التحليلات' : 'Analytics',
+      path: '/admin/analytics',
+      icon: BarChart
+    },
+    {
+      name: isRTL ? 'التكاملات' : 'Integrations',
+      path: '/admin/integrations',
+      icon: Plug
+    },
+    {
       name: isRTL ? 'الإعدادات' : 'Settings',
       path: '/admin/settings',
       icon: Settings

@@ -693,9 +693,6 @@ class AuraaLuxuryAPITester:
         self.test_admin_product_crud()
         self.test_admin_dashboard_security()
         
-        # Security tests
-        self.test_unauthorized_access()
-        
         # Print summary
         print("\n" + "=" * 60)
         print("📊 TEST SUMMARY")

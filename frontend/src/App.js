@@ -212,9 +212,10 @@ function App() {
             />
           </Routes>
           </BrowserRouter>
-        </AuthProvider>
-      </LanguageProvider>
-    </HelmetProvider>
+            </AuthProvider>
+          </WishlistProvider>
+        </LanguageProvider>
+      </HelmetProvider>
   );
 }
 

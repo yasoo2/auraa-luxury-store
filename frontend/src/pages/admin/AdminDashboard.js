@@ -103,28 +103,8 @@ const AdminDashboard = () => {
           <Routes>
             <Route path="/" element={<Navigate to="/admin/products" replace />} />
             <Route path="/products" element={<ProductsPage />} />
-            <Route
-              path="/orders"
-              element={
-                <div className="text-center py-20">
-                  <ShoppingCart size={64} className="mx-auto text-gray-300 mb-4" />
-                  <h2 className="text-2xl font-bold text-gray-600">
-                    {isRTL ? 'قريباً' : 'Coming Soon'}
-                  </h2>
-                </div>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <div className="text-center py-20">
-                  <Users size={64} className="mx-auto text-gray-300 mb-4" />
-                  <h2 className="text-2xl font-bold text-gray-600">
-                    {isRTL ? 'قريباً' : 'Coming Soon'}
-                  </h2>
-                </div>
-              }
-            />
+            <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/users" element={<UsersPage />} />
           </Routes>
         </main>
       </div>

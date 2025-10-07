@@ -221,3 +221,4 @@ frontend/build/AuraaLuxury_Production_Bundle.zip
 *.env.*
 frontend/node_modules/.cache/default-development/5.pack_
 frontend/node_modules/.cache/default-development/5.pack
+frontend/node_modules/.cache/default-development/7.pack

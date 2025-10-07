@@ -43,9 +43,21 @@ const HomePage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-amber-50 to-gray-100">
-      {/* Hero Carousel */}
-      <FashionModelsCarousel />
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white"  dir={isRTL ? 'rtl' : 'ltr'}>
+      <SEOHead 
+        title={isRTL ? 'أورا لاكشري - إكسسوارات فاخرة' : 'Auraa Luxury - Premium Accessories'}
+        description={isRTL ? 'اكتشف مجموعة أورا لاكشري الفاخرة من الإكسسوارات الذهبية واللؤلؤية. قلادات، أقراط، أساور وساعات بأجود الخامات والتصاميم العصرية.' : 'Discover Auraa Luxury\'s premium collection of gold and pearl accessories. Necklaces, earrings, bracelets and watches crafted with finest materials and contemporary designs.'}
+        keywords={isRTL ? 'أورا لاكشري، إكسسوارات فاخرة، قلادات ذهبية، أقراط لؤلؤ، أساور، ساعات، مجوهرات' : 'Auraa Luxury, premium accessories, gold necklaces, pearl earrings, bracelets, watches, jewelry'}
+        type="website"
+        breadcrumbs={[
+          { name: isRTL ? 'الرئيسية' : 'Home', url: window.location.origin }
+        ]}
+      />
+      
+      {/* Main Hero Section with Carousel */}
+      <section className="relative bg-black"  dir={isRTL ? 'rtl' : 'ltr'}>
+        <FashionModelsCarousel />
+      </section>
 
       {/* Featured Products */}
       <section className="py-12">

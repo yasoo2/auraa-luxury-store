@@ -10,8 +10,21 @@ import {
   DollarSign,
   Image as ImageIcon,
   X,
-  Check
+  Check,
+  Upload,
+  Eye,
+  Filter,
+  Download,
+  Star,
+  AlertCircle,
+  Save,
+  Camera,
+  Loader2,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 
 const ProductsPage = () => {
   const { language, formatPrice } = useLanguage();

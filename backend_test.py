@@ -359,27 +359,69 @@ class AuraaLuxuryAPITester:
         # Restore original token
         self.token = original_token
     
-    def test_unauthorized_access(self):
-        """Test unauthorized access to protected endpoints"""
-        # Temporarily remove token
+    def test_admin_dashboard_security(self):
+        """Test admin dashboard security - all /api/admin/* endpoints require admin authentication"""
+        
+        # Test 1: No authentication token
         original_token = self.token
         self.token = None
         
-        # Try to access cart without authentication
-        success, data, status = self.make_request('GET', '/cart')
-        
+        success, data, status = self.make_request('GET', '/admin/integrations')
         if not success and status in [401, 403]:
-            self.log_test("Unauthorized Cart Access", True, "Properly blocked unauthorized access")
+            self.log_test("Admin Endpoint - No Token", True, f"Properly blocked unauthenticated access (Status: {status})")
         else:
-            self.log_test("Unauthorized Cart Access", False, f"Should have returned 401/403, got {status}")
+            self.log_test("Admin Endpoint - No Token", False, f"Should return 401/403, got {status}")
         
-        # Try to create product without admin access
+        # Test 2: Non-admin user token
+        if original_token:  # Regular user token
+            self.token = original_token
+            success, data, status = self.make_request('GET', '/admin/integrations')
+            if not success and status == 403:
+                self.log_test("Admin Endpoint - Non-Admin User", True, "Properly blocked non-admin access (403)")
+            else:
+                self.log_test("Admin Endpoint - Non-Admin User", False, f"Should return 403, got {status}")
+        
+        # Test 3: Admin user token should work
+        if self.admin_token:
+            self.token = self.admin_token
+            success, data, status = self.make_request('GET', '/admin/integrations')
+            if success:
+                self.log_test("Admin Endpoint - Admin User", True, "Admin user can access admin endpoints")
+            else:
+                self.log_test("Admin Endpoint - Admin User", False, f"Admin access failed: {status}")
+        
+        # Test 4: Product CRUD security (admin-protected endpoints)
+        self.token = None
+        
+        # Test unauthorized product creation
         success, data, status = self.make_request('POST', '/products', {"name": "test"})
-        
         if not success and status in [401, 403]:
-            self.log_test("Unauthorized Product Creation", True, "Properly blocked unauthorized access")
+            self.log_test("Product CREATE - No Auth", True, f"Properly blocked unauthorized product creation (Status: {status})")
         else:
-            self.log_test("Unauthorized Product Creation", False, f"Should have returned 401/403, got {status}")
+            self.log_test("Product CREATE - No Auth", False, f"Should return 401/403, got {status}")
+        
+        # Test unauthorized product update
+        success, data, status = self.make_request('PUT', '/products/test-id', {"name": "test"})
+        if not success and status in [401, 403]:
+            self.log_test("Product UPDATE - No Auth", True, f"Properly blocked unauthorized product update (Status: {status})")
+        else:
+            self.log_test("Product UPDATE - No Auth", False, f"Should return 401/403, got {status}")
+        
+        # Test unauthorized product deletion
+        success, data, status = self.make_request('DELETE', '/products/test-id')
+        if not success and status in [401, 403]:
+            self.log_test("Product DELETE - No Auth", True, f"Properly blocked unauthorized product deletion (Status: {status})")
+        else:
+            self.log_test("Product DELETE - No Auth", False, f"Should return 401/403, got {status}")
+        
+        # Test with non-admin user
+        if original_token:
+            self.token = original_token
+            success, data, status = self.make_request('POST', '/products', {"name": "test"})
+            if not success and status == 403:
+                self.log_test("Product CREATE - Non-Admin", True, "Properly blocked non-admin product creation (403)")
+            else:
+                self.log_test("Product CREATE - Non-Admin", False, f"Should return 403, got {status}")
         
         # Restore token
         self.token = original_token

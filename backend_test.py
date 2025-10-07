@@ -688,8 +688,10 @@ class AuraaLuxuryAPITester:
         self.test_order_creation()
         self.test_get_orders()
         
-        # Admin tests
-        self.test_admin_product_creation()
+        # ADMIN DASHBOARD TESTS (Priority for this review)
+        print("\n🔐 ADMIN DASHBOARD TESTS")
+        self.test_admin_product_crud()
+        self.test_admin_dashboard_security()
         
         # Security tests
         self.test_unauthorized_access()

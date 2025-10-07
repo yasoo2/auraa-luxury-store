@@ -11,12 +11,43 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate Deploy Hook
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "❌ RENDER_DEPLOY_HOOK secret not found!"
+            echo "Please add RENDER_DEPLOY_HOOK to repository secrets."
+            exit 1
+          fi
+          echo "✅ RENDER_DEPLOY_HOOK found"
+
       - name: Trigger Render Deploy Hook
         run: |
-          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
-            echo "🚀 Triggering Render deployment..."
-            curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
-            echo "✅ Deploy hook triggered successfully"
+          echo "🚀 Triggering Render deployment..."
+          
+          # Make the API call with error checking
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}")
+          
+          if [ $HTTP_STATUS -eq 200 ] || [ $HTTP_STATUS -eq 201 ]; then
+            echo "✅ Deploy hook triggered successfully (HTTP $HTTP_STATUS)"
+            echo "🔄 Render deployment started"
           else
-            echo "⚠️  RENDER_DEPLOY_HOOK not set - skipping deploy"
+            echo "❌ Deploy hook failed with HTTP status: $HTTP_STATUS"
+            exit 1
           fi
+
+      - name: Deployment Success Notification
+        if: success()
+        run: |
+          echo "🎉 Backend deployment hook triggered successfully!"
+          echo "🔗 Check deployment status at: https://dashboard.render.com"
+
+      - name: Deployment Failure Notification
+        if: failure()
+        run: |
+          echo "❌ Backend deployment failed!"
+          echo "🔍 Please check:"
+          echo "   - RENDER_DEPLOY_HOOK secret is correct"
+          echo "   - Render service is properly configured"

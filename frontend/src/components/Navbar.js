@@ -5,6 +5,7 @@ import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown } from 
 
 import { useAuth } from '../App';
 import { useLanguage } from '../context/LanguageContext';
+import { useWishlist } from '../context/WishlistContext';
 import LanguageCurrencySelector from './LanguageCurrencySelector';
 import { Button } from './ui/button';
 import { Input } from './ui/input';

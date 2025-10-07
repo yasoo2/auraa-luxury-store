@@ -160,8 +160,9 @@ function App() {
   return (
     <HelmetProvider>
       <LanguageProvider>
-        <AuthProvider>
-          <BrowserRouter>
+        <WishlistProvider>
+          <AuthProvider>
+            <BrowserRouter>
           <Routes>
             {/* Admin Routes (no Navbar/Footer) */}
             <Route 

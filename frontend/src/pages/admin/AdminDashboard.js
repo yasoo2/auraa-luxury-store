@@ -36,6 +36,11 @@ const AdminDashboard = () => {
       name: isRTL ? 'المستخدمون' : 'Users',
       path: '/admin/users',
       icon: Users
+    },
+    {
+      name: isRTL ? 'الإعدادات' : 'Settings',
+      path: '/admin/settings',
+      icon: Settings
     }
   ];
 

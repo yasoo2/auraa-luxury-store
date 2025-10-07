@@ -297,7 +297,30 @@ const ProductsPage = () => {
             )}
           </div>
         </div>
+        
+        {/* Smart Recommendations */}
+        {!loading && products.length > 0 && (
+          <div className="mt-16">
+            <SmartRecommendations 
+              type="personalized"
+              category={filters.category}
+              limit={6}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Product Comparison Modal */}
+      {showComparison && (
+        <ProductComparison
+          initialProducts={comparisonProducts}
+          isModal={true}
+          onClose={() => setShowComparison(false)}
+        />
+      )}
+      
+      {/* Live Chat */}
+      <LiveChat userId={null} productId={null} />
     </div>
   );
 };

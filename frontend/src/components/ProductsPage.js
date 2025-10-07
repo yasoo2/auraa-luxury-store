@@ -128,6 +128,14 @@ const ProductsPage = () => {
             }
           </h1>
           <p className="text-xl text-gray-600">اكتشف مجموعتنا الواسعة من الاكسسوارات الفاخرة</p>
+          
+          {/* Advanced Search */}
+          <div className="mt-6">
+            <AdvancedSearch 
+              onResults={setProducts}
+              showFilters={true}
+            />
+          </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">

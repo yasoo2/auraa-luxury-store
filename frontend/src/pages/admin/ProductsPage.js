@@ -69,12 +69,29 @@ const ProductsPage = () => {
   const [formErrors, setFormErrors] = useState({});
 
   const categories = [
-    { value: 'necklaces', label_ar: 'قلادات', label_en: 'Necklaces' },
-    { value: 'earrings', label_ar: 'أقراط', label_en: 'Earrings' },
-    { value: 'rings', label_ar: 'خواتم', label_en: 'Rings' },
-    { value: 'bracelets', label_ar: 'أساور', label_en: 'Bracelets' },
-    { value: 'watches', label_ar: 'ساعات', label_en: 'Watches' },
-    { value: 'sets', label_ar: 'أطقم', label_en: 'Sets' }
+    { value: 'necklaces', label_ar: 'قلادات', label_en: 'Necklaces', icon: '📿' },
+    { value: 'earrings', label_ar: 'أقراط', label_en: 'Earrings', icon: '💎' },
+    { value: 'rings', label_ar: 'خواتم', label_en: 'Rings', icon: '💍' },
+    { value: 'bracelets', label_ar: 'أساور', label_en: 'Bracelets', icon: '📿' },
+    { value: 'watches', label_ar: 'ساعات', label_en: 'Watches', icon: '⌚' },
+    { value: 'sets', label_ar: 'أطقم', label_en: 'Sets', icon: '✨' }
+  ];
+
+  const materials = [
+    { value: 'gold', label: isRTL ? 'ذهب' : 'Gold' },
+    { value: 'silver', label: isRTL ? 'فضة' : 'Silver' },
+    { value: 'platinum', label: isRTL ? 'بلاتين' : 'Platinum' },
+    { value: 'pearl', label: isRTL ? 'لؤلؤ' : 'Pearl' },
+    { value: 'diamond', label: isRTL ? 'ماس' : 'Diamond' },
+    { value: 'crystal', label: isRTL ? 'كريستال' : 'Crystal' }
+  ];
+
+  const colors = [
+    { value: 'gold', label: isRTL ? 'ذهبي' : 'Gold', color: '#FFD700' },
+    { value: 'silver', label: isRTL ? 'فضي' : 'Silver', color: '#C0C0C0' },
+    { value: 'rose-gold', label: isRTL ? 'ذهبي وردي' : 'Rose Gold', color: '#E8B4B8' },
+    { value: 'white', label: isRTL ? 'أبيض' : 'White', color: '#FFFFFF' },
+    { value: 'black', label: isRTL ? 'أسود' : 'Black', color: '#000000' }
   ];
 
   useEffect(() => {

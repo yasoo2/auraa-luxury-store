@@ -305,6 +305,14 @@ const ProductsPage = () => {
                           <ShoppingCart className="h-4 w-4 ml-2" />
                           أضف للسلة
                         </Button>
+                        <Button 
+                          onClick={() => addToComparison(product)}
+                          variant="outline"
+                          size="sm"
+                          className={`p-2 ${comparisonProducts.some(p => p.id === product.id) ? 'bg-purple-100 text-purple-600' : ''}`}
+                        >
+                          <Scale className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </Card>

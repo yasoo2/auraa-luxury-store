@@ -50,6 +50,8 @@ class AuraaLuxuryAPITester:
                 response = requests.get(url, headers=default_headers, timeout=10)
             elif method.upper() == 'POST':
                 response = requests.post(url, json=data, headers=default_headers, timeout=10)
+            elif method.upper() == 'PUT':
+                response = requests.put(url, json=data, headers=default_headers, timeout=10)
             elif method.upper() == 'DELETE':
                 response = requests.delete(url, headers=default_headers, timeout=10)
             else:

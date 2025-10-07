@@ -811,6 +811,54 @@ const EnhancedProductsPage = () => {
           </Button>
         </div>
       )}
+
+      {/* Product Form Modal */}
+      <ProductFormModal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingProduct(null);
+        }}
+        product={editingProduct}
+        onSubmit={handleFormSubmit}
+        loading={submitting}
+      />
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" dir={isRTL ? 'rtl' : 'ltr'}>
+            <div className="flex items-center mb-4">
+              <AlertCircle className="h-6 w-6 text-red-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}
+              </h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              {isRTL 
+                ? 'هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.'
+                : 'Are you sure you want to delete this product? This action cannot be undone.'
+              }
+            </p>
+            
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700"
+                onClick={() => handleDeleteProduct(deleteConfirm)}
+              >
+                {isRTL ? 'حذف' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

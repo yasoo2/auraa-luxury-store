@@ -10,7 +10,8 @@ import {
   Share2, 
   Star,
   ArrowLeft,
-  HeartOff
+  HeartOff,
+  Eye
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';

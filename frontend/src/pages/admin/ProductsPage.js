@@ -27,13 +27,18 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 
 const ProductsPage = () => {
-  const { language, formatPrice } = useLanguage();
+  const { language, currency } = useLanguage();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [toast, setToast] = useState(null);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [uploading, setUploading] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState({});
   
   const isRTL = language === 'ar';
   const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
@@ -41,13 +46,27 @@ const ProductsPage = () => {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
+    name_en: '',
     description: '',
+    description_en: '',
     price: '',
     original_price: '',
     category: 'necklaces',
     images: [''],
-    stock_quantity: 100
+    stock_quantity: 100,
+    sku: '',
+    weight: '',
+    dimensions: '',
+    material: '',
+    color: '',
+    tags: '',
+    is_featured: false,
+    is_active: true,
+    meta_title: '',
+    meta_description: ''
   });
+
+  const [formErrors, setFormErrors] = useState({});
 
   const categories = [
     { value: 'necklaces', label_ar: 'قلادات', label_en: 'Necklaces' },

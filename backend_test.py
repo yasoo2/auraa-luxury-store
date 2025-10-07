@@ -176,8 +176,11 @@ class AuraaLuxuryAPITester:
         else:
             self.log_test("User Registration", False, f"Status: {status}, Response: {data}")
     
-    def test_admin_login(self):
-        """Test admin login"""
+    def test_admin_authentication_flow(self):
+        """Test complete admin authentication flow as requested"""
+        print("\n🔐 ADMIN AUTHENTICATION FLOW TESTING")
+        
+        # Test admin login with specific credentials
         admin_credentials = {
             "email": "admin@auraa.com",
             "password": "admin123"
@@ -187,13 +190,33 @@ class AuraaLuxuryAPITester:
         
         if success and data.get('access_token'):
             self.admin_token = data['access_token']
-            is_admin = data.get('user', {}).get('is_admin', False)
+            user_data = data.get('user', {})
+            is_admin = user_data.get('is_admin', False)
+            
             if is_admin:
-                self.log_test("Admin Login", True, "Admin logged in successfully")
+                self.log_test("Admin Login with admin@auraa.com", True, f"Admin logged in successfully, is_admin: {is_admin}")
+                
+                # Test token validation for admin routes
+                original_token = self.token
+                self.token = self.admin_token
+                
+                success_validate, data_validate, status_validate = self.make_request('GET', '/auth/me')
+                if success_validate and data_validate.get('is_admin'):
+                    self.log_test("Admin Token Validation", True, f"Token validated, user: {data_validate.get('email')}")
+                else:
+                    self.log_test("Admin Token Validation", False, f"Token validation failed: {status_validate}")
+                
+                # Restore original token
+                self.token = original_token
             else:
-                self.log_test("Admin Login", False, "User is not admin")
+                self.log_test("Admin Login with admin@auraa.com", False, f"User is not admin, is_admin: {is_admin}")
         else:
-            self.log_test("Admin Login", False, f"Status: {status}, Response: {data}")
+            self.log_test("Admin Login with admin@auraa.com", False, f"Status: {status}, Response: {data}")
+    
+    def test_admin_login(self):
+        """Test admin login (legacy method for compatibility)"""
+        # This now calls the comprehensive admin authentication flow
+        self.test_admin_authentication_flow()
     
     def test_user_profile(self):
         """Test user profile endpoint"""

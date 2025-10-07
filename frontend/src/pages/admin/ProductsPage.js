@@ -98,6 +98,262 @@ const ProductsPage = () => {
     fetchProducts();
   }, []);
 
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/api/products`);
+      setProducts(response.data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      showToast('فشل في تحميل المنتجات', 'error');
+      // Generate mock data for demo
+      setProducts(generateMockProducts());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateMockProducts = () => {
+    return [
+      {
+        id: '1',
+        name: 'قلادة ذهبية فاخرة',
+        name_en: 'Luxury Gold Necklace',
+        description: 'قلادة ذهبية مصنوعة من الذهب عيار 18 مع تصميم عصري',
+        price: 1299.99,
+        original_price: 1599.99,
+        category: 'necklaces',
+        images: ['https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400'],
+        stock_quantity: 25,
+        sku: 'AL-NECK-001',
+        material: 'gold',
+        color: 'gold',
+        is_featured: true,
+        is_active: true,
+        rating: 4.8,
+        reviews_count: 124
+      },
+      {
+        id: '2',
+        name: 'أقراط لؤلؤ طبيعية',
+        name_en: 'Natural Pearl Earrings',
+        description: 'أقراط مصنوعة من اللؤلؤ الطبيعي مع تصميم كلاسيكي',
+        price: 899.99,
+        category: 'earrings',
+        images: ['https://images.unsplash.com/photo-1506755855567-92ff770e8d00?w=400'],
+        stock_quantity: 15,
+        sku: 'AL-EAR-002',
+        material: 'pearl',
+        color: 'white',
+        is_featured: false,
+        is_active: true,
+        rating: 4.9,
+        reviews_count: 87
+      }
+    ];
+  };
+
+  const showToast = (message, type = 'success') => {
+    // This would integrate with your toast system
+    console.log(`${type}: ${message}`);
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat(isRTL ? 'ar-SA' : 'en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
+  };
+
+  const openModal = (product = null) => {
+    if (product) {
+      setEditingProduct(product);
+      setFormData({
+        name: product.name || '',
+        name_en: product.name_en || '',
+        description: product.description || '',
+        description_en: product.description_en || '',
+        price: product.price || '',
+        original_price: product.original_price || '',
+        category: product.category || 'necklaces',
+        images: product.images || [''],
+        stock_quantity: product.stock_quantity || 100,
+        sku: product.sku || '',
+        weight: product.weight || '',
+        dimensions: product.dimensions || '',
+        material: product.material || '',
+        color: product.color || '',
+        tags: product.tags ? product.tags.join(', ') : '',
+        is_featured: product.is_featured || false,
+        is_active: product.is_active !== false,
+        meta_title: product.meta_title || '',
+        meta_description: product.meta_description || ''
+      });
+    } else {
+      setEditingProduct(null);
+      setFormData({
+        name: '',
+        name_en: '',
+        description: '',
+        description_en: '',
+        price: '',
+        original_price: '',
+        category: 'necklaces',
+        images: [''],
+        stock_quantity: 100,
+        sku: generateSKU(),
+        weight: '',
+        dimensions: '',
+        material: '',
+        color: '',
+        tags: '',
+        is_featured: false,
+        is_active: true,
+        meta_title: '',
+        meta_description: ''
+      });
+    }
+    setFormErrors({});
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingProduct(null);
+    setFormData({
+      name: '',
+      name_en: '',
+      description: '',
+      description_en: '',
+      price: '',
+      original_price: '',
+      category: 'necklaces',
+      images: [''],
+      stock_quantity: 100,
+      sku: '',
+      weight: '',
+      dimensions: '',
+      material: '',
+      color: '',
+      tags: '',
+      is_featured: false,
+      is_active: true,
+      meta_title: '',
+      meta_description: ''
+    });
+    setFormErrors({});
+  };
+
+  const generateSKU = () => {
+    const prefix = 'AL';
+    const timestamp = Date.now().toString().slice(-6);
+    return `${prefix}-${timestamp}`;
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.name.trim()) errors.name = isRTL ? 'اسم المنتج مطلوب' : 'Product name is required';
+    if (!formData.price || formData.price <= 0) errors.price = isRTL ? 'السعر مطلوب وأكبر من صفر' : 'Valid price is required';
+    if (!formData.category) errors.category = isRTL ? 'الفئة مطلوبة' : 'Category is required';
+    if (!formData.images[0]) errors.images = isRTL ? 'صورة واحدة على الأقل مطلوبة' : 'At least one image is required';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    try {
+      setUploading(true);
+      
+      const productData = {
+        ...formData,
+        price: parseFloat(formData.price),
+        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+        stock_quantity: parseInt(formData.stock_quantity),
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+        images: formData.images.filter(img => img.trim())
+      };
+
+      if (editingProduct) {
+        await axios.put(`${API_URL}/api/admin/products/${editingProduct.id}`, productData);
+        showToast(isRTL ? 'تم تحديث المنتج بنجاح' : 'Product updated successfully');
+      } else {
+        await axios.post(`${API_URL}/api/admin/products`, productData);
+        showToast(isRTL ? 'تم إضافة المنتج بنجاح' : 'Product added successfully');
+      }
+      
+      await fetchProducts();
+      closeModal();
+    } catch (error) {
+      console.error('Error saving product:', error);
+      showToast(isRTL ? 'فشل في حفظ المنتج' : 'Failed to save product', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const deleteProduct = async (productId) => {
+    if (!window.confirm(isRTL ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Are you sure you want to delete this product?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_URL}/api/admin/products/${productId}`);
+      showToast(isRTL ? 'تم حذف المنتج بنجاح' : 'Product deleted successfully');
+      await fetchProducts();
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      showToast(isRTL ? 'فشل في حذف المنتج' : 'Failed to delete product', 'error');
+    }
+  };
+
+  const handleBulkAction = async (action) => {
+    if (selectedProducts.length === 0) return;
+    
+    try {
+      switch (action) {
+        case 'delete':
+          if (!window.confirm(isRTL ? `هل أنت متأكد من حذف ${selectedProducts.length} منتج؟` : `Are you sure you want to delete ${selectedProducts.length} products?`)) {
+            return;
+          }
+          await axios.post(`${API_URL}/api/admin/products/bulk-delete`, { ids: selectedProducts });
+          showToast(isRTL ? 'تم حذف المنتجات بنجاح' : 'Products deleted successfully');
+          break;
+        case 'activate':
+          await axios.post(`${API_URL}/api/admin/products/bulk-update`, { ids: selectedProducts, data: { is_active: true } });
+          showToast(isRTL ? 'تم تفعيل المنتجات بنجاح' : 'Products activated successfully');
+          break;
+        case 'deactivate':
+          await axios.post(`${API_URL}/api/admin/products/bulk-update`, { ids: selectedProducts, data: { is_active: false } });
+          showToast(isRTL ? 'تم إلغاء تفعيل المنتجات بنجاح' : 'Products deactivated successfully');
+          break;
+      }
+      
+      setSelectedProducts([]);
+      await fetchProducts();
+    } catch (error) {
+      console.error('Error in bulk action:', error);
+      showToast(isRTL ? 'فشل في تنفيذ العملية' : 'Failed to execute action', 'error');
+    }
+  };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.sku?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+    const matchesStatus = statusFilter === 'all' || 
+                         (statusFilter === 'active' && product.is_active) ||
+                         (statusFilter === 'inactive' && !product.is_active) ||
+                         (statusFilter === 'featured' && product.is_featured);
+    
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 3000);

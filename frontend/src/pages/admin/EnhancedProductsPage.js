@@ -574,7 +574,11 @@ const EnhancedProductsPage = () => {
                         <Button size="sm" variant="secondary" onClick={() => window.open(`/product/${product.id}`, '_blank')}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                        <Button 
+                          size="sm" 
+                          className="bg-amber-600 hover:bg-amber-700"
+                          onClick={() => handleEditProduct(product)}
+                        >
                           <Edit2 className="h-4 w-4" />
                         </Button>
                       </div>

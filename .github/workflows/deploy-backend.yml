@@ -2,9 +2,10 @@ name: Deploy Backend to Render
 
 on:
   push:
-    branches: [ main, feat/admin-suite-complete ]
+    branches: [ '*' ]
     paths:
       - 'backend/**'
+  workflow_dispatch:
 
 jobs:
   deploy:

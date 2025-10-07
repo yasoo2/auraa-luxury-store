@@ -12,7 +12,7 @@ import {
   Download,
   Upload,
   FileSpreadsheet,
-  Sync,
+  RotateCcw,
   Key,
   Shield,
   Globe,

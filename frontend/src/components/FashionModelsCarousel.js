@@ -63,17 +63,17 @@ const FashionModelsCarousel = () => {
     // Previous images kept (mapped to localized fields)
     {
       id: 7,
-      url: 'https://images.unsplash.com/photo-1613915617430-8ab0fd7c6baf?w=1920&q=85',
-      alt_ar: 'عارضة بأناقة استثنائية',
-      alt_en: 'Elegant Fashion Model 1',
+      url: 'https://images.unsplash.com/photo-1624708530650-15863e927ed4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxmYXNoaW9uJTIwbW9kZWwlMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTc1MzM4Mnww&ixlib=rb-4.1.0&q=85&w=1920',
+      alt_ar: 'عارضة أزياء بمجوهرات تقليدية فاخرة',
+      alt_en: 'Fashion model with luxury traditional jewelry',
       caption_ar: 'أناقة استثنائية',
       caption_en: 'Exceptional Elegance'
     },
     {
       id: 8,
-      url: 'https://images.unsplash.com/photo-1562572159-4efc207f5aff?w=1920&q=85',
-      alt_ar: 'عارضة بإطلالة فاخرة',
-      alt_en: 'Stylish Fashion Model 2',
+      url: 'https://images.pexels.com/photos/34132256/pexels-photo-34132256.jpeg?w=1920&cs=srgb&fm=jpg',
+      alt_ar: 'عارضة بفستان أحمر وإكسسوارات ذهبية',
+      alt_en: 'Model in red dress with gold accessories',
       caption_ar: 'أسلوب فاخر',
       caption_en: 'Luxury Style'
     },
@@ -87,9 +87,9 @@ const FashionModelsCarousel = () => {
     },
     {
       id: 10,
-      url: 'https://images.unsplash.com/photo-1616837874254-8d5aaa63e273?w=1920&q=85',
-      alt_ar: 'عارضة مع مجوهرات فاخرة',
-      alt_en: 'Luxury Jewelry Model 4',
+      url: 'https://images.unsplash.com/photo-1614353921776-5141cd008973?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwzfHxmYXNoaW9uJTIwbW9kZWwlMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTc1MzM4Mnww&ixlib=rb-4.1.0&q=85&w=1920',
+      alt_ar: 'خاتم فضي فاخر بحجر أسود',
+      alt_en: 'Luxury silver ring with black gemstone',
       caption_ar: 'مجوهرات فاخرة',
       caption_en: 'Luxury Jewelry'
     },
@@ -103,9 +103,9 @@ const FashionModelsCarousel = () => {
     },
     {
       id: 12,
-      url: 'https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?w=1920&cs=srgb&dl=pexels-photo-1926769.jpeg&fm=jpg',
-      alt_ar: 'إطلالة احترافية',
-      alt_en: 'Professional Model 6',
+      url: 'https://images.pexels.com/photos/34132253/pexels-photo-34132253.jpeg?w=1920&cs=srgb&fm=jpg',
+      alt_ar: 'عارضة بفستان أحمر وعقد لؤلؤ',
+      alt_en: 'Model in red dress with pearl necklace',
       caption_ar: 'إطلالة احترافية',
       caption_en: 'Professional Look'
     },
@@ -116,6 +116,47 @@ const FashionModelsCarousel = () => {
       alt_en: 'Elegant Style Model 7',
       caption_ar: 'أناقة مميزة',
       caption_en: 'Distinguished Elegance'
+    },
+    // Hijabi women with accessories
+    {
+      id: 14,
+      url: 'https://images.unsplash.com/photo-1758140970703-2dd27a6e0fa4?w=1920&q=85',
+      alt_ar: 'محجبة بحجاب أخضر وإكسسوارات فاخرة',
+      alt_en: 'Hijabi woman in green hijab with luxury accessories',
+      caption_ar: 'أناقة محتشمة',
+      caption_en: 'Modest Elegance'
+    },
+    {
+      id: 15,
+      url: 'https://images.unsplash.com/photo-1635770607507-beb7d7972491?w=1920&q=85',
+      alt_ar: 'خلخال فضي أنيق على القدم',
+      alt_en: 'Elegant silver ankle bracelet',
+      caption_ar: 'خلخال رقيق',
+      caption_en: 'Delicate Anklet'
+    },
+    {
+      id: 16,
+      url: 'https://images.pexels.com/photos/8182320/pexels-photo-8182320.jpeg?w=1920&cs=srgb&fm=jpg',
+      alt_ar: 'زنار ذهبي رقيق على الخصر',
+      alt_en: 'Delicate gold waist chain',
+      caption_ar: 'زنار ذهبي',
+      caption_en: 'Gold Waist Chain'
+    },
+    {
+      id: 17,
+      url: 'https://images.unsplash.com/photo-1758314243385-9af94851a559?w=1920&q=85',
+      alt_ar: 'محجبة بزي تقليدي وإكسسوارات',
+      alt_en: 'Hijabi woman in traditional outfit with accessories',
+      caption_ar: 'تراث وأناقة',
+      caption_en: 'Heritage & Elegance'
+    },
+    {
+      id: 18,
+      url: 'https://images.unsplash.com/photo-1758141247275-3edd55934e4d?w=1920&q=85',
+      alt_ar: 'عروس محجبة بمجوهرات فاخرة',
+      alt_en: 'Bridal hijabi with luxury jewelry',
+      caption_ar: 'عروس فاخرة',
+      caption_en: 'Luxury Bridal'
     }
   ];
 
@@ -148,21 +189,17 @@ const FashionModelsCarousel = () => {
 
   return (
     <div 
-      className="relative w-screen h-[50vh] sm:h-[60vh] lg:h-[70vh] overflow-hidden bg-black"
-      style={{ marginLeft: '0', marginRight: '0', maxWidth: '100vw' }}
+      className="relative w-screen overflow-hidden bg-black"
+      style={{ marginLeft: '0', marginRight: '0', maxWidth: '100vw', minHeight: '400px' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Main Image Container */}
-      <div className="relative w-full h-full">
+      <div className="relative w-full">
         {modelImages.map((image, index) => (
           <div
             key={image.id}
-            className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
-              index === currentSlide 
-                ? 'opacity-100 scale-100' 
-                : 'opacity-0 scale-105'
-            }`}
+            className={`${index === currentSlide ? 'block' : 'hidden'} transition-all duration-1000 ease-in-out`}
           >
             <picture>
               <source srcSet={`${image.url}&format=avif`} type="image/avif" />
@@ -170,7 +207,8 @@ const FashionModelsCarousel = () => {
               <img
                 src={image.url}
                 alt={isRTL ? image.alt_ar : image.alt_en}
-                className="w-full h-full object-cover object-center"
+                className="w-full h-auto object-contain object-center"
+                style={{ maxHeight: '80vh' }}
                 loading={index === currentSlide ? 'eager' : 'lazy'}
                 fetchpriority={index === currentSlide ? 'high' : 'auto'}
               />

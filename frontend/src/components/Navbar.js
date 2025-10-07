@@ -71,9 +71,9 @@ const Navbar = () => {
           {/* Logo (default inline left) */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
             <Link to="/" className="flex flex-col items-start py-2">
-              <div className="font-display font-black carousel-luxury-text leading-none">
-                <span className="block text-3xl md:text-4xl logo-aurra-contrast leading-none whitespace-nowrap">Auraa</span>
-                <span className="block text-[8px] md:text-[10px] font-thin text-gray-600 tracking-[0.25em] mt-0.5 whitespace-nowrap">LUXURY</span>
+              <div className="font-display font-black leading-none flex items-baseline gap-1">
+                <span className="text-3xl md:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>
+                <span style={{ fontSize: '12px', fontWeight: '100' }} className="carousel-luxury-text tracking-[0.25em] whitespace-nowrap">LUXURY</span>
               </div>
               <span className="block text-[9px] md:text-[11px] text-gray-600 tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
             </Link>

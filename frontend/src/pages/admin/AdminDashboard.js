@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
 import ProductsPage from './ProductsPage';
+import OrdersPage from './OrdersPage';
+import UsersPage from './UsersPage';
 import {
   Package,
   ShoppingCart,

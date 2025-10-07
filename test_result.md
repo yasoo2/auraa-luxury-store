@@ -304,7 +304,7 @@
 
 ## test_plan:
   current_focus:
-    - "Admin Dashboard Backend Testing - COMPLETED"
+    - "Admin Dashboard Complete Frontend Testing - COMPLETED"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

@@ -4,10 +4,12 @@ import { useLanguage } from '../../context/LanguageContext';
 import ProductsPage from './ProductsPage';
 import OrdersPage from './OrdersPage';
 import UsersPage from './UsersPage';
+import SettingsPage from './SettingsPage';
 import {
   Package,
   ShoppingCart,
   Users,
+  Settings,
   LogOut,
   Menu,
   X

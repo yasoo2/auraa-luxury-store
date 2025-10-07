@@ -123,7 +123,7 @@ const AdminDashboard = () => {
         <main className="flex-1 p-6">
           <Routes>
             <Route path="/" element={<Navigate to="/admin/products" replace />} />
-            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/products" element={<EnhancedProductsPage />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />

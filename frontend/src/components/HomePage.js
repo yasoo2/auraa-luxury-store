@@ -60,7 +60,7 @@ const HomePage = () => {
       </section>
 
       {/* Featured Products */}
-      <section className="py-12">
+      <section className="py-12" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mb-6">{t('featured_products')}</h2>
           {loading ? (

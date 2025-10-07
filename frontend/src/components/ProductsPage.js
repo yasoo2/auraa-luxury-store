@@ -28,6 +28,12 @@ const ProductsPage = () => {
     maxPrice: '',
     sortBy: 'newest'
   });
+  
+  // New state for advanced features
+  const [showComparison, setShowComparison] = useState(false);
+  const [comparisonProducts, setComparisonProducts] = useState([]);
+  const [viewMode, setViewMode] = useState('grid'); // grid, list
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setSEO({

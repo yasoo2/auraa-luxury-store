@@ -115,6 +115,22 @@ const ProductsPage = () => {
     }
   };
 
+  const addToComparison = (product) => {
+    if (comparisonProducts.length >= 4) {
+      toast.error('يمكنك مقارنة 4 منتجات كحد أقصى');
+      return;
+    }
+    
+    if (!comparisonProducts.some(p => p.id === product.id)) {
+      setComparisonProducts([...comparisonProducts, product]);
+      toast.success('تم إضافة المنتج للمقارنة');
+    }
+  };
+
+  const removeFromComparison = (productId) => {
+    setComparisonProducts(comparisonProducts.filter(p => p.id !== productId));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

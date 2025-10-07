@@ -78,7 +78,7 @@ const HomePage = () => {
           ) : (
             <div className="product-grid">
               {products.map((p) => (
-                <Card key={p.id} className="product-card overflow-hidden group">
+                <Card key={p.id} className="product-card overflow-hidden group relative">
                   <Link to={`/product/${p.id}`}>
                     <picture>
                       <source srcSet={`${p.images?.[0]}?format=avif`} type="image/avif" />
@@ -86,6 +86,16 @@ const HomePage = () => {
                       <img src={p.images?.[0]} alt={p.name} className="w-full h-64 img-product-card group-hover:scale-110 transition-transform duration-500" style={{ aspectRatio: '4 / 3' }} />
                     </picture>
                   </Link>
+                  
+                  {/* Heart Button */}
+                  <div className="absolute top-4 right-4 z-10">
+                    <HeartButton 
+                      product={p}
+                      variant="floating"
+                      size="md"
+                      showAnimation={true}
+                    />
+                  </div>
                   <div className="p-6">
                     <Link to={`/product/${p.id}`}>
                       <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2">{p.name}</h3>

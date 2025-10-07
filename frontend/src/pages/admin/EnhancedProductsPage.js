@@ -47,9 +47,14 @@ const EnhancedProductsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [uploading, setUploading] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid or list
+  const [submitting, setSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   
   const isRTL = language === 'ar';
   const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+
+  // Get auth token
+  const token = localStorage.getItem('token');
 
   // Form state
   const [formData, setFormData] = useState({

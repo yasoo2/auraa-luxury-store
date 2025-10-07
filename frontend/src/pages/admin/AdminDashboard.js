@@ -5,11 +5,15 @@ import ProductsPage from './ProductsPage';
 import OrdersPage from './OrdersPage';
 import UsersPage from './UsersPage';
 import SettingsPage from './SettingsPage';
+import AnalyticsPage from './AnalyticsPage';
+import IntegrationsPage from './IntegrationsPage';
 import {
   Package,
   ShoppingCart,
   Users,
   Settings,
+  BarChart,
+  Plug,
   LogOut,
   Menu,
   X

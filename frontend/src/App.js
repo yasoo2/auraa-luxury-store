@@ -13,6 +13,7 @@ import CheckoutPage from './components/CheckoutPage';
 import AuthPage from './components/AuthPage';
 import ProfilePage from './components/ProfilePage';
 import AdminPage from './components/AdminPage';
+import AdminDashboard from './pages/admin/AdminDashboard';
 // // import ExternalStoresPage from './components/ExternalStoresPage';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';

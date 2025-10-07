@@ -19,7 +19,10 @@ import {
   Zap,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  ShoppingCart,
+  DollarSign,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';

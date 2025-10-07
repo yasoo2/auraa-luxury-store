@@ -8,6 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import axios from 'axios';
 import { setSEO } from '../utils/seo';
+import AdvancedSearch from './AdvancedSearch';
+import SmartRecommendations from './SmartRecommendations';
+import ProductComparison from './ProductComparison';
+import LiveChat from './LiveChat';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

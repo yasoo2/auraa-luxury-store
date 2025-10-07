@@ -275,6 +275,86 @@ const EnhancedProductsPage = () => {
     }
   };
 
+  const handleCreateProduct = async (productData) => {
+    try {
+      setSubmitting(true);
+      const response = await axios.post(`${API_URL}/api/products`, productData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      setProducts(prev => [response.data, ...prev]);
+      setShowModal(false);
+      setEditingProduct(null);
+      
+      // Show success message
+      console.log('Product created successfully');
+    } catch (error) {
+      console.error('Error creating product:', error);
+      alert(isRTL ? 'خطأ في إنشاء المنتج' : 'Error creating product');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateProduct = async (productData) => {
+    try {
+      setSubmitting(true);
+      const response = await axios.put(`${API_URL}/api/products/${editingProduct.id}`, productData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? response.data : p));
+      setShowModal(false);
+      setEditingProduct(null);
+      
+      // Show success message
+      console.log('Product updated successfully');
+    } catch (error) {
+      console.error('Error updating product:', error);
+      alert(isRTL ? 'خطأ في تحديث المنتج' : 'Error updating product');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    try {
+      await axios.delete(`${API_URL}/api/products/${productId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      setProducts(prev => prev.filter(p => p.id !== productId));
+      setDeleteConfirm(null);
+      
+      // Show success message
+      console.log('Product deleted successfully');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert(isRTL ? 'خطأ في حذف المنتج' : 'Error deleting product');
+    }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setShowModal(true);
+  };
+
+  const handleFormSubmit = (productData) => {
+    if (editingProduct) {
+      handleUpdateProduct(productData);
+    } else {
+      handleCreateProduct(productData);
+    }
+  };
+
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}

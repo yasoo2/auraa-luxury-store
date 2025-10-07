@@ -471,7 +471,7 @@ const IntegrationsPage = () => {
             {isRTL ? 'استيراد منتجات مجمع' : 'Bulk Product Import'}
           </Button>
           <Button variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RotateCcw className="h-4 w-4 mr-2" />
             {isRTL ? 'مزامنة جميع التكاملات' : 'Sync All Integrations'}
           </Button>
         </div>

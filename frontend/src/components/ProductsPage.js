@@ -185,6 +185,38 @@ const ProductsPage = () => {
           <div className="lg:w-3/4">
             <div className="flex justify-between items-center mb-6">
               <p className="text-gray-600">{loading ? 'جاري التحميل...' : `${products.length} منتج`}</p>
+              
+              <div className="flex items-center gap-4">
+                {/* Comparison Toggle */}
+                {comparisonProducts.length > 0 && (
+                  <Button
+                    onClick={() => setShowComparison(true)}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    مقارنة ({comparisonProducts.length})
+                  </Button>
+                )}
+                
+                {/* View Mode Toggle */}
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                      viewMode === 'grid' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    شبكة
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                      viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    قائمة
+                  </button>
+                </div>
+              </div>
             </div>
             {loading ? (
               <div className="product-grid">

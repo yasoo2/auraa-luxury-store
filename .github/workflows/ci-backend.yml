@@ -1,0 +1,52 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+  push:
+    branches: [ feat/**, ci/** ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
+          pip install ruff black || true
+
+      - name: Lint with ruff
+        run: ruff check . || true
+        continue-on-error: true
+
+      - name: Check formatting with black
+        run: black --check . || true
+        continue-on-error: true
+
+      - name: Unit tests (optional)
+        run: |
+          if [ -f "pytest.ini" ] || [ -d "tests" ]; then
+            pip install pytest pytest-asyncio
+            pytest -q
+          else
+            echo "ℹ️  No tests directory found - skipping tests"
+          fi
+        continue-on-error: true

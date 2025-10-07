@@ -157,9 +157,10 @@ const AdminRoute = ({ children }) => {
 
 function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <BrowserRouter>
+    <HelmetProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <BrowserRouter>
           <Routes>
             {/* Admin Routes (no Navbar/Footer) */}
             <Route 

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Truck, Shield, Clock } from 'lucide-react';
 
 import FashionModelsCarousel from './FashionModelsCarousel';
+import SEOHead from './SEOHead';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';

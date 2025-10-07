@@ -15,6 +15,7 @@ const API = `${BACKEND_URL}/api`;
 
 const HomePage = () => {
   const { t, language } = useLanguage();
+  const isRTL = language === 'ar';
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 

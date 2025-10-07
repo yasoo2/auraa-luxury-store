@@ -279,9 +279,14 @@ const ProductsPage = () => {
                           إضافة سريعة
                         </Button>
                       </div>
-                      <button className="absolute top-4 left-4 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                        <Heart className="h-4 w-4 text-gray-600 hover:text-red-500" />
-                      </button>
+                      <div className="absolute top-4 left-4">
+                        <HeartButton 
+                          product={product}
+                          variant="floating"
+                          size="md"
+                          showAnimation={true}
+                        />
+                      </div>
                     </div>
                     <div className="p-6">
                       <Link to={`/product/${product.id}`}>

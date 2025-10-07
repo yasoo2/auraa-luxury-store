@@ -10,11 +10,11 @@
     }
   ],
   "env": {
-    "REACT_APP_BACKEND_URL": "https://luxury-estore-admin.preview.emergentagent.com"
+    "REACT_APP_BACKEND_URL": "https://auraaluxury.preview.emergentagent.com"
   },
   "build": {
     "env": {
-      "REACT_APP_BACKEND_URL": "https://luxury-estore-admin.preview.emergentagent.com"
+      "REACT_APP_BACKEND_URL": "https://auraaluxury.preview.emergentagent.com"
     }
   },
   "git": {

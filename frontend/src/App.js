@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import axios from 'axios';
 import './App.css';
 import { LanguageProvider } from './context/LanguageContext';
+import { WishlistProvider } from './context/WishlistContext';
 
 // Import components
 import HomePage from './components/HomePage';

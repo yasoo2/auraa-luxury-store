@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import axios from 'axios';
+import ProductFormModal from '../../components/admin/ProductFormModal';
 import { 
   Plus, 
   Edit2, 

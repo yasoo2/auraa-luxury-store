@@ -653,11 +653,20 @@ const EnhancedProductsPage = () => {
 
                     {/* Actions */}
                     <div className="flex gap-2">
-                      <Button className="flex-1 bg-amber-600 hover:bg-amber-700" size="sm">
+                      <Button 
+                        className="flex-1 bg-amber-600 hover:bg-amber-700" 
+                        size="sm"
+                        onClick={() => handleEditProduct(product)}
+                      >
                         <Edit2 className="h-3 w-3 mr-1" />
                         {isRTL ? 'تعديل' : 'Edit'}
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => setDeleteConfirm(product.id)}
+                      >
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>

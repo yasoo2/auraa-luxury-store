@@ -14,6 +14,7 @@ import CartPage from './components/CartPage';
 import CheckoutPage from './components/CheckoutPage';
 import AuthPage from './components/AuthPage';
 import ProfilePage from './components/ProfilePage';
+import WishlistPage from './components/WishlistPage';
 import AdminPage from './components/AdminPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 // // import ExternalStoresPage from './components/ExternalStoresPage';

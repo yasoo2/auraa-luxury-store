@@ -263,13 +263,33 @@ async def get_product(product_id: str):
     return Product(**product)
 
 @api_router.post("/products", response_model=Product)
-async def create_product(product_data: ProductCreate, current_user: User = Depends(get_current_user)):
-    if not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    
+async def create_product(product_data: ProductCreate, admin: User = Depends(get_admin_user)):
     product = Product(**product_data.dict())
     await db.products.insert_one(product.dict())
     return product
+
+@api_router.put("/products/{product_id}", response_model=Product)
+async def update_product(
+    product_id: str,
+    product_data: ProductCreate,
+    admin: User = Depends(get_admin_user)
+):
+    result = await db.products.update_one(
+        {"id": product_id},
+        {"$set": product_data.dict(exclude_unset=True)}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    product = await db.products.find_one({"id": product_id})
+    return Product(**product)
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(product_id: str, admin: User = Depends(get_admin_user)):
+    result = await db.products.delete_one({"id": product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product deleted successfully"}
 
 # Cart routes
 @api_router.get("/cart", response_model=Cart)

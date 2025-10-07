@@ -290,34 +290,71 @@ class AuraaLuxuryAPITester:
         else:
             self.log_test("Get Orders", False, f"Status: {status}")
     
-    def test_admin_product_creation(self):
-        """Test admin product creation"""
+    def test_admin_product_crud(self):
+        """Test complete admin product CRUD operations"""
         if not self.admin_token:
-            self.log_test("Admin Product Creation", False, "No admin token available")
+            self.log_test("Admin Product CRUD", False, "No admin token available")
             return
         
         # Temporarily use admin token
         original_token = self.token
         self.token = self.admin_token
         
+        # CREATE - Test admin product creation
         new_product = {
-            "name": "منتج تجريبي للاختبار",
-            "description": "هذا منتج تجريبي تم إنشاؤه للاختبار",
-            "price": 99.99,
-            "original_price": 149.99,
+            "name": "منتج تجريبي للاختبار الإداري",
+            "description": "هذا منتج تجريبي تم إنشاؤه لاختبار العمليات الإدارية",
+            "price": 199.99,
+            "original_price": 299.99,
             "discount_percentage": 33,
             "category": "rings",
             "images": ["https://images.unsplash.com/photo-1606623546924-a4f3ae5ea3e8"],
-            "stock_quantity": 50,
-            "external_url": "https://example.com"
+            "stock_quantity": 25,
+            "external_url": "https://example.com/admin-test"
         }
         
         success, data, status = self.make_request('POST', '/products', new_product)
         
         if success and data.get('id'):
-            self.log_test("Admin Product Creation", True, f"Product created: {data['name']}")
+            created_product_id = data['id']
+            self.log_test("Admin Product CREATE", True, f"Product created: {data['name']}")
+            
+            # UPDATE - Test admin product update
+            update_data = {
+                "name": "منتج محدث للاختبار الإداري",
+                "description": "تم تحديث هذا المنتج بواسطة المدير",
+                "price": 249.99,
+                "original_price": 349.99,
+                "discount_percentage": 28,
+                "category": "rings",
+                "images": ["https://images.unsplash.com/photo-1606623546924-a4f3ae5ea3e8"],
+                "stock_quantity": 15,
+                "external_url": "https://example.com/admin-test-updated"
+            }
+            
+            success_update, data_update, status_update = self.make_request('PUT', f'/products/{created_product_id}', update_data)
+            
+            if success_update and data_update.get('name') == update_data['name']:
+                self.log_test("Admin Product UPDATE", True, f"Product updated: {data_update['name']}")
+            else:
+                self.log_test("Admin Product UPDATE", False, f"Status: {status_update}, Response: {data_update}")
+            
+            # DELETE - Test admin product deletion
+            success_delete, data_delete, status_delete = self.make_request('DELETE', f'/products/{created_product_id}')
+            
+            if success_delete:
+                self.log_test("Admin Product DELETE", True, "Product deleted successfully")
+                
+                # Verify deletion by trying to get the product
+                success_verify, data_verify, status_verify = self.make_request('GET', f'/products/{created_product_id}')
+                if not success_verify and status_verify == 404:
+                    self.log_test("Admin Product DELETE Verification", True, "Product properly deleted (404 on GET)")
+                else:
+                    self.log_test("Admin Product DELETE Verification", False, f"Product still exists after deletion: {status_verify}")
+            else:
+                self.log_test("Admin Product DELETE", False, f"Status: {status_delete}, Response: {data_delete}")
         else:
-            self.log_test("Admin Product Creation", False, f"Status: {status}, Response: {data}")
+            self.log_test("Admin Product CREATE", False, f"Status: {status}, Response: {data}")
         
         # Restore original token
         self.token = original_token

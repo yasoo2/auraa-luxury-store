@@ -2,9 +2,10 @@ name: Deploy Frontend to Vercel
 
 on:
   push:
-    branches: [ main, feat/admin-suite-complete ]
+    branches: [ '*' ]
     paths:
       - 'frontend/**'
+  workflow_dispatch:
 
 jobs:
   deploy:

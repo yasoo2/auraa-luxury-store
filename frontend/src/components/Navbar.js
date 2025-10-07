@@ -18,6 +18,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { t, isRTL } = useLanguage();
+  const { getWishlistCount } = useWishlist();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);

@@ -2,7 +2,7 @@ name: 🚀 Main Branch Auto Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feat/admin-suite-complete ]
   workflow_dispatch:
     inputs:
       force_deploy:

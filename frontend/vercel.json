@@ -10,11 +10,7 @@
     }
   ],
   "env": {
-    "REACT_APP_BACKEND_URL": "https://auraa-admin.preview.emergentagent.com"
-  },
-  "build": {
-    "env": {
-      "REACT_APP_BACKEND_URL": "https://auraa-admin.preview.emergentagent.com"
+
     }
   },
   "git": {

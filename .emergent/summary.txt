@@ -1,9 +1,5 @@
 <analysis>
-The AI engineer has progressively built out the Auraa Luxury e-commerce application. Initially, the focus was on establishing the core Admin Suite, which involved securing backend product CRUD APIs and developing the foundational frontend dashboard. Key achievements include a fully functional and localized Admin Dashboard with sections for Products, Orders, Users, and Settings, all with dummy data for display. The engineer also implemented comprehensive SEO enhancements, advanced analytics, and external integration placeholders. Subsequently, the development shifted to enhancing the user experience with advanced search filters, smart product recommendations, product comparison, PWA support, and live chat functionality. A critical bug regarding the wishlist feature (heart icon functionality, persistence, and display on the homepage) was identified and successfully resolved. Most recently, efforts addressed deployment issues by adjusting GitHub Actions to work across branches and introducing preview deployments. The current ongoing task involves a significant refactor and enhancement of the Admin Product Management page to include an interactive form modal for adding and editing products.
-</analysis>
 
-<product_requirements>
-Auraa Luxury aims to be a high-end dropshipping e-commerce store for accessories. The application requires full e-commerce capabilities, an admin dashboard, and future integrations with AliExpress/Amazon. Key features implemented or in progress include a luxurious UI (gold/silver/black palette, multi-line logo), multi-language (Arabic/English, extended to other languages) and multi-currency (USD/SAR, extended to GCC) support with dynamic RTL/LTR, responsive design, a refined navigation with Shop by Category, and a full-width image carousel. Free Shipping is now in the footer. Simulated external store links and dummy products were removed. The comprehensive Admin Suite now includes pages for Products (with CRUD), Orders, Users, Settings, Analytics, and Integrations. Other recent additions include advanced search and filtering with AI, smart product recommendations, product comparison, PWA support, live chat, and a fully functional wishlist feature across product displays and a dedicated page. All new features are developed behind feature flags for controlled rollout. Automatic currency conversion to USD for final payment is a standing requirement.
 </product_requirements>
 
 <key_technical_concepts>
@@ -11,73 +7,9 @@ Auraa Luxury aims to be a high-end dropshipping e-commerce store for accessories
 - **Database:** MongoDB with .
 - **UI:** Shadcn UI (Tailwind CSS), React Context API for global state.
 - **Routing:** .
-- **Build/Deployment:** Vercel (frontend), Render (backend), GitHub Actions for CI/CD.
-- **Internationalization:** Custom , RTL/LTR support.
-- **Utilities:** ,  for CSS class management.
-- **SEO:**  for meta tag management.
-- **PWA:** Service Worker (), .
+
 </key_technical_concepts>
 
 <code_architecture>
 
--   **/app/backend/server.py**: Core FastAPI backend. Modified for admin product CRUD (POST, PUT, DELETE) and  dependency.
--   **/app/frontend/src/App.js**: Main React application entry. Routes updated for , , , and wrapped with  and .
--   **/app/frontend/src/components/HomePage.js**: Main landing page. Integrated  and  for wishlist functionality on product cards.
--   **/app/frontend/src/components/Navbar.js**: Site-wide navigation. Updated for multi-line logo, responsiveness, added إدارة (Admin) button (conditional for admin users), and  to display wishlist count.
--   **/app/frontend/src/context/LanguageContext.js**: Manages language/currency. Extended for more languages and GCC currencies.
--   **/app/frontend/src/context/WishlistContext.js (NEW)**: Manages wishlist state globally. Created to store and provide wishlist functionality.
--   **/app/frontend/src/components/FashionModelsCarousel.js**: Key UI feature. Updated with new accessory-focused model images and responsive CSS.
--   **/app/frontend/src/components/ProductsPage.js**: Product listing page. Now includes , ,  components and  for wishlist.
--   **/app/frontend/src/components/HeartButton.js (NEW)**: Reusable component for wishlist heart icon, handles toggling and visual state.
--   **/app/frontend/src/components/WishlistPage.js (NEW)**: Dedicated page to display and manage user's favorited products.
--   **/app/frontend/src/components/AdvancedSearch.js (NEW)**: Component for advanced product search and filtering.
--   **/app/frontend/src/components/SmartRecommendations.js (NEW)**: Component for displaying AI-powered product recommendations.
--   **/app/frontend/src/components/ProductComparison.js (NEW)**: Component for comparing selected products.
--   **/app/frontend/src/components/LiveChat.js (NEW)**: Component for instant customer support chat.
--   **/app/frontend/src/pages/admin/AdminDashboard.js**: Main admin component. Replaced , acts as a layout, now routes to , , , , , .
--   **/app/frontend/src/pages/admin/ProductsPage.js**: Original admin product management page. Now superseded by .
--   **/app/frontend/src/pages/admin/EnhancedProductsPage.js (NEW)**: Improved product management page within admin, likely to integrate .
--   **/app/frontend/src/components/admin/ProductFormModal.js (NEW)**: Modal component for adding or editing product details in the admin panel.
--   **/app/frontend/src/pages/admin/OrdersPage.js (NEW)**: Admin page for managing customer orders.
--   **/app/frontend/src/pages/admin/UsersPage.js (NEW)**: Admin page for managing user accounts and roles.
--   **/app/frontend/src/pages/admin/SettingsPage.js (NEW)**: Admin page for general store settings configuration.
--   **/app/frontend/src/pages/admin/AnalyticsPage.js (NEW)**: Admin page for displaying store analytics.
--   **/app/frontend/src/pages/admin/IntegrationsPage.js (NEW)**: Admin page for managing external integrations (AliExpress, Amazon).
--   **/app/frontend/src/config/flags.js**: Feature flag management. Updated to include , , .
--   **/app/frontend/src/App.css**: Global styling. Added custom color utilities, logo shimmer, responsive image classes, and  for toasts.
--   **/app/frontend/package.json**: Frontend dependencies. Numerous updates for Vercel, , .
--   **/app/frontend/public/index.html**: Main HTML file. Cleaned up, removed badge, added PWA  link and  registration.
--   **/app/frontend/public/manifest.json (NEW)**: Web app manifest for PWA capabilities.
--   **/app/frontend/public/sw.js (NEW)**: Service Worker file for PWA offline capabilities.
--   **/app/frontend/public/offline.html (NEW)**: HTML page to be served when offline.
--   **/app/frontend/src/index.js**: Entry point for React. Added  registration.
--   **/app/frontend/src/SEOHead.js (NEW)**: Component for managing SEO meta tags using .
--   **/app/vercel.json (NEW)**: Vercel configuration. Configures build command and routing rules.
--   **/app/.github/workflows/ci-frontend.yml (NEW)**: GitHub Action for frontend CI.
--   **/app/.github/workflows/ci-backend.yml (NEW)**: GitHub Action for backend CI.
--   **/app/.github/workflows/deploy-frontend.yml (NEW)**: GitHub Action for Vercel auto-deployment. Modified to deploy from all branches.
--   **/app/.github/workflows/deploy-backend.yml (NEW)**: GitHub Action for Render auto-deployment. Modified to deploy from all branches.
--   **/app/.github/workflows/deploy-preview.yml (NEW)**: GitHub Action for Vercel preview deployments.
-</code_architecture>
-
-<pending_tasks>
-- Complete full internationalization (i18n) across all frontend pages (beyond basic RTL/LTR).
-- Finalize comprehensive responsive image optimization for all remaining images.
-- Integrate real-time AliExpress and Amazon APIs for dropshipping.
-- Implement UI and backend for Bulk Import (CSV/Excel) and Auto-Sync for products.
-- Develop Orders, Users & Roles, CMS Pages, Theme, Media management in Admin Dashboard (beyond current placeholders).
-- Integrate general store settings management (backend logic).
-- Implement AI functionality for advanced search and smart recommendations (currently placeholders).
-- Implement detailed logic for product comparison.
-- Full implementation of PWA features (beyond basic manifest and service worker).
-- Full implementation of Live Chat (currently a UI component).
-- Automatic currency conversion to USD for final payment.
-</pending_tasks>
-
-<current_work>
-Immediately before this summary request, the AI engineer was actively enhancing the Admin Product Management page. The original  in the admin section was replaced by a new  (created in ). This new page is intended to be more interactive and will integrate a modal for adding and editing products. The  component (created in ) has been scaffolded and is the next piece to be integrated. The frontend service was restarted (, ) to apply the recent changes, and the user provided a simple compleat confirmation, indicating they expect the integration to proceed. The user had previously specified to continue the admin page.
-</current_work>
-
-<optional_next_step>
-Integrate the  into  to enable adding and editing products in the Admin Dashboard.
 </optional_next_step>

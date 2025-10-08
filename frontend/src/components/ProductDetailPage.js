@@ -6,6 +6,7 @@ import { Card } from './ui/card';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { setSEO } from '../utils/seo';
+import { useCart } from '../context/CartContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

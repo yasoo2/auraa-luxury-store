@@ -74,6 +74,7 @@ const CartPage = () => {
     try {
       await axios.delete(`${API}/cart/remove/${productId}`);
       await fetchCart(); // Refresh cart
+      await fetchCartCount(); // Update cart count in navbar
       toast.success('تم إزالة المنتج من السلة');
     } catch (error) {
       console.error('Error removing item:', error);

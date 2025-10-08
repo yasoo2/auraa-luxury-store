@@ -62,6 +62,7 @@ const CartPage = () => {
         await axios.post(`${API}/cart/add?product_id=${productId}&quantity=${newQuantity}`);
       }
       await fetchCart(); // Refresh cart
+      await fetchCartCount(); // Update cart count in navbar
       toast.success('تم تحديث السلة');
     } catch (error) {
       console.error('Error updating quantity:', error);

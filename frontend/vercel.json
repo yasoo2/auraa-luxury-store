@@ -2,11 +2,14 @@
   "buildCommand": "yarn build",
   "outputDirectory": "build",
   "installCommand": "yarn install",
-  "framework": null,
+  "framework": "create-react-app",
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "REACT_APP_BACKEND_URL": "https://auraa-admin.preview.emergentagent.com"
+  }
 }

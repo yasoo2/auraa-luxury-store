@@ -14,6 +14,7 @@ const API = `${BACKEND_URL}/api`;
 const CartPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { fetchCartCount } = useCart();
   const [cart, setCart] = useState(null);
   const [products, setProducts] = useState({});
   const [loading, setLoading] = useState(true);

@@ -85,7 +85,7 @@ const ProductDetailPage = () => {
 
   const buyNow = async () => {
     try {
-      await addToCart();
+      await handleAddToCart();
       navigate('/cart');
     } catch (error) {}
   };

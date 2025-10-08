@@ -69,16 +69,16 @@ const ProductDetailPage = () => {
     }
   };
 
-  const addToCart = async () => {
-    try {
-      await axios.post(`${API}/cart/add?product_id=${product.id}&quantity=${quantity}`);
+  const handleAddToCart = async () => {
+    const result = await addToCart(product.id, quantity);
+    if (result.success) {
       toast.success(`تم إضافة ${quantity} قطعة إلى السلة`);
-    } catch (error) {
-      if (error.response?.status === 401) {
+    } else {
+      if (result.error.includes('Authentication')) {
         toast.error('يجب تسجيل الدخول أولاً');
         navigate('/auth');
       } else {
-        toast.error('فشل في إضافة المنتج إلى السلة');
+        toast.error(result.error || 'فشل في إضافة المنتج إلى السلة');
       }
     }
   };

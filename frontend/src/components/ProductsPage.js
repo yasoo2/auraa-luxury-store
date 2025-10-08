@@ -309,7 +309,7 @@ const ProductsPage = () => {
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button onClick={() => addToCart(product.id)} className="btn-luxury flex-1" data-testid={`add-to-cart-${product.id}`}>
+                        <Button onClick={() => handleAddToCart(product.id)} className="btn-luxury flex-1" data-testid={`add-to-cart-${product.id}`}>
                           <ShoppingCart className="h-4 w-4 ml-2" />
                           أضف للسلة
                         </Button>

@@ -5,6 +5,7 @@ import axios from 'axios';
 import './App.css';
 import { LanguageProvider } from './context/LanguageContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { CartProvider } from './context/CartContext';
 
 // Import components
 import HomePage from './components/HomePage';

@@ -192,7 +192,7 @@ const ProductDetailPage = () => {
               </div>
 
               <div className="flex space-x-4">
-                <Button onClick={addToCart} className="btn-luxury flex-1" data-testid="add-to-cart-button">
+                <Button onClick={handleAddToCart} className="btn-luxury flex-1" data-testid="add-to-cart-button">
                   <ShoppingCart className="h-5 w-5 ml-2" />
                   أضف إلى السلة
                 </Button>

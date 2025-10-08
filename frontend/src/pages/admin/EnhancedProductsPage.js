@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import axios from 'axios';
+import ProductFormModal from '../../components/admin/ProductFormModal';
 import { 
   Plus, 
   Edit2, 
@@ -47,9 +48,14 @@ const EnhancedProductsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [uploading, setUploading] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid or list
+  const [submitting, setSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   
   const isRTL = language === 'ar';
   const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+
+  // Get auth token
+  const token = localStorage.getItem('token');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -267,6 +273,86 @@ const EnhancedProductsPage = () => {
       setSelectedProducts([]);
     } else {
       setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
+  const handleCreateProduct = async (productData) => {
+    try {
+      setSubmitting(true);
+      const response = await axios.post(`${API_URL}/api/products`, productData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      setProducts(prev => [response.data, ...prev]);
+      setShowModal(false);
+      setEditingProduct(null);
+      
+      // Show success message
+      console.log('Product created successfully');
+    } catch (error) {
+      console.error('Error creating product:', error);
+      alert(isRTL ? 'خطأ في إنشاء المنتج' : 'Error creating product');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateProduct = async (productData) => {
+    try {
+      setSubmitting(true);
+      const response = await axios.put(`${API_URL}/api/products/${editingProduct.id}`, productData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      setProducts(prev => prev.map(p => p.id === editingProduct.id ? response.data : p));
+      setShowModal(false);
+      setEditingProduct(null);
+      
+      // Show success message
+      console.log('Product updated successfully');
+    } catch (error) {
+      console.error('Error updating product:', error);
+      alert(isRTL ? 'خطأ في تحديث المنتج' : 'Error updating product');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    try {
+      await axios.delete(`${API_URL}/api/products/${productId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      setProducts(prev => prev.filter(p => p.id !== productId));
+      setDeleteConfirm(null);
+      
+      // Show success message
+      console.log('Product deleted successfully');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert(isRTL ? 'خطأ في حذف المنتج' : 'Error deleting product');
+    }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setShowModal(true);
+  };
+
+  const handleFormSubmit = (productData) => {
+    if (editingProduct) {
+      handleUpdateProduct(productData);
+    } else {
+      handleCreateProduct(productData);
     }
   };
 
@@ -489,7 +575,11 @@ const EnhancedProductsPage = () => {
                         <Button size="sm" variant="secondary" onClick={() => window.open(`/product/${product.id}`, '_blank')}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                        <Button 
+                          size="sm" 
+                          className="bg-amber-600 hover:bg-amber-700"
+                          onClick={() => handleEditProduct(product)}
+                        >
                           <Edit2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -564,11 +654,20 @@ const EnhancedProductsPage = () => {
 
                     {/* Actions */}
                     <div className="flex gap-2">
-                      <Button className="flex-1 bg-amber-600 hover:bg-amber-700" size="sm">
+                      <Button 
+                        className="flex-1 bg-amber-600 hover:bg-amber-700" 
+                        size="sm"
+                        onClick={() => handleEditProduct(product)}
+                      >
                         <Edit2 className="h-3 w-3 mr-1" />
                         {isRTL ? 'تعديل' : 'Edit'}
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 border-red-300 hover:bg-red-50">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => setDeleteConfirm(product.id)}
+                      >
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -670,10 +769,20 @@ const EnhancedProductsPage = () => {
                           <Button size="sm" variant="ghost" onClick={() => window.open(`/product/${product.id}`, '_blank')}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-amber-600 hover:text-amber-900">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="text-amber-600 hover:text-amber-900"
+                            onClick={() => handleEditProduct(product)}
+                          >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-900">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="text-red-600 hover:text-red-900"
+                            onClick={() => setDeleteConfirm(product.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -701,6 +810,54 @@ const EnhancedProductsPage = () => {
             <Plus className="h-4 w-4 mr-2" />
             {isRTL ? 'إضافة منتج' : 'Add Product'}
           </Button>
+        </div>
+      )}
+
+      {/* Product Form Modal */}
+      <ProductFormModal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingProduct(null);
+        }}
+        product={editingProduct}
+        onSubmit={handleFormSubmit}
+        loading={submitting}
+      />
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" dir={isRTL ? 'rtl' : 'ltr'}>
+            <div className="flex items-center mb-4">
+              <AlertCircle className="h-6 w-6 text-red-600 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}
+              </h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              {isRTL 
+                ? 'هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.'
+                : 'Are you sure you want to delete this product? This action cannot be undone.'
+              }
+            </p>
+            
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700"
+                onClick={() => handleDeleteProduct(deleteConfirm)}
+              >
+                {isRTL ? 'حذف' : 'Delete'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

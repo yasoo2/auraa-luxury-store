@@ -20,12 +20,12 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const { t, isRTL } = useLanguage();
   const { getWishlistCount } = useWishlist();
+  const { cartCount } = useCart();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const fetchCategories = async () => {

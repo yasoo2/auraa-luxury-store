@@ -163,7 +163,8 @@ function App() {
     <HelmetProvider>
       <LanguageProvider>
         <WishlistProvider>
-          <AuthProvider>
+          <CartProvider>
+            <AuthProvider>
             <BrowserRouter>
           <Routes>
             {/* Admin Routes (no Navbar/Footer) */}

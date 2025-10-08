@@ -20,6 +20,7 @@ const API = `${BACKEND_URL}/api`;
 
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);

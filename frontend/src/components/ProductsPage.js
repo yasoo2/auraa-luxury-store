@@ -13,6 +13,7 @@ import SmartRecommendations from './SmartRecommendations';
 import ProductComparison from './ProductComparison';
 import LiveChat from './LiveChat';
 import HeartButton from './HeartButton';
+import { useCart } from '../context/CartContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

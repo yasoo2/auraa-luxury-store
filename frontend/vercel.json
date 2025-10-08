@@ -1,6 +1,6 @@
 {
   "buildCommand": "yarn build",
-  "outputDirectory": "build", 
+  "outputDirectory": "build",
   "installCommand": "yarn install",
   "framework": "create-react-app",
   "rewrites": [
@@ -11,12 +11,5 @@
   ],
   "env": {
 
-    }
-  },
-  "git": {
-    "deploymentEnabled": {
-      "main": true,
-      "feat/admin-suite-complete": true
-    }
   }
 }

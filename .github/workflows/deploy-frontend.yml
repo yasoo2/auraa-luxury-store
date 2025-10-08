@@ -2,24 +2,55 @@ name: Deploy Frontend to Vercel
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, feat/admin-suite-complete ]
     paths:
       - 'frontend/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Build Project
+        working-directory: ./frontend
+        run: yarn build
+        env:
+          REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL || 'https://auraaluxury.preview.emergentagent.com' }}
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-args: '--prod'
+          vercel-args: '--prod --confirm'
           working-directory: ./frontend
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deployment Success Notification
+        if: success()
+        run: |
+          echo "🎉 Frontend successfully deployed to Vercel!"
+          echo "🔗 Check deployment at: https://vercel.com"
+
+      - name: Deployment Failure Notification
+        if: failure()
+        run: |
+          echo "❌ Frontend deployment failed!"
+          echo "🔍 Check the logs above for details"

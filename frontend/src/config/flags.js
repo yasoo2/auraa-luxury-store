@@ -14,6 +14,9 @@ export const FLAGS = {
   MULTI_LANG_EXTENDED: readBool('FEATURE_MULTI_LANG_EXTENDED') || true, // Default ON
   GCC_CURRENCIES: readBool('FEATURE_GCC_CURRENCIES') || true, // Default ON
   IMG_NO_CROP: readBool('FEATURE_IMG_NO_CROP') || true, // Default ON
+  // Phase 1: Admin Suite MVP
+  ADMIN: readBool('FEATURE_ADMIN') || true, // Admin Dashboard
+  BULK_IMPORT: readBool('FEATURE_BULK_IMPORT') || true, // CSV Import
 };
 
 export default FLAGS;

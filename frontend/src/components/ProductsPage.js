@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Filter, SlidersHorizontal, Star, Heart, ShoppingCart } from 'lucide-react';
+import { Filter, SlidersHorizontal, Star, Heart, ShoppingCart, Scale, Grid, List } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
@@ -8,6 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import axios from 'axios';
 import { setSEO } from '../utils/seo';
+import AdvancedSearch from './AdvancedSearch';
+import SmartRecommendations from './SmartRecommendations';
+import ProductComparison from './ProductComparison';
+import LiveChat from './LiveChat';
+import HeartButton from './HeartButton';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -24,6 +29,12 @@ const ProductsPage = () => {
     maxPrice: '',
     sortBy: 'newest'
   });
+  
+  // New state for advanced features
+  const [showComparison, setShowComparison] = useState(false);
+  const [comparisonProducts, setComparisonProducts] = useState([]);
+  const [viewMode, setViewMode] = useState('grid'); // grid, list
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setSEO({
@@ -105,6 +116,22 @@ const ProductsPage = () => {
     }
   };
 
+  const addToComparison = (product) => {
+    if (comparisonProducts.length >= 4) {
+      toast.error('يمكنك مقارنة 4 منتجات كحد أقصى');
+      return;
+    }
+    
+    if (!comparisonProducts.some(p => p.id === product.id)) {
+      setComparisonProducts([...comparisonProducts, product]);
+      toast.success('تم إضافة المنتج للمقارنة');
+    }
+  };
+
+  const removeFromComparison = (productId) => {
+    setComparisonProducts(comparisonProducts.filter(p => p.id !== productId));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -118,6 +145,14 @@ const ProductsPage = () => {
             }
           </h1>
           <p className="text-xl text-gray-600">اكتشف مجموعتنا الواسعة من الاكسسوارات الفاخرة</p>
+          
+          {/* Advanced Search */}
+          <div className="mt-6">
+            <AdvancedSearch 
+              onResults={setProducts}
+              showFilters={true}
+            />
+          </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -167,6 +202,38 @@ const ProductsPage = () => {
           <div className="lg:w-3/4">
             <div className="flex justify-between items-center mb-6">
               <p className="text-gray-600">{loading ? 'جاري التحميل...' : `${products.length} منتج`}</p>
+              
+              <div className="flex items-center gap-4">
+                {/* Comparison Toggle */}
+                {comparisonProducts.length > 0 && (
+                  <Button
+                    onClick={() => setShowComparison(true)}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    مقارنة ({comparisonProducts.length})
+                  </Button>
+                )}
+                
+                {/* View Mode Toggle */}
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                      viewMode === 'grid' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    شبكة
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                      viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    قائمة
+                  </button>
+                </div>
+              </div>
             </div>
             {loading ? (
               <div className="product-grid">
@@ -212,9 +279,14 @@ const ProductsPage = () => {
                           إضافة سريعة
                         </Button>
                       </div>
-                      <button className="absolute top-4 left-4 p-2 bg-white/80 rounded-full hover:bg-white transition-colors">
-                        <Heart className="h-4 w-4 text-gray-600 hover:text-red-500" />
-                      </button>
+                      <div className="absolute top-4 left-4">
+                        <HeartButton 
+                          product={product}
+                          variant="floating"
+                          size="md"
+                          showAnimation={true}
+                        />
+                      </div>
                     </div>
                     <div className="p-6">
                       <Link to={`/product/${product.id}`}>
@@ -239,6 +311,14 @@ const ProductsPage = () => {
                           <ShoppingCart className="h-4 w-4 ml-2" />
                           أضف للسلة
                         </Button>
+                        <Button 
+                          onClick={() => addToComparison(product)}
+                          variant="outline"
+                          size="sm"
+                          className={`p-2 ${comparisonProducts.some(p => p.id === product.id) ? 'bg-purple-100 text-purple-600' : ''}`}
+                        >
+                          <Scale className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </Card>
@@ -247,7 +327,30 @@ const ProductsPage = () => {
             )}
           </div>
         </div>
+        
+        {/* Smart Recommendations */}
+        {!loading && products.length > 0 && (
+          <div className="mt-16">
+            <SmartRecommendations 
+              type="personalized"
+              category={filters.category}
+              limit={6}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Product Comparison Modal */}
+      {showComparison && (
+        <ProductComparison
+          initialProducts={comparisonProducts}
+          isModal={true}
+          onClose={() => setShowComparison(false)}
+        />
+      )}
+      
+      {/* Live Chat */}
+      <LiveChat userId={null} productId={null} />
     </div>
   );
 };

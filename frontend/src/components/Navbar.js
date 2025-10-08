@@ -5,6 +5,7 @@ import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown } from 
 
 import { useAuth } from '../App';
 import { useLanguage } from '../context/LanguageContext';
+import { useWishlist } from '../context/WishlistContext';
 import LanguageCurrencySelector from './LanguageCurrencySelector';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -17,6 +18,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { t, isRTL } = useLanguage();
+  const { getWishlistCount } = useWishlist();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
@@ -156,8 +158,13 @@ const Navbar = () => {
             </Link>
 
             {/* Wishlist */}
-            <Link to={user ? '/wishlist' : '/auth'} className="p-2 text-gray-700 hover-text-brand transition-colors duration-200">
+            <Link to={user ? '/wishlist' : '/auth'} className="relative p-2 text-gray-700 hover-text-brand transition-colors duration-200">
               <Heart className="h-6 w-6" />
+              {getWishlistCount() > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[1.1rem] px-1 flex items-center justify-center">
+                  {getWishlistCount()}
+                </span>
+              )}
             </Link>
 
             {/* User */}

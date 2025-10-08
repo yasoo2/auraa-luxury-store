@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class AuraaLuxuryAPITester:
-    def __init__(self, base_url="https://auraa-luxury-1.preview.emergentagent.com"):
+    def __init__(self, base_url="https://auraaluxury.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.token = None
@@ -50,6 +50,8 @@ class AuraaLuxuryAPITester:
                 response = requests.get(url, headers=default_headers, timeout=10)
             elif method.upper() == 'POST':
                 response = requests.post(url, json=data, headers=default_headers, timeout=10)
+            elif method.upper() == 'PUT':
+                response = requests.put(url, json=data, headers=default_headers, timeout=10)
             elif method.upper() == 'DELETE':
                 response = requests.delete(url, headers=default_headers, timeout=10)
             else:
@@ -176,8 +178,11 @@ class AuraaLuxuryAPITester:
         else:
             self.log_test("User Registration", False, f"Status: {status}, Response: {data}")
     
-    def test_admin_login(self):
-        """Test admin login"""
+    def test_admin_authentication_flow(self):
+        """Test complete admin authentication flow as requested"""
+        print("\n🔐 ADMIN AUTHENTICATION FLOW TESTING")
+        
+        # Test admin login with specific credentials
         admin_credentials = {
             "email": "admin@auraa.com",
             "password": "admin123"
@@ -187,13 +192,33 @@ class AuraaLuxuryAPITester:
         
         if success and data.get('access_token'):
             self.admin_token = data['access_token']
-            is_admin = data.get('user', {}).get('is_admin', False)
+            user_data = data.get('user', {})
+            is_admin = user_data.get('is_admin', False)
+            
             if is_admin:
-                self.log_test("Admin Login", True, "Admin logged in successfully")
+                self.log_test("Admin Login with admin@auraa.com", True, f"Admin logged in successfully, is_admin: {is_admin}")
+                
+                # Test token validation for admin routes
+                original_token = self.token
+                self.token = self.admin_token
+                
+                success_validate, data_validate, status_validate = self.make_request('GET', '/auth/me')
+                if success_validate and data_validate.get('is_admin'):
+                    self.log_test("Admin Token Validation", True, f"Token validated, user: {data_validate.get('email')}")
+                else:
+                    self.log_test("Admin Token Validation", False, f"Token validation failed: {status_validate}")
+                
+                # Restore original token
+                self.token = original_token
             else:
-                self.log_test("Admin Login", False, "User is not admin")
+                self.log_test("Admin Login with admin@auraa.com", False, f"User is not admin, is_admin: {is_admin}")
         else:
-            self.log_test("Admin Login", False, f"Status: {status}, Response: {data}")
+            self.log_test("Admin Login with admin@auraa.com", False, f"Status: {status}, Response: {data}")
+    
+    def test_admin_login(self):
+        """Test admin login (legacy method for compatibility)"""
+        # This now calls the comprehensive admin authentication flow
+        self.test_admin_authentication_flow()
     
     def test_user_profile(self):
         """Test user profile endpoint"""
@@ -290,59 +315,138 @@ class AuraaLuxuryAPITester:
         else:
             self.log_test("Get Orders", False, f"Status: {status}")
     
-    def test_admin_product_creation(self):
-        """Test admin product creation"""
+    def test_admin_product_crud(self):
+        """Test complete admin product CRUD operations"""
         if not self.admin_token:
-            self.log_test("Admin Product Creation", False, "No admin token available")
+            self.log_test("Admin Product CRUD", False, "No admin token available")
             return
         
         # Temporarily use admin token
         original_token = self.token
         self.token = self.admin_token
         
+        # CREATE - Test admin product creation
         new_product = {
-            "name": "منتج تجريبي للاختبار",
-            "description": "هذا منتج تجريبي تم إنشاؤه للاختبار",
-            "price": 99.99,
-            "original_price": 149.99,
+            "name": "منتج تجريبي للاختبار الإداري",
+            "description": "هذا منتج تجريبي تم إنشاؤه لاختبار العمليات الإدارية",
+            "price": 199.99,
+            "original_price": 299.99,
             "discount_percentage": 33,
             "category": "rings",
             "images": ["https://images.unsplash.com/photo-1606623546924-a4f3ae5ea3e8"],
-            "stock_quantity": 50,
-            "external_url": "https://example.com"
+            "stock_quantity": 25,
+            "external_url": "https://example.com/admin-test"
         }
         
         success, data, status = self.make_request('POST', '/products', new_product)
         
         if success and data.get('id'):
-            self.log_test("Admin Product Creation", True, f"Product created: {data['name']}")
+            created_product_id = data['id']
+            self.log_test("Admin Product CREATE", True, f"Product created: {data['name']}")
+            
+            # UPDATE - Test admin product update
+            update_data = {
+                "name": "منتج محدث للاختبار الإداري",
+                "description": "تم تحديث هذا المنتج بواسطة المدير",
+                "price": 249.99,
+                "original_price": 349.99,
+                "discount_percentage": 28,
+                "category": "rings",
+                "images": ["https://images.unsplash.com/photo-1606623546924-a4f3ae5ea3e8"],
+                "stock_quantity": 15,
+                "external_url": "https://example.com/admin-test-updated"
+            }
+            
+            success_update, data_update, status_update = self.make_request('PUT', f'/products/{created_product_id}', update_data)
+            
+            if success_update and data_update.get('name') == update_data['name']:
+                self.log_test("Admin Product UPDATE", True, f"Product updated: {data_update['name']}")
+            else:
+                self.log_test("Admin Product UPDATE", False, f"Status: {status_update}, Response: {data_update}")
+            
+            # DELETE - Test admin product deletion
+            success_delete, data_delete, status_delete = self.make_request('DELETE', f'/products/{created_product_id}')
+            
+            if success_delete:
+                self.log_test("Admin Product DELETE", True, "Product deleted successfully")
+                
+                # Verify deletion by trying to get the product
+                success_verify, data_verify, status_verify = self.make_request('GET', f'/products/{created_product_id}')
+                if not success_verify and status_verify == 404:
+                    self.log_test("Admin Product DELETE Verification", True, "Product properly deleted (404 on GET)")
+                else:
+                    self.log_test("Admin Product DELETE Verification", False, f"Product still exists after deletion: {status_verify}")
+            else:
+                self.log_test("Admin Product DELETE", False, f"Status: {status_delete}, Response: {data_delete}")
         else:
-            self.log_test("Admin Product Creation", False, f"Status: {status}, Response: {data}")
+            self.log_test("Admin Product CREATE", False, f"Status: {status}, Response: {data}")
         
         # Restore original token
         self.token = original_token
     
-    def test_unauthorized_access(self):
-        """Test unauthorized access to protected endpoints"""
-        # Temporarily remove token
+    def test_admin_dashboard_security(self):
+        """Test admin dashboard security - all /api/admin/* endpoints require admin authentication"""
+        
+        # Test 1: No authentication token
         original_token = self.token
         self.token = None
         
-        # Try to access cart without authentication
-        success, data, status = self.make_request('GET', '/cart')
-        
+        success, data, status = self.make_request('GET', '/admin/integrations')
         if not success and status in [401, 403]:
-            self.log_test("Unauthorized Cart Access", True, "Properly blocked unauthorized access")
+            self.log_test("Admin Endpoint - No Token", True, f"Properly blocked unauthenticated access (Status: {status})")
         else:
-            self.log_test("Unauthorized Cart Access", False, f"Should have returned 401/403, got {status}")
+            self.log_test("Admin Endpoint - No Token", False, f"Should return 401/403, got {status}")
         
-        # Try to create product without admin access
+        # Test 2: Non-admin user token
+        if original_token:  # Regular user token
+            self.token = original_token
+            success, data, status = self.make_request('GET', '/admin/integrations')
+            if not success and status == 403:
+                self.log_test("Admin Endpoint - Non-Admin User", True, "Properly blocked non-admin access (403)")
+            else:
+                self.log_test("Admin Endpoint - Non-Admin User", False, f"Should return 403, got {status}")
+        
+        # Test 3: Admin user token should work
+        if self.admin_token:
+            self.token = self.admin_token
+            success, data, status = self.make_request('GET', '/admin/integrations')
+            if success:
+                self.log_test("Admin Endpoint - Admin User", True, "Admin user can access admin endpoints")
+            else:
+                self.log_test("Admin Endpoint - Admin User", False, f"Admin access failed: {status}")
+        
+        # Test 4: Product CRUD security (admin-protected endpoints)
+        self.token = None
+        
+        # Test unauthorized product creation
         success, data, status = self.make_request('POST', '/products', {"name": "test"})
-        
         if not success and status in [401, 403]:
-            self.log_test("Unauthorized Product Creation", True, "Properly blocked unauthorized access")
+            self.log_test("Product CREATE - No Auth", True, f"Properly blocked unauthorized product creation (Status: {status})")
         else:
-            self.log_test("Unauthorized Product Creation", False, f"Should have returned 401/403, got {status}")
+            self.log_test("Product CREATE - No Auth", False, f"Should return 401/403, got {status}")
+        
+        # Test unauthorized product update
+        success, data, status = self.make_request('PUT', '/products/test-id', {"name": "test"})
+        if not success and status in [401, 403]:
+            self.log_test("Product UPDATE - No Auth", True, f"Properly blocked unauthorized product update (Status: {status})")
+        else:
+            self.log_test("Product UPDATE - No Auth", False, f"Should return 401/403, got {status}")
+        
+        # Test unauthorized product deletion
+        success, data, status = self.make_request('DELETE', '/products/test-id')
+        if not success and status in [401, 403]:
+            self.log_test("Product DELETE - No Auth", True, f"Properly blocked unauthorized product deletion (Status: {status})")
+        else:
+            self.log_test("Product DELETE - No Auth", False, f"Should return 401/403, got {status}")
+        
+        # Test with non-admin user
+        if original_token:
+            self.token = original_token
+            success, data, status = self.make_request('POST', '/products', {"name": "test"})
+            if not success and status == 403:
+                self.log_test("Product CREATE - Non-Admin", True, "Properly blocked non-admin product creation (403)")
+            else:
+                self.log_test("Product CREATE - Non-Admin", False, f"Should return 403, got {status}")
         
         # Restore token
         self.token = original_token
@@ -609,11 +713,10 @@ class AuraaLuxuryAPITester:
         self.test_order_creation()
         self.test_get_orders()
         
-        # Admin tests
-        self.test_admin_product_creation()
-        
-        # Security tests
-        self.test_unauthorized_access()
+        # ADMIN DASHBOARD TESTS (Priority for this review)
+        print("\n🔐 ADMIN DASHBOARD TESTS")
+        self.test_admin_product_crud()
+        self.test_admin_dashboard_security()
         
         # Print summary
         print("\n" + "=" * 60)

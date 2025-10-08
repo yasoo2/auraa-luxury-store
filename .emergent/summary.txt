@@ -1,84 +1,128 @@
 <analysis>
-The trajectory documents the creation of a luxury dropshipping e-commerce application named Auraa Luxury. The development process was highly iterative and driven by user feedback provided in Arabic.
-
-Initially, the AI engineer scaffolded a full-stack application, including a FastAPI backend and a React frontend with multiple components for a complete e-commerce flow (Homepage, Products, Cart, Checkout, Admin Panel). The initial build faced several technical issues, including a  for  on the backend and a rendering error with the  component on the frontend, both of which were successfully debugged and resolved.
-
-Following the initial MVP, the user provided a series of specific feature requests. The engineer implemented a multi-language (Arabic/English) and multi-currency system using React Context. The UI and branding were significantly overhauled with a new color palette (silver, gold, black), a redesigned logo, and the integration of high-quality images of models. A major feature added was a full-width, auto-playing image carousel at the top of the homepage.
-
-The engineer then refactored the homepage by removing sections as requested by the user and moved the Shop by Category feature into a dropdown in the main navigation bar. Significant effort was put into making the entire application responsive for both desktop and mobile views.
-
-The final phase of the trajectory involves the user uploading a  file with a comprehensive list of new instructions. The AI engineer has successfully parsed this file and is about to begin implementing these new, detailed requirements, starting with updates to the visual identity.
+The AI engineer successfully transformed Auraa Luxury from an MVP into a feature-rich e-commerce platform. Initial efforts focused on core scaffolding, UI/UX (logo, carousel, i18n/L10n), and Vercel deployment issues. A major milestone was the creation of a comprehensive Admin Suite (backend CRUD, frontend dashboard pages for products, orders, users, settings, analytics, integrations). User-requested enhancements included advanced shopping features (AI search, smart recommendations, product comparison), and UX improvements (PWA, live chat). The engineer meticulously implemented a full wishlist system with UI integration. The latest work addresses a deployment issue by configuring GitHub Actions for feature branches and is currently focused on enhancing the Admin Products page with a modal-based product form, demonstrating an iterative, user-driven development approach with strong emphasis on testing and feature flagging.
 </analysis>
 
 <product_requirements>
-The goal is to build a high-end, world-class dropshipping e-commerce store named Auraa Luxury specializing in accessories.
-
-**Core Functionality:**
-*   A full-featured e-commerce platform with product listings, a shopping cart, a checkout process, and user authentication.
-*   An admin dashboard for managing products, orders, and viewing sales analytics.
-*   Integration with dropshipping suppliers like AliExpress and Amazon to source products (currently simulated).
-
-**Key Features Implemented:**
-*   **Branding & UI:** A sophisticated and luxurious visual identity using a silver, gold, and black color scheme. The logo is prominent, with Auraa larger than LUXURY and the word ACCESSORIES (or its Arabic equivalent) underneath.
-*   **Homepage:** Features a large, full-width, auto-playing image carousel of models right below the header.
-*   **Internationalization:** Supports multiple languages (Arabic, English) and currencies (USD, SAR), switchable from the navigation bar.
-*   **Responsive Design:** The application is fully responsive and optimized for a seamless experience on both desktop and mobile devices.
-*   **Navigation:** A clean header containing the logo, a Shop by Category dropdown menu, language/currency selectors, and user auth links.
-
-**Pending Requirements:**
-*   Implement a detailed set of instructions provided by the user in a  file, covering further enhancements to the store's features and design.
-*   Transition from a simulated dropshipping API to a live integration with AliExpress and Amazon.
+Auraa Luxury aims to be a high-end dropshipping e-commerce platform for accessories, featuring full e-commerce capabilities and an admin dashboard, with future AliExpress/Amazon integrations.
+Implemented features include:
+- A luxurious UI with a gold/silver/black palette, multi-line logo, responsive design, and refined navigation.
+- Multi-language (Arabic, English, extended to other languages) and multi-currency (USD, SAR, extended to GCC) support with dynamic RTL/LTR.
+- A full-width image carousel displaying models with accessories.
+- Free Shipping information in the footer.
+- Removal of simulated external store links and dummy products (except for initial admin setup).
+- A comprehensive Admin Suite for managing products, orders, users, pages, themes, media, integrations.
+- Full internationalization (i18n), responsive image handling, SEO, performance, and UX improvements, all feature-flagged.
+- Automatic currency conversion to USD for final payment.
+- Advanced shopping features: AI-powered search filters, smart product recommendations, and a product comparison system.
+- Enhanced user experience: PWA (Progressive Web App) support and live chat functionality.
+- A fully functional wishlist system with UI integration across product listings and a dedicated wishlist page.
 </product_requirements>
 
 <key_technical_concepts>
-*   **Full-Stack Framework:** React for the frontend, FastAPI for the backend API.
-*   **Database:** MongoDB for data storage, accessed via  async driver.
-*   **UI Library:** Shadcn UI components built on top of Tailwind CSS for a modern, responsive design.
-*   **State Management:** React Context API () for managing global state related to language and currency.
-*   **Frontend Routing:**  for client-side navigation between different pages and components.
+- **Full-Stack:** React (frontend), FastAPI (backend).
+- **Database:** MongoDB with .
+- **UI:** Shadcn UI (Tailwind CSS), React Context API for global state.
+- **Routing:** .
+- **Build/Deployment:** CRACO, Vercel, Render, GitHub Actions for CI/CD.
+- **Internationalization:** Custom .
+- **State Management:** React Context API (e.g., , ).
 </key_technical_concepts>
 
 <code_architecture>
-The application follows a standard monorepo structure with separate  and  directories.
 
-
-
-*   **/app/backend/server.py**
-    *   **Importance:** This is the single file containing the entire FastAPI backend application. It handles API routing, database connection with MongoDB, CORS configuration, and all business logic.
-    *   **Changes:** Initially created as a boilerplate server. It was significantly modified to include CRUD endpoints for products, user authentication routes (, ), an endpoint to seed the database with sample data (), and a simulated endpoint for fetching external products (). A bug related to a missing  import was fixed.
-
-*   **/app/frontend/src/App.js**
-    *   **Importance:** This is the root component of the React application. It sets up the main application layout and routing using .
-    *   **Changes:** It was modified to define routes for all the created pages (, , , , , ). It was also updated to wrap the entire application with the  to make language and currency state available globally.
-
-*   **/app/frontend/src/components/HomePage.js**
-    *   **Importance:** The main landing page of the application.
-    *   **Changes:** This component underwent the most changes. It was initially built with a standard hero section, categories, and a models section. It was later refactored to remove the hero and models sections entirely, placing the new  component at the very top. The Shop by Category section was also removed from this page as its functionality was moved to the .
-
-*   **/app/frontend/src/components/Navbar.js**
-    *   **Importance:** Provides consistent navigation across the entire site.
-    *   **Changes:** The Navbar was heavily modified to incorporate the new branding, including the multi-line logo. It was updated to include the  component and a new dropdown menu for Shop by Category. A mobile-responsive hamburger menu was also implemented.
-
-*   **/app/frontend/src/context/LanguageContext.js**
-    *   **Importance:** A crucial file for internationalization. It uses React's Context API to manage and provide the current language and currency settings to all components in the application. It contains translation strings and logic for formatting prices.
-    *   **Changes:** This file was created from scratch to fulfill the multi-language/currency requirement. It was populated with Arabic and English translations for various UI elements.
-
-*   **/app/frontend/src/components/FashionModelsCarousel.js**
-    *   **Importance:** A key UI feature on the homepage, designed to give the site a high-end, premium feel.
-    *   **Changes:** Created from scratch using the Shadcn Carousel component. It was styled to be full-width, auto-play, and include navigation controls, progress indicators, and custom text overlays. It was also made fully responsive.
+-   **/app/backend/server.py**: Core FastAPI backend.
+    -   **Importance:** Handles API endpoints, authentication, and database interactions.
+    -   **Changes:** Contains admin product CRUD (Create, Read, Update, Delete) endpoints with  dependency.
+-   **/app/frontend/src/App.js**: Main React application entry point.
+    -   **Importance:** Defines the main application structure and routing.
+    -   **Changes:** Routes updated to use  and newly created admin pages.  added for global wishlist state.  component integrated.
+-   **/app/frontend/src/components/Navbar.js**: Site-wide navigation.
+    -   **Importance:** Branding, navigation, and user authentication status display.
+    -   **Changes:** Includes a conditional إدارة (Admin) button for admin users and a wishlist counter.
+-   **/app/frontend/src/components/HomePage.js**: Main landing page.
+    -   **Importance:** Showcases products, promotions, and the main carousel.
+    -   **Changes:** Integrated  for better SEO and  for wishlist functionality on product cards.
+-   **/app/frontend/src/components/ProductsPage.js**: Page displaying product listings.
+    -   **Importance:** Allows users to browse and filter products.
+    -   **Changes:** Integrated , ,  components, and  for wishlist.
+-   **/app/frontend/src/context/LanguageContext.js**: Manages global language and currency.
+    -   **Importance:** Provides internationalization support.
+    -   **Changes:** Expanded to support more global languages and GCC currencies, dynamic RTL/LTR.
+-   **/app/frontend/src/context/WishlistContext.js (NEW)**: Manages global wishlist state.
+    -   **Importance:** Centralizes wishlist logic, allowing products to be added/removed from anywhere.
+-   **/app/frontend/src/components/HeartButton.js (NEW)**: Reusable wishlist button component.
+    -   **Importance:** Encapsulates wishlist logic and UI for product cards.
+-   **/app/frontend/src/components/WishlistPage.js (NEW)**: Dedicated page for displaying user's favorite products.
+    -   **Importance:** Provides a user interface to manage wishlist items.
+-   **/app/frontend/src/pages/admin/AdminDashboard.js**: Main entry for the Admin panel.
+    -   **Importance:** The central hub for all administrative functionalities.
+    -   **Changes:** Updated to include navigation and routing for , , , , , and .
+-   **/app/frontend/src/pages/admin/OrdersPage.js (NEW)**: Admin page for managing orders.
+    -   **Importance:** Provides interface for viewing and managing customer orders.
+-   **/app/frontend/src/pages/admin/UsersPage.js (NEW)**: Admin page for managing users.
+    -   **Importance:** Allows administrators to manage user accounts and roles.
+-   **/app/frontend/src/pages/admin/SettingsPage.js (NEW)**: Admin page for general store settings.
+    -   **Importance:** Centralizes configuration options for the entire store.
+-   **/app/frontend/src/pages/admin/AnalyticsPage.js (NEW)**: Admin page for displaying store analytics.
+    -   **Importance:** Provides insights into store performance.
+-   **/app/frontend/src/pages/admin/IntegrationsPage.js (NEW)**: Admin page for managing third-party integrations.
+    -   **Importance:** Facilitates the setup and management of external services like AliExpress/Amazon.
+-   **/app/frontend/src/pages/admin/EnhancedProductsPage.js (NEW)**: New, enhanced page for product management within the admin panel.
+    -   **Importance:** Replaces the initial  with improved UI and functionality, likely including a modal for adding/editing products.
+-   **/app/frontend/src/components/admin/ProductFormModal.js (NEW)**: Component for adding/editing products in the admin panel.
+    -   **Importance:** Provides a form within a modal for streamlined product management.
+-   **/app/frontend/src/components/AdvancedSearch.js (NEW)**: Component for advanced product search.
+    -   **Importance:** Enhances product discovery with more refined search options.
+-   **/app/frontend/src/components/SmartRecommendations.js (NEW)**: Component for displaying AI-powered product recommendations.
+    -   **Importance:** Improves user engagement and sales through personalized suggestions.
+-   **/app/frontend/src/components/ProductComparison.js (NEW)**: Component for comparing multiple products.
+    -   **Importance:** Helps users make informed purchasing decisions.
+-   **/app/frontend/src/components/LiveChat.js (NEW)**: Component for live customer support chat.
+    -   **Importance:** Provides instant support and improves customer satisfaction.
+-   **/app/frontend/src/components/SEOHead.js (NEW)**: Component for managing SEO meta tags.
+    -   **Importance:** Centralizes SEO configurations for better search engine visibility.
+-   **/app/frontend/src/config/flags.js**: Centralized management for feature flags.
+    -   **Importance:** Enables controlled rollout of new features.
+    -   **Changes:** Updated to include , , .
+-   **/app/frontend/public/index.html**: Main HTML file for the frontend.
+    -   **Importance:** The root HTML document of the application.
+    -   **Changes:** Cleaned up HTML, removed Made with Emergent badge, added PWA  link.
+-   **/app/frontend/public/manifest.json (NEW)**: Web App Manifest for PWA.
+    -   **Importance:** Defines the app's metadata for installation on user devices.
+-   **/app/frontend/public/sw.js (NEW)**: Service Worker for PWA.
+    -   **Importance:** Enables offline capabilities and faster loading.
+-   **/app/frontend/public/offline.html (NEW)**: Offline fallback page for PWA.
+    -   **Importance:** Provides content to users when the network is unavailable.
+-   **/app/frontend/src/index.js**: Entry point for React app.
+    -   **Importance:** Renders the main  component.
+    -   **Changes:** Added service worker registration for PWA.
+-   **/app/.github/workflows/deploy-frontend.yml**: GitHub Action for Vercel auto-deployment.
+    -   **Importance:** Automates frontend deployment.
+    -   **Changes:** Modified to trigger deployment on pushes to all branches ().
+-   **/app/.github/workflows/deploy-backend.yml**: GitHub Action for Render auto-deployment.
+    -   **Importance:** Automates backend deployment.
+    -   **Changes:** Modified to trigger deployment on pushes to all branches ().
+-   **/app/.github/workflows/deploy-preview.yml (NEW)**: GitHub Action for preview deployments.
+    -   **Importance:** Creates preview deployments for pull requests or specific branches.
+-   **/app/frontend/vercel.json**: Vercel configuration file.
+    -   **Importance:** Configures Vercel build and deployment settings.
+    -   **Changes:** Configured build command and rewrite rules.
 </code_architecture>
 
 <pending_tasks>
-*   Implement the full set of instructions detailed in the user-provided  file.
-*   Develop the real integration with AliExpress and Amazon APIs to replace the current simulated product fetching.
+- Complete full internationalization (i18n) across all frontend pages (partially done).
+- Finalize comprehensive responsive image optimization for all remaining images.
+- Integrate real-time AliExpress and Amazon APIs for dropshipping (IntegrationsPage created, but logic not implemented).
+- Implement UI and backend for Bulk Import (CSV/Excel) and Auto-Sync for products.
+- Develop Orders, Users & Roles, CMS Pages, Theme, Media management in Admin Dashboard (pages created, but core logic/UI for these specific features not fully implemented beyond basic layouts).
+- Integrate general store settings management (page created, logic not implemented).
+- Implement advanced SEO enhancements (OG/Twitter, hreflang, canonical, JSON-LD) (SEOHead component created, but full integration and specific tag population may be pending).
 </pending_tasks>
 
 <current_work>
-The most recent activity involved addressing a series of highly specific user requests that significantly refined the application's UI and functionality. This included moving the Shop by Category section from the homepage into a dropdown in the navigation bar, adjusting the logo to place the word اكسيسوري (Accessories) directly underneath it, and ensuring the entire application is fully responsive on both desktop and mobile devices.
-
-Immediately before this summary request, the user uploaded a document named  containing a new, comprehensive set of requirements. The AI engineer successfully downloaded and parsed the content of this file. The last action taken was to formulate a plan to begin implementing these new instructions, starting with the updates related to colors and visual identity as specified in the document. The application is currently in a stable and functional state, pending the implementation of this next major set of features.
+The AI engineer is currently focusing on enhancing the Admin Products page. The previous  in the admin section is being replaced by a more interactive . This new page will likely incorporate a modal-based approach for adding and editing products, using the newly created  component. This development is a direct continuation of the user's request to فالنكمل صفحة الادمن (Let's continue with the admin page). The most immediate task is to test this enhanced product management interface to ensure the CRUD operations are seamless and user-friendly within the admin dashboard.
 </current_work>
 
 <optional_next_step>
-Begin implementing the instructions from the  file, starting with the required updates to the color palette and overall visual identity.
+Test the  and  to ensure product CRUD operations work as expected.
 </optional_next_step>

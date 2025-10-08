@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>غير متصل - Auraa Luxury</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FEF3C7 0%, #F59E0B 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            direction: rtl;
+        }
+        
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #D97706;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            color: #92400E;
+            margin-bottom: 30px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+        
+        .offline-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            opacity: 0.7;
+        }
+        
+        h1 {
+            color: #1F2937;
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        
+        p {
+            color: #6B7280;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .retry-btn {
+            background: linear-gradient(135deg, #D97706, #F59E0B);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(217, 119, 6, 0.3);
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(217, 119, 6, 0.4);
+        }
+        
+        .features {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #E5E7EB;
+        }
+        
+        .features h3 {
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .feature-list {
+            list-style: none;
+            color: #6B7280;
+        }
+        
+        .feature-list li {
+            margin-bottom: 8px;
+            padding-right: 20px;
+            position: relative;
+        }
+        
+        .feature-list li:before {
+            content: "✨";
+            position: absolute;
+            right: 0;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        
+        .offline-icon {
+            animation: pulse 2s infinite;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            .logo {
+                font-size: 2rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Auraa</div>
+        <div class="subtitle">LUXURY ACCESSORIES</div>
+        
+        <div class="offline-icon">📱</div>
+        
+        <h1>غير متصل بالإنترنت</h1>
+        <p>يبدو أنك غير متصل بالإنترنت حالياً. لا تقلق، يمكنك الاستمرار في تصفح المنتجات التي تم تحميلها مسبقاً.</p>
+        
+        <button class="retry-btn" onclick="window.location.reload()">
+            إعادة المحاولة
+        </button>
+        
+        <div class="features">
+            <h3>ما يمكنك فعله في وضع عدم الاتصال:</h3>
+            <ul class="feature-list">
+                <li>تصفح المنتجات المحفوظة</li>
+                <li>مراجعة عربة التسوق</li>
+                <li>قراءة معلومات المنتجات</li>
+                <li>استخدام قائمة الأمنيات</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // Check for connectivity
+        function checkConnection() {
+            if (navigator.onLine) {
+                window.location.reload();
+            }
+        }
+        
+        // Listen for connectivity changes
+        window.addEventListener('online', checkConnection);
+        
+        // Auto-retry every 30 seconds
+        setInterval(checkConnection, 30000);
+        
+        // Add some interactivity
+        document.querySelector('.retry-btn').addEventListener('click', function() {
+            this.textContent = 'جاري إعادة المحاولة...';
+            this.disabled = true;
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import axios from 'axios';
 import './App.css';
 import { LanguageProvider } from './context/LanguageContext';
+import { WishlistProvider } from './context/WishlistContext';
 
 // Import components
 import HomePage from './components/HomePage';
@@ -12,7 +14,9 @@ import CartPage from './components/CartPage';
 import CheckoutPage from './components/CheckoutPage';
 import AuthPage from './components/AuthPage';
 import ProfilePage from './components/ProfilePage';
+import WishlistPage from './components/WishlistPage';
 import AdminPage from './components/AdminPage';
+import AdminDashboard from './pages/admin/AdminDashboard';
 // // import ExternalStoresPage from './components/ExternalStoresPage';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -155,51 +159,65 @@ const AdminRoute = ({ children }) => {
 
 function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <div className="App min-h-screen app-bg">
-            <Navbar />
-            <main className="flex-grow">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/products" element={<ProductsPage />} />
-                <Route path="/product/:id" element={<ProductDetailPage />} />
-                {/* <Route path="/external-stores" element={<ExternalStoresPage />} /> */}
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route 
-                  path="/checkout" 
-                  element={
-                    <ProtectedRoute>
-                      <CheckoutPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/profile" 
-                  element={
-                    <ProtectedRoute>
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/admin" 
-                  element={
-                    <AdminRoute>
-                      <AdminPage />
-                    </AdminRoute>
-                  } 
-                />
-              </Routes>
-            </main>
-            <Footer />
-            <Toaster />
-          </div>
-        </BrowserRouter>
-      </AuthProvider>
-    </LanguageProvider>
+    <HelmetProvider>
+      <LanguageProvider>
+        <WishlistProvider>
+          <AuthProvider>
+            <BrowserRouter>
+          <Routes>
+            {/* Admin Routes (no Navbar/Footer) */}
+            <Route 
+              path="/admin/*" 
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              } 
+            />
+
+            {/* Public Routes (with Navbar/Footer) */}
+            <Route 
+              path="*" 
+              element={
+                <div className="App min-h-screen app-bg">
+                  <Navbar />
+                  <main className="flex-grow">
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/products" element={<ProductsPage />} />
+                      <Route path="/product/:id" element={<ProductDetailPage />} />
+                      <Route path="/cart" element={<CartPage />} />
+                      <Route path="/auth" element={<AuthPage />} />
+                      <Route 
+                        path="/checkout" 
+                        element={
+                          <ProtectedRoute>
+                            <CheckoutPage />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/profile" 
+                        element={
+                          <ProtectedRoute>
+                            <ProfilePage />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route path="/wishlist" element={<WishlistPage />} />
+                    </Routes>
+                  </main>
+                  <Footer />
+                  <Toaster />
+                </div>
+              }
+            />
+          </Routes>
+          </BrowserRouter>
+            </AuthProvider>
+          </WishlistProvider>
+        </LanguageProvider>
+      </HelmetProvider>
   );
 }
 

@@ -1,12 +1,26 @@
 {
   "buildCommand": "yarn build",
-  "outputDirectory": "build",
-  "installCommand": "yarn install --frozen-lockfile",
+  "outputDirectory": "build", 
+  "installCommand": "yarn install",
   "framework": "create-react-app",
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "REACT_APP_BACKEND_URL": "https://auraaluxury.preview.emergentagent.com"
+  },
+  "build": {
+    "env": {
+      "REACT_APP_BACKEND_URL": "https://auraaluxury.preview.emergentagent.com"
+    }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "feat/admin-suite-complete": true
+    }
+  }
 }

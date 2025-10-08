@@ -217,9 +217,10 @@ function App() {
           </Routes>
           </BrowserRouter>
             </AuthProvider>
-          </WishlistProvider>
-        </LanguageProvider>
-      </HelmetProvider>
+          </CartProvider>
+        </WishlistProvider>
+      </LanguageProvider>
+    </HelmetProvider>
   );
 }
 

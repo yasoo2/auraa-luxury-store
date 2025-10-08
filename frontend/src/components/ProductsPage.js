@@ -105,15 +105,15 @@ const ProductsPage = () => {
     setSearchParams(newParams);
   };
 
-  const addToCart = async (productId) => {
-    try {
-      await axios.post(`${API}/cart/add?product_id=${productId}&quantity=1`);
+  const handleAddToCart = async (productId) => {
+    const result = await addToCart(productId, 1);
+    if (result.success) {
       toast.success('تم إضافة المنتج إلى السلة');
-    } catch (error) {
-      if (error.response?.status === 401) {
+    } else {
+      if (result.error.includes('Authentication')) {
         toast.error('يجب تسجيل الدخول أولاً');
       } else {
-        toast.error('فشل في إضافة المنتج إلى السلة');
+        toast.error(result.error || 'فشل في إضافة المنتج إلى السلة');
       }
     }
   };

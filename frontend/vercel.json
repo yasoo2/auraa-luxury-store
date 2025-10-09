@@ -1,5 +1,10 @@
 {
-  "buildCommand": "yarn build",
+  "buildCommand": "npm ci && npm run build",
   "outputDirectory": "build",
-  "framework": "create-react-app"
+  "framework": "create-react-app",
+  "installCommand": "npm ci",
+  "env": {
+    "REACT_APP_BACKEND_URL": "https://auraa-luxury-store.onrender.com",
+    "NODE_VERSION": "20"
+  }
 }

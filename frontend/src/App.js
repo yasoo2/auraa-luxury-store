@@ -76,9 +76,10 @@ function App() {
                 <Toaster />
               </div>
             </Router>
-          </CartProvider>
-        </WishlistProvider>
-      </LanguageProvider>
+            </CartProvider>
+          </WishlistProvider>
+        </LanguageProvider>
+      </AuthProvider>
     </HelmetProvider>
   );
 }

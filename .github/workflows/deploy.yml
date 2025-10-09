@@ -1,19 +1,21 @@
-name: Deploy to Vercel (on main)
+name: Deploy to Vercel on merge to main
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Vercel Deploy Hook
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Call Vercel Deploy Hook
         env:
           HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
         run: |
           if [ -z "$HOOK" ]; then
-            echo "VERCEL_DEPLOY_HOOK is missing"; exit 1
+            echo "Missing VERCEL_DEPLOY_HOOK secret" && exit 1
           fi
-          curl -s -X POST "$HOOK"
+          curl -X POST "$HOOK"

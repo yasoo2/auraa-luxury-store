@@ -58,14 +58,6 @@ const FashionModelsCarousel = () => {
       alt_en: 'Woman with elegant waist belt and luxury look',
       caption_ar: 'زنار خصر أنيق',
       caption_en: 'Elegant Waist Belt'
-    },
-    {
-      id: 9,
-      url: 'https://images.unsplash.com/photo-1611042553484-d61f84d22784?w=1920&q=85',
-      alt_ar: 'عارضة برقي وجمال',
-      alt_en: 'Sophisticated Model 3',
-      caption_ar: 'رقي وجمال',
-      caption_en: 'Sophistication & Beauty'
     }
   ];
 

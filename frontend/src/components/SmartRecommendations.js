@@ -33,6 +33,7 @@ const SmartRecommendations = ({
 }) => {
   const { t, language, currency } = useLanguage();
   const isRTL = language === 'ar';
+  const navigate = useNavigate();
   
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);

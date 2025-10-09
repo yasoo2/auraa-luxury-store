@@ -22,6 +22,9 @@ const Navbar = () => {
   const { getWishlistCount } = useWishlist();
   const { cartCount } = useCart();
 
+  // Debug user state
+  console.log('Navbar - Current user:', user);
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [categories, setCategories] = useState([]);

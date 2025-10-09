@@ -237,7 +237,9 @@ const Navbar = () => {
                 </div>
               </div>
 
-              <Link to="/products" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">{t('products')}</Link>
+              <Link to="/products" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
+                {isRTL ? 'المنتجات' : 'Products'}
+              </Link>
 
               {!user && (
                 <Link to="/auth" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all text-center">{t('login')}</Link>

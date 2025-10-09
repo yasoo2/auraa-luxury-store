@@ -221,7 +221,9 @@ const Navbar = () => {
                 </div>
               </form>
 
-              <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">{t('home')}</Link>
+              <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
+                {isRTL ? 'الرئيسية' : 'Home'}
+              </Link>
 
               <div className="border-t border-gray-100 pt-2">
                 <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">{isRTL ? 'تسوق حسب الفئة' : 'Shop by Category'}</div>

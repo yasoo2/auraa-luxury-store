@@ -133,11 +133,14 @@ const FashionModelsCarousel = () => {
         <img
           src={currentImage.url}
           alt={isRTL ? currentImage.alt_ar : currentImage.alt_en}
-          className="w-full h-full object-cover transition-all duration-700 ease-in-out"
+          className="w-full h-full object-cover transition-all duration-1000 ease-in-out scale-105 hover:scale-110"
           loading="lazy"
         />
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+        {/* Luxury Overlay gradients */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-900/20 via-transparent to-amber-900/20"></div>
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 animate-gold-shimmer opacity-30"></div>
       </div>
 
       {/* Navigation Arrows */}

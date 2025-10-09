@@ -123,7 +123,9 @@ const Navbar = () => {
               )}
             </div>
 
-            <Link to="/products" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm">{t('products')}</Link>
+            <Link to="/products" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm">
+              {isRTL ? 'المنتجات' : 'Products'}
+            </Link>
           </div>
 
           {/* Search Bar (desktop) */}

@@ -75,7 +75,9 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className={`hidden lg:flex items-center ${isRTL ? 'space-x-reverse space-x-6' : 'space-x-6'}`} style={{ marginLeft: 'auto' }}>
-            <Link to="/" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm">{t('home')}</Link>
+            <Link to="/" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm">
+              {isRTL ? 'الرئيسية' : 'Home'}
+            </Link>
 
             {/* Categories Dropdown */}
             <div className="relative">

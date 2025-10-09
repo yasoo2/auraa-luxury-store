@@ -9,73 +9,55 @@ const FashionModelsCarousel = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
 
-  // High-quality fashion model images
+  // High-quality fashion model images - Beautiful women with elegant accessories
   const modelImages = [
-    // New curated images
     {
       id: 1,
-      url: 'https://images.unsplash.com/photo-1647780954399-a220fd047916?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBqZXdlbHJ5JTIwbW9kZWx8ZW58MHx8fHwxNzU5NTQxNTQ4fDA&ixlib=rb-4.1.0&q=85&w=1920',
-      alt_ar: 'عارضة بأقراط أنيقة بأسلوب تحريري فاخر',
-      alt_en: 'Model with elegant earrings in luxury editorial style',
-      caption_ar: 'مجوهرات فاخرة',
-      caption_en: 'Luxury Jewelry'
+      url: 'https://images.unsplash.com/photo-1643236008023-dcf174afa2ab?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwd29tZW4lMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk5Njg3NzF8MA&ixlib=rb-4.1.0&q=85',
+      alt_ar: 'امرأة أنيقة بإكسسوارات راقية',
+      alt_en: 'Elegant woman with refined accessories',
+      caption_ar: 'أناقة استثنائية',
+      caption_en: 'Exceptional Elegance'
     },
     {
       id: 2,
-      url: 'https://images.unsplash.com/photo-1758716021044-37738384c00e?w=1920&q=85',
-      alt_ar: 'عارضة بقطعة مجوهرات أنيقة',
-      alt_en: 'Model with elegant jewelry',
-      caption_ar: 'أناقة لافتة',
-      caption_en: 'Striking Elegance'
+      url: 'https://images.unsplash.com/photo-1643237268922-25dbcdaf4770?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwyfHxlbGVnYW50JTIwd29tZW4lMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk5Njg3NzF8MA&ixlib=rb-4.1.0&q=85',
+      alt_ar: 'امرأة جميلة بأقراط أنيقة',
+      alt_en: 'Beautiful woman with elegant earrings',
+      caption_ar: 'أناقة محتشمة',
+      caption_en: 'Modest Elegance'
     },
     {
       id: 3,
-      url: 'https://images.unsplash.com/photo-1614353921776-5141cd008973?w=1920&q=85',
-      alt_ar: 'تركيز على الخواتم والأكسسوارات',
-      alt_en: 'Focus on rings and accessories',
+      url: 'https://images.unsplash.com/photo-1643237251986-c0bde5848c5b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwzfHxlbGVnYW50JTIwd29tZW4lMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk5Njg3NzF8MA&ixlib=rb-4.1.0&q=85',
+      alt_ar: 'امرأة بعقد أنيق وإطلالة راقية',
+      alt_en: 'Woman with elegant necklace and refined look',
       caption_ar: 'تفاصيل مبهرة',
       caption_en: 'Exquisite Details'
     },
     {
       id: 4,
-      url: 'https://images.unsplash.com/photo-1759090987847-7d2b25beb2f0?w=1920&q=85',
-      alt_ar: 'عارضة بفستان أسود ومجوهرات',
-      alt_en: 'Model in black dress with jewelry',
-      caption_ar: 'إطلالة فاخرة',
-      caption_en: 'Opulent Look'
+      url: 'https://images.pexels.com/photos/34180980/pexels-photo-34180980.jpeg',
+      alt_ar: 'امرأة جميلة بأسلوب عصري أنيق',
+      alt_en: 'Beautiful woman with modern elegant style',
+      caption_ar: 'حضور لافت',
+      caption_en: 'Captivating Presence'
     },
     {
       id: 5,
-      url: 'https://images.pexels.com/photos/34132253/pexels-photo-34132253.jpeg?w=1920&cs=srgb&dl=pexels-photo-34132253.jpeg&fm=jpg',
-      alt_ar: 'عارضة بحضور قوي مع إكسسوارات فاخرة',
-      alt_en: 'Model with bold presence and luxury accessories',
-      caption_ar: 'حضور لافت',
-      caption_en: 'Bold Presence'
+      url: 'https://images.unsplash.com/photo-1603139835562-32d47f7fdae6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwyfHxmYXNoaW9uJTIwYmVsdHxlbnwwfHx8fDE3NTk5Njg3ODV8MA&ixlib=rb-4.1.0&q=85',
+      alt_ar: 'امرأة بحزام أنيق وإطلالة عصرية',
+      alt_en: 'Woman with stylish belt and modern look',
+      caption_ar: 'زنار ذهبي',
+      caption_en: 'Golden Belt'
     },
     {
       id: 6,
-      url: 'https://images.unsplash.com/photo-1743127187686-e6145b08658b?w=1920&q=85',
-      alt_ar: 'سوار فاخر بأحجار زرقاء',
-      alt_en: 'Luxury bracelet with blue gemstones',
-      caption_ar: 'سوار فاخر',
-      caption_en: 'Luxury Bracelet'
-    },
-    // Previous images kept (mapped to localized fields)
-    {
-      id: 7,
-      url: 'https://images.unsplash.com/photo-1624708530650-15863e927ed4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxmYXNoaW9uJTIwbW9kZWwlMjBqZXdlbHJ5fGVufDB8fHx8MTc1OTc1MzM4Mnww&ixlib=rb-4.1.0&q=85&w=1920',
-      alt_ar: 'عارضة أزياء بمجوهرات تقليدية فاخرة',
-      alt_en: 'Fashion model with luxury traditional jewelry',
-      caption_ar: 'أناقة استثنائية',
-      caption_en: 'Exceptional Elegance'
-    },
-    {
-      id: 8,
-      url: 'https://images.pexels.com/photos/34132256/pexels-photo-34132256.jpeg?w=1920&cs=srgb&fm=jpg',
-      alt_ar: 'عارضة بفستان أحمر وإكسسوارات ذهبية',
-      alt_en: 'Model in red dress with gold accessories',
-      caption_ar: 'أسلوب فاخر',
-      caption_en: 'Luxury Style'
+      url: 'https://images.unsplash.com/photo-1712876718948-e95fd738aeb6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwzfHxmYXNoaW9uJTIwYmVsdHxlbnwwfHx8fDE3NTk5Njg3ODV8MA&ixlib=rb-4.1.0&q=85',
+      alt_ar: 'امرأة بزنار خصر أنيق وإطلالة فاخرة',
+      alt_en: 'Woman with elegant waist belt and luxury look',
+      caption_ar: 'زنار خصر أنيق',
+      caption_en: 'Elegant Waist Belt'
     },
     {
       id: 9,

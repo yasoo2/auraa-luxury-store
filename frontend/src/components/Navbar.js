@@ -18,7 +18,8 @@ const API = `${BACKEND_URL}/api`;
 const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { t, isRTL } = useLanguage();
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
   const { getWishlistCount } = useWishlist();
   const { cartCount } = useCart();
 

@@ -45,8 +45,13 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, [token, BACKEND_URL]);
 
-  const login = async (credentials) => {
+  const login = async (emailOrCredentials, password) => {
     try {
+      // Support both single object and separate email/password parameters
+      const credentials = typeof emailOrCredentials === 'string' 
+        ? { email: emailOrCredentials, password: password }
+        : emailOrCredentials;
+
       const response = await axios.post(`${BACKEND_URL}/api/auth/login`, credentials);
       const { access_token, user: userData } = response.data;
       
@@ -59,7 +64,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Login failed:', error);
       return {
         success: false,
-        message: error.response?.data?.detail || 'Login failed'
+        error: error.response?.data?.detail || 'فشل تسجيل الدخول'
       };
     }
   };

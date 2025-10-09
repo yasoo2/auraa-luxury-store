@@ -1,0 +1,17 @@
+name: Deploy to Vercel (on main merge)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  trigger-vercel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Vercel Deploy Hook
+        run: |
+          if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK }}" ]; then
+            echo "VERCEL_DEPLOY_HOOK is not set"; exit 1;
+          fi
+          curl -s -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"

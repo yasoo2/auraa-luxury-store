@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Sparkles,
@@ -33,6 +33,7 @@ const SmartRecommendations = ({
 }) => {
   const { t, language, currency } = useLanguage();
   const isRTL = language === 'ar';
+  const navigate = useNavigate();
   
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);

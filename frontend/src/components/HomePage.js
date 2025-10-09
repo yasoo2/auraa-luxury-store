@@ -14,19 +14,10 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const HomePage = () => {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const isRTL = language === 'ar';
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setSEO({
-      title: language === 'ar' ? 'Auraa Luxury | متجر الإكسسوارات الفاخرة' : 'Auraa Luxury | Luxury Accessories Store',
-      description: language === 'ar' ? 'تسوّق أفضل الإكسسوارات الفاخرة بجودة عالية وشحن سريع.' : 'Shop premium luxury accessories with top quality and fast shipping.',
-      lang: language,
-      canonical: 'https://www.auraaluxury.com/',
-    });
-  }, [language]);
 
   useEffect(() => {
     const fetchFeatured = async () => {

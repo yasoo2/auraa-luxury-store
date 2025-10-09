@@ -19,4 +19,4 @@ jobs:
           if [ -z "$HOOK" ]; then
             echo "Missing VERCEL_DEPLOY_HOOK secret" && exit 1
           fi
-          curl -X POST "$HOOK"
+          curl -s -X POST "$HOOK"

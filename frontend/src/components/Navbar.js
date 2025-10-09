@@ -242,7 +242,9 @@ const Navbar = () => {
               </Link>
 
               {!user && (
-                <Link to="/auth" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all text-center">{t('login')}</Link>
+                <Link to="/auth" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all text-center">
+                  {isRTL ? 'دخول / تسجيل' : 'Login / Register'}
+                </Link>
               )}
             </div>
           </div>

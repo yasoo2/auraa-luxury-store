@@ -133,7 +133,7 @@ const Navbar = () => {
             <div className="relative">
               <Input
                 type="text"
-                placeholder={t('search_placeholder')}
+                placeholder={isRTL ? 'ابحث عن المنتجات...' : 'Search products...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64 pr-10 search-expand focus-ring"
@@ -211,7 +211,7 @@ const Navbar = () => {
                 <div className="relative">
                   <Input
                     type="text"
-                    placeholder={t('search_placeholder')}
+                    placeholder={isRTL ? 'ابحث عن المنتجات...' : 'Search products...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pr-10 text-sm"

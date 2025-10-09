@@ -1,41 +1,83 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Helmet, HelmetProvider } from 'react-helmet-async';
 import './App.css';
+
+// Contexts
+import { LanguageProvider } from './context/LanguageContext';
+import { WishlistProvider } from './context/WishlistContext';
+import { CartProvider } from './context/CartContext';
+
+// Components
+import Navbar from './components/Navbar';
+import HomePage from './components/HomePage';
+import ProductsPage from './components/ProductsPage';
+import ProductDetailPage from './components/ProductDetailPage';
+import CartPage from './components/CartPage';
+import WishlistPage from './components/WishlistPage';
+import AuthPage from './components/AuthPage';
+import ProfilePage from './components/ProfilePage';
+import CheckoutPage from './components/CheckoutPage';
+import Footer from './components/Footer';
+
+// Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+
+// UI Components
+import { Toaster } from './components/ui/sonner';
+
+// Feature Flags
+import { FEATURE_MULTI_LANG_EXTENDED, FEATURE_PWA_SUPPORT, FEATURE_LIVE_CHAT } from './config/flags';
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-amber-100">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-6xl font-bold text-amber-800 mb-4">
-            Auraa Luxury
-          </h1>
-          <p className="text-xl text-amber-700 mb-8">
-            Premium Accessories Collection
-          </p>
-          <div className="bg-white p-8 rounded-lg shadow-lg max-w-lg mx-auto">
-            <h2 className="text-3xl font-semibold text-gray-800 mb-6">
-              🚀 Deployment Success
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Vercel deployment is working correctly!
-            </p>
-            <div className="bg-green-50 p-4 rounded-lg mb-4">
-              <p className="text-green-800 font-medium">
-                ✅ Build completed successfully
-              </p>
-              <p className="text-green-600 text-sm">
-                JSON parsing issues resolved
-              </p>
-            </div>
-            <div className="text-sm text-gray-500 space-y-1">
-              <div>Build time: {new Date().toLocaleString()}</div>
-              <div>Version: 1.0.0</div>
-              <div>Backend: auraa-luxury-store.onrender.com</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <HelmetProvider>
+      <LanguageProvider>
+        <WishlistProvider>
+          <CartProvider>
+            <Router>
+              <div className="App" dir="auto">
+                <Helmet>
+                  <title>Auraa Luxury - Premium Accessories</title>
+                  <meta name="description" content="Premium luxury accessories for the discerning customer" />
+                  <meta name="viewport" content="width=device-width, initial-scale=1" />
+                  <link rel="preconnect" href="https://fonts.googleapis.com" />
+                  <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
+                  <link 
+                    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" 
+                    rel="stylesheet" 
+                  />
+                </Helmet>
+
+                <Navbar />
+                
+                <main className="min-h-screen bg-gradient-to-br from-neutral-50 to-stone-100">
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/product/:id" element={<ProductDetailPage />} />
+                    <Route path="/cart" element={<CartPage />} />
+                    <Route path="/wishlist" element={<WishlistPage />} />
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
+                    
+                    {/* Admin Routes */}
+                    <Route path="/admin/*" element={<AdminDashboard />} />
+                    
+                    {/* Redirect unknown routes to home */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </main>
+
+                <Footer />
+                <Toaster />
+              </div>
+            </Router>
+          </CartProvider>
+        </WishlistProvider>
+      </LanguageProvider>
+    </HelmetProvider>
   );
 }
 

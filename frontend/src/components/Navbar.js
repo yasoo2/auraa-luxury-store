@@ -173,7 +173,9 @@ const Navbar = () => {
               </div>
             ) : (
               <Link to="/auth">
-                <Button className="btn-luxury" data-testid="login-button">{t('login')}</Button>
+                <Button className="btn-luxury" data-testid="login-button">
+                  {isRTL ? 'دخول / تسجيل' : 'Login / Register'}
+                </Button>
               </Link>
             )}
 

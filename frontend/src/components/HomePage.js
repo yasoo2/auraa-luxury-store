@@ -62,10 +62,12 @@ const HomePage = () => {
           {/* Section Title */}
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl md:text-6xl font-bold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-800 bg-clip-text text-transparent animate-text-sparkle mb-4">
-              منتجات مميزة
+              {isRTL ? 'منتجات مميزة' : 'Featured Products'}
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
-            <p className="text-gray-600 mt-6 text-lg animate-fade-in-up">اكتشف مجموعتنا الحصرية من الإكسسوارات الفاخرة</p>
+            <p className="text-gray-600 mt-6 text-lg animate-fade-in-up">
+              {isRTL ? 'اكتشف مجموعتنا الحصرية من الإكسسوارات الفاخرة' : 'Discover our exclusive luxury accessories collection'}
+            </p>
           </div>
 
           {loading ? (

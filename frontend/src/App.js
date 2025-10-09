@@ -4,6 +4,7 @@ import { Helmet, HelmetProvider } from 'react-helmet-async';
 import './App.css';
 
 // Contexts
+import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { CartProvider } from './context/CartContext';

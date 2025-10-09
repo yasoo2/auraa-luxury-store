@@ -132,7 +132,7 @@ const HomePage = () => {
 
                       <button className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 animate-pulse-gold shadow-lg">
                         <Link to={`/product/${p.id}`} className="block w-full h-full text-white no-underline">
-                          اكتشف المنتج
+                          {isRTL ? 'اكتشف المنتج' : 'Discover Product'}
                         </Link>
                       </button>
                     </div>

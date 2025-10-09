@@ -97,135 +97,136 @@ const AuthPage = () => {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
-            {!isLogin && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    type="text"
-                    name="first_name"
-                    placeholder="الاسم الأول"
-                    value={formData.first_name}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                    required
-                    data-testid="first-name-input"
-                  />
+              {!isLogin && (
+                <div className="grid grid-cols-2 gap-4 animate-fade-in-up">
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                    <input
+                      type="text"
+                      name="first_name"
+                      placeholder="الاسم الأول"
+                      value={formData.first_name}
+                      onChange={handleInputChange}
+                      className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                      required
+                      data-testid="first-name-input"
+                    />
+                  </div>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                    <input
+                      type="text"
+                      name="last_name"
+                      placeholder="الاسم الأخير"
+                      value={formData.last_name}
+                      onChange={handleInputChange}
+                      className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                      required
+                      data-testid="last-name-input"
+                    />
+                  </div>
                 </div>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    type="text"
-                    name="last_name"
-                    placeholder="الاسم الأخير"
-                    value={formData.last_name}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                    required
-                    data-testid="last-name-input"
-                  />
-                </div>
-              </div>
-            )}
+              )}
 
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type="email"
-                name="email"
-                placeholder="البريد الإلكتروني"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="pl-10"
-                required
-                data-testid="email-input"
-              />
-            </div>
-
-            {!isLogin && (
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  type="tel"
-                  name="phone"
-                  placeholder="رقم الجوال (اختياري)"
-                  value={formData.phone}
+              <div className="relative animate-slide-in-left">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="البريد الإلكتروني"
+                  value={formData.email}
                   onChange={handleInputChange}
-                  className="pl-10"
-                  data-testid="phone-input"
+                  className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                  required
+                  data-testid="email-input"
                 />
               </div>
-            )}
 
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="كلمة المرور"
-                value={formData.password}
-                onChange={handleInputChange}
-                className="pl-10 pr-10"
-                required
-                minLength={6}
-                data-testid="password-input"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-
-            <Button 
-              type="submit" 
-              className="btn-luxury w-full" 
-              disabled={loading}
-              data-testid="auth-submit-button"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span className="ml-2">جاري...</span>
+              {!isLogin && (
+                <div className="relative animate-fade-in-up">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    placeholder="رقم الجوال (اختياري)"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                    data-testid="phone-input"
+                  />
                 </div>
-              ) : (
-                isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'
               )}
-            </Button>
-          </form>
 
-          {/* Switch Mode */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              {isLogin ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟'}
-              {' '}
-              <button
-                type="button"
-                onClick={switchMode}
-                className="text-amber-600 hover:text-amber-700 font-medium underline"
-                data-testid="switch-auth-mode"
+              <div className="relative animate-slide-in-right">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="كلمة المرور"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 pr-12 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                  required
+                  minLength={6}
+                  data-testid="password-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-300 hover:text-amber-200 transition-colors duration-200"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                data-testid="auth-submit-button"
+                className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 animate-pulse-gold shadow-2xl animate-luxury-zoom-in"
               >
-                {isLogin ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span className="ml-2">جاري...</span>
+                  </div>
+                ) : (
+                  isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'
+                )}
               </button>
-            </p>
-          </div>
+            </form>
 
-          {/* Demo Account Info */}
-          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <h4 className="font-medium text-amber-800 mb-2">حساب تجريبي:</h4>
-            <div className="text-sm text-amber-700">
-              <p>البريد: admin@auraa.com</p>
-              <p>كلمة المرور: admin123</p>
+            {/* Switch Mode */}
+            <div className="mt-6 text-center animate-fade-in-up">
+              <p className="text-white/80">
+                {isLogin ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟'}
+                {' '}
+                <button
+                  type="button"
+                  onClick={switchMode}
+                  className="text-amber-300 hover:text-amber-200 font-medium underline transition-colors duration-200"
+                  data-testid="switch-auth-mode"
+                >
+                  {isLogin ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+                </button>
+              </p>
+            </div>
+
+            {/* Demo Account Info */}
+            <div className="mt-6 p-4 bg-amber-500/20 border border-amber-300/30 rounded-xl backdrop-blur-sm animate-float">
+              <h4 className="font-medium text-amber-200 mb-2">حساب تجريبي:</h4>
+              <div className="text-sm text-amber-100">
+                <p>البريد: admin@auraa.com</p>
+                <p>كلمة المرور: admin123</p>
+              </div>
+            </div>
+
+            {/* Security Notice */}
+            <div className="mt-6 text-center text-sm text-white/60 animate-fade-in-up">
+              <p>🔒 بياناتك محمية ومشفرة</p>
             </div>
           </div>
-
-          {/* Security Notice */}
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>🔒 بياناتك محمية ومشفرة</p>
-          </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,190 @@
+
+> auraa-luxury-frontend@0.1.0 build
+> craco build
+
+Creating an optimized production build...
+Compiled with warnings.
+
+[eslint] 
+src/App.js
+  Line 19:8:  'AdminPage' is defined but never used  no-unused-vars
+
+src/components/AdminPage.js
+  Line 54:6:  React Hook useEffect has a missing dependency: 'fetchStats'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/AdvancedSearch.js
+  Line 7:3:    'Filter' is defined but never used                                                                          no-unused-vars
+  Line 10:3:   'Star' is defined but never used                                                                            no-unused-vars
+  Line 11:3:   'Heart' is defined but never used                                                                           no-unused-vars
+  Line 12:3:   'ShoppingCart' is defined but never used                                                                    no-unused-vars
+  Line 13:3:   'Eye' is defined but never used                                                                             no-unused-vars
+  Line 17:3:   'Palette' is defined but never used                                                                         no-unused-vars
+  Line 28:11:  't' is assigned a value but never used                                                                      no-unused-vars
+  Line 28:24:  'currency' is assigned a value but never used                                                               no-unused-vars
+  Line 96:27:  React Hook useCallback received a function whose dependencies are unknown. Pass an inline function instead  react-hooks/exhaustive-deps
+
+src/components/CartPage.js
+  Line 16:9:  'navigate' is assigned a value but never used  no-unused-vars
+
+src/components/CheckoutPage.js
+  Line 42:6:  React Hook useEffect has a missing dependency: 'fetchCart'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/FashionModelsCarousel.js
+  Line 3:10:  'Button' is defined but never used  no-unused-vars
+
+src/components/Footer.js
+  Line 22:15:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 25:15:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 28:15:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 86:17:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 91:17:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 125:13:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 128:13:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 131:13:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/components/LanguageCurrencySelector.js
+  Line 5:8:  'FLAGS' is defined but never used  no-unused-vars
+
+src/components/LiveChat.js
+  Line 10:3:    'Phone' is defined but never used                                                                                                      no-unused-vars
+  Line 11:3:    'Video' is defined but never used                                                                                                      no-unused-vars
+  Line 19:3:    'Heart' is defined but never used                                                                                                      no-unused-vars
+  Line 20:3:    'ThumbsUp' is defined but never used                                                                                                   no-unused-vars
+  Line 21:12:   'ImageIcon' is defined but never used                                                                                                  no-unused-vars
+  Line 24:3:    'Camera' is defined but never used                                                                                                     no-unused-vars
+  Line 33:11:   't' is assigned a value but never used                                                                                                 no-unused-vars
+  Line 40:10:   'isTyping' is assigned a value but never used                                                                                          no-unused-vars
+  Line 90:6:    React Hook useEffect has missing dependencies: 'chatSession' and 'initializeChat'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 149:5:   Expected a default case                                                                                                                default-case
+  Line 227:26:  Comparing to itself is potentially pointless                                                                                           no-self-compare
+
+src/components/ProductComparison.js
+  Line 3:10:   'Link' is defined but never used                                                                                        no-unused-vars
+  Line 11:3:   'Minus' is defined but never used                                                                                       no-unused-vars
+  Line 18:3:   'Palette' is defined but never used                                                                                     no-unused-vars
+  Line 19:3:   'Ruler' is defined but never used                                                                                       no-unused-vars
+  Line 21:3:   'Shield' is defined but never used                                                                                      no-unused-vars
+  Line 32:11:  't' is assigned a value but never used                                                                                  no-unused-vars
+  Line 107:6:  React Hook useEffect has a missing dependency: 'fetchComparisonData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/ProductDetailPage.js
+  Line 3:50:  'ArrowLeft' is defined but never used                                                                            no-unused-vars
+  Line 26:6:  React Hook useEffect has a missing dependency: 'fetchProduct'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/ProductsPage.js
+  Line 3:10:   'Filter' is defined but never used                                                                                no-unused-vars
+  Line 3:43:   'Heart' is defined but never used                                                                                 no-unused-vars
+  Line 3:71:   'Grid' is defined but never used                                                                                  no-unused-vars
+  Line 3:77:   'List' is defined but never used                                                                                  no-unused-vars
+  Line 39:10:  'showFilters' is assigned a value but never used                                                                  no-unused-vars
+  Line 39:23:  'setShowFilters' is assigned a value but never used                                                               no-unused-vars
+  Line 55:6:   React Hook useEffect has a missing dependency: 'fetchProducts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 133:9:  'removeFromComparison' is assigned a value but never used                                                         no-unused-vars
+
+src/components/ProfilePage.js
+  Line 3:33:  'Settings' is defined but never used  no-unused-vars
+
+src/components/SmartRecommendations.js
+  Line 13:3:   'Users' is defined but never used                                                                                        no-unused-vars
+  Line 15:3:   'Clock' is defined but never used                                                                                        no-unused-vars
+  Line 16:3:   'Gift' is defined but never used                                                                                         no-unused-vars
+  Line 34:11:  't' is assigned a value but never used                                                                                   no-unused-vars
+  Line 83:6:   React Hook useEffect has a missing dependency: 'fetchRecommendations'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/WishlistPage.js
+  Line 21:11:  't' is assigned a value but never used               no-unused-vars
+  Line 29:5:   'syncWithServer' is assigned a value but never used  no-unused-vars
+
+src/components/admin/ProductFormModal.js
+  Line 7:3:    'Camera' is defined but never used                   no-unused-vars
+  Line 56:10:  'imageUploading' is assigned a value but never used  no-unused-vars
+
+src/context/WishlistContext.js
+  Line 20:19:  'setLoading' is assigned a value but never used  no-unused-vars
+
+src/pages/admin/AdminDashboard.js
+  Line 23:11:  't' is assigned a value but never used  no-unused-vars
+
+src/pages/admin/AnalyticsPage.js
+  Line 6:3:     'Bar' is defined but never used                                                                                    no-unused-vars
+  Line 12:3:    'LineChart' is defined but never used                                                                              no-unused-vars
+  Line 13:3:    'Line' is defined but never used                                                                                   no-unused-vars
+  Line 22:3:    'TrendingDown' is defined but never used                                                                           no-unused-vars
+  Line 27:3:    'Eye' is defined but never used                                                                                    no-unused-vars
+  Line 37:11:   't' is assigned a value but never used                                                                             no-unused-vars
+  Line 120:6:   React Hook useEffect has a missing dependency: 'fetchAnalytics'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 166:68:  'customerMetrics' is assigned a value but never used                                                               no-unused-vars
+
+src/pages/admin/EnhancedProductsPage.js
+  Line 10:3:   'DollarSign' is defined but never used                                                                            no-unused-vars
+  Line 11:12:  'ImageIcon' is defined but never used                                                                             no-unused-vars
+  Line 12:3:   'X' is defined but never used                                                                                     no-unused-vars
+  Line 14:3:   'Upload' is defined but never used                                                                                no-unused-vars
+  Line 16:3:   'Filter' is defined but never used                                                                                no-unused-vars
+  Line 20:3:   'Save' is defined but never used                                                                                  no-unused-vars
+  Line 21:3:   'Camera' is defined but never used                                                                                no-unused-vars
+  Line 23:3:   'Copy' is defined but never used                                                                                  no-unused-vars
+  Line 24:3:   'ExternalLink' is defined but never used                                                                          no-unused-vars
+  Line 27:3:   'MoreHorizontal' is defined but never used                                                                        no-unused-vars
+  Line 28:3:   'Settings' is defined but never used                                                                              no-unused-vars
+  Line 29:3:   'Tag' is defined but never used                                                                                   no-unused-vars
+  Line 31:3:   'Ruler' is defined but never used                                                                                 no-unused-vars
+  Line 32:3:   'Weight' is defined but never used                                                                                no-unused-vars
+  Line 36:8:   'ProductFormModal' is defined but never used                                                                      no-unused-vars
+  Line 43:10:  'showModal' is assigned a value but never used                                                                    no-unused-vars
+  Line 44:10:  'editingProduct' is assigned a value but never used                                                               no-unused-vars
+  Line 44:26:  'setEditingProduct' is assigned a value but never used                                                            no-unused-vars
+  Line 48:10:  'uploading' is assigned a value but never used                                                                    no-unused-vars
+  Line 48:21:  'setUploading' is assigned a value but never used                                                                 no-unused-vars
+  Line 55:10:  'formData' is assigned a value but never used                                                                     no-unused-vars
+  Line 55:20:  'setFormData' is assigned a value but never used                                                                  no-unused-vars
+  Line 77:10:  'formErrors' is assigned a value but never used                                                                   no-unused-vars
+  Line 77:22:  'setFormErrors' is assigned a value but never used                                                                no-unused-vars
+  Line 88:9:   'materials' is assigned a value but never used                                                                    no-unused-vars
+  Line 108:6:  React Hook useEffect has a missing dependency: 'fetchProducts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 227:9:  'formatDate' is assigned a value but never used                                                                   no-unused-vars
+
+src/pages/admin/IntegrationsPage.js
+  Line 10:3:    'AlertCircle' is defined but never used            no-unused-vars
+  Line 16:3:    'Key' is defined but never used                    no-unused-vars
+  Line 34:11:   't' is assigned a value but never used             no-unused-vars
+  Line 41:21:   'setActiveTab' is assigned a value but never used  no-unused-vars
+  Line 183:13:  'response' is assigned a value but never used      no-unused-vars
+
+src/pages/admin/OrdersPage.js
+  Line 11:3:   'AlertCircle' is defined but never used                                                                         no-unused-vars
+  Line 23:11:  't' is assigned a value but never used                                                                          no-unused-vars
+  Line 63:6:   React Hook useEffect has a missing dependency: 'fetchOrders'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/SettingsPage.js
+  Line 14:3:   'Shield' is defined but never used      no-unused-vars
+  Line 16:3:   'Palette' is defined but never used     no-unused-vars
+  Line 19:3:   'X' is defined but never used           no-unused-vars
+  Line 28:11:  't' is assigned a value but never used  no-unused-vars
+
+src/pages/admin/UsersPage.js
+  Line 14:3:   'Edit' is defined but never used                                                                               no-unused-vars
+  Line 27:11:  't' is assigned a value but never used                                                                         no-unused-vars
+  Line 40:6:   React Hook useEffect has a missing dependency: 'fetchUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  306.28 kB  build/static/js/main.2aba0a60.js
+  16.44 kB   build/static/css/main.6cadce9f.css
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  yarn global add serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+

@@ -209,7 +209,7 @@ const HomePage = () => {
               to="/products"
               className="inline-block bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white font-bold py-4 px-8 rounded-full transition-all duration-300 hover:scale-105 animate-pulse-gold shadow-2xl font-display text-lg"
             >
-              اكتشف مجموعتنا الكاملة
+              {isRTL ? 'اكتشف مجموعتنا الكاملة' : 'Discover Our Complete Collection'}
             </Link>
           </div>
         </div>

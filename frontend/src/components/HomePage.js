@@ -65,58 +65,87 @@ const HomePage = () => {
       </section>
 
       {/* Featured Products */}
-      <section className="py-12" dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mb-6">{t('featured_products')}</h2>
+      <section className="py-20 relative" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          {/* Section Title */}
+          <div className="text-center mb-16">
+            <h2 className="font-display text-4xl md:text-6xl font-bold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-800 bg-clip-text text-transparent animate-text-sparkle mb-4">
+              منتجات مميزة
+            </h2>
+            <div className="w-24 h-1 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
+            <p className="text-gray-600 mt-6 text-lg animate-fade-in-up">اكتشف مجموعتنا الحصرية من الإكسسوارات الفاخرة</p>
+          </div>
+
           {loading ? (
-            <div className="product-grid">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="luxury-card p-4 animate-pulse">
-                  <div className="skeleton h-64 rounded-lg mb-4" />
-                  <div className="skeleton h-6 rounded mb-2" />
-                  <div className="skeleton h-4 rounded w-3/4 mb-2" />
-                  <div className="skeleton h-8 rounded w-1/2" />
+                <div key={i} className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl animate-pulse shadow-xl">
+                  <div className="bg-gray-300 h-64 rounded-xl mb-4" />
+                  <div className="bg-gray-300 h-6 rounded mb-2" />
+                  <div className="bg-gray-300 h-4 rounded w-3/4 mb-2" />
+                  <div className="bg-gray-300 h-8 rounded w-1/2" />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="product-grid">
-              {products.map((p) => (
-                <Card key={p.id} className="product-card overflow-hidden group relative">
-                  <Link to={`/product/${p.id}`}>
-                    <picture>
-                      <source srcSet={`${p.images?.[0]}?format=avif`} type="image/avif" />
-                      <source srcSet={`${p.images?.[0]}?format=webp`} type="image/webp" />
-                      <img src={p.images?.[0]} alt={p.name} className="w-full h-64 img-product-card group-hover:scale-110 transition-transform duration-500" style={{ aspectRatio: '4 / 3' }} />
-                    </picture>
-                  </Link>
-                  
-                  {/* Heart Button */}
-                  <div className="absolute top-4 right-4 z-10">
-                    <HeartButton 
-                      product={p}
-                      variant="floating"
-                      size="md"
-                      showAnimation={true}
-                    />
-                  </div>
-                  <div className="p-6">
-                    <Link to={`/product/${p.id}`}>
-                      <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2">{p.name}</h3>
-                    </Link>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex flex-col">
-                        <span className="price-highlight text-xl font-bold text-amber-600">{p.price} ر.س</span>
-                        {p.original_price && (
-                          <span className="text-sm text-gray-500 line-through">{p.original_price} ر.س</span>
-                        )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {products.map((p, index) => (
+                <div key={p.id} className="group relative animate-luxury-zoom-in" style={{animationDelay: `${index * 0.1}s`}}>
+                  <div className="bg-white/80 backdrop-blur-sm border border-amber-200/50 rounded-2xl overflow-hidden shadow-2xl hover:shadow-amber-300/50 transition-all duration-500 hover:scale-105 animate-float">
+                    <div className="relative overflow-hidden">
+                      <Link to={`/product/${p.id}`}>
+                        <img 
+                          src={p.images?.[0]} 
+                          alt={p.name} 
+                          className="w-full h-64 object-cover transition-all duration-700 group-hover:scale-110" 
+                        />
+                        {/* Luxury overlay effect */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute inset-0 animate-gold-shimmer opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+                      </Link>
+                      
+                      {/* Heart Button */}
+                      <div className="absolute top-4 right-4 z-10">
+                        <HeartButton 
+                          product={p}
+                          variant="floating"
+                          size="md"
+                          showAnimation={true}
+                        />
                       </div>
-                      <Button asChild className="btn-luxury">
-                        <Link to={`/product/${p.id}`}>{t('add_to_cart')}</Link>
-                      </Button>
+
+                      {/* Luxury Badge */}
+                      <div className="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse-gold">
+                        مميز
+                      </div>
+                    </div>
+
+                    <div className="p-6">
+                      <Link to={`/product/${p.id}`}>
+                        <h3 className="font-bold text-lg mb-3 text-gray-900 group-hover:text-amber-600 transition-colors duration-300 line-clamp-2 font-display">
+                          {p.name}
+                        </h3>
+                      </Link>
+                      
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex flex-col">
+                          <span className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                            {p.price} ر.س
+                          </span>
+                          {p.original_price && (
+                            <span className="text-sm text-gray-500 line-through">{p.original_price} ر.س</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <button className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 animate-pulse-gold shadow-lg">
+                        <Link to={`/product/${p.id}`} className="block w-full h-full text-white no-underline">
+                          اكتشف المنتج
+                        </Link>
+                      </button>
                     </div>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           )}

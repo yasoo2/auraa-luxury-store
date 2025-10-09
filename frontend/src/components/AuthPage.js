@@ -68,16 +68,25 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
-      <div className="max-w-md w-full mx-4">
-        <Card className="luxury-card p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">A</span>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Luxury Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-amber-900 to-black">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23fbbf24" fill-opacity="0.1"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+        <div className="absolute inset-0 animate-gold-shimmer opacity-30"></div>
+      </div>
+      
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          {/* Luxury Card */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-8 shadow-2xl animate-luxury-zoom-in">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center animate-rotate-glow shadow-lg">
+                  <span className="text-white font-bold text-2xl font-display">A</span>
+                </div>
               </div>
-              <span className="font-display text-2xl font-bold gradient-text">Auraa Luxury</span>
+              <h1 className="font-display text-3xl font-bold text-white animate-text-sparkle mb-2">Auraa Luxury</h1>
             </div>
             <h1 className="font-display text-3xl font-bold text-gray-900 mb-2" data-testid="auth-title">
               {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}

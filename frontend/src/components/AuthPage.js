@@ -87,17 +87,16 @@ const AuthPage = () => {
                 </div>
               </div>
               <h1 className="font-display text-3xl font-bold text-white animate-text-sparkle mb-2">Auraa Luxury</h1>
+              <h2 className="text-xl font-semibold text-amber-200 mb-2 animate-fade-in-up" data-testid="auth-title">
+                {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
+              </h2>
+              <p className="text-white/80 animate-slide-in-right">
+                {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى عائلة Auraa Luxury'}
+              </p>
             </div>
-            <h1 className="font-display text-3xl font-bold text-gray-900 mb-2" data-testid="auth-title">
-              {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
-            </h1>
-            <p className="text-gray-600">
-              {isLogin ? 'مرحباً بعودتك!' : 'انضم إلى عائلة Auraa Luxury'}
-            </p>
-          </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="relative">

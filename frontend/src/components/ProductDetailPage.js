@@ -6,6 +6,7 @@ import { Card } from './ui/card';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { setSEO } from '../utils/seo';
+import { useCart } from '../context/CartContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -13,6 +14,7 @@ const API = `${BACKEND_URL}/api`;
 const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -67,23 +69,23 @@ const ProductDetailPage = () => {
     }
   };
 
-  const addToCart = async () => {
-    try {
-      await axios.post(`${API}/cart/add?product_id=${product.id}&quantity=${quantity}`);
+  const handleAddToCart = async () => {
+    const result = await addToCart(product.id, quantity);
+    if (result.success) {
       toast.success(`تم إضافة ${quantity} قطعة إلى السلة`);
-    } catch (error) {
-      if (error.response?.status === 401) {
+    } else {
+      if (result.error.includes('Authentication')) {
         toast.error('يجب تسجيل الدخول أولاً');
         navigate('/auth');
       } else {
-        toast.error('فشل في إضافة المنتج إلى السلة');
+        toast.error(result.error || 'فشل في إضافة المنتج إلى السلة');
       }
     }
   };
 
   const buyNow = async () => {
     try {
-      await addToCart();
+      await handleAddToCart();
       navigate('/cart');
     } catch (error) {}
   };
@@ -190,7 +192,7 @@ const ProductDetailPage = () => {
               </div>
 
               <div className="flex space-x-4">
-                <Button onClick={addToCart} className="btn-luxury flex-1" data-testid="add-to-cart-button">
+                <Button onClick={handleAddToCart} className="btn-luxury flex-1" data-testid="add-to-cart-button">
                   <ShoppingCart className="h-5 w-5 ml-2" />
                   أضف إلى السلة
                 </Button>

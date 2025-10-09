@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { toast } from 'sonner';
 import { useAuth } from '../App';
+import { useCart } from '../context/CartContext';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -13,6 +14,7 @@ const API = `${BACKEND_URL}/api`;
 const CartPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { fetchCartCount } = useCart();
   const [cart, setCart] = useState(null);
   const [products, setProducts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -60,6 +62,7 @@ const CartPage = () => {
         await axios.post(`${API}/cart/add?product_id=${productId}&quantity=${newQuantity}`);
       }
       await fetchCart(); // Refresh cart
+      await fetchCartCount(); // Update cart count in navbar
       toast.success('تم تحديث السلة');
     } catch (error) {
       console.error('Error updating quantity:', error);
@@ -71,6 +74,7 @@ const CartPage = () => {
     try {
       await axios.delete(`${API}/cart/remove/${productId}`);
       await fetchCart(); // Refresh cart
+      await fetchCartCount(); // Update cart count in navbar
       toast.success('تم إزالة المنتج من السلة');
     } catch (error) {
       console.error('Error removing item:', error);

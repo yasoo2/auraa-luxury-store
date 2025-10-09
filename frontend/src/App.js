@@ -5,6 +5,7 @@ import axios from 'axios';
 import './App.css';
 import { LanguageProvider } from './context/LanguageContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { CartProvider } from './context/CartContext';
 
 // Import components
 import HomePage from './components/HomePage';
@@ -162,7 +163,8 @@ function App() {
     <HelmetProvider>
       <LanguageProvider>
         <WishlistProvider>
-          <AuthProvider>
+          <CartProvider>
+            <AuthProvider>
             <BrowserRouter>
           <Routes>
             {/* Admin Routes (no Navbar/Footer) */}
@@ -215,9 +217,10 @@ function App() {
           </Routes>
           </BrowserRouter>
             </AuthProvider>
-          </WishlistProvider>
-        </LanguageProvider>
-      </HelmetProvider>
+          </CartProvider>
+        </WishlistProvider>
+      </LanguageProvider>
+    </HelmetProvider>
   );
 }
 

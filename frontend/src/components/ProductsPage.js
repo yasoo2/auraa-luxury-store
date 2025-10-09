@@ -13,12 +13,14 @@ import SmartRecommendations from './SmartRecommendations';
 import ProductComparison from './ProductComparison';
 import LiveChat from './LiveChat';
 import HeartButton from './HeartButton';
+import { useCart } from '../context/CartContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -103,15 +105,15 @@ const ProductsPage = () => {
     setSearchParams(newParams);
   };
 
-  const addToCart = async (productId) => {
-    try {
-      await axios.post(`${API}/cart/add?product_id=${productId}&quantity=1`);
+  const handleAddToCart = async (productId) => {
+    const result = await addToCart(productId, 1);
+    if (result.success) {
       toast.success('تم إضافة المنتج إلى السلة');
-    } catch (error) {
-      if (error.response?.status === 401) {
+    } else {
+      if (result.error.includes('Authentication')) {
         toast.error('يجب تسجيل الدخول أولاً');
       } else {
-        toast.error('فشل في إضافة المنتج إلى السلة');
+        toast.error(result.error || 'فشل في إضافة المنتج إلى السلة');
       }
     }
   };
@@ -274,7 +276,7 @@ const ProductsPage = () => {
                         {(() => { const created = new Date(product.created_at); const diffDays = (Date.now() - created.getTime()) / (1000*60*60*24); return diffDays < 30; })() && (<span className="badge badge-new">جديد</span>)}
                       </div>
                       <div className="quick-add bg-white/90 backdrop-blur-sm p-3">
-                        <Button onClick={() => addToCart(product.id)} className="w-full">
+                        <Button onClick={() => handleAddToCart(product.id)} className="w-full">
                           <ShoppingCart className="h-4 w-4 ml-2" />
                           إضافة سريعة
                         </Button>
@@ -307,7 +309,7 @@ const ProductsPage = () => {
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button onClick={() => addToCart(product.id)} className="btn-luxury flex-1" data-testid={`add-to-cart-${product.id}`}>
+                        <Button onClick={() => handleAddToCart(product.id)} className="btn-luxury flex-1" data-testid={`add-to-cart-${product.id}`}>
                           <ShoppingCart className="h-4 w-4 ml-2" />
                           أضف للسلة
                         </Button>

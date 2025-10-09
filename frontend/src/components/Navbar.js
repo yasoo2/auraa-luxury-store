@@ -6,6 +6,7 @@ import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown } from 
 import { useAuth } from '../App';
 import { useLanguage } from '../context/LanguageContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useCart } from '../context/CartContext';
 import LanguageCurrencySelector from './LanguageCurrencySelector';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -19,12 +20,12 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const { t, isRTL } = useLanguage();
   const { getWishlistCount } = useWishlist();
+  const { cartCount } = useCart();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -38,20 +39,7 @@ const Navbar = () => {
     fetchCategories();
   }, []);
 
-  useEffect(() => {
-    const fetchCart = async () => {
-      try {
-        if (!user) return;
-        const res = await axios.get(`${API}/cart`);
-        const items = res.data?.items || [];
-        const count = items.reduce((sum, it) => sum + (it.quantity || 0), 0);
-        setCartCount(count);
-      } catch (e) {
-        // silent
-      }
-    };
-    fetchCart();
-  }, [user]);
+  // Cart count is now managed by CartContext
 
   const handleSearch = (e) => {
     e.preventDefault();

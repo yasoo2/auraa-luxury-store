@@ -167,8 +167,12 @@ const HomePage = () => {
               <div className="w-20 h-20 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-rotate-glow group-hover:scale-110 transition-transform duration-300 shadow-2xl">
                 <Truck className="h-10 w-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white font-display">شحن مجاني</h3>
-              <p className="text-white/80 leading-relaxed">شحن سريع ومجاني لجميع الطلبات داخل المملكة العربية السعودية</p>
+              <h3 className="text-2xl font-bold mb-4 text-white font-display">
+                {isRTL ? 'شحن مجاني' : 'Free Shipping'}
+              </h3>
+              <p className="text-white/80 leading-relaxed">
+                {isRTL ? 'شحن سريع ومجاني لجميع الطلبات داخل المملكة العربية السعودية' : 'Fast and free shipping for all orders within Saudi Arabia'}
+              </p>
               <div className="mt-4 w-12 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
             </div>
 

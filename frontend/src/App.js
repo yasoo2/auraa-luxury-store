@@ -1,38 +1,43 @@
 import React from 'react';
-import './App.css';
 
 function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-amber-100">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-6xl font-bold text-amber-800 mb-4">
-            Auraa Luxury
-          </h1>
-          <p className="text-xl text-amber-700 mb-8">
-            Premium Accessories Collection
-          </p>
-          <div className="bg-white p-8 rounded-lg shadow-lg max-w-lg mx-auto">
-            <h2 className="text-3xl font-semibold text-gray-800 mb-6">
-              🚀 Deployment Success
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Vercel deployment is working correctly!
-            </p>
-            <div className="bg-green-50 p-4 rounded-lg mb-4">
-              <p className="text-green-800 font-medium">
-                ✅ Build completed successfully
-              </p>
-              <p className="text-green-600 text-sm">
-                JSON parsing issues resolved
-              </p>
-            </div>
-            <div className="text-sm text-gray-500 space-y-1">
-              <div>Build time: {new Date().toLocaleString()}</div>
-              <div>Version: 1.0.0</div>
-              <div>Backend: auraa-luxury-store.onrender.com</div>
-            </div>
-          </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      backgroundColor: '#f8f9fa',
+      fontFamily: 'Arial, sans-serif'
+    }}>
+      <div style={{
+        textAlign: 'center',
+        padding: '2rem',
+        backgroundColor: 'white',
+        borderRadius: '10px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        maxWidth: '500px'
+      }}>
+        <h1 style={{ color: '#d97706', marginBottom: '1rem', fontSize: '3rem' }}>
+          Auraa Luxury ✨
+        </h1>
+        <p style={{ color: '#6b7280', fontSize: '1.2rem', marginBottom: '1.5rem' }}>
+          Premium Accessories Collection
+        </p>
+        <div style={{
+          backgroundColor: '#10b981',
+          color: 'white',
+          padding: '1rem',
+          borderRadius: '8px',
+          marginBottom: '1rem'
+        }}>
+          <h2>🚀 Deployment Successful!</h2>
+          <p>Vercel build completed without errors</p>
+        </div>
+        <div style={{ fontSize: '0.9rem', color: '#9ca3af' }}>
+          <p>Build Time: {new Date().toLocaleString()}</p>
+          <p>Version: 1.0.0</p>
+          <p>Status: Production Ready ✅</p>
         </div>
       </div>
     </div>

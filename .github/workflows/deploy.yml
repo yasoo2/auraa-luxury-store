@@ -8,15 +8,57 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate environment
+        run: |
+          echo "🔍 Validating deployment environment..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Triggered by: ${{ github.event_name }}"
 
       - name: Call Vercel Deploy Hook
         env:
           HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
         run: |
+          echo "🚀 Starting Vercel deployment..."
+          
           if [ -z "$HOOK" ]; then
-            echo "Missing VERCEL_DEPLOY_HOOK secret" && exit 1
+            echo "❌ ERROR: VERCEL_DEPLOY_HOOK secret is missing"
+            echo "Please add VERCEL_DEPLOY_HOOK secret in repository settings"
+            exit 1
           fi
-          curl -s -X POST "$HOOK"
+          
+          echo "📡 Calling Vercel Deploy Hook..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$HOOK")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          
+          echo "Response Code: $HTTP_CODE"
+          echo "Response Body: $BODY"
+          
+          if [ "$HTTP_CODE" -eq 200 ] || [ "$HTTP_CODE" -eq 201 ]; then
+            echo "✅ Deploy hook called successfully"
+            echo "🔗 Check deployment status: https://vercel.com/dashboard"
+          else
+            echo "❌ Deploy hook failed with HTTP $HTTP_CODE"
+            echo "Response: $BODY"
+            exit 1
+          fi
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "📋 Deployment Summary:"
+          echo "- Repository: auraa-luxury-store"
+          echo "- Branch: main"  
+          echo "- Commit: ${{ github.sha }}"
+          echo "- Timestamp: $(date -u)"
+          echo "🎯 Next: Monitor Vercel dashboard for build progress"

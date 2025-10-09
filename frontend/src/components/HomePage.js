@@ -9,7 +9,6 @@ import HeartButton from './HeartButton';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';
-import { setSEO } from '../utils/seo';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

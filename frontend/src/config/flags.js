@@ -17,6 +17,14 @@ export const FLAGS = {
   // Phase 1: Admin Suite MVP
   ADMIN: readBool('FEATURE_ADMIN') || true, // Admin Dashboard
   BULK_IMPORT: readBool('FEATURE_BULK_IMPORT') || true, // CSV Import
+  // Additional Features
+  PWA_SUPPORT: readBool('FEATURE_PWA_SUPPORT') || true, // PWA Support
+  LIVE_CHAT: readBool('FEATURE_LIVE_CHAT') || true, // Live Chat
 };
+
+// Named exports for convenience
+export const FEATURE_MULTI_LANG_EXTENDED = FLAGS.MULTI_LANG_EXTENDED;
+export const FEATURE_PWA_SUPPORT = FLAGS.PWA_SUPPORT;
+export const FEATURE_LIVE_CHAT = FLAGS.LIVE_CHAT;
 
 export default FLAGS;

@@ -193,8 +193,12 @@ const HomePage = () => {
               <div className="w-20 h-20 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-rotate-glow group-hover:scale-110 transition-transform duration-300 shadow-2xl">
                 <Clock className="h-10 w-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white font-display">دعم 24/7</h3>
-              <p className="text-white/80 leading-relaxed">فريق خدمة عملاء متاح على مدار الساعة لمساعدتك في أي وقت</p>
+              <h3 className="text-2xl font-bold mb-4 text-white font-display">
+                {isRTL ? 'دعم 24/7' : '24/7 Support'}
+              </h3>
+              <p className="text-white/80 leading-relaxed">
+                {isRTL ? 'فريق خدمة عملاء متاح على مدار الساعة لمساعدتك في أي وقت' : 'Customer service team available 24/7 to help you anytime'}
+              </p>
               <div className="mt-4 w-12 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
             </div>
           </div>

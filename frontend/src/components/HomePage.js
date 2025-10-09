@@ -110,7 +110,7 @@ const HomePage = () => {
 
                       {/* Luxury Badge */}
                       <div className="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse-gold">
-                        مميز
+                        {isRTL ? 'مميز' : 'Featured'}
                       </div>
                     </div>
 

@@ -9,7 +9,7 @@ const FashionModelsCarousel = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
 
-  // High-quality fashion model images - Beautiful women with elegant accessories
+  // New beautiful women with elegant accessories images
   const modelImages = [
     {
       id: 1,
@@ -88,111 +88,82 @@ const FashionModelsCarousel = () => {
     setIsPlaying(!isPlaying);
   };
 
+  const currentImage = modelImages[currentSlide];
+
   return (
     <div 
-      className="relative w-screen overflow-hidden bg-black"
-      style={{ marginLeft: '0', marginRight: '0', maxWidth: '100vw', minHeight: '400px' }}
+      className="relative w-full h-[500px] md:h-[600px] lg:h-[700px] overflow-hidden bg-gradient-to-r from-black/20 to-transparent group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Main Image Container */}
-      <div className="relative w-full">
-        {modelImages.map((image, index) => (
-          <div
-            key={image.id}
-            className={`${index === currentSlide ? 'block' : 'hidden'} transition-all duration-1000 ease-in-out`}
-          >
-            <picture>
-              <source srcSet={`${image.url}&format=avif`} type="image/avif" />
-              <source srcSet={`${image.url}&format=webp`} type="image/webp" />
-              <img
-                src={image.url}
-                alt={isRTL ? image.alt_ar : image.alt_en}
-                className="w-full h-auto object-contain object-center"
-                style={{ maxHeight: '80vh' }}
-                loading={index === currentSlide ? 'eager' : 'lazy'}
-                fetchpriority={index === currentSlide ? 'high' : 'auto'}
-              />
-            </picture>
-            {/* Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/40"></div>
-            
-            {/* Image Caption (no brand text) */}
-            <div className="absolute bottom-4 sm:bottom-8 left-4 sm:left-8 text-white z-20 max-w-xs sm:max-w-md">
-              <h3 className="text-xl sm:text-2xl lg:text-4xl font-display font-bold mb-2 drop-shadow-lg">
-                {isRTL ? image.caption_ar : image.caption_en}
-              </h3>
-            </div>
-          </div>
-        ))}
+      {/* Background Image */}
+      <div className="absolute inset-0">
+        <img
+          src={currentImage.url}
+          alt={isRTL ? currentImage.alt_ar : currentImage.alt_en}
+          className="w-full h-full object-cover transition-all duration-700 ease-in-out"
+          loading="lazy"
+        />
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
       </div>
 
       {/* Navigation Arrows */}
-      <Button
+      <button
         onClick={prevSlide}
-        className={`absolute top-1/2 ${isRTL ? 'right-4' : 'left-4'} transform -translate-y-1/2 z-30 bg-white/20 backdrop-blur-sm hover:bg-white/40 border-white/30 text-white transition-all duration-300`}
-        size="icon"
+        className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-10`}
+        aria-label={isRTL ? 'الصورة السابقة' : 'Previous image'}
       >
         {isRTL ? <ChevronRight className="h-6 w-6" /> : <ChevronLeft className="h-6 w-6" />}
-      </Button>
+      </button>
 
-      <Button
+      <button
         onClick={nextSlide}
-        className={`absolute top-1/2 ${isRTL ? 'left-4' : 'right-4'} transform -translate-y-1/2 z-30 bg-white/20 backdrop-blur-sm hover:bg-white/40 border-white/30 text-white transition-all duration-300`}
-        size="icon"
+        className={`absolute ${isRTL ? 'left-4' : 'right-4'} top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-10`}
+        aria-label={isRTL ? 'الصورة التالية' : 'Next image'}
       >
         {isRTL ? <ChevronLeft className="h-6 w-6" /> : <ChevronRight className="h-6 w-6" />}
-      </Button>
+      </button>
 
       {/* Play/Pause Button */}
-      <Button
+      <button
         onClick={togglePlayPause}
-        className="absolute top-4 right-4 z-30 bg-white/20 backdrop-blur-sm hover:bg-white/40 border-white/30 text-white transition-all duration-300"
-        size="icon"
+        className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-10"
+        aria-label={isRTL ? (isPlaying ? 'إيقاف مؤقت' : 'تشغيل') : (isPlaying ? 'Pause' : 'Play')}
       >
-        {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-      </Button>
+        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+      </button>
 
-      {/* Dots Navigation */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-30">
+      {/* Content Overlay */}
+      <div className="absolute inset-0 flex items-end justify-start p-8 md:p-12 lg:p-16">
+        <div className="text-white max-w-2xl" dir={isRTL ? 'rtl' : 'ltr'}>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-4 text-shadow-lg animate-fade-in">
+            Auraa Luxury
+          </h1>
+          <h2 className="text-lg md:text-xl lg:text-2xl mb-6 text-amber-200 font-light">
+            {isRTL ? currentImage.caption_ar : currentImage.caption_en}
+          </h2>
+          <p className="text-sm md:text-base opacity-90 mb-8 leading-relaxed">
+            {isRTL 
+              ? 'اكتشف مجموعتنا الحصرية من الإكسسوارات الفاخرة المصممة خصيصاً للمرأة العصرية'
+              : 'Discover our exclusive collection of luxury accessories designed for the modern woman'
+            }
+          </p>
+        </div>
+      </div>
+
+      {/* Slide Indicators */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
         {modelImages.map((_, index) => (
           <button
             key={index}
             onClick={() => goToSlide(index)}
             className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              index === currentSlide
-                ? 'bg-white scale-125 shadow-lg'
-                : 'bg-white/50 hover:bg-white/80'
+              index === currentSlide 
+                ? 'bg-white scale-125' 
+                : 'bg-white/50 hover:bg-white/70'
             }`}
-          />
-        ))}
-      </div>
-
-      {/* Progress Bar */}
-      <div className="absolute bottom-0 left-0 w-full h-1 bg-black/30 z-30">
-        <div 
-          className="h-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-4000 ease-linear"
-          style={{ 
-            width: isPlaying && !isHovered ? `${((currentSlide + 1) / modelImages.length) * 100}%` : '0%'
-          }}
-        />
-      </div>
-
-      {/* Brand Overlay removed per request */}
-
-
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 bg-white/20 rounded-full animate-pulse"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${i * 0.5}s`,
-              animationDuration: `${3 + Math.random() * 2}s`
-            }}
+            aria-label={`${isRTL ? 'الانتقال للصورة' : 'Go to slide'} ${index + 1}`}
           />
         ))}
       </div>

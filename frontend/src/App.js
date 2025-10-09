@@ -33,9 +33,10 @@ import { FEATURE_MULTI_LANG_EXTENDED, FEATURE_PWA_SUPPORT, FEATURE_LIVE_CHAT } f
 function App() {
   return (
     <HelmetProvider>
-      <LanguageProvider>
-        <WishlistProvider>
-          <CartProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <WishlistProvider>
+            <CartProvider>
             <Router>
               <div className="App" dir="auto">
                 <Helmet>

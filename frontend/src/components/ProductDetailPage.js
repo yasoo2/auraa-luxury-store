@@ -206,8 +206,8 @@ const ProductDetailPage = () => {
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
                 <Truck className="h-6 w-6 text-amber-600 ml-3" />
                 <div>
-                  <div className="font-medium text-gray-900">شحن مجاني</div>
-                  <div className="text-sm text-gray-600">للطلبات فوق 200 ر.س</div>
+                  <div className="font-medium text-gray-900">توصيل سريع</div>
+                  <div className="text-sm text-gray-600">3-7 أيام عمل</div>
                 </div>
               </div>
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">

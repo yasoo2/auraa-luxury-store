@@ -17,7 +17,8 @@ import {
   Plug,
   LogOut,
   Menu,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 
 const AdminDashboard = () => {

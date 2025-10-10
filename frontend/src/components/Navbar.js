@@ -145,50 +145,63 @@ const Navbar = () => {
             </div>
           </form>
 
-          {/* Right Actions */}
-          <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
-            <LanguageCurrencySelector />
+          {/* Right Actions - Mobile optimized */}
+          <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-1 sm:space-x-2 md:space-x-4' : 'space-x-1 sm:space-x-2 md:space-x-4'}`}>
+            {/* Language Currency Selector - Hidden on smallest screens */}
+            <div className="hidden sm:block">
+              <LanguageCurrencySelector />
+            </div>
 
             {/* Cart */}
-            <Link to="/cart" className="relative p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
-              <ShoppingCart className="h-6 w-6" />
-              <span className="cart-badge absolute -top-1 -right-1 bg-brand text-white text-[10px] rounded-full h-5 min-w-[1.1rem] px-1 flex items-center justify-center">{cartCount}</span>
+            <Link to="/cart" className="relative p-1.5 sm:p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
+              <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="cart-badge absolute -top-0.5 -right-0.5 bg-brand text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">{cartCount}</span>
             </Link>
 
             {/* Wishlist */}
-            <Link to={user ? '/wishlist' : '/auth'} className="relative p-2 text-gray-700 hover-text-brand transition-colors duration-200">
-              <Heart className="h-6 w-6" />
+            <Link to={user ? '/wishlist' : '/auth'} className="relative p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200">
+              <Heart className="h-5 w-5 sm:h-6 sm:w-6" />
               {getWishlistCount() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[1.1rem] px-1 flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
                   {getWishlistCount()}
                 </span>
               )}
             </Link>
 
-            {/* User */}
+            {/* User Actions - Responsive */}
             {user ? (
-              <div className="flex items-center space-x-2">
-                <Link to="/profile" className="p-2 text-gray-700 hover-text-brand transition-colors duration-200" data-testid="profile-link">
-                  <User className="h-6 w-6" />
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                {/* Profile - Hidden on mobile, shown in menu */}
+                <Link to="/profile" className="hidden sm:block p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200" data-testid="profile-link">
+                  <User className="h-5 w-5 sm:h-6 sm:w-6" />
                 </Link>
-                <Button onClick={handleLogout} variant="ghost" size="sm" className="p-2 text-gray-700 hover-text-brand" data-testid="logout-button">
-                  <LogOut className="h-4 w-4" />
+                
+                {/* Logout - Hidden on mobile, shown in menu */}
+                <Button onClick={handleLogout} variant="ghost" size="sm" className="hidden sm:block p-1.5 sm:p-2 text-gray-700 hover-text-brand" data-testid="logout-button">
+                  <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
+                
+                {/* Admin Button - Always visible if admin */}
                 {user && user.is_admin && (
-                  <Link to="/admin" className="px-3 py-1 text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors">إدارة</Link>
+                  <Link to="/admin" className="px-2 py-1 text-xs sm:text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors whitespace-nowrap">إدارة</Link>
                 )}
               </div>
             ) : (
-              <Link to="/auth">
-                <Button className="btn-luxury" data-testid="login-button">
-                  {isRTL ? 'دخول / تسجيل' : 'Login / Register'}
+              <Link to="/auth" className="hidden sm:block">
+                <Button className="btn-luxury text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2" data-testid="login-button">
+                  {isRTL ? 'دخول' : 'Login'}
                 </Button>
               </Link>
             )}
 
-            {/* Mobile menu */}
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 text-gray-700 hover-text-brand transition-colors duration-200" data-testid="mobile-menu-button">
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {/* Mobile menu button */}
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)} 
+              className="lg:hidden p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200 ml-1" 
+              data-testid="mobile-menu-button"
+              aria-label="Toggle mobile menu"
+            >
+              {isMenuOpen ? <X className="h-5 w-5 sm:h-6 sm:w-6" /> : <Menu className="h-5 w-5 sm:h-6 sm:w-6" />}
             </button>
           </div>
 

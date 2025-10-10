@@ -146,18 +146,18 @@ const FashionModelsCarousel = () => {
       {/* Navigation Arrows */}
       <button
         onClick={prevSlide}
-        className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-10`}
+        className={`absolute ${isRTL ? 'right-2 sm:right-4' : 'left-2 sm:left-4'} top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full transition-all duration-300 opacity-60 sm:opacity-0 group-hover:opacity-100 z-10 touch-manipulation`}
         aria-label={isRTL ? 'الصورة السابقة' : 'Previous image'}
       >
-        {isRTL ? <ChevronRight className="h-6 w-6" /> : <ChevronLeft className="h-6 w-6" />}
+        {isRTL ? <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6" /> : <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6" />}
       </button>
 
       <button
         onClick={nextSlide}
-        className={`absolute ${isRTL ? 'left-4' : 'right-4'} top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-10`}
+        className={`absolute ${isRTL ? 'left-2 sm:left-4' : 'right-2 sm:right-4'} top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full transition-all duration-300 opacity-60 sm:opacity-0 group-hover:opacity-100 z-10 touch-manipulation`}
         aria-label={isRTL ? 'الصورة التالية' : 'Next image'}
       >
-        {isRTL ? <ChevronLeft className="h-6 w-6" /> : <ChevronRight className="h-6 w-6" />}
+        {isRTL ? <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6" /> : <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6" />}
       </button>
 
       {/* Play/Pause Button */}

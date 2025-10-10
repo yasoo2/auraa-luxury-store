@@ -15,10 +15,10 @@ const SEOHead = ({
   const { language, currency } = useLanguage();
   const isRTL = language === 'ar';
   
-  const siteName = isRTL ? 'أورا لاكشري' : 'Auraa Luxury';
-  const defaultTitle = isRTL ? 'أورا لاكشري - إكسسوارات فاخرة' : 'Auraa Luxury - Premium Accessories';
+  const siteName = 'Auraa Luxury';
+  const defaultTitle = isRTL ? 'Auraa Luxury - إكسسوارات فاخرة' : 'Auraa Luxury - Premium Accessories';
   const defaultDescription = isRTL 
-    ? 'اكتشف مجموعة أورا لاكشري الفاخرة من الإكسسوارات الذهبية واللؤلؤية. قلادات، أقراط، أساور وساعات بأجود الخامات والتصاميم العصرية.'
+    ? 'اكتشف مجموعة Auraa Luxury الفاخرة من الإكسسوارات الذهبية واللؤلؤية. قلادات، أقراط، أساور وساعات بأجود الخامات والتصاميم العصرية.'
     : 'Discover Auraa Luxury\'s premium collection of gold and pearl accessories. Necklaces, earrings, bracelets and watches crafted with finest materials and contemporary designs.';
   
   const finalTitle = title ? `${title} | ${siteName}` : defaultTitle;

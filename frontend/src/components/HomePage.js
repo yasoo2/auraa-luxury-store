@@ -163,17 +163,17 @@ const HomePage = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-            <div className="text-center p-8 animate-fade-in-up group" style={{animationDelay: '0.1s'}}>
-              <div className="w-20 h-20 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-rotate-glow group-hover:scale-110 transition-transform duration-300 shadow-2xl">
-                <Truck className="h-10 w-10 text-white" />
+            <div className="text-center p-4 sm:p-6 lg:p-8 animate-fade-in-up group" style={{animationDelay: '0.1s'}}>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 animate-rotate-glow group-hover:scale-110 transition-transform duration-300 shadow-2xl">
+                <Truck className="h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white font-display">
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4 text-white font-display">
                 {isRTL ? 'توصيل سريع' : 'Fast Delivery'}
               </h3>
-              <p className="text-white/80 leading-relaxed">
+              <p className="text-white/80 leading-relaxed text-sm sm:text-base">
                 {isRTL ? 'توصيل سريع وموثوق لجميع الطلبات داخل المملكة العربية السعودية' : 'Fast and reliable delivery for all orders within Saudi Arabia'}
               </p>
-              <div className="mt-4 w-12 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
+              <div className="mt-3 sm:mt-4 w-10 sm:w-12 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
             </div>
 
             <div className="text-center p-8 animate-fade-in-up group" style={{animationDelay: '0.2s'}}>

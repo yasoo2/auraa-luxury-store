@@ -96,7 +96,7 @@ const AuthPage = () => {
                 {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
               </h2>
               <p className="text-white/80 animate-slide-in-right">
-                {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى عائلة لورا لاكشري'}
+                {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى عائلة Lora Luxury'}
               </p>
             </div>
 

@@ -20,7 +20,9 @@ import {
   LogOut,
   Menu,
   X,
-  RefreshCw
+  RefreshCw,
+  ExternalLink,
+  Upload
 } from 'lucide-react';
 
 const AdminDashboard = () => {

@@ -61,7 +61,7 @@ const DeploymentSetup = () => {
               <span className="text-white font-bold text-2xl">A</span>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-white">Lora Luxury</CardTitle>
+          <CardTitle className="text-2xl font-bold text-white">Auraa Luxury</CardTitle>
           <CardDescription className="text-white/80">
             إعداد النشر الأولي
           </CardDescription>

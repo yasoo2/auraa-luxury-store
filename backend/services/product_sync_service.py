@@ -477,7 +477,7 @@ class ProductSyncService:
                 "timestamp": datetime.utcnow(),
                 "data": data,
                 "server_info": {
-                    "hostname": "auraa-backend",
+                    "hostname": "lora-luxury-backend",
                     "sync_service_version": "1.0"
                 }
             }

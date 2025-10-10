@@ -431,7 +431,8 @@
   restore_complete: true
 
 ## test_plan:
-  current_focus: []
+  current_focus:
+    - "Remove Arabic Brand Name - Keep English Only"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

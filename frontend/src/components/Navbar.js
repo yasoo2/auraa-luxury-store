@@ -64,12 +64,12 @@ const Navbar = () => {
         <div className="relative flex justify-between items-center min-h-16 md:min-h-20 py-2" style={{ direction: 'ltr' }}>
           {/* Logo (default inline left) */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
-            <Link to="/" className="flex flex-col items-start py-2">
+            <Link to="/" className="flex flex-col items-start py-1 md:py-2">
               <div className="font-display font-black leading-none flex items-baseline gap-1">
-                <span className="text-3xl md:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Lora</span>
-                <span style={{ fontSize: '12px', fontWeight: '100' }} className="carousel-luxury-text tracking-[0.25em] whitespace-nowrap">LUXURY</span>
+                <span className="text-2xl sm:text-3xl md:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Lora</span>
+                <span style={{ fontSize: '10px' }} className="sm:text-xs carousel-luxury-text tracking-[0.15em] sm:tracking-[0.25em] whitespace-nowrap">LUXURY</span>
               </div>
-              <span className="block text-[9px] md:text-[11px] text-gray-600 tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
+              <span className="block text-[8px] sm:text-[9px] md:text-[11px] text-gray-600 tracking-[0.3em] sm:tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
             </Link>
           )}
 

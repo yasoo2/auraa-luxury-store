@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class AuraaLuxuryAPITester:
-    def __init__(self, base_url="https://gold-dropship.preview.emergentagent.com"):
+    def __init__(self, base_url="https://highend-store.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.token = None

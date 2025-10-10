@@ -54,10 +54,10 @@ const WishlistPage = () => {
   const shareWishlist = () => {
     if (navigator.share) {
       navigator.share({
-        title: isRTL ? 'قائمة المفضلة - لورا لاكشري' : 'My Wishlist - لورا لاكشري',
+        title: isRTL ? 'قائمة المفضلة - Auraa Luxury' : 'My Wishlist - Auraa Luxury',
         text: isRTL ? 
-          `تحقق من قائمة المفضلة الخاصة بي في أورا لاكشري - ${getWishlistCount()} منتج` :
-          `Check out my wishlist at لورا لاكشري - ${getWishlistCount()} items`,
+          `تحقق من قائمة المفضلة الخاصة بي في Auraa Luxury - ${getWishlistCount()} منتج` :
+          `Check out my wishlist at Auraa Luxury - ${getWishlistCount()} items`,
         url: window.location.href
       });
     } else {

@@ -751,10 +751,20 @@ const EnhancedProductsPage = () => {
                           <Button size="sm" variant="ghost" onClick={() => window.open(`/product/${product.id}`, '_blank')}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-amber-600 hover:text-amber-900">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="text-amber-600 hover:text-amber-900"
+                            onClick={() => handleEditProduct(product)}
+                          >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-900">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="text-red-600 hover:text-red-900"
+                            onClick={() => handleDeleteProduct(product.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

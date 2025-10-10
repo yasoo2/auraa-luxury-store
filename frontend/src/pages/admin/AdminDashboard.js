@@ -30,9 +30,17 @@ import {
 
 const AdminDashboard = () => {
   const { t, language } = useLanguage();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isRTL = language === 'ar';
+
+  // Redirect if not authenticated or not admin
+  useEffect(() => {
+    if (!isAuthenticated || !user?.is_admin) {
+      navigate('/');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const menuItems = [
     {

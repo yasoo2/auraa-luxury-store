@@ -1060,7 +1060,7 @@ async def search_aliexpress_products(
     max_price: float = None,
     page_size: int = 20,
     page_no: int = 1,
-    current_user: dict = Depends(get_current_admin_user)
+    admin: User = Depends(get_admin_user)
 ):
     """Search products on AliExpress"""
     try:
@@ -1086,7 +1086,7 @@ async def search_aliexpress_products(
 @api_router.get("/admin/aliexpress/product/{product_id}")
 async def get_aliexpress_product_details(
     product_id: str,
-    current_user: dict = Depends(get_current_admin_user)
+    admin: User = Depends(get_admin_user)
 ):
     """Get detailed product information from AliExpress"""
     try:
@@ -1113,7 +1113,7 @@ async def import_aliexpress_product(
     custom_description: str = None,
     markup_percentage: float = 50.0,
     category: str = "imported",
-    current_user: dict = Depends(get_current_admin_user)
+    admin: User = Depends(get_admin_user)
 ):
     """Import a product from AliExpress to local store"""
     try:
@@ -1139,7 +1139,7 @@ async def import_aliexpress_product(
 
 @api_router.post("/admin/aliexpress/sync-prices")
 async def sync_aliexpress_prices(
-    current_user: dict = Depends(get_current_admin_user)
+    admin: User = Depends(get_admin_user)
 ):
     """Sync prices for all AliExpress products"""
     try:
@@ -1161,7 +1161,7 @@ async def sync_aliexpress_prices(
 @api_router.post("/admin/upload-image")
 async def upload_image(
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_admin_user)
+    admin: User = Depends(get_admin_user)
 ):
     """Upload and process product image"""
     try:

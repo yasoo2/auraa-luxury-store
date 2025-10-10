@@ -68,7 +68,7 @@ const SettingsPage = () => {
     tiktok_url: '',
     
     // Payment Methods
-    payment_cod: true,
+    payment_cod: false, // Disabled for dropshipping
     payment_stripe: false,
     payment_paypal: false,
     payment_bank_transfer: true,

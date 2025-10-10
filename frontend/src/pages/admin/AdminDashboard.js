@@ -48,6 +48,16 @@ const AdminDashboard = () => {
       icon: Users
     },
     {
+      name: isRTL ? 'علي إكسبريس' : 'AliExpress',
+      path: '/admin/aliexpress',
+      icon: ExternalLink
+    },
+    {
+      name: isRTL ? 'الاستيراد المجمع' : 'Bulk Import',
+      path: '/admin/bulk-import',
+      icon: Upload
+    },
+    {
       name: isRTL ? 'التحليلات' : 'Analytics',
       path: '/admin/analytics',
       icon: BarChart

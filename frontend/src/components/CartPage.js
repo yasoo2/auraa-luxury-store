@@ -250,7 +250,7 @@ const CartPage = () => {
                 <div className="flex justify-between text-xl font-bold">
                   <span>المجموع:</span>
                   <span className="text-amber-600" data-testid="total-amount">
-                    {(cart.total_amount + (cart.total_amount < 200 ? 15 : 0)).toFixed(2)} ر.س
+                    {(cart.total_amount + 15).toFixed(2)} ر.س
                   </span>
                 </div>
               </div>

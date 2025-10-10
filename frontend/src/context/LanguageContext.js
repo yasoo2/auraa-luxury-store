@@ -23,15 +23,37 @@ const LANGUAGES = {
   hi: { name: 'हिन्दी', dir: 'ltr', flag: '🇮🇳' }
 };
 
-// GCC Currencies with proper decimal places
+// Global Currencies with proper decimal places
 const CURRENCIES = {
+  // GCC Currencies
   USD: { symbol: '$', decimals: 2, name_en: 'US Dollar', name_ar: 'دولار أمريكي' },
   SAR: { symbol: 'ر.س', decimals: 2, name_en: 'Saudi Riyal', name_ar: 'ريال سعودي' },
   AED: { symbol: 'د.إ', decimals: 2, name_en: 'UAE Dirham', name_ar: 'درهم إماراتي' },
   QAR: { symbol: 'ر.ق', decimals: 2, name_en: 'Qatari Riyal', name_ar: 'ريال قطري' },
   KWD: { symbol: 'د.ك', decimals: 3, name_en: 'Kuwaiti Dinar', name_ar: 'دينار كويتي' },
   BHD: { symbol: 'د.ب', decimals: 3, name_en: 'Bahraini Dinar', name_ar: 'دينار بحريني' },
-  OMR: { symbol: 'ر.ع', decimals: 3, name_en: 'Omani Rial', name_ar: 'ريال عماني' }
+  OMR: { symbol: 'ر.ع', decimals: 3, name_en: 'Omani Rial', name_ar: 'ريال عماني' },
+  
+  // Major Global Currencies
+  EUR: { symbol: '€', decimals: 2, name_en: 'Euro', name_ar: 'يورو' },
+  GBP: { symbol: '£', decimals: 2, name_en: 'British Pound', name_ar: 'جنيه إسترليني' },
+  JPY: { symbol: '¥', decimals: 0, name_en: 'Japanese Yen', name_ar: 'ين ياباني' },
+  CAD: { symbol: 'C$', decimals: 2, name_en: 'Canadian Dollar', name_ar: 'دولار كندي' },
+  AUD: { symbol: 'A$', decimals: 2, name_en: 'Australian Dollar', name_ar: 'دولار أسترالي' },
+  CHF: { symbol: 'CHF', decimals: 2, name_en: 'Swiss Franc', name_ar: 'فرنك سويسري' },
+  
+  // Asian Currencies
+  CNY: { symbol: '¥', decimals: 2, name_en: 'Chinese Yuan', name_ar: 'يوان صيني' },
+  INR: { symbol: '₹', decimals: 2, name_en: 'Indian Rupee', name_ar: 'روبية هندية' },
+  KRW: { symbol: '₩', decimals: 0, name_en: 'South Korean Won', name_ar: 'وون كوري جنوبي' },
+  SGD: { symbol: 'S$', decimals: 2, name_en: 'Singapore Dollar', name_ar: 'دولار سنغافوري' },
+  HKD: { symbol: 'HK$', decimals: 2, name_en: 'Hong Kong Dollar', name_ar: 'دولار هونغ كونغ' },
+  
+  // Other Regional Currencies
+  TRY: { symbol: '₺', decimals: 2, name_en: 'Turkish Lira', name_ar: 'ليرة تركية' },
+  EGP: { symbol: 'ج.م', decimals: 2, name_en: 'Egyptian Pound', name_ar: 'جنيه مصري' },
+  JOD: { symbol: 'د.أ', decimals: 3, name_en: 'Jordanian Dinar', name_ar: 'دينار أردني' },
+  LBP: { symbol: 'ل.ل', decimals: 2, name_en: 'Lebanese Pound', name_ar: 'ليرة لبنانية' }
 };
 
 const translations = {

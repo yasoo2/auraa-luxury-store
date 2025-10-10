@@ -1051,6 +1051,112 @@ async def update_all_product_prices(admin: User = Depends(get_admin_user)):
         logger.error(f"Error updating all prices: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# AliExpress Integration Endpoints
+@api_router.get("/admin/aliexpress/search")
+async def search_aliexpress_products(
+    keywords: str,
+    category_id: str = None,
+    min_price: float = None,
+    max_price: float = None,
+    page_size: int = 20,
+    page_no: int = 1,
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Search products on AliExpress"""
+    try:
+        aliexpress_service = get_aliexpress_service(db)
+        await aliexpress_service.initialize()
+        
+        results = await aliexpress_service.search_products(
+            keywords=keywords,
+            category_id=category_id,
+            min_price=min_price,
+            max_price=max_price,
+            page_size=page_size,
+            page_no=page_no
+        )
+        
+        await aliexpress_service.close()
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error searching AliExpress: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/aliexpress/product/{product_id}")
+async def get_aliexpress_product_details(
+    product_id: str,
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Get detailed product information from AliExpress"""
+    try:
+        aliexpress_service = get_aliexpress_service(db)
+        await aliexpress_service.initialize()
+        
+        details = await aliexpress_service.get_product_details(product_id)
+        
+        await aliexpress_service.close()
+        
+        if not details:
+            raise HTTPException(status_code=404, detail="Product not found")
+            
+        return details
+        
+    except Exception as e:
+        logger.error(f"Error getting product details: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/import")
+async def import_aliexpress_product(
+    aliexpress_product_id: str,
+    custom_name: str = None,
+    custom_description: str = None,
+    markup_percentage: float = 50.0,
+    category: str = "imported",
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Import a product from AliExpress to local store"""
+    try:
+        aliexpress_service = get_aliexpress_service(db)
+        await aliexpress_service.initialize()
+        
+        imported_product = await aliexpress_service.import_product_to_store(
+            aliexpress_product_id=aliexpress_product_id,
+            custom_name=custom_name,
+            custom_description=custom_description,
+            markup_percentage=markup_percentage,
+            category=category
+        )
+        
+        await aliexpress_service.close()
+        
+        logger.info(f"Product imported successfully: {aliexpress_product_id}")
+        return {"success": True, "product": imported_product}
+        
+    except Exception as e:
+        logger.error(f"Error importing product: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/sync-prices")
+async def sync_aliexpress_prices(
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Sync prices for all AliExpress products"""
+    try:
+        aliexpress_service = get_aliexpress_service(db)
+        await aliexpress_service.initialize()
+        
+        results = await aliexpress_service.sync_product_prices()
+        
+        await aliexpress_service.close()
+        
+        logger.info(f"Price sync completed: {results['updated_count']} products updated")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error syncing prices: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Image Upload Endpoint
 @api_router.post("/admin/upload-image")
 async def upload_image(

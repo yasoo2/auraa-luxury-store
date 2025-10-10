@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useWishlist } from '../context/WishlistContext';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import { 
   Heart, 
   ShoppingCart, 

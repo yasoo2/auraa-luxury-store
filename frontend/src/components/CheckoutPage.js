@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;

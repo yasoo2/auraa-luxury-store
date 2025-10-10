@@ -1,13 +1,5 @@
 <analysis>
 
-</product_requirements>
-
-<key_technical_concepts>
-- **Full-Stack:** React (frontend) with Vite, FastAPI (backend).
-- **Database:** MongoDB with .
-- **UI:** Shadcn UI (Tailwind CSS), React Context API for global state.
-- **Routing:** .
-
 </key_technical_concepts>
 
 <code_architecture>

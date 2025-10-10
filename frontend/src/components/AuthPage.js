@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { toast } from 'sonner';
-import { useAuth } from '../App';
+import { useAuth } from '../context/AuthContext';
 
 // ✅ استيراد حقل الهاتف مع الأعلام
 import PhoneInput from 'react-phone-input-2';
@@ -20,8 +20,8 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'admin@auraa.com',
+    password: 'admin123',
     first_name: '',
     last_name: '',
     phone: '' // سيتم تخزينه بصيغة دولية مثل +90555...
@@ -80,14 +80,16 @@ const AuthPage = () => {
         result = await register(formData);
       }
       
+      console.log('Login result:', result);
       if (result.success) {
-        toast.success(isLogin ? 'تم تسجيل الدخول بنجاح' : 'تم إنشاء الحساب بنجاح');
+        console.log('Login successful, navigating to:', from);
         navigate(from, { replace: true });
       } else {
-        toast.error(result.error || 'حدث خطأ');
+
       }
     } catch (error) {
-      toast.error('حدث خطأ غير متوقع');
+      console.error('Auth error:', error);
+      alert('حدث خطأ غير متوقع: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -105,164 +107,148 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
-      <div className="max-w-md w-full mx-4">
-        <Card className="luxury-card p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">A</span>
-              </div>
-              <span className="font-display text-2xl font-bold gradient-text">Auraa Luxury</span>
-            </div>
-            <h1 className="font-display text-3xl font-bold text-gray-900 mb-2" data-testid="auth-title">
-              {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
-            </h1>
-            <p className="text-gray-600">
-              {isLogin ? 'مرحباً بعودتك!' : 'انضم إلى عائلة Auraa Luxury'}
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {!isLogin && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    type="text"
-                    name="first_name"
-                    placeholder="الاسم الأول"
-                    value={formData.first_name}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                    required
-                    data-testid="first-name-input"
-                  />
-                </div>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input
-                    type="text"
-                    name="last_name"
-                    placeholder="الاسم الأخير"
-                    value={formData.last_name}
-                    onChange={handleInputChange}
-                    className="pl-10"
-                    required
-                    data-testid="last-name-input"
-                  />
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Luxury Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-amber-900 to-black">
+        <div className="absolute inset-0 opacity-20" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23fbbf24' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }}></div>
+        <div className="absolute inset-0 animate-gold-shimmer opacity-30"></div>
+      </div>
+      
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          {/* Luxury Card */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-8 shadow-2xl animate-luxury-zoom-in">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center animate-rotate-glow shadow-lg">
+                  <span className="text-white font-bold text-2xl font-display">A</span>
                 </div>
               </div>
-            )}
-
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type="email"
-                name="email"
-                placeholder="البريد الإلكتروني"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="pl-10"
-                required
-                data-testid="email-input"
-              />
+              <h1 className="font-display text-3xl font-bold text-white animate-text-sparkle mb-2">Auraa Luxury</h1>
+              <h2 className="text-xl font-semibold text-amber-200 mb-2 animate-fade-in-up" data-testid="auth-title">
+                {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
+              </h2>
+              <p className="text-white/80 animate-slide-in-right">
+                {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى عائلة Auraa Luxury'}
+              </p>
             </div>
 
-            {/* ✅ حقل الهاتف الاحترافي مع أعلام الدول + المقدّمات */}
-            {!isLogin && (
-              <div className="relative">
-                <label className="block mb-2 font-medium">رقم الجوال</label>
-                <PhoneInput
-                  country={'tr'} // البلد الافتراضي (يمكن تغييره لما تحب)
-                  value={formData.phone.replace(/^\+?/, '')} 
-                  onChange={(val /*, countryData, e, formattedValue */) => {
-                    // نضمن حفظه بصيغة دولية تبدأ بـ +
-                    const normalized = `+${String(val || '').replace(/^\+?/, '')}`;
-                    setFormData((prev) => ({ ...prev, phone: normalized }));
-                  }}
-                  enableSearch
-                  inputStyle={{ width: '100%' }}
-                  dropdownStyle={{ zIndex: 9999 }}
-                  placeholder="اختر الدولة ثم اكتب الرقم"
-                />
-                <p className="text-xs opacity-70 mt-1">
-                  سيتم حفظ الرقم بصيغة دولية (E.164) مثل ‎+90555… لسهولة التواصل والشحن.
-                </p>
-              </div>
-            )}
-
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="كلمة المرور"
-                value={formData.password}
-                onChange={handleInputChange}
-                className="pl-10 pr-10"
-                required
-                minLength={6}
-                data-testid="password-input"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-
-            <Button 
-              type="submit" 
-              className="btn-luxury w-full" 
-              disabled={loading}
-              data-testid="auth-submit-button"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span className="ml-2">جاري...</span>
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {!isLogin && (
+                <div className="grid grid-cols-2 gap-4 animate-fade-in-up">
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                    <input
+                      type="text"
+                      name="first_name"
+                      placeholder="الاسم الأول"
+                      value={formData.first_name}
+                      onChange={handleInputChange}
+                      className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                      required
+                      data-testid="first-name-input"
+                    />
+                  </div>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                    <input
+                      type="text"
+                      name="last_name"
+                      placeholder="الاسم الأخير"
+                      value={formData.last_name}
+                      onChange={handleInputChange}
+                      className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                      required
+                      data-testid="last-name-input"
+                    />
+                  </div>
                 </div>
-              ) : (
-                isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'
               )}
-            </Button>
-          </form>
 
-          {/* Switch Mode */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              {isLogin ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟'}
-              {' '}
-              <button
-                type="button"
-                onClick={switchMode}
-                className="text-amber-600 hover:text-amber-700 font-medium underline"
-                data-testid="switch-auth-mode"
+              <div className="relative animate-slide-in-left">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="البريد الإلكتروني"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                  required
+                  data-testid="email-input"
+                />
+              </div>
+
+              {!isLogin && (
+                <div className="relative animate-fade-in-up">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    placeholder="رقم الجوال (اختياري)"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                    data-testid="phone-input"
+                  />
+                </div>
+              )}
+
+
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                data-testid="auth-submit-button"
+                className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 animate-pulse-gold shadow-2xl animate-luxury-zoom-in"
               >
-                {isLogin ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span className="ml-2">جاري...</span>
+                  </div>
+                ) : (
+                  isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'
+                )}
               </button>
-            </p>
-          </div>
+            </form>
 
-          {/* Demo Account Info */}
-          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <h4 className="font-medium text-amber-800 mb-2">حساب تجريبي:</h4>
-            <div className="text-sm text-amber-700">
-              <p>البريد: admin@auraa.com</p>
-              <p>كلمة المرور: admin123</p>
+            {/* Switch Mode */}
+            <div className="mt-6 text-center animate-fade-in-up">
+              <p className="text-white/80">
+                {isLogin ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟'}
+                {' '}
+                <button
+                  type="button"
+                  onClick={switchMode}
+                  className="text-amber-300 hover:text-amber-200 font-medium underline transition-colors duration-200"
+                  data-testid="switch-auth-mode"
+                >
+                  {isLogin ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+                </button>
+              </p>
+            </div>
+
+            {/* Demo Account Info */}
+            <div className="mt-6 p-4 bg-amber-500/20 border border-amber-300/30 rounded-xl backdrop-blur-sm animate-float">
+              <h4 className="font-medium text-amber-200 mb-2">حساب تجريبي:</h4>
+              <div className="text-sm text-amber-100">
+                <p>البريد: admin@auraa.com</p>
+                <p>كلمة المرور: admin123</p>
+              </div>
+            </div>
+
+            {/* Security Notice */}
+            <div className="mt-6 text-center text-sm text-white/60 animate-fade-in-up">
+              <p>🔒 بياناتك محمية ومشفرة</p>
             </div>
           </div>
-
-          {/* Security Notice */}
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>🔒 بياناتك محمية ومشفرة</p>
-          </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

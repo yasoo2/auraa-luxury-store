@@ -7,6 +7,7 @@ import UsersPage from './UsersPage';
 import SettingsPage from './SettingsPage';
 import AnalyticsPage from './AnalyticsPage';
 import IntegrationsPage from './IntegrationsPage';
+import AutoUpdatePage from './AutoUpdatePage';
 import {
   Package,
   ShoppingCart,
@@ -16,7 +17,8 @@ import {
   Plug,
   LogOut,
   Menu,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -50,6 +52,11 @@ const AdminDashboard = () => {
       name: isRTL ? 'التكاملات' : 'Integrations',
       path: '/admin/integrations',
       icon: Plug
+    },
+    {
+      name: isRTL ? 'التحديثات التلقائية' : 'Auto Updates',
+      path: '/admin/auto-update',
+      icon: RefreshCw
     },
     {
       name: isRTL ? 'الإعدادات' : 'Settings',
@@ -128,6 +135,7 @@ const AdminDashboard = () => {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
+            <Route path="/auto-update" element={<AutoUpdatePage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>

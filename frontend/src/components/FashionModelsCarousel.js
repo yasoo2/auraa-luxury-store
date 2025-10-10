@@ -9,55 +9,87 @@ const FashionModelsCarousel = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
 
-  // New beautiful women with elegant accessories images
+  // Luxury fashion models with premium accessories - 10 exclusive images
   const modelImages = [
     {
       id: 1,
-      url: 'https://images.unsplash.com/photo-1643236008023-dcf174afa2ab?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwd29tZW4lMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk5Njg3NzF8MA&ixlib=rb-4.1.0&q=85',
-      alt_ar: 'امرأة أنيقة بإكسسوارات راقية',
-      alt_en: 'Elegant woman with refined accessories',
-      caption_ar: 'أناقة استثنائية',
-      caption_en: 'Exceptional Elegance'
+      url: 'https://images.unsplash.com/photo-1567777301743-3b7ef158aadf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwxfHxsdXh1cnklMjBmYXNoaW9uJTIwbW9kZWx8ZW58MHx8fHwxNzYwMDUyMDgxfDA&ixlib=rb-4.1.0&q=85',
+      alt_ar: 'عارضة أزياء فاخرة في بيئة راقية',
+      alt_en: 'Luxury fashion model in elegant setting',
+      caption_ar: 'الأناقة الكلاسيكية',
+      caption_en: 'Classic Elegance'
     },
     {
       id: 2,
-      url: 'https://images.unsplash.com/photo-1643237268922-25dbcdaf4770?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwyfHxlbGVnYW50JTIwd29tZW4lMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk5Njg3NzF8MA&ixlib=rb-4.1.0&q=85',
-      alt_ar: 'امرأة جميلة بأقراط أنيقة',
-      alt_en: 'Beautiful woman with elegant earrings',
-      caption_ar: 'أناقة محتشمة',
-      caption_en: 'Modest Elegance'
+      url: 'https://images.unsplash.com/photo-1622080157653-830e675f14c3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxsdXh1cnklMjBmYXNoaW9uJTIwbW9kZWx8ZW58MHx8fHwxNzYwMDUyMDgxfDA&ixlib=rb-4.1.0&q=85',
+      alt_ar: 'عارضة راقية بفستان أحمر فاخر',
+      alt_en: 'Sophisticated model in luxury red dress',
+      caption_ar: 'الجاذبية المثالية',
+      caption_en: 'Perfect Allure'
     },
     {
       id: 3,
-      url: 'https://images.unsplash.com/photo-1643237251986-c0bde5848c5b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwzfHxlbGVnYW50JTIwd29tZW4lMjBhY2Nlc3Nvcmllc3xlbnwwfHx8fDE3NTk5Njg3NzF8MA&ixlib=rb-4.1.0&q=85',
-      alt_ar: 'امرأة بعقد أنيق وإطلالة راقية',
-      alt_en: 'Woman with elegant necklace and refined look',
-      caption_ar: 'تفاصيل مبهرة',
-      caption_en: 'Exquisite Details'
+      url: 'https://images.unsplash.com/photo-1614999612412-3b1dbcd68e40?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHw0fHxsdXh1cnklMjBmYXNoaW9uJTIwbW9kZWx8ZW58MHx8fHwxNzYwMDUyMDgxfDA&ixlib=rb-4.1.0&q=85',
+      alt_ar: 'عارضة تحمل عقد ذهبي فاخر',
+      alt_en: 'Model wearing luxury gold necklace',
+      caption_ar: 'بريق الذهب',
+      caption_en: 'Golden Radiance'
     },
     {
       id: 4,
-      url: 'https://images.pexels.com/photos/34180980/pexels-photo-34180980.jpeg',
-      alt_ar: 'امرأة جميلة بأسلوب عصري أنيق',
-      alt_en: 'Beautiful woman with modern elegant style',
-      caption_ar: 'حضور لافت',
-      caption_en: 'Captivating Presence'
+      url: 'https://images.pexels.com/photos/34231676/pexels-photo-34231676.jpeg',
+      alt_ar: 'عارضة أزياء بإطلالة عصرية أنيقة',
+      alt_en: 'Fashion model with modern elegant look',
+      caption_ar: 'الحداثة الراقية',
+      caption_en: 'Modern Sophistication'
     },
     {
       id: 5,
-      url: 'https://images.unsplash.com/photo-1603139835562-32d47f7fdae6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwyfHxmYXNoaW9uJTIwYmVsdHxlbnwwfHx8fDE3NTk5Njg3ODV8MA&ixlib=rb-4.1.0&q=85',
-      alt_ar: 'امرأة بحزام أنيق وإطلالة عصرية',
-      alt_en: 'Woman with stylish belt and modern look',
-      caption_ar: 'زنار ذهبي',
-      caption_en: 'Golden Belt'
+      url: 'https://images.pexels.com/photos/34231672/pexels-photo-34231672.jpeg',
+      alt_ar: 'جمال طبيعي بلمسة فاخرة',
+      alt_en: 'Natural beauty with luxury touch',
+      caption_ar: 'الجمال الطبيعي',
+      caption_en: 'Natural Beauty'
     },
     {
       id: 6,
-      url: 'https://images.unsplash.com/photo-1712876718948-e95fd738aeb6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwzfHxmYXNoaW9uJTIwYmVsdHxlbnwwfHx8fDE3NTk5Njg3ODV8MA&ixlib=rb-4.1.0&q=85',
-      alt_ar: 'امرأة بزنار خصر أنيق وإطلالة فاخرة',
-      alt_en: 'Woman with elegant waist belt and luxury look',
-      caption_ar: 'زنار خصر أنيق',
-      caption_en: 'Elegant Waist Belt'
+      url: 'https://images.unsplash.com/photo-1694062045776-f48d9b6de57e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxqZXdlbHJ5JTIwbW9kZWx8ZW58MHx8fHwxNzYwMDUyMDg5fDA&ixlib=rb-4.1.0&q=85',
+      alt_ar: 'عارضة مجوهرات بإكسسوارات ذهبية',
+      alt_en: 'Jewelry model with gold accessories',
+      caption_ar: 'مجوهرات استثنائية',
+      caption_en: 'Exceptional Jewelry'
+    },
+    {
+      id: 7,
+      url: 'https://images.unsplash.com/photo-1652766540048-de0a878a3266?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwyfHxqZXdlbHJ5JTIwbW9kZWw=',
+      alt_ar: 'أقراط أنيقة في إطار فني',
+      alt_en: 'Elegant earrings in artistic frame',
+      caption_ar: 'فن الأقراط',
+      caption_en: 'Art of Earrings'
+    },
+    {
+      id: 8,
+      url: 'https://images.unsplash.com/photo-1590166223826-12dee1677420?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwzfHxqZXdlbHJ5JTIwbW9kZWw=',
+      alt_ar: 'عارضة بأقراط لؤلؤية فاخرة',
+      alt_en: 'Model with luxury pearl earrings',
+      caption_ar: 'لؤلؤ أصيل',
+      caption_en: 'Authentic Pearls'
+    },
+    {
+      id: 9,
+      url: 'https://images.pexels.com/photos/34221116/pexels-photo-34221116.jpeg',
+      alt_ar: 'تصوير مجوهرات احترافي',
+      alt_en: 'Professional jewelry photography',
+      caption_ar: 'الكمال في التفاصيل',
+      caption_en: 'Perfection in Detail'
+    },
+    {
+      id: 10,
+      url: 'https://images.pexels.com/photos/620074/pexels-photo-620074.jpeg',
+      alt_ar: 'مجموعة إكسسوارات فاخرة متكاملة',
+      alt_en: 'Complete luxury accessories collection',
+      caption_ar: 'مجموعة متكاملة',
+      caption_en: 'Complete Collection'
     }
   ];
 
@@ -101,11 +133,14 @@ const FashionModelsCarousel = () => {
         <img
           src={currentImage.url}
           alt={isRTL ? currentImage.alt_ar : currentImage.alt_en}
-          className="w-full h-full object-cover transition-all duration-700 ease-in-out"
+          className="w-full h-full object-cover transition-all duration-1000 ease-in-out scale-105 hover:scale-110"
           loading="lazy"
         />
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+        {/* Luxury Overlay gradients */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-amber-900/20 via-transparent to-amber-900/20"></div>
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 animate-gold-shimmer opacity-30"></div>
       </div>
 
       {/* Navigation Arrows */}
@@ -136,19 +171,23 @@ const FashionModelsCarousel = () => {
 
       {/* Content Overlay */}
       <div className="absolute inset-0 flex items-end justify-start p-8 md:p-12 lg:p-16">
-        <div className="text-white max-w-2xl" dir={isRTL ? 'rtl' : 'ltr'}>
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-4 text-shadow-lg animate-fade-in">
+        <div className="text-white max-w-2xl animate-slide-in-left" dir={isRTL ? 'rtl' : 'ltr'}>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-4 animate-text-sparkle font-display">
             Auraa Luxury
           </h1>
-          <h2 className="text-lg md:text-xl lg:text-2xl mb-6 text-amber-200 font-light">
+          <h2 className="text-lg md:text-xl lg:text-2xl mb-6 text-amber-200 font-light animate-fade-in-up animate-float">
             {isRTL ? currentImage.caption_ar : currentImage.caption_en}
           </h2>
-          <p className="text-sm md:text-base opacity-90 mb-8 leading-relaxed">
+          <p className="text-sm md:text-base opacity-90 mb-8 leading-relaxed animate-fade-in-up">
             {isRTL 
               ? 'اكتشف مجموعتنا الحصرية من الإكسسوارات الفاخرة المصممة خصيصاً للمرأة العصرية'
               : 'Discover our exclusive collection of luxury accessories designed for the modern woman'
             }
           </p>
+          {/* Luxury CTA Button */}
+          <button className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 px-8 py-3 rounded-full text-white font-semibold animate-pulse-gold transition-all duration-500 hover:scale-105 shadow-xl">
+            {isRTL ? 'تسوق الآن' : 'Shop Now'}
+          </button>
         </div>
       </div>
 

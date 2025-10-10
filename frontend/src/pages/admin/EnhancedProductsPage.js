@@ -325,14 +325,6 @@ const EnhancedProductsPage = () => {
     return category?.icon || '📦';
   };
 
-  const handleSelectProduct = (productId) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
-
   const handleSelectAll = () => {
     if (selectedProducts.length === filteredProducts.length) {
       setSelectedProducts([]);

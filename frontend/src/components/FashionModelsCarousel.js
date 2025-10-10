@@ -170,22 +170,22 @@ const FashionModelsCarousel = () => {
       </button>
 
       {/* Content Overlay */}
-      <div className="absolute inset-0 flex items-end justify-start p-8 md:p-12 lg:p-16">
-        <div className="text-white max-w-2xl animate-slide-in-left" dir={isRTL ? 'rtl' : 'ltr'}>
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-4 animate-text-sparkle font-display">
+      <div className="absolute inset-0 flex items-center sm:items-end justify-center sm:justify-start p-4 sm:p-6 md:p-8 lg:p-12 xl:p-16">
+        <div className="text-white max-w-2xl animate-slide-in-left text-center sm:text-left" dir={isRTL ? 'rtl' : 'ltr'}>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold mb-3 sm:mb-4 animate-text-sparkle font-display leading-tight">
             Auraa Luxury
           </h1>
-          <h2 className="text-lg md:text-xl lg:text-2xl mb-6 text-amber-200 font-light animate-fade-in-up animate-float">
+          <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl mb-4 sm:mb-6 text-amber-200 font-light animate-fade-in-up animate-float">
             {isRTL ? currentImage.caption_ar : currentImage.caption_en}
           </h2>
-          <p className="text-sm md:text-base opacity-90 mb-8 leading-relaxed animate-fade-in-up">
+          <p className="text-xs sm:text-sm md:text-base opacity-90 mb-6 sm:mb-8 leading-relaxed animate-fade-in-up max-w-lg mx-auto sm:mx-0">
             {isRTL 
               ? 'اكتشف مجموعتنا الحصرية من الإكسسوارات الفاخرة المصممة خصيصاً للمرأة العصرية'
               : 'Discover our exclusive collection of luxury accessories designed for the modern woman'
             }
           </p>
           {/* Luxury CTA Button */}
-          <button className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 px-8 py-3 rounded-full text-white font-semibold animate-pulse-gold transition-all duration-500 hover:scale-105 shadow-xl">
+          <button className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 px-6 py-2 sm:px-8 sm:py-3 rounded-full text-white font-semibold animate-pulse-gold transition-all duration-500 hover:scale-105 shadow-xl text-sm sm:text-base">
             {isRTL ? 'تسوق الآن' : 'Shop Now'}
           </button>
         </div>

@@ -635,6 +635,46 @@ async def initialize_sample_data():
     
     return {"message": f"Initialized {len(products)} sample products"}
 
+@api_router.post("/initialize-admin")
+async def initialize_admin():
+    """Initialize default admin user for deployment"""
+    try:
+        # Check if admin already exists
+        existing_admin = await db.users.find_one({"email": "admin@auraa.com"})
+        
+        if existing_admin:
+            return {"message": "Admin user already exists", "admin_exists": True}
+        
+        # Create admin user
+        hashed_password = pwd_context.hash("admin123")
+        
+        admin_data = {
+            "_id": str(uuid.uuid4()),
+            "email": "admin@auraa.com",
+            "first_name": "Admin",
+            "last_name": "Auraa",
+            "phone": "+966501234567",
+            "hashed_password": hashed_password,
+            "is_admin": True,
+            "address": None,
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        # Insert admin user
+        await db.users.insert_one(admin_data)
+        
+        logger.info("Default admin user created successfully")
+        
+        return {
+            "message": "Admin user created successfully",
+            "admin_email": "admin@auraa.com",
+            "admin_created": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating admin user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating admin user: {str(e)}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

@@ -138,10 +138,11 @@ const SimpleAuthPage = () => {
               <input
                 type="tel"
                 name="phone"
-                placeholder="رقم الجوال (اختياري)"
+                placeholder="رقم الجوال"
                 value={formData.phone}
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded-xl px-12 py-3 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                required
                 data-testid="phone-input"
               />
             </div>

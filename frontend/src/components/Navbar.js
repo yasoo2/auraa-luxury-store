@@ -174,7 +174,7 @@ const Navbar = () => {
                 <Button onClick={handleLogout} variant="ghost" size="sm" className="p-2 text-gray-700 hover-text-brand" data-testid="logout-button">
                   <LogOut className="h-4 w-4" />
                 </Button>
-                {user.is_admin && (
+                {user && user.is_admin && (
                   <Link to="/admin" className="px-3 py-1 text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors">إدارة</Link>
                 )}
               </div>

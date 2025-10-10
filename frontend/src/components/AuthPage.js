@@ -52,7 +52,8 @@ const AuthPage = () => {
         alert(result.error || 'حدث خطأ');
       }
     } catch (error) {
-      toast.error('حدث خطأ غير متوقع');
+      console.error('Auth error:', error);
+      alert('حدث خطأ غير متوقع: ' + error.message);
     } finally {
       setLoading(false);
     }

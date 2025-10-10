@@ -333,7 +333,7 @@ const ProductFormModal = ({
                     onChange={(e) => handleInputChange('category', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   >
-                    {categories.map((cat) => (
+                    {categoryOptions.map((cat) => (
                       <option key={cat.value} value={cat.value}>
                         {cat.icon} {isRTL ? cat.label_ar : cat.label_en}
                       </option>

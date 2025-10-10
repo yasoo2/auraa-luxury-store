@@ -42,9 +42,9 @@ const HomePage = () => {
         }}></div>
       </div>
       <SEOHead 
-        title={isRTL ? 'أورا لاكشري - إكسسوارات فاخرة' : 'Auraa Luxury - Premium Accessories'}
-        description={isRTL ? 'اكتشف مجموعة أورا لاكشري الفاخرة من الإكسسوارات الذهبية واللؤلؤية. قلادات، أقراط، أساور وساعات بأجود الخامات والتصاميم العصرية.' : 'Discover Auraa Luxury\'s premium collection of gold and pearl accessories. Necklaces, earrings, bracelets and watches crafted with finest materials and contemporary designs.'}
-        keywords={isRTL ? 'أورا لاكشري، إكسسوارات فاخرة، قلادات ذهبية، أقراط لؤلؤ، أساور، ساعات، مجوهرات' : 'Auraa Luxury, premium accessories, gold necklaces, pearl earrings, bracelets, watches, jewelry'}
+        title={isRTL ? 'لورا لاكشري - إكسسوارات فاخرة' : 'لورا لاكشري - Premium Accessories'}
+        description={isRTL ? 'اكتشف مجموعة لورا لاكشري الفاخرة من الإكسسوارات الذهبية واللؤلؤية. قلادات، أقراط، أساور وساعات بأجود الخامات والتصاميم العصرية.' : 'Discover لورا لاكشري\'s premium collection of gold and pearl accessories. Necklaces, earrings, bracelets and watches crafted with finest materials and contemporary designs.'}
+        keywords={isRTL ? 'لورا لاكشري، إكسسوارات فاخرة، قلادات ذهبية، أقراط لؤلؤ، أساور، ساعات، مجوهرات' : 'لورا لاكشري, premium accessories, gold necklaces, pearl earrings, bracelets, watches, jewelry'}
         type="website"
         breadcrumbs={[
           { name: isRTL ? 'الرئيسية' : 'Home', url: window.location.origin }

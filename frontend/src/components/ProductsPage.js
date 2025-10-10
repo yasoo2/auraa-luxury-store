@@ -277,7 +277,7 @@ const ProductsPage = () => {
                 <Button onClick={() => { setFilters({ category: '', search: '', minPrice: '', maxPrice: '', sortBy: 'newest' }); setSearchParams({}); }}>مسح المرشحات</Button>
               </div>
             ) : (
-              <div className="product-grid">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
                 {products.map((product) => (
                   <Card key={product.id} className="product-card overflow-hidden group" data-testid={`product-${product.id}`}>
                     <div className="relative overflow-hidden">

@@ -841,13 +841,7 @@ class AuraaLuxuryAPITester:
             self.log_test("Sync Products - AliExpress", False, f"Status: {status}, Response: {data}")
         
         # Test Amazon sync
-        amazon_params = {
-            "source": "amazon",
-            "search_query": "designer jewelry",
-            "limit": 3
-        }
-        
-        success, data, status = self.make_request('POST', '/auto-update/sync-products', amazon_params)
+        success, data, status = self.make_request('POST', '/auto-update/sync-products?source=amazon&search_query=designer jewelry&limit=3')
         
         if success:
             source = data.get('source')

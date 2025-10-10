@@ -888,6 +888,7 @@ async def get_scheduled_task_logs(
 async def update_all_product_prices(admin: User = Depends(get_admin_user)):
     """Manually trigger price update for all products"""
     try:
+        curr_service = get_currency_service(db)
         updated_count = 0
         
         # Get all products
@@ -898,13 +899,13 @@ async def update_all_product_prices(admin: User = Depends(get_admin_user)):
                     continue
                 
                 # Get current multi-currency prices
-                multi_currency_prices = await currency_service.get_multi_currency_prices(
+                multi_currency_prices = await curr_service.get_multi_currency_prices(
                     base_price_usd, "USD"
                 )
                 
                 # Apply luxury markup
                 markup_percentage = product.get("markup_percentage", 50.0)
-                final_prices = await currency_service.apply_luxury_markup(
+                final_prices = await curr_service.apply_luxury_markup(
                     multi_currency_prices, markup_percentage
                 )
                 

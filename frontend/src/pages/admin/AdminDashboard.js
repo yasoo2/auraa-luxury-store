@@ -22,7 +22,9 @@ import {
   X,
   RefreshCw,
   ExternalLink,
-  Upload
+  Upload,
+  BarChart,
+  Plug
 } from 'lucide-react';
 
 const AdminDashboard = () => {

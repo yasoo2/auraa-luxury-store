@@ -54,7 +54,7 @@ const WishlistPage = () => {
   const shareWishlist = () => {
     if (navigator.share) {
       navigator.share({
-        title: isRTL ? 'قائمة المفضلة - أورا لاكشري' : 'My Wishlist - Auraa Luxury',
+        title: isRTL ? 'قائمة المفضلة - لورا لاكشري' : 'My Wishlist - لورا لاكشري',
         text: isRTL ? 
           `تحقق من قائمة المفضلة الخاصة بي في أورا لاكشري - ${getWishlistCount()} منتج` :
           `Check out my wishlist at Auraa Luxury - ${getWishlistCount()} items`,

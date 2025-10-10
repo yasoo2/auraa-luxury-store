@@ -173,7 +173,7 @@ const FashionModelsCarousel = () => {
       <div className="absolute inset-0 flex items-end justify-start p-8 md:p-12 lg:p-16">
         <div className="text-white max-w-2xl animate-slide-in-left" dir={isRTL ? 'rtl' : 'ltr'}>
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-4 animate-text-sparkle font-display">
-            لورا لاكشري
+            Lora Luxury
           </h1>
           <h2 className="text-lg md:text-xl lg:text-2xl mb-6 text-amber-200 font-light animate-fade-in-up animate-float">
             {isRTL ? currentImage.caption_ar : currentImage.caption_en}

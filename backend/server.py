@@ -714,7 +714,8 @@ async def get_auto_update_status(admin: User = Depends(get_admin_user)):
 @api_router.post("/auto-update/trigger-currency-update")
 async def trigger_currency_update(admin: User = Depends(get_admin_user)):
     """Manually trigger currency rate update"""
-    success = await currency_service.update_exchange_rates()
+    curr_service = get_currency_service(db)
+    success = await curr_service.update_exchange_rates()
     
     if success:
         return {"message": "Currency rates updated successfully"}

@@ -71,6 +71,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const register = async (userData) => {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, userData);
+      const { access_token, user: newUser } = response.data;
+      
+      console.log('Registration successful, user data:', newUser);
+      
+      setToken(access_token);
+      setUser(newUser);
+      localStorage.setItem('token', access_token);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Registration failed:', error);
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'فشل في إنشاء الحساب'
+      };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);

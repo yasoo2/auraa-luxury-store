@@ -50,7 +50,6 @@ const EnhancedProductsPage = () => {
   const [viewMode, setViewMode] = useState('grid'); // grid or list
   
   const isRTL = language === 'ar';
-  const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
   // Form state
   const [formData, setFormData] = useState({

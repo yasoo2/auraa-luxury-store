@@ -534,7 +534,7 @@ async def initialize_sample_data():
         admin_data = {
             "email": "admin@auraa.com",
             "first_name": "Admin",
-            "last_name": "Auraa",
+            "last_name": "لاكشري",
             "phone": "+966501234567",
             "password": get_password_hash("admin123"),
             "is_admin": True
@@ -652,7 +652,7 @@ async def initialize_admin():
             "_id": str(uuid.uuid4()),
             "email": "admin@auraa.com",
             "first_name": "Admin",
-            "last_name": "Auraa",
+            "last_name": "لاكشري",
             "phone": "+966501234567",
             "hashed_password": hashed_password,
             "is_admin": True,
@@ -692,7 +692,7 @@ async def setup_deployment():
                     "_id": str(uuid.uuid4()),
                     "email": "admin@auraa.com",
                     "first_name": "Admin",
-                    "last_name": "Auraa",
+                    "last_name": "لاكشري",
                     "phone": "+966501234567",
                     "hashed_password": hashed_password,
                     "is_admin": True,

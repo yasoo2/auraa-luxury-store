@@ -56,8 +56,8 @@ class DeploymentVerificationTest:
                               f"Missing required fields: {missing_fields}")
                 return False
             
-            # Check trigger configuration
-            triggers = workflow_content.get('on', {})
+            # Check trigger configuration (YAML parser converts 'on' to True)
+            triggers = workflow_content.get('on', workflow_content.get(True, {}))
             
             # Verify push trigger on main branch
             push_config = triggers.get('push', {})

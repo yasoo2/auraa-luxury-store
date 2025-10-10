@@ -91,7 +91,7 @@ const AuthPage = () => {
                   <span className="text-white font-bold text-2xl font-display">A</span>
                 </div>
               </div>
-              <h1 className="font-display text-3xl font-bold text-white animate-text-sparkle mb-2">لورا لاكشري</h1>
+              <h1 className="font-display text-3xl font-bold text-white animate-text-sparkle mb-2">Lora Luxury</h1>
               <h2 className="text-xl font-semibold text-amber-200 mb-2 animate-fade-in-up" data-testid="auth-title">
                 {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
               </h2>

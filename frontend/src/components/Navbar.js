@@ -17,7 +17,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const { language } = useLanguage();
   const isRTL = language === 'ar';
   const { getWishlistCount } = useWishlist();
@@ -25,6 +25,8 @@ const Navbar = () => {
 
   // Debug user state
   console.log('Navbar - Current user:', user);
+  console.log('Navbar - Is authenticated:', isAuthenticated);
+  console.log('Navbar - Is admin:', user?.is_admin);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);

@@ -785,7 +785,7 @@ async def startup_event():
     # Initialize exchange rates
     await currency_service.update_exchange_rates()
     
-    logger.info("Auraa Luxury Auto-Update services started successfully")
+    logger.info("لورا لاكشري Auto-Update services started successfully")
 
 # Auto-Update API Endpoints
 

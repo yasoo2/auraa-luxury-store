@@ -34,7 +34,7 @@ api_router = APIRouter(prefix="/api")
 # Security
 security = HTTPBearer()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = "auraa-luxury-secret-key-2024"
+SECRET_KEY = os.environ.get("SECRET_KEY", "auraa-luxury-secret-key-2024")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -1211,20 +1211,4 @@ async def upload_image(
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on application shutdown"""
-    try:
-        sched_service = get_scheduler_service(db)
-        if sched_service:
-            await sched_service.stop_scheduler()
-    except:
-        pass
-    
-    client.close()
-    logger.info("لورا لاكشري services shut down successfully")
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
-
-# Include the router in the main app (MUST be after all routes are defined)
-app.include_router(api_router)

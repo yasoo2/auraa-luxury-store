@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import axios from 'axios';
+import ProductFormModal from '../../components/admin/ProductFormModal';
 import { 
   Plus, 
   Edit2, 
@@ -48,8 +49,13 @@ const EnhancedProductsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [uploading, setUploading] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid or list
+  const [submitting, setSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   
   const isRTL = language === 'ar';
+
+  // Get auth token
+  const token = localStorage.getItem('token');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -544,7 +550,11 @@ const EnhancedProductsPage = () => {
                         <Button size="sm" variant="secondary" onClick={() => window.open(`/product/${product.id}`, '_blank')}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                        <Button 
+                          size="sm" 
+                          className="bg-amber-600 hover:bg-amber-700"
+                          onClick={() => handleEditProduct(product)}
+                        >
                           <Edit2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -631,7 +641,6 @@ const EnhancedProductsPage = () => {
                         variant="outline" 
                         size="sm" 
                         className="text-red-600 border-red-300 hover:bg-red-50"
-                        onClick={() => handleDeleteProduct(product.id)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -746,7 +755,6 @@ const EnhancedProductsPage = () => {
                             size="sm" 
                             variant="ghost" 
                             className="text-red-600 hover:text-red-900"
-                            onClick={() => handleDeleteProduct(product.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -779,17 +787,6 @@ const EnhancedProductsPage = () => {
       )}
 
       {/* Product Form Modal */}
-      {showModal && (
-        <ProductFormModal
-          isOpen={showModal}
-          onClose={() => {
-            setShowModal(false);
-            setEditingProduct(null);
-          }}
-          onSave={handleSaveProduct}
-          product={editingProduct}
-          categories={categories}
-        />
       )}
     </div>
   );

@@ -657,7 +657,7 @@ logger = logging.getLogger(__name__)
 from services.currency_service import get_currency_service
 from services.scheduler_service import get_scheduler_service
 from services.product_sync_service import get_product_sync_service
-from typing import UploadFile, File
+from fastapi import UploadFile, File
 
 # Auto-Update Services Initialization
 currency_service = None

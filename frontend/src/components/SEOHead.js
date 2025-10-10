@@ -27,7 +27,7 @@ const SEOHead = ({
   const finalImage = image || '/images/auraa-luxury-og.jpg';
   
   const defaultKeywords = isRTL 
-    ? 'أورا لاكشري، إكسسوارات فاخرة، قلادات ذهبية، أقراط لؤلؤ، أساور، ساعات، مجوهرات، إكسسوارات نسائية، تسوق أونلاين'
+    ? 'Auraa Luxury، إكسسوارات فاخرة، قلادات ذهبية، أقراط لؤلؤ، أساور، ساعات، مجوهرات، إكسسوارات نسائية، تسوق أونلاين'
     : 'Auraa Luxury, premium accessories, gold necklaces, pearl earrings, bracelets, watches, jewelry, women accessories, online shopping';
   
   const finalKeywords = keywords ? `${keywords}, ${defaultKeywords}` : defaultKeywords;

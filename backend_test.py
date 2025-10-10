@@ -674,6 +674,375 @@ class AuraaLuxuryAPITester:
         
         # Restore token
         self.token = original_token
+
+    # ========== AUTO-UPDATE API TESTS ==========
+    
+    def test_auto_update_status(self):
+        """Test GET /api/auto-update/status endpoint"""
+        if not self.admin_token:
+            self.log_test("Auto-Update Status", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        success, data, status = self.make_request('GET', '/auto-update/status')
+        
+        if success:
+            # Check required fields in response
+            required_fields = ['currency_service', 'scheduler', 'auto_updates_enabled']
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if not missing_fields:
+                currency_service = data.get('currency_service', {})
+                scheduler = data.get('scheduler', {})
+                
+                # Validate currency service status
+                if ('supported_currencies' in currency_service and 
+                    'cache_duration_hours' in currency_service):
+                    
+                    # Validate scheduler status
+                    if 'status' in scheduler:
+                        self.log_test("Auto-Update Status", True, 
+                                    f"Status: {scheduler.get('status')}, "
+                                    f"Currencies: {len(currency_service.get('supported_currencies', []))}, "
+                                    f"Auto-updates: {data.get('auto_updates_enabled')}")
+                    else:
+                        self.log_test("Auto-Update Status", False, "Missing scheduler status")
+                else:
+                    self.log_test("Auto-Update Status", False, "Invalid currency service data")
+            else:
+                self.log_test("Auto-Update Status", False, f"Missing fields: {missing_fields}")
+        else:
+            self.log_test("Auto-Update Status", False, f"Status: {status}, Response: {data}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_currency_rates_endpoint(self):
+        """Test GET /api/auto-update/currency-rates endpoint"""
+        success, data, status = self.make_request('GET', '/auto-update/currency-rates')
+        
+        if success:
+            # Check required fields
+            required_fields = ['base_currency', 'rates', 'last_updated']
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if not missing_fields:
+                base_currency = data.get('base_currency')
+                rates = data.get('rates', {})
+                
+                if base_currency == 'USD' and isinstance(rates, dict):
+                    self.log_test("Currency Rates Endpoint", True, 
+                                f"Base: {base_currency}, Rates: {len(rates)} currencies")
+                else:
+                    self.log_test("Currency Rates Endpoint", False, 
+                                f"Invalid data structure: base={base_currency}, rates_type={type(rates)}")
+            else:
+                self.log_test("Currency Rates Endpoint", False, f"Missing fields: {missing_fields}")
+        else:
+            self.log_test("Currency Rates Endpoint", False, f"Status: {status}, Response: {data}")
+
+    def test_trigger_currency_update(self):
+        """Test POST /api/auto-update/trigger-currency-update endpoint"""
+        if not self.admin_token:
+            self.log_test("Trigger Currency Update", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        success, data, status = self.make_request('POST', '/auto-update/trigger-currency-update')
+        
+        if success:
+            message = data.get('message', '')
+            if 'currency rates updated' in message.lower():
+                self.log_test("Trigger Currency Update", True, f"Message: {message}")
+            else:
+                self.log_test("Trigger Currency Update", False, f"Unexpected message: {message}")
+        else:
+            self.log_test("Trigger Currency Update", False, f"Status: {status}, Response: {data}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_convert_currency_endpoint(self):
+        """Test POST /api/auto-update/convert-currency endpoint"""
+        test_conversion = {
+            "amount": 100.0,
+            "from_currency": "USD",
+            "to_currency": "SAR"
+        }
+        
+        success, data, status = self.make_request('POST', '/auto-update/convert-currency', test_conversion)
+        
+        if success:
+            # Check required fields in response
+            required_fields = ['original_amount', 'from_currency', 'to_currency', 'converted_amount', 'formatted_result']
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if not missing_fields:
+                original = data.get('original_amount')
+                converted = data.get('converted_amount')
+                formatted = data.get('formatted_result')
+                
+                if (original == 100.0 and 
+                    isinstance(converted, (int, float)) and converted > 0 and
+                    isinstance(formatted, str)):
+                    self.log_test("Convert Currency Endpoint", True, 
+                                f"Converted {original} USD to {converted} SAR ({formatted})")
+                else:
+                    self.log_test("Convert Currency Endpoint", False, 
+                                f"Invalid conversion data: {original} -> {converted}")
+            else:
+                self.log_test("Convert Currency Endpoint", False, f"Missing fields: {missing_fields}")
+        else:
+            self.log_test("Convert Currency Endpoint", False, f"Status: {status}, Response: {data}")
+
+    def test_sync_products_endpoint(self):
+        """Test POST /api/auto-update/sync-products endpoint"""
+        if not self.admin_token:
+            self.log_test("Sync Products Endpoint", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        # Test AliExpress sync
+        aliexpress_params = {
+            "source": "aliexpress",
+            "search_query": "luxury accessories",
+            "limit": 5
+        }
+        
+        success, data, status = self.make_request('POST', '/auto-update/sync-products', aliexpress_params)
+        
+        if success:
+            required_fields = ['message', 'products_found', 'products_added', 'source']
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if not missing_fields:
+                products_found = data.get('products_found', 0)
+                products_added = data.get('products_added', 0)
+                source = data.get('source')
+                
+                if source == 'aliexpress' and products_found >= 0 and products_added >= 0:
+                    self.log_test("Sync Products - AliExpress", True, 
+                                f"Found: {products_found}, Added: {products_added}")
+                else:
+                    self.log_test("Sync Products - AliExpress", False, 
+                                f"Invalid data: source={source}, found={products_found}, added={products_added}")
+            else:
+                self.log_test("Sync Products - AliExpress", False, f"Missing fields: {missing_fields}")
+        else:
+            self.log_test("Sync Products - AliExpress", False, f"Status: {status}, Response: {data}")
+        
+        # Test Amazon sync
+        amazon_params = {
+            "source": "amazon",
+            "search_query": "designer jewelry",
+            "limit": 3
+        }
+        
+        success, data, status = self.make_request('POST', '/auto-update/sync-products', amazon_params)
+        
+        if success:
+            source = data.get('source')
+            products_found = data.get('products_found', 0)
+            products_added = data.get('products_added', 0)
+            
+            if source == 'amazon' and products_found >= 0 and products_added >= 0:
+                self.log_test("Sync Products - Amazon", True, 
+                            f"Found: {products_found}, Added: {products_added}")
+            else:
+                self.log_test("Sync Products - Amazon", False, 
+                            f"Invalid data: source={source}, found={products_found}, added={products_added}")
+        else:
+            self.log_test("Sync Products - Amazon", False, f"Status: {status}, Response: {data}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_bulk_import_tasks_endpoint(self):
+        """Test GET /api/auto-update/bulk-import-tasks endpoint"""
+        if not self.admin_token:
+            self.log_test("Bulk Import Tasks", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        success, data, status = self.make_request('GET', '/auto-update/bulk-import-tasks')
+        
+        if success:
+            if isinstance(data, list):
+                self.log_test("Bulk Import Tasks", True, f"Retrieved {len(data)} bulk import tasks")
+                
+                # If there are tasks, validate structure
+                if len(data) > 0:
+                    task = data[0]
+                    expected_fields = ['_id', 'type', 'status', 'created_at']
+                    missing_fields = [field for field in expected_fields if field not in task]
+                    
+                    if not missing_fields:
+                        self.log_test("Bulk Import Task Structure", True, "Task structure is valid")
+                    else:
+                        self.log_test("Bulk Import Task Structure", False, f"Missing fields: {missing_fields}")
+            else:
+                self.log_test("Bulk Import Tasks", False, f"Expected list, got {type(data)}")
+        else:
+            self.log_test("Bulk Import Tasks", False, f"Status: {status}, Response: {data}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_scheduled_task_logs_endpoint(self):
+        """Test GET /api/auto-update/scheduled-task-logs endpoint"""
+        if not self.admin_token:
+            self.log_test("Scheduled Task Logs", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        success, data, status = self.make_request('GET', '/auto-update/scheduled-task-logs')
+        
+        if success:
+            if isinstance(data, list):
+                self.log_test("Scheduled Task Logs", True, f"Retrieved {len(data)} task logs")
+                
+                # If there are logs, validate structure
+                if len(data) > 0:
+                    log_entry = data[0]
+                    expected_fields = ['task_type', 'status', 'message', 'timestamp']
+                    missing_fields = [field for field in expected_fields if field not in log_entry]
+                    
+                    if not missing_fields:
+                        self.log_test("Task Log Structure", True, "Log structure is valid")
+                    else:
+                        self.log_test("Task Log Structure", False, f"Missing fields: {missing_fields}")
+            else:
+                self.log_test("Scheduled Task Logs", False, f"Expected list, got {type(data)}")
+        else:
+            self.log_test("Scheduled Task Logs", False, f"Status: {status}, Response: {data}")
+        
+        # Test with task_type filter
+        success, data, status = self.make_request('GET', '/auto-update/scheduled-task-logs?task_type=currency_update')
+        
+        if success:
+            if isinstance(data, list):
+                self.log_test("Scheduled Task Logs - Filtered", True, f"Retrieved {len(data)} currency update logs")
+            else:
+                self.log_test("Scheduled Task Logs - Filtered", False, f"Expected list, got {type(data)}")
+        else:
+            self.log_test("Scheduled Task Logs - Filtered", False, f"Status: {status}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_update_all_prices_endpoint(self):
+        """Test POST /api/auto-update/update-all-prices endpoint"""
+        if not self.admin_token:
+            self.log_test("Update All Prices", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        success, data, status = self.make_request('POST', '/auto-update/update-all-prices')
+        
+        if success:
+            required_fields = ['message', 'updated_count']
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if not missing_fields:
+                updated_count = data.get('updated_count', 0)
+                message = data.get('message', '')
+                
+                if isinstance(updated_count, int) and updated_count >= 0:
+                    self.log_test("Update All Prices", True, 
+                                f"Updated {updated_count} products. Message: {message}")
+                else:
+                    self.log_test("Update All Prices", False, 
+                                f"Invalid updated_count: {updated_count}")
+            else:
+                self.log_test("Update All Prices", False, f"Missing fields: {missing_fields}")
+        else:
+            self.log_test("Update All Prices", False, f"Status: {status}, Response: {data}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_auto_update_authentication(self):
+        """Test authentication requirements for auto-update endpoints"""
+        # Test endpoints that require admin authentication
+        admin_endpoints = [
+            '/auto-update/status',
+            '/auto-update/trigger-currency-update',
+            '/auto-update/sync-products',
+            '/auto-update/bulk-import-tasks',
+            '/auto-update/scheduled-task-logs',
+            '/auto-update/update-all-prices'
+        ]
+        
+        # Test without token
+        original_token = self.token
+        self.token = None
+        
+        for endpoint in admin_endpoints:
+            method = 'POST' if endpoint in ['/auto-update/trigger-currency-update', 
+                                          '/auto-update/sync-products', 
+                                          '/auto-update/update-all-prices'] else 'GET'
+            
+            success, data, status = self.make_request(method, endpoint)
+            if not success and status in [401, 403]:
+                self.log_test(f"Auth Check - {endpoint} (No Token)", True, f"Properly blocked (Status: {status})")
+            else:
+                self.log_test(f"Auth Check - {endpoint} (No Token)", False, f"Should return 401/403, got {status}")
+        
+        # Test with non-admin token (if available)
+        if original_token:  # Regular user token
+            self.token = original_token
+            
+            for endpoint in admin_endpoints:
+                method = 'POST' if endpoint in ['/auto-update/trigger-currency-update', 
+                                              '/auto-update/sync-products', 
+                                              '/auto-update/update-all-prices'] else 'GET'
+                
+                success, data, status = self.make_request(method, endpoint)
+                if not success and status == 403:
+                    self.log_test(f"Auth Check - {endpoint} (Non-Admin)", True, "Properly blocked non-admin access")
+                else:
+                    self.log_test(f"Auth Check - {endpoint} (Non-Admin)", False, f"Should return 403, got {status}")
+        
+        # Test public endpoints (should work without authentication)
+        public_endpoints = [
+            '/auto-update/currency-rates',
+            '/auto-update/convert-currency'
+        ]
+        
+        self.token = None
+        
+        for endpoint in public_endpoints:
+            if endpoint == '/auto-update/convert-currency':
+                test_data = {"amount": 100, "from_currency": "USD", "to_currency": "SAR"}
+                success, data, status = self.make_request('POST', endpoint, test_data)
+            else:
+                success, data, status = self.make_request('GET', endpoint)
+            
+            if success:
+                self.log_test(f"Public Access - {endpoint}", True, "Public endpoint accessible without auth")
+            else:
+                self.log_test(f"Public Access - {endpoint}", False, f"Public endpoint failed: {status}")
+        
+        # Restore token
+        self.token = original_token
     
     def run_all_tests(self):
         """Run all tests in sequence"""

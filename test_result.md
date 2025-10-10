@@ -461,6 +461,8 @@
 ## test_plan:
   current_focus:
     - "Complete Responsive Design for All Devices"
+    - "Fix Wishlist Heart Icon Functionality" 
+    - "Full Image Optimization"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

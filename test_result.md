@@ -232,6 +232,20 @@
       - working: true
         agent: "main"
         comment: "✅ FINAL FIX COMPLETE - HOMEPAGE TITLE NOW IN ENGLISH: Fixed the homepage section title to display 'Why Lora Luxury?' in English as requested by user. Changed HomePage.js line 160 from conditional rendering to hardcoded English text. VERIFICATION CONFIRMED: Screenshot shows 'Why Lora Luxury?' now displays correctly in English, Arabic title count is 0, fast delivery text 'توصيل سريع' remains visible below. ALL REQUIREMENTS NOW 100% COMPLETE: 1) ✅ All free shipping text removed. 2) ✅ Fast delivery messaging implemented. 3) ✅ Fixed 15 SAR shipping cost. 4) ✅ Homepage title in English 'Why Lora Luxury?'. 5) ✅ Return policy updated. 6) ✅ Dropshipping business model fully implemented. CONCLUSION: Free shipping removal and content update task now 100% complete and working perfectly."
+  - task: "Remove Cash on Delivery Payment Option"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/CheckoutPage.js, /app/frontend/src/components/ProfilePage.js, /app/frontend/src/pages/admin/SettingsPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "User requested to remove COD payment method as this is a dropshipping store that requires upfront payment before ordering from suppliers."
+      - working: true
+        agent: "main"
+        comment: "✅ CASH ON DELIVERY REMOVAL COMPLETE: Successfully removed COD payment option from all relevant pages to align with dropshipping business model. CHANGES MADE: 1) CHECKOUT PAGE: Removed 'دفع عند الاستلام' (COD) option from payment method selector, removed COD conditional display section, left only credit card and bank transfer options. 2) PROFILE PAGE: Updated order history display to show only 'بطاقة ائتمانية' (credit card) or 'تحويل بنكي' (bank transfer), removed COD reference. 3) ADMIN SETTINGS: Disabled payment_cod option by default (set to false), removed COD from payment methods configuration UI. DROPSHIPPING ALIGNMENT: All payment methods now require upfront payment which is essential for dropshipping business where suppliers need payment before order fulfillment. REMAINING OPTIONS: Credit card and bank transfer payments ensure secure upfront collection before placing supplier orders. CONCLUSION: COD payment method completely removed, supporting proper dropshipping workflow with advance payment requirements."
 
 ## frontend:
   - task: "Cart Counter Functionality with CartContext"

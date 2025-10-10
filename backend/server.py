@@ -941,10 +941,12 @@ async def update_all_product_prices(admin: User = Depends(get_admin_user)):
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on application shutdown"""
-    global scheduler_service
-    
-    if scheduler_service:
-        await scheduler_service.stop_scheduler()
+    try:
+        sched_service = get_scheduler_service(db)
+        if sched_service:
+            await sched_service.stop_scheduler()
+    except:
+        pass
     
     client.close()
     logger.info("Auraa Luxury services shut down successfully")

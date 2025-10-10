@@ -57,7 +57,8 @@ const ProductFormModal = ({
   const [imageUploading, setImageUploading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const categories = [
+  // Use categories from props, with fallback defaults
+  const categoryOptions = categories.length > 0 ? categories : [
     { value: 'necklaces', label_ar: 'قلادات', label_en: 'Necklaces', icon: '📿' },
     { value: 'earrings', label_ar: 'أقراط', label_en: 'Earrings', icon: '💎' },
     { value: 'rings', label_ar: 'خواتم', label_en: 'Rings', icon: '💍' },

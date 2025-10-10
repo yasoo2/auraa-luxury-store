@@ -30,8 +30,8 @@ const SettingsPage = () => {
   
   const [settings, setSettings] = useState({
     // Store Information
-    store_name: 'لورا لاكشري',
-    store_name_ar: 'أورا لاكشري',
+    store_name: 'Auraa Luxury',
+    store_name_ar: 'Auraa Luxury',
     store_description: 'Premium accessories for discerning customers',
     store_description_ar: 'إكسسوارات فاخرة للعملاء المميزين',
     

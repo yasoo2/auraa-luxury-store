@@ -1,3 +1,4 @@
+// Admin Dashboard - Fixed all imports and authentication
 import React, { useState, useEffect } from 'react';
 import { Link, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';

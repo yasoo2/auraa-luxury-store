@@ -220,7 +220,7 @@ const ProductDetailPage = () => {
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
                 <RotateCcw className="h-6 w-6 text-amber-600 ml-3" />
                 <div>
-                  <div className="font-medium text-gray-900">إرجاع مجاني</div>
+                  <div className="font-medium text-gray-900">سياسة الإرجاع</div>
                   <div className="text-sm text-gray-600">خلال 30 يوم</div>
                 </div>
               </div>

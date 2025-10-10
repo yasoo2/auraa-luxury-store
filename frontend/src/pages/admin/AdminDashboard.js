@@ -8,6 +8,8 @@ import SettingsPage from './SettingsPage';
 import AnalyticsPage from './AnalyticsPage';
 import IntegrationsPage from './IntegrationsPage';
 import AutoUpdatePage from './AutoUpdatePage';
+import AliExpressPage from './AliExpressPage';
+import BulkImportPage from './BulkImportPage';
 import {
   Package,
   ShoppingCart,

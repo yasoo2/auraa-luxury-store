@@ -160,13 +160,13 @@ const FashionModelsCarousel = () => {
         {isRTL ? <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" /> : <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />}
       </button>
 
-      {/* Play/Pause Button */}
+      {/* Play/Pause Button - Enhanced for Mobile */}
       <button
         onClick={togglePlayPause}
-        className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-2 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-10"
+        className={`absolute top-3 sm:top-4 ${isRTL ? 'left-3 sm:left-4' : 'right-3 sm:right-4'} bg-white/15 hover:bg-white/25 active:bg-white/35 backdrop-blur-md text-white p-2 sm:p-3 rounded-full transition-all duration-300 opacity-70 sm:opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95 z-10 shadow-lg min-w-[40px] min-h-[40px] flex items-center justify-center`}
         aria-label={isRTL ? (isPlaying ? 'إيقاف مؤقت' : 'تشغيل') : (isPlaying ? 'Pause' : 'Play')}
       >
-        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        {isPlaying ? <Pause className="h-4 w-4 sm:h-5 sm:w-5" /> : <Play className="h-4 w-4 sm:h-5 sm:w-5" />}
       </button>
 
       {/* Content Overlay */}

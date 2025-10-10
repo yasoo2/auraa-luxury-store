@@ -81,11 +81,14 @@ const LanguageCurrencySelector = () => {
         )}
       </div>
 
-      <div className="relative">
+      <div className="relative" ref={currencyRef}>
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowCurrencies(!showCurrencies)}
+          onClick={() => {
+            setShowCurrencies(!showCurrencies);
+            setShowLanguages(false); // Close language dropdown when opening currency
+          }}
           className="flex items-center space-x-1 hover:bg-gray-100"
         >
           <DollarSign className="h-4 w-4" />

@@ -191,19 +191,23 @@ const FashionModelsCarousel = () => {
         </div>
       </div>
 
-      {/* Slide Indicators */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
+      {/* Slide Indicators - Enhanced for Mobile Touch */}
+      <div className="absolute bottom-3 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 sm:space-x-3 z-10 bg-black/20 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-2 rounded-full">
         {modelImages.map((_, index) => (
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            className={`rounded-full transition-all duration-300 touch-manipulation min-w-[32px] min-h-[32px] flex items-center justify-center ${
               index === currentSlide 
-                ? 'bg-white scale-125' 
-                : 'bg-white/50 hover:bg-white/70'
+                ? 'bg-white scale-110 shadow-lg' 
+                : 'bg-white/40 hover:bg-white/60 active:bg-white/70'
             }`}
             aria-label={`${isRTL ? 'الانتقال للصورة' : 'Go to slide'} ${index + 1}`}
-          />
+          >
+            <span className={`block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full ${
+              index === currentSlide ? 'bg-amber-500' : 'bg-transparent'
+            }`}></span>
+          </button>
         ))}
       </div>
     </div>

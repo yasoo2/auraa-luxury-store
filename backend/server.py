@@ -55,7 +55,7 @@ class User(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    phone: Optional[str] = None
+    phone: str
     address: Optional[Dict[str, Any]] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_admin: bool = False
@@ -65,7 +65,7 @@ class UserCreate(BaseModel):
     password: str
     first_name: str
     last_name: str
-    phone: Optional[str] = None
+    phone: str
 
 class UserLogin(BaseModel):
     email: EmailStr

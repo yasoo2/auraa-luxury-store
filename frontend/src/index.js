@@ -44,3 +44,4 @@ if ('serviceWorker' in navigator) {
     window.location.reload();
   });
 }
+// Force rebuild - Fri Oct 10 22:23:44 UTC 2025

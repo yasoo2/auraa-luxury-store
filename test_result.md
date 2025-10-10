@@ -459,11 +459,10 @@
   restore_complete: true
 
 ## test_plan:
-  current_focus:
-    - "Complete All Remaining Development Phases"
+  current_focus: []
   stuck_tasks: []
   test_all: false
-  test_priority: "high_first"
+  test_priority: "completed"
 
 ## agent_communication:
   - agent: "main"

@@ -56,7 +56,7 @@ const ProductDetailPage = () => {
       setRelatedProducts(relatedResponse.data.filter(p => p.id !== response.data.id));
       setLoading(false);
       setSEO({
-        title: `${response.data.name} | لورا لاكشري`,
+        title: `${response.data.name} | Auraa Luxury`,
         description: response.data.description?.slice(0, 150),
         canonical: `https://www.auraaluxury.com/product/${response.data.id}`,
         ogImage: response.data.images?.[0]

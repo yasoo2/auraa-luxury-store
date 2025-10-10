@@ -41,6 +41,10 @@ const ProductsPage = () => {
   
   // RTL detection
   const isRTL = document.documentElement.dir === 'rtl' || document.documentElement.lang === 'ar';
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  
+  // RTL detection
+  const isRTL = document.documentElement.dir === 'rtl' || document.documentElement.lang === 'ar';
 
   useEffect(() => {
     setSEO({

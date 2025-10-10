@@ -35,7 +35,7 @@ const ProductDetailPage = () => {
       name: p.name,
       image: p.images,
       description: p.description,
-      brand: { '@type': 'Brand', name: 'لورا لاكشري' },
+      brand: { '@type': 'Brand', name: 'Auraa Luxury' },
       offers: {
         '@type': 'Offer',
         priceCurrency: 'SAR',

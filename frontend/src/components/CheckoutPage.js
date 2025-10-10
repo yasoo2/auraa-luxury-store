@@ -107,7 +107,7 @@ const CheckoutPage = () => {
     );
   }
 
-  const shippingCost = cart.total_amount >= 200 ? 0 : 15;
+  const shippingCost = 15; // Fixed shipping cost for dropshipping
   const totalAmount = cart.total_amount + shippingCost;
 
   return (

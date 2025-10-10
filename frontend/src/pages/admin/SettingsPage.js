@@ -162,7 +162,7 @@ const SettingsPage = () => {
           <Input
             value={settings.store_name}
             onChange={(e) => updateSetting('store_name', e.target.value)}
-            placeholder="Auraa Luxury"
+            placeholder="لورا لاكشري"
           />
         </div>
         

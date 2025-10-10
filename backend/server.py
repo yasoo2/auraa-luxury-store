@@ -653,6 +653,290 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Import new services
+from services.currency_service import get_currency_service
+from services.scheduler_service import get_scheduler_service
+from services.product_sync_service import get_product_sync_service
+from typing import UploadFile, File
+
+# Auto-Update Services Initialization
+currency_service = None
+scheduler_service = None
+product_sync_service = None
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    global currency_service, scheduler_service, product_sync_service
+    
+    currency_service = get_currency_service(db)
+    scheduler_service = get_scheduler_service(db)
+    product_sync_service = get_product_sync_service(db)
+    
+    # Start scheduler
+    await scheduler_service.start_scheduler()
+    
+    # Initialize exchange rates
+    await currency_service.update_exchange_rates()
+    
+    logger.info("Auraa Luxury Auto-Update services started successfully")
+
+# Auto-Update API Endpoints
+
+@api_router.get("/auto-update/status")
+async def get_auto_update_status(admin: User = Depends(get_admin_user)):
+    """Get status of all auto-update services"""
+    currency_status = {
+        "last_update": None,
+        "supported_currencies": currency_service.supported_currencies,
+        "cache_duration_hours": currency_service.cache_duration.total_seconds() / 3600
+    }
+    
+    # Get last currency update from database
+    last_currency_update = await db.exchange_rates.find_one(
+        {},
+        sort=[("updated_at", -1)]
+    )
+    if last_currency_update:
+        currency_status["last_update"] = last_currency_update["updated_at"].isoformat()
+    
+    scheduler_status = scheduler_service.get_scheduler_status()
+    
+    return {
+        "currency_service": currency_status,
+        "scheduler": scheduler_status,
+        "auto_updates_enabled": True
+    }
+
+@api_router.post("/auto-update/trigger-currency-update")
+async def trigger_currency_update(admin: User = Depends(get_admin_user)):
+    """Manually trigger currency rate update"""
+    success = await currency_service.update_exchange_rates()
+    
+    if success:
+        return {"message": "Currency rates updated successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to update currency rates")
+
+@api_router.post("/auto-update/sync-products")
+async def trigger_product_sync(
+    source: str = "aliexpress",
+    search_query: Optional[str] = "luxury accessories",
+    limit: int = 10,
+    admin: User = Depends(get_admin_user)
+):
+    """Manually trigger product synchronization"""
+    try:
+        products = await product_sync_service.search_products(
+            query=search_query,
+            source=source,
+            min_price=50.0,  # Minimum for luxury items
+            limit=limit
+        )
+        
+        added_count = 0
+        for product_data in products:
+            try:
+                await product_sync_service.add_new_product(product_data)
+                added_count += 1
+            except Exception as e:
+                logger.error(f"Error adding product: {str(e)}")
+                continue
+        
+        return {
+            "message": f"Product sync completed",
+            "products_found": len(products),
+            "products_added": added_count,
+            "source": source
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in product sync: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Product sync failed: {str(e)}")
+
+@api_router.get("/auto-update/currency-rates")
+async def get_current_currency_rates():
+    """Get current exchange rates"""
+    rates = {}
+    
+    for currency in currency_service.supported_currencies:
+        if currency != "USD":  # USD is base currency
+            rate = await currency_service.get_cached_rate("USD", currency)
+            if rate:
+                rates[currency] = rate
+    
+    return {
+        "base_currency": "USD",
+        "rates": rates,
+        "last_updated": datetime.utcnow().isoformat()
+    }
+
+@api_router.post("/auto-update/convert-currency")
+async def convert_currency_endpoint(
+    amount: float,
+    from_currency: str,
+    to_currency: str
+):
+    """Convert amount between currencies"""
+    try:
+        converted = await currency_service.convert_currency(amount, from_currency, to_currency)
+        
+        if converted is None:
+            raise HTTPException(status_code=400, detail="Currency conversion failed")
+        
+        formatted_result = await currency_service.format_currency(converted, to_currency, "en")
+        
+        return {
+            "original_amount": amount,
+            "from_currency": from_currency,
+            "to_currency": to_currency,
+            "converted_amount": converted,
+            "formatted_result": formatted_result
+        }
+        
+    except Exception as e:
+        logger.error(f"Currency conversion error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class BulkImportRequest(BaseModel):
+    """Request model for bulk product import"""
+    import_type: str  # "csv" or "excel"
+    scheduled_at: Optional[datetime] = None
+
+@api_router.post("/auto-update/bulk-import")
+async def schedule_bulk_import(
+    file: UploadFile = File(...),
+    import_request: BulkImportRequest = Depends(),
+    admin: User = Depends(get_admin_user)
+):
+    """Schedule bulk product import from CSV/Excel file"""
+    try:
+        # Validate file type
+        if import_request.import_type not in ["csv", "excel"]:
+            raise HTTPException(status_code=400, detail="Import type must be 'csv' or 'excel'")
+        
+        # Save uploaded file
+        upload_dir = "/tmp/bulk_imports"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_extension = "csv" if import_request.import_type == "csv" else "xlsx"
+        file_path = f"{upload_dir}/{uuid.uuid4().hex}.{file_extension}"
+        
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Schedule import task
+        task_doc = {
+            "_id": str(uuid.uuid4()),
+            "type": f"{import_request.import_type}_import",
+            "file_path": file_path,
+            "status": "pending",
+            "scheduled_at": import_request.scheduled_at or datetime.utcnow(),
+            "created_by": admin.id,
+            "created_at": datetime.utcnow()
+        }
+        
+        await db.bulk_import_tasks.insert_one(task_doc)
+        
+        return {
+            "message": "Bulk import scheduled successfully",
+            "task_id": task_doc["_id"],
+            "import_type": import_request.import_type,
+            "scheduled_at": task_doc["scheduled_at"].isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error scheduling bulk import: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/auto-update/bulk-import-tasks")
+async def get_bulk_import_tasks(admin: User = Depends(get_admin_user)):
+    """Get list of bulk import tasks"""
+    tasks = await db.bulk_import_tasks.find({}).sort("created_at", -1).to_list(length=50)
+    
+    for task in tasks:
+        # Remove file path for security
+        if "file_path" in task:
+            del task["file_path"]
+    
+    return tasks
+
+@api_router.get("/auto-update/scheduled-task-logs")
+async def get_scheduled_task_logs(
+    task_type: Optional[str] = None,
+    limit: int = 100,
+    admin: User = Depends(get_admin_user)
+):
+    """Get logs of scheduled tasks"""
+    query = {}
+    if task_type:
+        query["task_type"] = task_type
+    
+    logs = await db.scheduled_task_logs.find(query).sort("timestamp", -1).limit(limit).to_list(length=None)
+    
+    return logs
+
+@api_router.post("/auto-update/update-all-prices")
+async def update_all_product_prices(admin: User = Depends(get_admin_user)):
+    """Manually trigger price update for all products"""
+    try:
+        updated_count = 0
+        
+        # Get all products
+        async for product in db.products.find({}):
+            try:
+                base_price_usd = product.get("base_price_usd")
+                if not base_price_usd:
+                    continue
+                
+                # Get current multi-currency prices
+                multi_currency_prices = await currency_service.get_multi_currency_prices(
+                    base_price_usd, "USD"
+                )
+                
+                # Apply luxury markup
+                markup_percentage = product.get("markup_percentage", 50.0)
+                final_prices = await currency_service.apply_luxury_markup(
+                    multi_currency_prices, markup_percentage
+                )
+                
+                # Update product
+                update_data = {
+                    "price_usd": final_prices.get("USD"),
+                    "price_sar": final_prices.get("SAR"),
+                    "price_aed": final_prices.get("AED"),
+                    "price_qar": final_prices.get("QAR"),
+                    "updated_at": datetime.utcnow()
+                }
+                
+                await db.products.update_one(
+                    {"_id": product["_id"]},
+                    {"$set": update_data}
+                )
+                
+                updated_count += 1
+                
+            except Exception as e:
+                logger.error(f"Error updating price for product {product.get('_id')}: {str(e)}")
+                continue
+        
+        return {
+            "message": "Price update completed",
+            "updated_count": updated_count
+        }
+        
+    except Exception as e:
+        logger.error(f"Error updating all prices: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def shutdown_event():
+    """Cleanup on application shutdown"""
+    global scheduler_service
+    
+    if scheduler_service:
+        await scheduler_service.stop_scheduler()
+    
     client.close()
+    logger.info("Auraa Luxury services shut down successfully")

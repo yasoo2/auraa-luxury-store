@@ -33,7 +33,6 @@ jobs:
           cd frontend
           yarn build
         env:
-          REACT_APP_BACKEND_URL: https://gold-dropship.preview.emergentagent.com
 
       - name: Deploy Preview to Vercel
         uses: amondnet/vercel-action@v25

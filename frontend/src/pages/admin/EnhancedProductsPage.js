@@ -103,6 +103,22 @@ const EnhancedProductsPage = () => {
     { value: 'black', label: isRTL ? 'أسود' : 'Black', color: '#000000' }
   ];
 
+  // Filter products based on search term, category, and status
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = !searchTerm || 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && product.is_active) ||
+      (statusFilter === 'inactive' && !product.is_active) ||
+      (statusFilter === 'featured' && product.is_featured);
+
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
   // All the functions from previous implementation
   useEffect(() => {
     fetchProducts();

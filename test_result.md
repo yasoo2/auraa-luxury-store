@@ -459,10 +459,11 @@
   restore_complete: true
 
 ## test_plan:
-  current_focus: []
+  current_focus:
+    - "Complete Responsive Design for All Devices"
   stuck_tasks: []
   test_all: false
-  test_priority: "completed"
+  test_priority: "high_first"
 
 ## agent_communication:
   - agent: "main"

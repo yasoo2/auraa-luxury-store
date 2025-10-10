@@ -46,7 +46,10 @@ const AuthPage = () => {
       console.log('Login result:', result);
       if (result.success) {
         console.log('Login successful, navigating to:', from);
-        navigate(from, { replace: true });
+        // Small delay to ensure state update
+        setTimeout(() => {
+          navigate(from, { replace: true });
+        }, 100);
       } else {
         console.log('Login failed:', result.error);
         alert(result.error || 'حدث خطأ');

@@ -122,7 +122,7 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
     comparisonProducts.forEach((product, index) => {
       mockData[product.id] = {
         ...product,
-        brand: 'Auraa Luxury',
+        brand: 'لورا لاكشري',
         sku: `AL-${product.id.slice(-4).toUpperCase()}`,
         material: index % 3 === 0 ? (isRTL ? 'ذهب عيار 18' : '18K Gold') : 
                  index % 3 === 1 ? (isRTL ? 'فضة استرليني' : 'Sterling Silver') : 

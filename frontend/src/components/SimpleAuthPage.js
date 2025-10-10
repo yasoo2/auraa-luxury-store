@@ -81,7 +81,7 @@ const SimpleAuthPage = () => {
             {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
           </h2>
           <p className="text-gray-600">
-            {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى عائلة لورا لاكشري'}
+            {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى Auraa Luxury'}
           </p>
         </div>
 

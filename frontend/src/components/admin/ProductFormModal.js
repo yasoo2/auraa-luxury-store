@@ -163,12 +163,24 @@ const ProductFormModal = ({
       const formDataUpload = new FormData();
       formDataUpload.append('image', file);
 
-      // This would upload to your backend
-      // const response = await axios.post('/api/admin/upload-image', formDataUpload);
-      // const imageUrl = response.data.url;
-
-      // For demo purposes, create a local URL
-      const imageUrl = URL.createObjectURL(file);
+      // Upload to backend
+      const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_URL}/api/admin/upload-image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formDataUpload
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const data = await response.json();
+      const imageUrl = `${API_URL}${data.url}`;
       handleImageChange(index, imageUrl);
     } catch (error) {
       console.error('Error uploading image:', error);

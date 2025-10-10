@@ -42,9 +42,9 @@ const HomePage = () => {
         }}></div>
       </div>
       <SEOHead 
-        title={isRTL ? 'أورا لاكشري - إكسسوارات فاخرة' : 'Auraa Luxury - Premium Accessories'}
-        description={isRTL ? 'اكتشف مجموعة أورا لاكشري الفاخرة من الإكسسوارات الذهبية واللؤلؤية. قلادات، أقراط، أساور وساعات بأجود الخامات والتصاميم العصرية.' : 'Discover Auraa Luxury\'s premium collection of gold and pearl accessories. Necklaces, earrings, bracelets and watches crafted with finest materials and contemporary designs.'}
-        keywords={isRTL ? 'أورا لاكشري، إكسسوارات فاخرة، قلادات ذهبية، أقراط لؤلؤ، أساور، ساعات، مجوهرات' : 'Auraa Luxury, premium accessories, gold necklaces, pearl earrings, bracelets, watches, jewelry'}
+        title={isRTL ? 'Auraa Luxury - إكسسوارات فاخرة' : 'Auraa Luxury - Premium Accessories'}
+        description={isRTL ? 'اكتشف مجموعة Auraa Luxury الفاخرة من الإكسسوارات الذهبية واللؤلؤية. قلادات، أقراط، أساور وساعات بأجود الخامات والتصاميم العصرية.' : 'Discover Auraa Luxury\'s premium collection of gold and pearl accessories. Necklaces, earrings, bracelets and watches crafted with finest materials and contemporary designs.'}
+        keywords={isRTL ? 'Auraa Luxury، إكسسوارات فاخرة، قلادات ذهبية، أقراط لؤلؤ، أساور، ساعات، مجوهرات' : 'Auraa Luxury, premium accessories, gold necklaces, pearl earrings, bracelets, watches, jewelry'}
         type="website"
         breadcrumbs={[
           { name: isRTL ? 'الرئيسية' : 'Home', url: window.location.origin }
@@ -57,15 +57,15 @@ const HomePage = () => {
       </section>
 
       {/* Featured Products */}
-      <section className="py-20 relative" dir={isRTL ? 'rtl' : 'ltr'}>
+      <section className="py-12 sm:py-16 lg:py-20 relative" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Section Title */}
-          <div className="text-center mb-16">
-            <h2 className="font-display text-4xl md:text-6xl font-bold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-800 bg-clip-text text-transparent animate-text-sparkle mb-4">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-800 bg-clip-text text-transparent animate-text-sparkle mb-4">
               {isRTL ? 'منتجات مميزة' : 'Featured Products'}
             </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
-            <p className="text-gray-600 mt-6 text-lg animate-fade-in-up">
+            <div className="w-16 sm:w-20 lg:w-24 h-1 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
+            <p className="text-gray-600 mt-4 sm:mt-6 text-sm sm:text-base lg:text-lg animate-fade-in-up max-w-2xl mx-auto px-4">
               {isRTL ? 'اكتشف مجموعتنا الحصرية من الإكسسوارات الفاخرة' : 'Discover our exclusive luxury accessories collection'}
             </p>
           </div>
@@ -147,7 +147,7 @@ const HomePage = () => {
       </section>
 
       {/* Luxury Features Section */}
-      <section className="py-20 bg-gradient-to-r from-slate-900 via-amber-900 to-slate-900 relative overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
+      <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-r from-slate-900 via-amber-900 to-slate-900 relative overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
         {/* Background Pattern */}
         <div className="absolute inset-0 animate-gold-shimmer" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23fbbf24' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
@@ -155,25 +155,25 @@ const HomePage = () => {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Section Title */}
-          <div className="text-center mb-16">
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-white animate-text-sparkle mb-4">
-              {isRTL ? 'لماذا أورا لاكشري؟' : 'Why Auraa Luxury?'}
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white animate-text-sparkle mb-4">
+              Why Auraa Luxury?
             </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
+            <div className="w-16 sm:w-20 lg:w-24 h-1 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-8 animate-fade-in-up group" style={{animationDelay: '0.1s'}}>
-              <div className="w-20 h-20 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-rotate-glow group-hover:scale-110 transition-transform duration-300 shadow-2xl">
-                <Truck className="h-10 w-10 text-white" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            <div className="text-center p-4 sm:p-6 lg:p-8 animate-fade-in-up group" style={{animationDelay: '0.1s'}}>
+              <div className="w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 animate-rotate-glow group-hover:scale-110 transition-transform duration-300 shadow-2xl">
+                <Truck className="h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-white font-display">
-                {isRTL ? 'شحن مجاني' : 'Free Shipping'}
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mb-3 sm:mb-4 text-white font-display">
+                {isRTL ? 'توصيل سريع' : 'Fast Delivery'}
               </h3>
-              <p className="text-white/80 leading-relaxed">
-                {isRTL ? 'شحن سريع ومجاني لجميع الطلبات داخل المملكة العربية السعودية' : 'Fast and free shipping for all orders within Saudi Arabia'}
+              <p className="text-white/80 leading-relaxed text-sm sm:text-base">
+                {isRTL ? 'توصيل سريع وموثوق لجميع الطلبات داخل المملكة العربية السعودية' : 'Fast and reliable delivery for all orders within Saudi Arabia'}
               </p>
-              <div className="mt-4 w-12 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
+              <div className="mt-3 sm:mt-4 w-10 sm:w-12 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
             </div>
 
             <div className="text-center p-8 animate-fade-in-up group" style={{animationDelay: '0.2s'}}>

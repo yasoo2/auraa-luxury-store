@@ -31,7 +31,7 @@ const SettingsPage = () => {
   const [settings, setSettings] = useState({
     // Store Information
     store_name: 'Auraa Luxury',
-    store_name_ar: 'أورا لاكشري',
+    store_name_ar: 'Auraa Luxury',
     store_description: 'Premium accessories for discerning customers',
     store_description_ar: 'إكسسوارات فاخرة للعملاء المميزين',
     
@@ -68,7 +68,7 @@ const SettingsPage = () => {
     tiktok_url: '',
     
     // Payment Methods
-    payment_cod: true,
+    payment_cod: false, // Disabled for dropshipping
     payment_stripe: false,
     payment_paypal: false,
     payment_bank_transfer: true,
@@ -173,7 +173,7 @@ const SettingsPage = () => {
           <Input
             value={settings.store_name_ar}
             onChange={(e) => updateSetting('store_name_ar', e.target.value)}
-            placeholder="أورا لاكشري"
+            placeholder="Auraa Luxury"
             dir="rtl"
           />
         </div>
@@ -392,7 +392,6 @@ const SettingsPage = () => {
         
         <div className="space-y-3">
           {[
-            { key: 'payment_cod', label: isRTL ? 'الدفع عند الاستلام' : 'Cash on Delivery' },
             { key: 'payment_stripe', label: isRTL ? 'ستريب (بطاقات ائتمانية)' : 'Stripe (Credit Cards)' },
             { key: 'payment_paypal', label: isRTL ? 'باي بال' : 'PayPal' },
             { key: 'payment_bank_transfer', label: isRTL ? 'تحويل بنكي' : 'Bank Transfer' }

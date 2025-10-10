@@ -1,5 +1,4 @@
 <analysis>
-
 </key_technical_concepts>
 
 <code_architecture>

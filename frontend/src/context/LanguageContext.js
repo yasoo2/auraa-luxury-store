@@ -23,15 +23,37 @@ const LANGUAGES = {
   hi: { name: 'हिन्दी', dir: 'ltr', flag: '🇮🇳' }
 };
 
-// GCC Currencies with proper decimal places
+// Global Currencies with proper decimal places
 const CURRENCIES = {
+  // GCC Currencies
   USD: { symbol: '$', decimals: 2, name_en: 'US Dollar', name_ar: 'دولار أمريكي' },
   SAR: { symbol: 'ر.س', decimals: 2, name_en: 'Saudi Riyal', name_ar: 'ريال سعودي' },
   AED: { symbol: 'د.إ', decimals: 2, name_en: 'UAE Dirham', name_ar: 'درهم إماراتي' },
   QAR: { symbol: 'ر.ق', decimals: 2, name_en: 'Qatari Riyal', name_ar: 'ريال قطري' },
   KWD: { symbol: 'د.ك', decimals: 3, name_en: 'Kuwaiti Dinar', name_ar: 'دينار كويتي' },
   BHD: { symbol: 'د.ب', decimals: 3, name_en: 'Bahraini Dinar', name_ar: 'دينار بحريني' },
-  OMR: { symbol: 'ر.ع', decimals: 3, name_en: 'Omani Rial', name_ar: 'ريال عماني' }
+  OMR: { symbol: 'ر.ع', decimals: 3, name_en: 'Omani Rial', name_ar: 'ريال عماني' },
+  
+  // Major Global Currencies
+  EUR: { symbol: '€', decimals: 2, name_en: 'Euro', name_ar: 'يورو' },
+  GBP: { symbol: '£', decimals: 2, name_en: 'British Pound', name_ar: 'جنيه إسترليني' },
+  JPY: { symbol: '¥', decimals: 0, name_en: 'Japanese Yen', name_ar: 'ين ياباني' },
+  CAD: { symbol: 'C$', decimals: 2, name_en: 'Canadian Dollar', name_ar: 'دولار كندي' },
+  AUD: { symbol: 'A$', decimals: 2, name_en: 'Australian Dollar', name_ar: 'دولار أسترالي' },
+  CHF: { symbol: 'CHF', decimals: 2, name_en: 'Swiss Franc', name_ar: 'فرنك سويسري' },
+  
+  // Asian Currencies
+  CNY: { symbol: '¥', decimals: 2, name_en: 'Chinese Yuan', name_ar: 'يوان صيني' },
+  INR: { symbol: '₹', decimals: 2, name_en: 'Indian Rupee', name_ar: 'روبية هندية' },
+  KRW: { symbol: '₩', decimals: 0, name_en: 'South Korean Won', name_ar: 'وون كوري جنوبي' },
+  SGD: { symbol: 'S$', decimals: 2, name_en: 'Singapore Dollar', name_ar: 'دولار سنغافوري' },
+  HKD: { symbol: 'HK$', decimals: 2, name_en: 'Hong Kong Dollar', name_ar: 'دولار هونغ كونغ' },
+  
+  // Other Regional Currencies
+  TRY: { symbol: '₺', decimals: 2, name_en: 'Turkish Lira', name_ar: 'ليرة تركية' },
+  EGP: { symbol: 'ج.م', decimals: 2, name_en: 'Egyptian Pound', name_ar: 'جنيه مصري' },
+  JOD: { symbol: 'د.أ', decimals: 3, name_en: 'Jordanian Dinar', name_ar: 'دينار أردني' },
+  LBP: { symbol: 'ل.ل', decimals: 2, name_en: 'Lebanese Pound', name_ar: 'ليرة لبنانية' }
 };
 
 const translations = {
@@ -58,8 +80,8 @@ const translations = {
     hero_subtitle: 'اكتشف مجموعتنا الفاخرة من الاكسسوارات والمجوهرات الراقية',
     shop_now: 'تسوق الآن',
     featured_sets: 'الأطقم المميزة',
-    free_shipping: 'شحن مجاني',
-    free_shipping_desc: 'شحن مجاني لجميع الطلبات فوق 200 ريال',
+    fast_delivery: 'توصيل سريع',
+    fast_delivery_desc: 'توصيل سريع وموثوق لجميع الطلبات داخل المملكة',
     quality_guarantee: 'ضمان الجودة',
     quality_guarantee_desc: 'ضمان شامل على جميع منتجاتنا لمدة سنة كاملة',
     support_247: 'دعم 24/7',
@@ -173,8 +195,8 @@ const translations = {
     hero_subtitle: 'Discover our luxury collection of elegant accessories and fine jewelry',
     shop_now: 'Shop Now',
     featured_sets: 'Featured Sets',
-    free_shipping: 'Free Shipping',
-    free_shipping_desc: 'Free shipping on all orders over 200 SAR',
+    fast_delivery: 'Fast Delivery',
+    fast_delivery_desc: 'Fast and reliable delivery for all orders within Saudi Arabia',
     quality_guarantee: 'Quality Guarantee',
     quality_guarantee_desc: 'Full warranty on all our products for one year',
     support_247: '24/7 Support',
@@ -973,15 +995,39 @@ export const LanguageProvider = ({ children }) => {
         setExchangeRates(data.rates);
       } catch (error) {
         console.error('Failed to fetch exchange rates:', error);
-        // Fallback to static rates
+        // Fallback to static rates (approximate rates as of 2024)
         setExchangeRates({
+          // Base currency
           USD: 1,
+          
+          // GCC Currencies
           SAR: 3.75,
           AED: 3.67,
           QAR: 3.64,
           KWD: 0.31,
           BHD: 0.38,
-          OMR: 0.38
+          OMR: 0.38,
+          
+          // Major Global Currencies
+          EUR: 0.92,
+          GBP: 0.79,
+          JPY: 149.50,
+          CAD: 1.36,
+          AUD: 1.52,
+          CHF: 0.88,
+          
+          // Asian Currencies
+          CNY: 7.24,
+          INR: 83.25,
+          KRW: 1340.50,
+          SGD: 1.35,
+          HKD: 7.83,
+          
+          // Other Regional Currencies
+          TRY: 29.85,
+          EGP: 30.95,
+          JOD: 0.71,
+          LBP: 15000.00
         });
       }
     };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Filter, SlidersHorizontal, Star, Heart, ShoppingCart, Scale, Grid, List } from 'lucide-react';
+import { Filter, SlidersHorizontal, Star, Heart, ShoppingCart, Scale, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
@@ -37,6 +37,10 @@ const ProductsPage = () => {
   const [comparisonProducts, setComparisonProducts] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // grid, list
   const [showFilters, setShowFilters] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  
+  // RTL detection
+  const isRTL = document.documentElement.dir === 'rtl' || document.documentElement.lang === 'ar';
 
   useEffect(() => {
     setSEO({
@@ -157,12 +161,25 @@ const ProductsPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          <div className="lg:w-1/4">
-            <Card className="luxury-card p-6 sticky top-24">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
+          {/* Mobile Filter Toggle */}
+          <div className="lg:hidden">
+            <Button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              variant="outline"
+              className="w-full mb-4"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              {isRTL ? 'المرشحات' : 'Filters'}
+              {showMobileFilters ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
+            </Button>
+          </div>
+
+          <div className={`lg:w-1/4 ${showMobileFilters || 'hidden'} lg:block`}>
+            <Card className="luxury-card p-4 sm:p-6 sticky top-24">
               <div className="flex items-center mb-4">
                 <SlidersHorizontal className="h-5 w-5 ml-2 text-amber-600" />
-                <h2 className="text-lg font-bold text-gray-900">تصفية النتائج</h2>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">{isRTL ? 'تصفية النتائج' : 'Filter Results'}</h2>
               </div>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">الفئة</label>
@@ -238,7 +255,7 @@ const ProductsPage = () => {
               </div>
             </div>
             {loading ? (
-              <div className="product-grid">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
                 {[...Array(8)].map((_, i) => (
                   <div key={i} className="luxury-card p-4 animate-pulse">
                     <div className="skeleton h-64 rounded-lg mb-4"></div>
@@ -256,7 +273,7 @@ const ProductsPage = () => {
                 <Button onClick={() => { setFilters({ category: '', search: '', minPrice: '', maxPrice: '', sortBy: 'newest' }); setSearchParams({}); }}>مسح المرشحات</Button>
               </div>
             ) : (
-              <div className="product-grid">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
                 {products.map((product) => (
                   <Card key={product.id} className="product-card overflow-hidden group" data-testid={`product-${product.id}`}>
                     <div className="relative overflow-hidden">
@@ -264,7 +281,7 @@ const ProductsPage = () => {
                         <picture>
                           <source srcSet={`${product.images[0]}?format=avif`} type="image/avif" />
                           <source srcSet={`${product.images[0]}?format=webp`} type="image/webp" />
-                          <img src={product.images[0]} alt={product.name} className="w-full h-64 img-product-card group-hover:scale-110 transition-transform duration-500" style={{ aspectRatio: '4 / 3' }} />
+                          <img src={product.images[0]} alt={product.name} className="w-full h-48 sm:h-56 lg:h-64 object-cover group-hover:scale-110 transition-transform duration-500" />
                         </picture>
                       </Link>
                       {product.discount_percentage && (

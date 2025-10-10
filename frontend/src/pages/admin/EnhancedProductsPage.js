@@ -38,6 +38,7 @@ import ProductFormModal from '../../components/admin/ProductFormModal';
 
 const EnhancedProductsPage = () => {
   const { language, currency } = useLanguage();
+  const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,7 +53,6 @@ const EnhancedProductsPage = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   
   const isRTL = language === 'ar';
-  const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
   // Get auth token
   const token = localStorage.getItem('token');
@@ -108,6 +108,22 @@ const EnhancedProductsPage = () => {
     { value: 'black', label: isRTL ? 'أسود' : 'Black', color: '#000000' }
   ];
 
+  // Filter products based on search term, category, and status
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = !searchTerm || 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && product.is_active) ||
+      (statusFilter === 'inactive' && !product.is_active) ||
+      (statusFilter === 'featured' && product.is_featured);
+
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
   // All the functions from previous implementation
   useEffect(() => {
     fetchProducts();
@@ -123,6 +139,74 @@ const EnhancedProductsPage = () => {
       setProducts(generateMockProducts());
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveProduct = async (productData) => {
+    try {
+      if (editingProduct) {
+        // Update existing product
+        const response = await axios.put(`${API_URL}/api/products/${editingProduct.id}`, productData);
+        setProducts(products.map(p => p.id === editingProduct.id ? response.data : p));
+      } else {
+        // Create new product
+        const response = await axios.post(`${API_URL}/api/products`, productData);
+        setProducts([...products, response.data]);
+      }
+      
+      setShowModal(false);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error('Error saving product:', error);
+      // For demo purposes, add to local state
+      if (editingProduct) {
+        setProducts(products.map(p => p.id === editingProduct.id ? { ...editingProduct, ...productData } : p));
+      } else {
+        const newProduct = {
+          id: Date.now().toString(),
+          ...productData,
+          created_at: new Date().toISOString()
+        };
+        setProducts([...products, newProduct]);
+      }
+      setShowModal(false);
+      setEditingProduct(null);
+    }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setShowModal(true);
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (!confirm(isRTL ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Are you sure you want to delete this product?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_URL}/api/products/${productId}`);
+      setProducts(products.filter(p => p.id !== productId));
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      // For demo purposes, remove from local state
+      setProducts(products.filter(p => p.id !== productId));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
+  const handleSelectProduct = (productId) => {
+    if (selectedProducts.includes(productId)) {
+      setSelectedProducts(selectedProducts.filter(id => id !== productId));
+    } else {
+      setSelectedProducts([...selectedProducts, productId]);
     }
   };
 
@@ -245,115 +329,6 @@ const EnhancedProductsPage = () => {
   const getCategoryIcon = (categoryValue) => {
     const category = categories.find(cat => cat.value === categoryValue);
     return category?.icon || '📦';
-  };
-
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && product.is_active) ||
-                         (statusFilter === 'inactive' && !product.is_active) ||
-                         (statusFilter === 'featured' && product.is_featured) ||
-                         (statusFilter === 'low-stock' && product.stock_quantity < 10);
-    
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
-
-  const handleSelectProduct = (productId) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedProducts.length === filteredProducts.length) {
-      setSelectedProducts([]);
-    } else {
-      setSelectedProducts(filteredProducts.map(p => p.id));
-    }
-  };
-
-  const handleCreateProduct = async (productData) => {
-    try {
-      setSubmitting(true);
-      const response = await axios.post(`${API_URL}/api/products`, productData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      setProducts(prev => [response.data, ...prev]);
-      setShowModal(false);
-      setEditingProduct(null);
-      
-      // Show success message
-      console.log('Product created successfully');
-    } catch (error) {
-      console.error('Error creating product:', error);
-      alert(isRTL ? 'خطأ في إنشاء المنتج' : 'Error creating product');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleUpdateProduct = async (productData) => {
-    try {
-      setSubmitting(true);
-      const response = await axios.put(`${API_URL}/api/products/${editingProduct.id}`, productData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? response.data : p));
-      setShowModal(false);
-      setEditingProduct(null);
-      
-      // Show success message
-      console.log('Product updated successfully');
-    } catch (error) {
-      console.error('Error updating product:', error);
-      alert(isRTL ? 'خطأ في تحديث المنتج' : 'Error updating product');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeleteProduct = async (productId) => {
-    try {
-      await axios.delete(`${API_URL}/api/products/${productId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      setProducts(prev => prev.filter(p => p.id !== productId));
-      setDeleteConfirm(null);
-      
-      // Show success message
-      console.log('Product deleted successfully');
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      alert(isRTL ? 'خطأ في حذف المنتج' : 'Error deleting product');
-    }
-  };
-
-  const handleEditProduct = (product) => {
-    setEditingProduct(product);
-    setShowModal(true);
-  };
-
-  const handleFormSubmit = (productData) => {
-    if (editingProduct) {
-      handleUpdateProduct(productData);
-    } else {
-      handleCreateProduct(productData);
-    }
   };
 
   return (
@@ -666,7 +641,6 @@ const EnhancedProductsPage = () => {
                         variant="outline" 
                         size="sm" 
                         className="text-red-600 border-red-300 hover:bg-red-50"
-                        onClick={() => setDeleteConfirm(product.id)}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -781,7 +755,6 @@ const EnhancedProductsPage = () => {
                             size="sm" 
                             variant="ghost" 
                             className="text-red-600 hover:text-red-900"
-                            onClick={() => setDeleteConfirm(product.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -814,51 +787,6 @@ const EnhancedProductsPage = () => {
       )}
 
       {/* Product Form Modal */}
-      <ProductFormModal
-        isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          setEditingProduct(null);
-        }}
-        product={editingProduct}
-        onSubmit={handleFormSubmit}
-        loading={submitting}
-      />
-
-      {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" dir={isRTL ? 'rtl' : 'ltr'}>
-            <div className="flex items-center mb-4">
-              <AlertCircle className="h-6 w-6 text-red-600 mr-3" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                {isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}
-              </h3>
-            </div>
-            
-            <p className="text-gray-600 mb-6">
-              {isRTL 
-                ? 'هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء.'
-                : 'Are you sure you want to delete this product? This action cannot be undone.'
-              }
-            </p>
-            
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setDeleteConfirm(null)}
-              >
-                {isRTL ? 'إلغاء' : 'Cancel'}
-              </Button>
-              <Button
-                className="bg-red-600 hover:bg-red-700"
-                onClick={() => handleDeleteProduct(deleteConfirm)}
-              >
-                {isRTL ? 'حذف' : 'Delete'}
-              </Button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

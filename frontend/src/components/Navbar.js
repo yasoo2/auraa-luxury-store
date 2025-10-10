@@ -17,7 +17,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const { language } = useLanguage();
   const isRTL = language === 'ar';
   const { getWishlistCount } = useWishlist();
@@ -25,6 +25,8 @@ const Navbar = () => {
 
   // Debug user state
   console.log('Navbar - Current user:', user);
+  console.log('Navbar - Is authenticated:', isAuthenticated);
+  console.log('Navbar - Is admin:', user?.is_admin);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);
@@ -61,20 +63,20 @@ const Navbar = () => {
   return (
     <nav className="nav-glass sticky top-0" style={{ zIndex: 200 }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative flex justify-between items-center min-h-20 py-2" style={{ direction: 'ltr' }}>
-          {/* Logo (default inline left) */}
+        <div className="relative flex justify-between items-center min-h-16 md:min-h-20 py-2" style={{ direction: 'ltr' }}>
+          {/* Logo (default inline left) - Mobile optimized */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
-            <Link to="/" className="flex flex-col items-start py-2">
+            <Link to="/" className="flex flex-col items-start py-1 md:py-2 flex-shrink-0">
               <div className="font-display font-black leading-none flex items-baseline gap-1">
-                <span className="text-3xl md:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>
-                <span style={{ fontSize: '12px', fontWeight: '100' }} className="carousel-luxury-text tracking-[0.25em] whitespace-nowrap">LUXURY</span>
+                <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>
+                <span style={{ fontSize: '8px' }} className="sm:text-xs carousel-luxury-text tracking-[0.1em] sm:tracking-[0.25em] whitespace-nowrap">LUXURY</span>
               </div>
-              <span className="block text-[9px] md:text-[11px] text-gray-600 tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
+              <span className="block text-[7px] sm:text-[9px] md:text-[11px] text-gray-600 tracking-[0.2em] sm:tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
             </Link>
           )}
 
           {/* Desktop Navigation */}
-          <div className={`hidden lg:flex items-center ${isRTL ? 'space-x-reverse space-x-6' : 'space-x-6'}`} style={{ marginLeft: 'auto' }}>
+          <div className={`hidden lg:flex items-center gap-8 px-8`} style={{ marginLeft: 'auto' }}>
             <Link to="/" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm">
               {isRTL ? 'الرئيسية' : 'Home'}
             </Link>
@@ -143,50 +145,63 @@ const Navbar = () => {
             </div>
           </form>
 
-          {/* Right Actions */}
-          <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
-            <LanguageCurrencySelector />
+          {/* Right Actions - Mobile optimized */}
+          <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-1 sm:space-x-2 md:space-x-4' : 'space-x-1 sm:space-x-2 md:space-x-4'}`}>
+            {/* Language Currency Selector - Hidden on smallest screens */}
+            <div className="hidden sm:block">
+              <LanguageCurrencySelector />
+            </div>
 
             {/* Cart */}
-            <Link to="/cart" className="relative p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
-              <ShoppingCart className="h-6 w-6" />
-              <span className="cart-badge absolute -top-1 -right-1 bg-brand text-white text-[10px] rounded-full h-5 min-w-[1.1rem] px-1 flex items-center justify-center">{cartCount}</span>
+            <Link to="/cart" className="relative p-1.5 sm:p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
+              <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="cart-badge absolute -top-0.5 -right-0.5 bg-brand text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">{cartCount}</span>
             </Link>
 
             {/* Wishlist */}
-            <Link to={user ? '/wishlist' : '/auth'} className="relative p-2 text-gray-700 hover-text-brand transition-colors duration-200">
-              <Heart className="h-6 w-6" />
+            <Link to={user ? '/wishlist' : '/auth'} className="relative p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200">
+              <Heart className="h-5 w-5 sm:h-6 sm:w-6" />
               {getWishlistCount() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[1.1rem] px-1 flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
                   {getWishlistCount()}
                 </span>
               )}
             </Link>
 
-            {/* User */}
+            {/* User Actions - Responsive */}
             {user ? (
-              <div className="flex items-center space-x-2">
-                <Link to="/profile" className="p-2 text-gray-700 hover-text-brand transition-colors duration-200" data-testid="profile-link">
-                  <User className="h-6 w-6" />
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                {/* Profile - Hidden on mobile, shown in menu */}
+                <Link to="/profile" className="hidden sm:block p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200" data-testid="profile-link">
+                  <User className="h-5 w-5 sm:h-6 sm:w-6" />
                 </Link>
-                <Button onClick={handleLogout} variant="ghost" size="sm" className="p-2 text-gray-700 hover-text-brand" data-testid="logout-button">
-                  <LogOut className="h-4 w-4" />
+                
+                {/* Logout - Hidden on mobile, shown in menu */}
+                <Button onClick={handleLogout} variant="ghost" size="sm" className="hidden sm:block p-1.5 sm:p-2 text-gray-700 hover-text-brand" data-testid="logout-button">
+                  <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
-                {user.is_admin && (
-                  <Link to="/admin" className="px-3 py-1 text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors">إدارة</Link>
+                
+                {/* Admin Button - Always visible if admin */}
+                {user && user.is_admin && (
+                  <Link to="/admin" className="px-2 py-1 text-xs sm:text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors whitespace-nowrap">إدارة</Link>
                 )}
               </div>
             ) : (
-              <Link to="/auth">
-                <Button className="btn-luxury" data-testid="login-button">
-                  {isRTL ? 'دخول / تسجيل' : 'Login / Register'}
+              <Link to="/auth" className="hidden sm:block">
+                <Button className="btn-luxury text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2" data-testid="login-button">
+                  {isRTL ? 'دخول' : 'Login'}
                 </Button>
               </Link>
             )}
 
-            {/* Mobile menu */}
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 text-gray-700 hover-text-brand transition-colors duration-200" data-testid="mobile-menu-button">
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {/* Mobile menu button */}
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)} 
+              className="lg:hidden p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200 ml-1" 
+              data-testid="mobile-menu-button"
+              aria-label="Toggle mobile menu"
+            >
+              {isMenuOpen ? <X className="h-5 w-5 sm:h-6 sm:w-6" /> : <Menu className="h-5 w-5 sm:h-6 sm:w-6" />}
             </button>
           </div>
 
@@ -202,10 +217,15 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Enhanced */}
         {isMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 bg-white">
-            <div className="px-4 pt-4 pb-4 space-y-2 max-h-96 overflow-y-auto">
+          <div className="lg:hidden border-t border-gray-200 bg-white shadow-lg">
+            <div className="px-4 py-4 space-y-3 max-h-[80vh] overflow-y-auto">
+              {/* Language/Currency Selector - Visible in mobile menu */}
+              <div className="sm:hidden mb-4 pb-3 border-b border-gray-100">
+                <LanguageCurrencySelector />
+              </div>
+
               {/* Mobile Search */}
               <form onSubmit={handleSearch} className="mb-4">
                 <div className="relative">
@@ -220,6 +240,20 @@ const Navbar = () => {
                   <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400`} />
                 </div>
               </form>
+
+              {/* User Actions for Mobile */}
+              {user && (
+                <div className="sm:hidden pb-3 mb-3 border-b border-gray-100 space-y-2">
+                  <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
+                    <User className="h-4 w-4 mr-2" />
+                    {isRTL ? 'الملف الشخصي' : 'Profile'}
+                  </Link>
+                  <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {isRTL ? 'تسجيل الخروج' : 'Logout'}
+                  </button>
+                </div>
+              )}
 
               <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
                 {isRTL ? 'الرئيسية' : 'Home'}

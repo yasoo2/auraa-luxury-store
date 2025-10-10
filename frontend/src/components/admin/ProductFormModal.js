@@ -23,7 +23,8 @@ const ProductFormModal = ({
   isOpen, 
   onClose, 
   product = null, 
-  onSubmit,
+  onSave,
+  categories = [],
   loading = false 
 }) => {
   const { language } = useLanguage();
@@ -56,7 +57,8 @@ const ProductFormModal = ({
   const [imageUploading, setImageUploading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const categories = [
+  // Use categories from props, with fallback defaults
+  const categoryOptions = categories.length > 0 ? categories : [
     { value: 'necklaces', label_ar: 'قلادات', label_en: 'Necklaces', icon: '📿' },
     { value: 'earrings', label_ar: 'أقراط', label_en: 'Earrings', icon: '💎' },
     { value: 'rings', label_ar: 'خواتم', label_en: 'Rings', icon: '💍' },
@@ -162,12 +164,24 @@ const ProductFormModal = ({
       const formDataUpload = new FormData();
       formDataUpload.append('image', file);
 
-      // This would upload to your backend
-      // const response = await axios.post('/api/admin/upload-image', formDataUpload);
-      // const imageUrl = response.data.url;
-
-      // For demo purposes, create a local URL
-      const imageUrl = URL.createObjectURL(file);
+      // Upload to backend
+      const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_URL}/api/admin/upload-image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formDataUpload
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const data = await response.json();
+      const imageUrl = `${API_URL}${data.url}`;
       handleImageChange(index, imageUrl);
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -217,7 +231,7 @@ const ProductFormModal = ({
       images: formData.images.filter(img => img.trim())
     };
 
-    onSubmit(submitData);
+    onSave(submitData);
   };
 
   if (!isOpen) return null;
@@ -319,7 +333,7 @@ const ProductFormModal = ({
                     onChange={(e) => handleInputChange('category', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   >
-                    {categories.map((cat) => (
+                    {categoryOptions.map((cat) => (
                       <option key={cat.value} value={cat.value}>
                         {cat.icon} {isRTL ? cat.label_ar : cat.label_en}
                       </option>

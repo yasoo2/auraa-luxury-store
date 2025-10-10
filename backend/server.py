@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Query, File, UploadFile
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -9,6 +10,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
 import uuid
+import shutil
+import aiofiles
+from PIL import Image
+import io
 from datetime import datetime, timezone, timedelta
 import jwt
 from passlib.context import CryptContext
@@ -23,7 +28,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Create the main app
-app = FastAPI(title="Auraa Luxury API", version="1.0.0")
+app = FastAPI(title="لورا لاكشري API", version="1.0.0")
 api_router = APIRouter(prefix="/api")
 
 # Security
@@ -55,7 +60,7 @@ class User(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
-    phone: Optional[str] = None
+    phone: str
     address: Optional[Dict[str, Any]] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_admin: bool = False
@@ -65,7 +70,7 @@ class UserCreate(BaseModel):
     password: str
     first_name: str
     last_name: str
-    phone: Optional[str] = None
+    phone: str
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -186,7 +191,7 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 # Routes
 @api_router.get("/")
 async def root():
-    return {"message": "Welcome to Auraa Luxury API"}
+    return {"message": "Welcome to لورا لاكشري API"}
 
 # Auth routes
 @api_router.post("/auth/register")
@@ -534,7 +539,7 @@ async def initialize_sample_data():
         admin_data = {
             "email": "admin@auraa.com",
             "first_name": "Admin",
-            "last_name": "Auraa",
+            "last_name": "لاكشري",
             "phone": "+966501234567",
             "password": get_password_hash("admin123"),
             "is_admin": True
@@ -652,7 +657,7 @@ async def initialize_admin():
             "_id": str(uuid.uuid4()),
             "email": "admin@auraa.com",
             "first_name": "Admin",
-            "last_name": "Auraa",
+            "last_name": "لاكشري",
             "phone": "+966501234567",
             "hashed_password": hashed_password,
             "is_admin": True,
@@ -692,7 +697,7 @@ async def setup_deployment():
                     "_id": str(uuid.uuid4()),
                     "email": "admin@auraa.com",
                     "first_name": "Admin",
-                    "last_name": "Auraa",
+                    "last_name": "Luxury",
                     "phone": "+966501234567",
                     "hashed_password": hashed_password,
                     "is_admin": True,
@@ -763,6 +768,7 @@ logger = logging.getLogger(__name__)
 from services.currency_service import get_currency_service
 from services.scheduler_service import get_scheduler_service
 from services.product_sync_service import get_product_sync_service
+from services.aliexpress_service import get_aliexpress_service
 from fastapi import UploadFile, File
 
 # Auto-Update Services Initialization
@@ -785,7 +791,7 @@ async def startup_event():
     # Initialize exchange rates
     await currency_service.update_exchange_rates()
     
-    logger.info("Auraa Luxury Auto-Update services started successfully")
+    logger.info("لورا لاكشري Auto-Update services started successfully")
 
 # Auto-Update API Endpoints
 
@@ -1045,4 +1051,164 @@ async def update_all_product_prices(admin: User = Depends(get_admin_user)):
         logger.error(f"Error updating all prices: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# AliExpress Integration Endpoints
+@api_router.get("/admin/aliexpress/search")
+async def search_aliexpress_products(
+    keywords: str,
+    category_id: str = None,
+    min_price: float = None,
+    max_price: float = None,
+    page_size: int = 20,
+    page_no: int = 1,
+    admin: User = Depends(get_admin_user)
+):
+    """Search products on AliExpress"""
+    try:
+        aliexpress_service = get_aliexpress_service(db)
+        await aliexpress_service.initialize()
+        
+        results = await aliexpress_service.search_products(
+            keywords=keywords,
+            category_id=category_id,
+            min_price=min_price,
+            max_price=max_price,
+            page_size=page_size,
+            page_no=page_no
+        )
+        
+        await aliexpress_service.close()
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error searching AliExpress: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/aliexpress/product/{product_id}")
+async def get_aliexpress_product_details(
+    product_id: str,
+    admin: User = Depends(get_admin_user)
+):
+    """Get detailed product information from AliExpress"""
+    try:
+        aliexpress_service = get_aliexpress_service(db)
+        await aliexpress_service.initialize()
+        
+        details = await aliexpress_service.get_product_details(product_id)
+        
+        await aliexpress_service.close()
+        
+        if not details:
+            raise HTTPException(status_code=404, detail="Product not found")
+            
+        return details
+        
+    except Exception as e:
+        logger.error(f"Error getting product details: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/import")
+async def import_aliexpress_product(
+    aliexpress_product_id: str,
+    custom_name: str = None,
+    custom_description: str = None,
+    markup_percentage: float = 50.0,
+    category: str = "imported",
+    admin: User = Depends(get_admin_user)
+):
+    """Import a product from AliExpress to local store"""
+    try:
+        aliexpress_service = get_aliexpress_service(db)
+        await aliexpress_service.initialize()
+        
+        imported_product = await aliexpress_service.import_product_to_store(
+            aliexpress_product_id=aliexpress_product_id,
+            custom_name=custom_name,
+            custom_description=custom_description,
+            markup_percentage=markup_percentage,
+            category=category
+        )
+        
+        await aliexpress_service.close()
+        
+        logger.info(f"Product imported successfully: {aliexpress_product_id}")
+        return {"success": True, "product": imported_product}
+        
+    except Exception as e:
+        logger.error(f"Error importing product: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/sync-prices")
+async def sync_aliexpress_prices(
+    admin: User = Depends(get_admin_user)
+):
+    """Sync prices for all AliExpress products"""
+    try:
+        aliexpress_service = get_aliexpress_service(db)
+        await aliexpress_service.initialize()
+        
+        results = await aliexpress_service.sync_product_prices()
+        
+        await aliexpress_service.close()
+        
+        logger.info(f"Price sync completed: {results['updated_count']} products updated")
+        return results
+        
+    except Exception as e:
+        logger.error(f"Error syncing prices: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Image Upload Endpoint
+@api_router.post("/admin/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    admin: User = Depends(get_admin_user)
+):
+    """Upload and process product image"""
+    try:
+        # Check file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Check file size (max 10MB)
+        max_size = 10 * 1024 * 1024  # 10MB
+        file_content = await file.read()
+        if len(file_content) > max_size:
+            raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB")
+        
+        # Generate unique filename
+        file_extension = file.filename.split('.')[-1].lower()
+        if file_extension not in ['jpg', 'jpeg', 'png', 'webp']:
+            raise HTTPException(status_code=400, detail="Invalid file type. Only JPG, PNG, and WebP are allowed")
+        
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        file_path = f"/app/backend/static/uploads/{unique_filename}"
+        
+        # Process and save image
+        image = Image.open(io.BytesIO(file_content))
+        
+        # Convert to RGB if necessary
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Resize image to reasonable dimensions (max 1200px width)
+        max_width = 1200
+        if image.width > max_width:
+            ratio = max_width / image.width
+            new_height = int(image.height * ratio)
+            image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Save optimized image
+        image.save(file_path, format='JPEG', quality=85, optimize=True)
+        
+        # Return the URL
+        image_url = f"/static/uploads/{unique_filename}"
+        
+        logger.info(f"Image uploaded successfully: {unique_filename}")
+        return {"url": image_url, "filename": unique_filename}
+        
+    except Exception as e:
+        logger.error(f"Error uploading image: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 @app.on_event("shutdown")
+

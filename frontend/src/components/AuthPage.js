@@ -83,7 +83,10 @@ const AuthPage = () => {
       console.log('Login result:', result);
       if (result.success) {
         console.log('Login successful, navigating to:', from);
-        navigate(from, { replace: true });
+        // Small delay to ensure state update
+        setTimeout(() => {
+          navigate(from, { replace: true });
+        }, 100);
       } else {
 
       }
@@ -132,7 +135,7 @@ const AuthPage = () => {
                 {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
               </h2>
               <p className="text-white/80 animate-slide-in-right">
-                {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى عائلة Auraa Luxury'}
+                {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى Auraa Luxury'}
               </p>
             </div>
 
@@ -189,10 +192,11 @@ const AuthPage = () => {
                   <input
                     type="tel"
                     name="phone"
-                    placeholder="رقم الجوال (اختياري)"
+                    placeholder="رقم الجوال"
                     value={formData.phone}
                     onChange={handleInputChange}
                     className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                    required
                     data-testid="phone-input"
                   />
                 </div>

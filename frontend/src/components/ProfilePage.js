@@ -216,9 +216,7 @@ const ProfilePage = () => {
                         <div>
                           <p className="text-sm text-gray-600">طريقة الدفع:</p>
                           <p className="font-medium">
-                            {order.payment_method === 'card' ? 'بطاقة ائتمانية' : 
-                             order.payment_method === 'cod' ? 'دفع عند الاستلام' : 
-                             'تحويل بنكي'}
+                            {order.payment_method === 'card' ? 'بطاقة ائتمانية' : 'تحويل بنكي'}
                           </p>
                         </div>
                       </div>

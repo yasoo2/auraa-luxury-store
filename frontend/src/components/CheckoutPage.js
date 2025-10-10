@@ -107,7 +107,7 @@ const CheckoutPage = () => {
     );
   }
 
-  const shippingCost = cart.total_amount >= 200 ? 0 : 15;
+  const shippingCost = 15; // Fixed shipping cost for dropshipping
   const totalAmount = cart.total_amount + shippingCost;
 
   return (
@@ -256,7 +256,6 @@ const CheckoutPage = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="card">💳 بطاقة ائتمانية</SelectItem>
-                      <SelectItem value="cod">💰 دفع عند الاستلام</SelectItem>
                       <SelectItem value="bank_transfer">🏦 تحويل بنكي</SelectItem>
                     </SelectContent>
                   </Select>
@@ -309,13 +308,7 @@ const CheckoutPage = () => {
                     </div>
                   )}
                   
-                  {formData.paymentMethod === 'cod' && (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                      <p className="text-amber-800">
-                        💰 سيتم تحصيل المبلغ عند استلام الطلب
-                      </p>
-                    </div>
-                  )}
+                  {/* COD option removed for dropshipping business model */}
                   
                   {formData.paymentMethod === 'bank_transfer' && (
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -354,8 +347,8 @@ const CheckoutPage = () => {
                   
                   <div className="flex justify-between">
                     <span className="text-gray-600">الشحن:</span>
-                    <span className={`font-medium ${shippingCost === 0 ? 'text-green-600' : ''}`}>
-                      {shippingCost === 0 ? 'مجاني' : `${shippingCost.toFixed(2)} ر.س`}
+                    <span className="font-medium">
+                      {shippingCost.toFixed(2)} ر.س
                     </span>
                   </div>
                   

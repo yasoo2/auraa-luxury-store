@@ -8,17 +8,23 @@ import SettingsPage from './SettingsPage';
 import AnalyticsPage from './AnalyticsPage';
 import IntegrationsPage from './IntegrationsPage';
 import AutoUpdatePage from './AutoUpdatePage';
+import AliExpressPage from './AliExpressPage';
+import BulkImportPage from './BulkImportPage';
 import {
   Package,
   ShoppingCart,
   Users,
+  TrendingUp,
   Settings,
-  BarChart,
-  Plug,
+  Zap,
   LogOut,
   Menu,
   X,
-  RefreshCw
+  RefreshCw,
+  ExternalLink,
+  Upload,
+  BarChart,
+  Plug
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -42,6 +48,16 @@ const AdminDashboard = () => {
       name: isRTL ? 'المستخدمون' : 'Users',
       path: '/admin/users',
       icon: Users
+    },
+    {
+      name: isRTL ? 'علي إكسبريس' : 'AliExpress',
+      path: '/admin/aliexpress',
+      icon: ExternalLink
+    },
+    {
+      name: isRTL ? 'الاستيراد المجمع' : 'Bulk Import',
+      path: '/admin/bulk-import',
+      icon: Upload
     },
     {
       name: isRTL ? 'التحليلات' : 'Analytics',
@@ -133,6 +149,8 @@ const AdminDashboard = () => {
             <Route path="/products" element={<EnhancedProductsPage />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/aliexpress" element={<AliExpressPage />} />
+            <Route path="/bulk-import" element={<BulkImportPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
             <Route path="/auto-update" element={<AutoUpdatePage />} />

@@ -84,7 +84,7 @@ const AdminDashboard = () => {
                 {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
               <h1 className="text-2xl font-bold carousel-luxury-text">
-                {isRTL ? 'لوحة التحكم - لورا لاكشري' : 'لورا لاكشري - Admin'}
+                {isRTL ? 'لوحة التحكم - Auraa Luxury' : 'Auraa Luxury - Admin'}
               </h1>
             </div>
             <button

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Globe, DollarSign, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';
@@ -8,6 +8,25 @@ const LanguageCurrencySelector = () => {
   const { language, currency, switchLanguage, switchCurrency, languages, currencies } = useLanguage();
   const [showLanguages, setShowLanguages] = useState(false);
   const [showCurrencies, setShowCurrencies] = useState(false);
+  const languageRef = useRef(null);
+  const currencyRef = useRef(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (languageRef.current && !languageRef.current.contains(event.target)) {
+        setShowLanguages(false);
+      }
+      if (currencyRef.current && !currencyRef.current.contains(event.target)) {
+        setShowCurrencies(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Convert languages object to array
   const languagesList = Object.entries(languages).map(([code, info]) => ({

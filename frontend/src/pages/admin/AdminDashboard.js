@@ -135,6 +135,7 @@ const AdminDashboard = () => {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
+            <Route path="/auto-update" element={<AutoUpdatePage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>

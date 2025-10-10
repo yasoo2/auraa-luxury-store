@@ -242,15 +242,10 @@ const CartPage = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">الشحن:</span>
-                  <span className="font-medium text-green-600">
-                    {cart.total_amount >= 200 ? 'مجاني' : '15.00 ر.س'}
+                  <span className="font-medium">
+                    15.00 ر.س
                   </span>
                 </div>
-                {cart.total_amount < 200 && (
-                  <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
-                    أضف {(200 - cart.total_amount).toFixed(2)} ر.س للحصول على شحن مجاني
-                  </div>
-                )}
                 <hr className="border-gray-200" />
                 <div className="flex justify-between text-xl font-bold">
                   <span>المجموع:</span>

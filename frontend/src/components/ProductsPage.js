@@ -259,7 +259,7 @@ const ProductsPage = () => {
               </div>
             </div>
             {loading ? (
-              <div className="product-grid">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
                 {[...Array(8)].map((_, i) => (
                   <div key={i} className="luxury-card p-4 animate-pulse">
                     <div className="skeleton h-64 rounded-lg mb-4"></div>

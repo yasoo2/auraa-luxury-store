@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import EnhancedProductsPage from './EnhancedProductsPage';
 import OrdersPage from './OrdersPage';
 import UsersPage from './UsersPage';

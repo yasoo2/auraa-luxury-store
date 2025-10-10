@@ -186,7 +186,7 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 # Routes
 @api_router.get("/")
 async def root():
-    return {"message": "Welcome to Auraa Luxury API"}
+    return {"message": "Welcome to لورا لاكشري API"}
 
 # Auth routes
 @api_router.post("/auth/register")

@@ -354,8 +354,8 @@ const CheckoutPage = () => {
                   
                   <div className="flex justify-between">
                     <span className="text-gray-600">الشحن:</span>
-                    <span className={`font-medium ${shippingCost === 0 ? 'text-green-600' : ''}`}>
-                      {shippingCost === 0 ? 'مجاني' : `${shippingCost.toFixed(2)} ر.س`}
+                    <span className="font-medium">
+                      {shippingCost.toFixed(2)} ر.س
                     </span>
                   </div>
                   

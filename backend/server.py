@@ -686,10 +686,13 @@ async def startup_event():
 @api_router.get("/auto-update/status")
 async def get_auto_update_status(admin: User = Depends(get_admin_user)):
     """Get status of all auto-update services"""
+    curr_service = get_currency_service(db)
+    sched_service = get_scheduler_service(db)
+    
     currency_status = {
         "last_update": None,
-        "supported_currencies": currency_service.supported_currencies,
-        "cache_duration_hours": currency_service.cache_duration.total_seconds() / 3600
+        "supported_currencies": curr_service.supported_currencies,
+        "cache_duration_hours": curr_service.cache_duration.total_seconds() / 3600
     }
     
     # Get last currency update from database
@@ -700,7 +703,7 @@ async def get_auto_update_status(admin: User = Depends(get_admin_user)):
     if last_currency_update:
         currency_status["last_update"] = last_currency_update["updated_at"].isoformat()
     
-    scheduler_status = scheduler_service.get_scheduler_status()
+    scheduler_status = sched_service.get_scheduler_status()
     
     return {
         "currency_service": currency_status,

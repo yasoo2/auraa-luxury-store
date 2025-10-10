@@ -157,7 +157,7 @@ const HomePage = () => {
           {/* Section Title */}
           <div className="text-center mb-16">
             <h2 className="font-display text-4xl md:text-5xl font-bold text-white animate-text-sparkle mb-4">
-              {isRTL ? 'لماذا لورا لاكشري؟' : 'Why Lora Luxury?'}
+              Why Lora Luxury?
             </h2>
             <div className="w-24 h-1 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
           </div>

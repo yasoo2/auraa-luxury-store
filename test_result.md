@@ -380,8 +380,7 @@
   restore_complete: true
 
 ## test_plan:
-  current_focus:
-    - "Mobile Responsive Header Fix"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

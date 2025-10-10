@@ -45,11 +45,14 @@ const LanguageCurrencySelector = () => {
 
   return (
     <div className="flex items-center space-x-2">
-      <div className="relative">
+      <div className="relative" ref={languageRef}>
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowLanguages(!showLanguages)}
+          onClick={() => {
+            setShowLanguages(!showLanguages);
+            setShowCurrencies(false); // Close currency dropdown when opening language
+          }}
           className="flex items-center space-x-1 hover:bg-gray-100"
         >
           <Globe className="h-4 w-4" />

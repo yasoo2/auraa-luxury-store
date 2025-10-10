@@ -761,11 +761,12 @@ async def trigger_product_sync(
 @api_router.get("/auto-update/currency-rates")
 async def get_current_currency_rates():
     """Get current exchange rates"""
+    curr_service = get_currency_service(db)
     rates = {}
     
-    for currency in currency_service.supported_currencies:
+    for currency in curr_service.supported_currencies:
         if currency != "USD":  # USD is base currency
-            rate = await currency_service.get_cached_rate("USD", currency)
+            rate = await curr_service.get_cached_rate("USD", currency)
             if rate:
                 rates[currency] = rate
     

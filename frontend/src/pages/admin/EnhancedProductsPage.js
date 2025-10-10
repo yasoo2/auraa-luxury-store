@@ -703,6 +703,20 @@ const EnhancedProductsPage = () => {
           </Button>
         </div>
       )}
+
+      {/* Product Form Modal */}
+      {showModal && (
+        <ProductFormModal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setEditingProduct(null);
+          }}
+          onSave={handleSaveProduct}
+          product={editingProduct}
+          categories={categories}
+        />
+      )}
     </div>
   );
 };

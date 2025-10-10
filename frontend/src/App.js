@@ -17,6 +17,7 @@ import ProductDetailPage from './components/ProductDetailPage';
 import CartPage from './components/CartPage';
 import WishlistPage from './components/WishlistPage';
 import AuthPage from './components/AuthPage';
+import DeploymentSetup from './components/DeploymentSetup';
 import ProfilePage from './components/ProfilePage';
 import CheckoutPage from './components/CheckoutPage';
 import Footer from './components/Footer';

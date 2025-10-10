@@ -774,12 +774,13 @@ async def get_current_currency_rates():
         "last_updated": datetime.utcnow().isoformat()
     }
 
-@api_router.post("/auto-update/convert-currency")
-async def convert_currency_endpoint(
-    amount: float,
-    from_currency: str,
+class CurrencyConversionRequest(BaseModel):
+    amount: float
+    from_currency: str
     to_currency: str
-):
+
+@api_router.post("/auto-update/convert-currency")
+async def convert_currency_endpoint(request: CurrencyConversionRequest):
     """Convert amount between currencies"""
     try:
         curr_service = get_currency_service(db)

@@ -218,7 +218,7 @@ const ProductFormModal = ({
       images: formData.images.filter(img => img.trim())
     };
 
-    onSubmit(submitData);
+    onSave(submitData);
   };
 
   if (!isOpen) return null;

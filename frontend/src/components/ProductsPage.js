@@ -161,12 +161,25 @@ const ProductsPage = () => {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          <div className="lg:w-1/4">
-            <Card className="luxury-card p-6 sticky top-24">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
+          {/* Mobile Filter Toggle */}
+          <div className="lg:hidden">
+            <Button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              variant="outline"
+              className="w-full mb-4"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              {isRTL ? 'المرشحات' : 'Filters'}
+              {showMobileFilters ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
+            </Button>
+          </div>
+
+          <div className={`lg:w-1/4 ${showMobileFilters || 'hidden'} lg:block`}>
+            <Card className="luxury-card p-4 sm:p-6 sticky top-24">
               <div className="flex items-center mb-4">
                 <SlidersHorizontal className="h-5 w-5 ml-2 text-amber-600" />
-                <h2 className="text-lg font-bold text-gray-900">تصفية النتائج</h2>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">{isRTL ? 'تصفية النتائج' : 'Filter Results'}</h2>
               </div>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">الفئة</label>

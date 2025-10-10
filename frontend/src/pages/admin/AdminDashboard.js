@@ -54,6 +54,11 @@ const AdminDashboard = () => {
       icon: Plug
     },
     {
+      name: isRTL ? 'التحديثات التلقائية' : 'Auto Updates',
+      path: '/admin/auto-update',
+      icon: RefreshCw
+    },
+    {
       name: isRTL ? 'الإعدادات' : 'Settings',
       path: '/admin/settings',
       icon: Settings

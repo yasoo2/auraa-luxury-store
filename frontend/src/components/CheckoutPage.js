@@ -256,7 +256,6 @@ const CheckoutPage = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="card">💳 بطاقة ائتمانية</SelectItem>
-                      <SelectItem value="cod">💰 دفع عند الاستلام</SelectItem>
                       <SelectItem value="bank_transfer">🏦 تحويل بنكي</SelectItem>
                     </SelectContent>
                   </Select>

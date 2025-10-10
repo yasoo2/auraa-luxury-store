@@ -326,19 +326,6 @@ const EnhancedProductsPage = () => {
     return category?.icon || '📦';
   };
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && product.is_active) ||
-                         (statusFilter === 'inactive' && !product.is_active) ||
-                         (statusFilter === 'featured' && product.is_featured) ||
-                         (statusFilter === 'low-stock' && product.stock_quantity < 10);
-    
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
-
   const handleSelectProduct = (productId) => {
     setSelectedProducts(prev => 
       prev.includes(productId) 

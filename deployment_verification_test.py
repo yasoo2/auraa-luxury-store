@@ -47,9 +47,12 @@ class DeploymentVerificationTest:
             with open(workflow_path, 'r') as f:
                 workflow_content = yaml.safe_load(f)
             
-            # Check required fields
-            required_fields = ['name', 'on', 'jobs']
+            # Check required fields (YAML parser converts 'on' to True)
+            required_fields = ['name', 'jobs']
+            has_on_field = 'on' in workflow_content or True in workflow_content
             missing_fields = [field for field in required_fields if field not in workflow_content]
+            if not has_on_field:
+                missing_fields.append('on')
             
             if missing_fields:
                 self.log_result("Workflow YAML Structure", "FAIL", 

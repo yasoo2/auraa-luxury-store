@@ -110,8 +110,8 @@ const LiveChat = ({ userId = null, productId = null }) => {
       // Add welcome message
       addSystemMessage(
         isRTL ? 
-        'مرحباً بك في دعم أورا لاكشري! كيف يمكنني مساعدتك اليوم؟' :
-        'مرحباً بك في دعم لورا لاكشري! كيف يمكنني مساعدتك اليوم؟'
+        'مرحباً بك في دعم Auraa Luxury! كيف يمكنني مساعدتك اليوم؟' :
+        'مرحباً بك في دعم Auraa Luxury! كيف يمكنني مساعدتك اليوم؟'
       );
       
     } catch (error) {

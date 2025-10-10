@@ -675,6 +675,75 @@ async def initialize_admin():
         logger.error(f"Error creating admin user: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error creating admin user: {str(e)}")
 
+@api_router.post("/setup-deployment")
+async def setup_deployment():
+    """Complete setup for deployment with admin user and sample data"""
+    try:
+        setup_results = {}
+        
+        # 1. Create admin user
+        try:
+            existing_admin = await db.users.find_one({"email": "admin@auraa.com"})
+            
+            if not existing_admin:
+                hashed_password = pwd_context.hash("admin123")
+                
+                admin_data = {
+                    "_id": str(uuid.uuid4()),
+                    "email": "admin@auraa.com",
+                    "first_name": "Admin",
+                    "last_name": "Auraa",
+                    "phone": "+966501234567",
+                    "hashed_password": hashed_password,
+                    "is_admin": True,
+                    "address": None,
+                    "created_at": datetime.now(timezone.utc)
+                }
+                
+                await db.users.insert_one(admin_data)
+                setup_results["admin_created"] = True
+                logger.info("Admin user created during deployment setup")
+            else:
+                setup_results["admin_exists"] = True
+                logger.info("Admin user already exists")
+                
+        except Exception as e:
+            setup_results["admin_error"] = str(e)
+        
+        # 2. Initialize sample products
+        try:
+            product_count = await db.products.count_documents({})
+            
+            if product_count == 0:
+                # Use the existing initialize_sample_data logic
+                result = await initialize_sample_data()
+                setup_results["products_created"] = True
+                setup_results["product_message"] = result["message"]
+            else:
+                setup_results["products_exist"] = True
+                setup_results["existing_product_count"] = product_count
+                
+        except Exception as e:
+            setup_results["products_error"] = str(e)
+        
+        # 3. Initialize exchange rates if available
+        try:
+            if currency_service:
+                await currency_service.update_exchange_rates()
+                setup_results["currency_rates_updated"] = True
+        except Exception as e:
+            setup_results["currency_error"] = str(e)
+        
+        return {
+            "message": "Deployment setup completed",
+            "setup_results": setup_results,
+            "ready_for_use": setup_results.get("admin_created") or setup_results.get("admin_exists")
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in deployment setup: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Deployment setup error: {str(e)}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

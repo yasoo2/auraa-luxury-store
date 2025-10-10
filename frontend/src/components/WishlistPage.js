@@ -57,7 +57,7 @@ const WishlistPage = () => {
         title: isRTL ? 'قائمة المفضلة - لورا لاكشري' : 'My Wishlist - لورا لاكشري',
         text: isRTL ? 
           `تحقق من قائمة المفضلة الخاصة بي في أورا لاكشري - ${getWishlistCount()} منتج` :
-          `Check out my wishlist at Auraa Luxury - ${getWishlistCount()} items`,
+          `Check out my wishlist at لورا لاكشري - ${getWishlistCount()} items`,
         url: window.location.href
       });
     } else {

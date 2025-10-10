@@ -51,7 +51,7 @@ const SimpleAuthPage = () => {
       }
     } catch (error) {
       console.error('Auth error:', error);
-      toast.error('حدث خطأ غير متوقع');
+      alert('حدث خطأ غير متوقع: ' + error.message);
     } finally {
       setLoading(false);
     }

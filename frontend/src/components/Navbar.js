@@ -217,10 +217,15 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Enhanced */}
         {isMenuOpen && (
           <div className="lg:hidden border-t border-gray-200 bg-white shadow-lg">
-            <div className="px-4 py-4 space-y-3 max-h-96 overflow-y-auto">
+            <div className="px-4 py-4 space-y-3 max-h-[80vh] overflow-y-auto">
+              {/* Language/Currency Selector - Visible in mobile menu */}
+              <div className="sm:hidden mb-4 pb-3 border-b border-gray-100">
+                <LanguageCurrencySelector />
+              </div>
+
               {/* Mobile Search */}
               <form onSubmit={handleSearch} className="mb-4">
                 <div className="relative">
@@ -235,6 +240,20 @@ const Navbar = () => {
                   <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400`} />
                 </div>
               </form>
+
+              {/* User Actions for Mobile */}
+              {user && (
+                <div className="sm:hidden pb-3 mb-3 border-b border-gray-100 space-y-2">
+                  <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
+                    <User className="h-4 w-4 mr-2" />
+                    {isRTL ? 'الملف الشخصي' : 'Profile'}
+                  </Link>
+                  <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    {isRTL ? 'تسجيل الخروج' : 'Logout'}
+                  </button>
+                </div>
+              )}
 
               <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
                 {isRTL ? 'الرئيسية' : 'Home'}

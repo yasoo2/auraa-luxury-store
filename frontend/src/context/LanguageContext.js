@@ -995,15 +995,39 @@ export const LanguageProvider = ({ children }) => {
         setExchangeRates(data.rates);
       } catch (error) {
         console.error('Failed to fetch exchange rates:', error);
-        // Fallback to static rates
+        // Fallback to static rates (approximate rates as of 2024)
         setExchangeRates({
+          // Base currency
           USD: 1,
+          
+          // GCC Currencies
           SAR: 3.75,
           AED: 3.67,
           QAR: 3.64,
           KWD: 0.31,
           BHD: 0.38,
-          OMR: 0.38
+          OMR: 0.38,
+          
+          // Major Global Currencies
+          EUR: 0.92,
+          GBP: 0.79,
+          JPY: 149.50,
+          CAD: 1.36,
+          AUD: 1.52,
+          CHF: 0.88,
+          
+          // Asian Currencies
+          CNY: 7.24,
+          INR: 83.25,
+          KRW: 1340.50,
+          SGD: 1.35,
+          HKD: 7.83,
+          
+          // Other Regional Currencies
+          TRY: 29.85,
+          EGP: 30.95,
+          JOD: 0.71,
+          LBP: 15000.00
         });
       }
     };

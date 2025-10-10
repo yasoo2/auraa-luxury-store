@@ -204,8 +204,8 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 bg-white">
-            <div className="px-4 pt-4 pb-4 space-y-2 max-h-96 overflow-y-auto">
+          <div className="lg:hidden border-t border-gray-200 bg-white shadow-lg">
+            <div className="px-4 py-4 space-y-3 max-h-96 overflow-y-auto">
               {/* Mobile Search */}
               <form onSubmit={handleSearch} className="mb-4">
                 <div className="relative">

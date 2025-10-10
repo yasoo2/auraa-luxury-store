@@ -209,7 +209,7 @@ const Navbar = () => {
           {FLAGS.LOGO_BOTTOM_RIGHT && (
             <Link to="/" className="hidden md:block absolute bottom-1 right-2 flex flex-col items-end">
               <div className="flex items-end space-x-2">
-                <span className="font-display text-5xl md:text-6xl font-black logo-aurra-contrast leading-none tracking-tight">Lora</span>
+                <span className="font-display text-5xl md:text-6xl font-black logo-aurra-contrast leading-none tracking-tight">Auraa</span>
                 <span className="font-display text-[1px] md:text-[2px] font-thin text-gray-600 tracking-[0.15em]">LUXURY</span>
               </div>
               <span className="block text-[9px] md:text-[11px] text-gray-600 tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase">ACCESSORIES</span>

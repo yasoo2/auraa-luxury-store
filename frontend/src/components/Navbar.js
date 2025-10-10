@@ -74,7 +74,7 @@ const Navbar = () => {
           )}
 
           {/* Desktop Navigation */}
-          <div className={`hidden lg:flex items-center ${isRTL ? 'space-x-reverse space-x-6' : 'space-x-6'}`} style={{ marginLeft: 'auto' }}>
+          <div className={`hidden lg:flex items-center ${isRTL ? 'space-x-reverse space-x-12' : 'space-x-12'} mx-8`} style={{ marginLeft: 'auto' }}>
             <Link to="/" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm">
               {isRTL ? 'الرئيسية' : 'Home'}
             </Link>

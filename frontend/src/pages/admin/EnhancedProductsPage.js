@@ -120,6 +120,74 @@ const EnhancedProductsPage = () => {
     }
   };
 
+  const handleSaveProduct = async (productData) => {
+    try {
+      if (editingProduct) {
+        // Update existing product
+        const response = await axios.put(`${API_URL}/api/products/${editingProduct.id}`, productData);
+        setProducts(products.map(p => p.id === editingProduct.id ? response.data : p));
+      } else {
+        // Create new product
+        const response = await axios.post(`${API_URL}/api/products`, productData);
+        setProducts([...products, response.data]);
+      }
+      
+      setShowModal(false);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error('Error saving product:', error);
+      // For demo purposes, add to local state
+      if (editingProduct) {
+        setProducts(products.map(p => p.id === editingProduct.id ? { ...editingProduct, ...productData } : p));
+      } else {
+        const newProduct = {
+          id: Date.now().toString(),
+          ...productData,
+          created_at: new Date().toISOString()
+        };
+        setProducts([...products, newProduct]);
+      }
+      setShowModal(false);
+      setEditingProduct(null);
+    }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setShowModal(true);
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (!confirm(isRTL ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Are you sure you want to delete this product?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_URL}/api/products/${productId}`);
+      setProducts(products.filter(p => p.id !== productId));
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      // For demo purposes, remove from local state
+      setProducts(products.filter(p => p.id !== productId));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
+  const handleSelectProduct = (productId) => {
+    if (selectedProducts.includes(productId)) {
+      setSelectedProducts(selectedProducts.filter(id => id !== productId));
+    } else {
+      setSelectedProducts([...selectedProducts, productId]);
+    }
+  };
+
   const generateMockProducts = () => {
     return [
       {

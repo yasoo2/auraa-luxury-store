@@ -143,21 +143,21 @@ const FashionModelsCarousel = () => {
         <div className="absolute inset-0 animate-gold-shimmer opacity-30"></div>
       </div>
 
-      {/* Navigation Arrows */}
+      {/* Navigation Arrows - Enhanced for Mobile */}
       <button
         onClick={prevSlide}
-        className={`absolute ${isRTL ? 'right-2 sm:right-4' : 'left-2 sm:left-4'} top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full transition-all duration-300 opacity-60 sm:opacity-0 group-hover:opacity-100 z-10 touch-manipulation`}
+        className={`absolute ${isRTL ? 'right-2 sm:right-4 md:right-6' : 'left-2 sm:left-4 md:left-6'} top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-md text-white p-3 sm:p-3 md:p-4 rounded-full transition-all duration-300 opacity-80 sm:opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95 z-10 touch-manipulation shadow-lg hover:shadow-xl min-w-[44px] min-h-[44px] flex items-center justify-center`}
         aria-label={isRTL ? 'الصورة السابقة' : 'Previous image'}
       >
-        {isRTL ? <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6" /> : <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6" />}
+        {isRTL ? <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" /> : <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />}
       </button>
 
       <button
         onClick={nextSlide}
-        className={`absolute ${isRTL ? 'left-2 sm:left-4' : 'right-2 sm:right-4'} top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-2 sm:p-3 rounded-full transition-all duration-300 opacity-60 sm:opacity-0 group-hover:opacity-100 z-10 touch-manipulation`}
+        className={`absolute ${isRTL ? 'left-2 sm:left-4 md:left-6' : 'right-2 sm:right-4 md:right-6'} top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 active:bg-white/40 backdrop-blur-md text-white p-3 sm:p-3 md:p-4 rounded-full transition-all duration-300 opacity-80 sm:opacity-0 group-hover:opacity-100 hover:scale-110 active:scale-95 z-10 touch-manipulation shadow-lg hover:shadow-xl min-w-[44px] min-h-[44px] flex items-center justify-center`}
         aria-label={isRTL ? 'الصورة التالية' : 'Next image'}
       >
-        {isRTL ? <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6" /> : <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6" />}
+        {isRTL ? <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" /> : <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7" />}
       </button>
 
       {/* Play/Pause Button */}

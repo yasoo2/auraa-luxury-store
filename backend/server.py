@@ -692,7 +692,7 @@ async def setup_deployment():
                     "_id": str(uuid.uuid4()),
                     "email": "admin@auraa.com",
                     "first_name": "Admin",
-                    "last_name": "لاكشري",
+                    "last_name": "Luxury",
                     "phone": "+966501234567",
                     "hashed_password": hashed_password,
                     "is_admin": True,

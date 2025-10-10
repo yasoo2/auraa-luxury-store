@@ -68,7 +68,7 @@ const Navbar = () => {
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
             <Link to="/" className="flex flex-col items-start py-1 md:py-2 flex-shrink-0">
               <div className="font-display font-black leading-none flex items-baseline gap-1">
-                <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Lora</span>
+                <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>
                 <span style={{ fontSize: '8px' }} className="sm:text-xs carousel-luxury-text tracking-[0.1em] sm:tracking-[0.25em] whitespace-nowrap">LUXURY</span>
               </div>
               <span className="block text-[7px] sm:text-[9px] md:text-[11px] text-gray-600 tracking-[0.2em] sm:tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>

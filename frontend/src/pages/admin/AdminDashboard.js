@@ -147,6 +147,8 @@ const AdminDashboard = () => {
             <Route path="/products" element={<EnhancedProductsPage />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/aliexpress" element={<AliExpressPage />} />
+            <Route path="/bulk-import" element={<BulkImportPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
             <Route path="/auto-update" element={<AutoUpdatePage />} />

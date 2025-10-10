@@ -23,7 +23,8 @@ const ProductFormModal = ({
   isOpen, 
   onClose, 
   product = null, 
-  onSubmit,
+  onSave,
+  categories = [],
   loading = false 
 }) => {
   const { language } = useLanguage();

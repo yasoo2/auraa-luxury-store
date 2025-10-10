@@ -10,6 +10,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
 import uuid
+import shutil
+import aiofiles
+from PIL import Image
+import io
 from datetime import datetime, timezone, timedelta
 import jwt
 from passlib.context import CryptContext

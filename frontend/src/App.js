@@ -1,3 +1,4 @@
+// Auraa Luxury - Updated Version 2.0
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Helmet, HelmetProvider } from 'react-helmet-async';

@@ -285,7 +285,7 @@ const ProductsPage = () => {
                         <picture>
                           <source srcSet={`${product.images[0]}?format=avif`} type="image/avif" />
                           <source srcSet={`${product.images[0]}?format=webp`} type="image/webp" />
-                          <img src={product.images[0]} alt={product.name} className="w-full h-64 img-product-card group-hover:scale-110 transition-transform duration-500" style={{ aspectRatio: '4 / 3' }} />
+                          <img src={product.images[0]} alt={product.name} className="w-full h-48 sm:h-56 lg:h-64 object-cover group-hover:scale-110 transition-transform duration-500" />
                         </picture>
                       </Link>
                       {product.discount_percentage && (

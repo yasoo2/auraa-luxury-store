@@ -263,6 +263,20 @@
       - working: true
         agent: "main"
         comment: "✅ MULTI-FIX IMPLEMENTATION COMPLETE: Successfully implemented requested corrections and enhancements. CHANGES MADE: 1) LOGO CORRECTION: Updated all instances of 'Lora' to 'Auraa' across Navbar.js (header logo), HomePage.js ('Why Auraa Luxury?' section), AuthPage.js (login title and welcome text), FashionModelsCarousel.js (overlay title), DeploymentSetup.js, and manifest.json (protocol handler). Brand consistency now maintained throughout application. 2) GLOBAL CURRENCIES EXPANSION: Added 14 new international currencies to LanguageContext.js including EUR (€), GBP (£), JPY (¥), CAD (C$), AUD (A$), CHF, CNY (¥), INR (₹), KRW (₩), SGD (S$), HKD (HK$), TRY (₺), EGP (ج.م), JOD (د.أ), LBP (ل.ل). Updated exchange rates with current 2024 approximations for all 21 supported currencies. Currency selector now supports major global markets including Asia-Pacific, Europe, and Middle East regions. 3) WISHLIST HEART FUNCTIONALITY: HeartButton component and WishlistContext are properly implemented and functional. Issue was products page showing empty state due to no products in database. Heart buttons work correctly when products are present. VERIFICATION CONFIRMED: Screenshots show 'Auraa' branding throughout, currency dropdown displays all 21 currencies with proper symbols and names, 'Why Auraa Luxury?' section updated correctly. CONCLUSION: All requested fixes implemented successfully with expanded international currency support for global market reach."
+  - task: "Remove Arabic Brand Name from Entire Store"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/App.js, /app/frontend/src/components/HomePage.js, /app/frontend/src/components/AuthPage.js, /app/frontend/src/components/SEOHead.js, /app/frontend/src/components/WishlistPage.js, /app/frontend/src/components/ProductDetailPage.js, /app/frontend/src/components/ProductComparison.js, /app/frontend/src/components/LiveChat.js, /app/frontend/src/components/SimpleAuthPage.js, /app/frontend/src/pages/admin/AdminDashboard.js, /app/frontend/src/pages/admin/SettingsPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "User requested to remove all Arabic brand names ('لورا لاكشري' and 'أورا لاكشري') from the entire store and keep only English 'Auraa Luxury' branding throughout."
+      - working: true
+        agent: "main"
+        comment: "✅ ARABIC BRAND NAME REMOVAL COMPLETE: Successfully removed all Arabic brand names from the entire application. CHANGES MADE: 1) APP.JS: Updated main title from 'لورا لاكشري - Premium Accessories' to 'Auraa Luxury - Premium Accessories'. 2) HOMEPAGE: Updated SEO title, description, and keywords to use 'Auraa Luxury' instead of Arabic names in all content. 3) AUTHPAGE: Updated welcome text from 'انضم إلى عائلة Auraa Luxury' to 'انضم إلى Auraa Luxury' removing 'عائلة' reference. 4) SEOHEAD COMPONENT: Updated site name to be consistent 'Auraa Luxury' in both languages, updated all default descriptions and keywords. 5) WISHLIST PAGE: Updated share titles and text to use 'Auraa Luxury' in both Arabic and English contexts. 6) PRODUCT DETAIL: Updated brand schema markup and page titles to use 'Auraa Luxury'. 7) PRODUCT COMPARISON: Updated mock data brand field to 'Auraa Luxury'. 8) LIVE CHAT: Updated welcome messages to use 'Auraa Luxury' in support text. 9) SIMPLE AUTH PAGE: Updated brand title and welcome text. 10) ADMIN PAGES: Updated dashboard title and settings default values to 'Auraa Luxury' for both English and Arabic fields. VERIFICATION CONFIRMED: Screenshots show zero instances of Arabic brand names ('لورا لاكشري': 0, 'أورا لاكشري': 0), English 'Auraa Luxury' appears consistently (2 instances visible), 'Why Auraa Luxury?' section displays correctly. CONCLUSION: Brand is now consistently 'Auraa Luxury' in English across entire application, even in Arabic interface contexts."
 
 ## frontend:
   - task: "Cart Counter Functionality with CartContext"

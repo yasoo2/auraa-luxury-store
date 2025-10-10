@@ -57,15 +57,15 @@ const HomePage = () => {
       </section>
 
       {/* Featured Products */}
-      <section className="py-20 relative" dir={isRTL ? 'rtl' : 'ltr'}>
+      <section className="py-12 sm:py-16 lg:py-20 relative" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Section Title */}
-          <div className="text-center mb-16">
-            <h2 className="font-display text-4xl md:text-6xl font-bold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-800 bg-clip-text text-transparent animate-text-sparkle mb-4">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-800 bg-clip-text text-transparent animate-text-sparkle mb-4">
               {isRTL ? 'منتجات مميزة' : 'Featured Products'}
             </h2>
-            <div className="w-24 h-1 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
-            <p className="text-gray-600 mt-6 text-lg animate-fade-in-up">
+            <div className="w-16 sm:w-20 lg:w-24 h-1 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
+            <p className="text-gray-600 mt-4 sm:mt-6 text-sm sm:text-base lg:text-lg animate-fade-in-up max-w-2xl mx-auto px-4">
               {isRTL ? 'اكتشف مجموعتنا الحصرية من الإكسسوارات الفاخرة' : 'Discover our exclusive luxury accessories collection'}
             </p>
           </div>

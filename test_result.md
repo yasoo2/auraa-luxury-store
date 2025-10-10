@@ -454,6 +454,8 @@
     message: "🛒 NEW TASK: Remove Free Shipping Text and Convert Arabic Content - User requested to remove 'Free Shipping' text as this is a dropshipping business, and convert any Arabic 'Why Aura Luxury' content to English to maintain brand consistency."
   - agent: "main"
     message: "💳 NEW TASK: Remove Cash on Delivery Payment Option - User requested to remove COD payment method as this is a dropshipping store that requires upfront payment before ordering from suppliers."
+  - agent: "main"
+    message: "🔧 NEW TASKS: Multiple Fixes Required - 1) Fix logo name from 'Lora' to 'Auraa' (user correction), 2) Fix wishlist heart button functionality in product discovery, 3) Add more global currencies to expand international market support."
   - agent: "testing"
     message: "🎉 MOBILE RESPONSIVE HEADER TESTING COMPLETE - EXCEPTIONAL RESULTS: Executed comprehensive testing of mobile responsive header fixes as requested. RESULTS: ✅ ALL REQUIREMENTS VERIFIED SUCCESSFULLY. Tested across all requested screen sizes (iPhone SE 320px, iPhone XR 414px, iPad 768px, Desktop 1920px) with perfect results. All header components (logo, cart icon with badge, wishlist icon, mobile menu button, admin button) are visible and functional. Mobile menu provides complete access to all functionality including language/currency selector, search, navigation links, and user actions. Admin authentication working perfectly with admin button visible on all screen sizes. No overlapping or cutoff elements detected. Responsive behavior excellent with smooth transitions. Cross-device functionality confirmed working. The mobile responsive header implementation meets and exceeds all testing requirements."
   - agent: "testing"

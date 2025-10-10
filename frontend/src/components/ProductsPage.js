@@ -38,6 +38,9 @@ const ProductsPage = () => {
   const [viewMode, setViewMode] = useState('grid'); // grid, list
   const [showFilters, setShowFilters] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  
+  // RTL detection
+  const isRTL = document.documentElement.dir === 'rtl' || document.documentElement.lang === 'ar';
 
   useEffect(() => {
     setSEO({

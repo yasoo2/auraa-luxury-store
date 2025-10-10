@@ -784,12 +784,13 @@ async def convert_currency_endpoint(
 ):
     """Convert amount between currencies"""
     try:
-        converted = await currency_service.convert_currency(amount, from_currency, to_currency)
+        curr_service = get_currency_service(db)
+        converted = await curr_service.convert_currency(amount, from_currency, to_currency)
         
         if converted is None:
             raise HTTPException(status_code=400, detail="Currency conversion failed")
         
-        formatted_result = await currency_service.format_currency(converted, to_currency, "en")
+        formatted_result = await curr_service.format_currency(converted, to_currency, "en")
         
         return {
             "original_amount": amount,

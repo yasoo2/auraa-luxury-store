@@ -635,9 +635,6 @@ async def initialize_sample_data():
     
     return {"message": f"Initialized {len(products)} sample products"}
 
-# Include the router in the main app
-app.include_router(api_router)
-
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

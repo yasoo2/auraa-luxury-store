@@ -731,7 +731,8 @@ async def trigger_product_sync(
 ):
     """Manually trigger product synchronization"""
     try:
-        products = await product_sync_service.search_products(
+        prod_sync_service = get_product_sync_service(db)
+        products = await prod_sync_service.search_products(
             query=search_query,
             source=source,
             min_price=50.0,  # Minimum for luxury items
@@ -741,7 +742,7 @@ async def trigger_product_sync(
         added_count = 0
         for product_data in products:
             try:
-                await product_sync_service.add_new_product(product_data)
+                await prod_sync_service.add_new_product(product_data)
                 added_count += 1
             except Exception as e:
                 logger.error(f"Error adding product: {str(e)}")

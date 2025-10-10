@@ -414,8 +414,7 @@
   restore_complete: true
 
 ## test_plan:
-  current_focus:
-    - "Remove Cash on Delivery Payment Option"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

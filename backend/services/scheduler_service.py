@@ -315,7 +315,7 @@ class SchedulerService:
                 "message": message,
                 "timestamp": datetime.utcnow(),
                 "server_info": {
-                    "hostname": "auraa-backend",
+                    "hostname": "lora-luxury-backend",
                     "scheduler_version": "1.0"
                 }
             }

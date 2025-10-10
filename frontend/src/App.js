@@ -41,7 +41,7 @@ function App() {
             <Router>
               <div className="App" dir="auto">
                 <Helmet>
-                  <title>Auraa Luxury - Premium Accessories</title>
+                  <title>لورا لاكشري - Premium Accessories</title>
                   <meta name="description" content="Premium luxury accessories for the discerning customer" />
                   <meta name="viewport" content="width=device-width, initial-scale=1" />
                   <link rel="preconnect" href="https://fonts.googleapis.com" />

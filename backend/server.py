@@ -1050,6 +1050,59 @@ async def update_all_product_prices(admin: User = Depends(get_admin_user)):
         logger.error(f"Error updating all prices: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Image Upload Endpoint
+@api_router.post("/admin/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_admin_user)
+):
+    """Upload and process product image"""
+    try:
+        # Check file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Check file size (max 10MB)
+        max_size = 10 * 1024 * 1024  # 10MB
+        file_content = await file.read()
+        if len(file_content) > max_size:
+            raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB")
+        
+        # Generate unique filename
+        file_extension = file.filename.split('.')[-1].lower()
+        if file_extension not in ['jpg', 'jpeg', 'png', 'webp']:
+            raise HTTPException(status_code=400, detail="Invalid file type. Only JPG, PNG, and WebP are allowed")
+        
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        file_path = f"/app/backend/static/uploads/{unique_filename}"
+        
+        # Process and save image
+        image = Image.open(io.BytesIO(file_content))
+        
+        # Convert to RGB if necessary
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Resize image to reasonable dimensions (max 1200px width)
+        max_width = 1200
+        if image.width > max_width:
+            ratio = max_width / image.width
+            new_height = int(image.height * ratio)
+            image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Save optimized image
+        image.save(file_path, format='JPEG', quality=85, optimize=True)
+        
+        # Return the URL
+        image_url = f"/static/uploads/{unique_filename}"
+        
+        logger.info(f"Image uploaded successfully: {unique_filename}")
+        return {"url": image_url, "filename": unique_filename}
+        
+    except Exception as e:
+        logger.error(f"Error uploading image: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on application shutdown"""
@@ -1062,6 +1115,9 @@ async def shutdown_event():
     
     client.close()
     logger.info("لورا لاكشري services shut down successfully")
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
 
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

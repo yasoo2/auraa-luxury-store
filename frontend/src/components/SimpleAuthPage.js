@@ -40,11 +40,14 @@ const SimpleAuthPage = () => {
         result = await register(formData);
       }
       
+      console.log('Login result:', result);
       if (result.success) {
-        toast.success(isLogin ? 'تم تسجيل الدخول بنجاح' : 'تم إنشاء الحساب بنجاح');
+        console.log('Login successful, navigating to:', from);
+        alert('تم تسجيل الدخول بنجاح');
         navigate(from, { replace: true });
       } else {
-        toast.error(result.error || 'حدث خطأ');
+        console.log('Login failed:', result.error);
+        alert(result.error || 'حدث خطأ');
       }
     } catch (error) {
       console.error('Auth error:', error);

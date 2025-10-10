@@ -76,7 +76,7 @@ const SimpleAuthPage = () => {
           <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-bold text-2xl">A</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Auraa Luxury</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">لورا لاكشري</h1>
           <h2 className="text-xl font-semibold text-gray-700 mb-2" data-testid="auth-title">
             {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
           </h2>

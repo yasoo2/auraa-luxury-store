@@ -37,6 +37,7 @@ const ProductsPage = () => {
   const [comparisonProducts, setComparisonProducts] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // grid, list
   const [showFilters, setShowFilters] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     setSEO({

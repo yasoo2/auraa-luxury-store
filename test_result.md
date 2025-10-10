@@ -456,9 +456,9 @@
   restore_complete: true
 
 ## test_plan:
-  current_focus:
-    - "Complete Product Management System"
-  stuck_tasks: []
+  current_focus: []
+  stuck_tasks:
+    - "Complete Product Management System - JS errors need debugging"
   test_all: false
   test_priority: "high_first"
 

@@ -1056,7 +1056,7 @@ async def shutdown_event():
         pass
     
     client.close()
-    logger.info("Auraa Luxury services shut down successfully")
+    logger.info("لورا لاكشري services shut down successfully")
 
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

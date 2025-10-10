@@ -380,7 +380,8 @@
   restore_complete: true
 
 ## test_plan:
-  current_focus: []
+  current_focus:
+    - "Remove Free Shipping Text and Convert Arabic Content to English"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

@@ -417,7 +417,10 @@
   restore_complete: true
 
 ## test_plan:
-  current_focus: []
+  current_focus:
+    - "Fix Logo Name from Lora to Auraa"
+    - "Fix Wishlist Heart Button Functionality" 
+    - "Add More Global Currencies"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

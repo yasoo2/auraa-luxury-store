@@ -1059,8 +1059,20 @@ class AuraaLuxuryAPITester:
         self.test_admin_login()
         self.test_user_profile()
         
-        # NEW INTEGRATION TESTS (Priority)
-        print("\n🔧 INTEGRATION TESTS (NEW FEATURES)")
+        # AUTO-UPDATE API TESTS (Priority for this review)
+        print("\n🔄 AUTO-UPDATE API TESTS (NEW FEATURES)")
+        self.test_auto_update_status()
+        self.test_currency_rates_endpoint()
+        self.test_trigger_currency_update()
+        self.test_convert_currency_endpoint()
+        self.test_sync_products_endpoint()
+        self.test_bulk_import_tasks_endpoint()
+        self.test_scheduled_task_logs_endpoint()
+        self.test_update_all_prices_endpoint()
+        self.test_auto_update_authentication()
+        
+        # INTEGRATION TESTS (Existing)
+        print("\n🔧 INTEGRATION TESTS")
         self.test_admin_integrations_get()
         self.test_admin_integrations_post()
         self.test_integrations_permissions()
@@ -1082,7 +1094,7 @@ class AuraaLuxuryAPITester:
         self.test_order_creation()
         self.test_get_orders()
         
-        # ADMIN DASHBOARD TESTS (Priority for this review)
+        # ADMIN DASHBOARD TESTS
         print("\n🔐 ADMIN DASHBOARD TESTS")
         self.test_admin_product_crud()
         self.test_admin_dashboard_security()

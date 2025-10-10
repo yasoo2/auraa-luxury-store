@@ -308,13 +308,7 @@ const CheckoutPage = () => {
                     </div>
                   )}
                   
-                  {formData.paymentMethod === 'cod' && (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                      <p className="text-amber-800">
-                        💰 سيتم تحصيل المبلغ عند استلام الطلب
-                      </p>
-                    </div>
-                  )}
+                  {/* COD option removed for dropshipping business model */}
                   
                   {formData.paymentMethod === 'bank_transfer' && (
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">

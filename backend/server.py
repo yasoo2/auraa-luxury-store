@@ -1232,6 +1232,9 @@ from services.aliexpress.product_sync import ProductSyncService
 from services.aliexpress.customs_calculator import CustomsCalculator
 from services.aliexpress.scheduler import AliExpressSyncScheduler
 from services.aliexpress.models import AliExpressProduct
+from services.aliexpress.bulk_import import BulkImportService
+from services.aliexpress.category_mapper import CategoryMapper
+from services.geoip_service import GeoIPService
 
 # Initialize AliExpress services
 aliexpress_auth = None

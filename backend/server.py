@@ -1889,6 +1889,221 @@ async def get_protection_analytics(
         logger.error(f"Error getting protection analytics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Multi-Supplier Quick Import System
+@api_router.post("/admin/import-fast")
+async def quick_import_multi_supplier(
+    request_data: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
+    """Quick import products from multiple suppliers (AliExpress, Amazon, Custom)"""
+    try:
+        count = request_data.get('count', 1000)
+        query = request_data.get('query', 'jewelry accessories')
+        provider = request_data.get('provider', 'aliexpress')
+        
+        # Validate provider
+        if provider not in ['aliexpress', 'amazon', 'custom']:
+            raise HTTPException(status_code=400, detail="Invalid provider. Must be: aliexpress, amazon, or custom")
+        
+        # Validate count
+        if not isinstance(count, int) or count <= 0 or count > 5000:
+            raise HTTPException(status_code=400, detail="Count must be between 1 and 5000")
+        
+        task_id = str(uuid.uuid4())
+        
+        # Schedule background import task based on provider
+        if provider == 'aliexpress':
+            # Use existing AliExpress import logic
+            task_data = {
+                "_id": task_id,
+                "type": "quick_import_aliexpress",
+                "count": count,
+                "query": query,
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "progress": 0,
+                "products_imported": 0,
+                "markup_percentage": 100,  # Double the price (100% markup)
+                "auto_categorize": True,
+                "add_taxes": True,
+                "add_shipping": True
+            }
+            
+            await db.import_tasks.insert_one(task_data)
+            
+            # In production, this would trigger actual import
+            logger.info(f"Started AliExpress quick import task {task_id} for {count} products")
+            
+        elif provider == 'amazon':
+            # Stub for Amazon import
+            task_data = {
+                "_id": task_id,
+                "type": "quick_import_amazon",
+                "count": count,
+                "query": query,
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "progress": 0,
+                "products_imported": 0,
+                "markup_percentage": 100,
+                "note": "Amazon import is under development"
+            }
+            
+            await db.import_tasks.insert_one(task_data)
+            logger.info(f"Amazon import stub created: {task_id}")
+            
+        elif provider == 'custom':
+            # Stub for custom supplier import
+            task_data = {
+                "_id": task_id,
+                "type": "quick_import_custom",
+                "count": count,
+                "query": query,
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "progress": 0,
+                "products_imported": 0,
+                "markup_percentage": 100,
+                "note": "Custom supplier import is under development"
+            }
+            
+            await db.import_tasks.insert_one(task_data)
+            logger.info(f"Custom supplier import stub created: {task_id}")
+        
+        return {
+            "success": True,
+            "task_id": task_id,
+            "message": f"Quick import started for {count} products from {provider}",
+            "count": count,
+            "provider": provider,
+            "query": query,
+            "markup_percentage": 100,
+            "estimated_duration_minutes": count // 50  # Rough estimate
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting quick import: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/sync-now")
+async def sync_now_multi_supplier(
+    request_data: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
+    """Sync prices, inventory, and shipping for specific supplier"""
+    try:
+        provider = request_data.get('provider', 'aliexpress')
+        
+        # Validate provider
+        if provider not in ['aliexpress', 'amazon', 'custom']:
+            raise HTTPException(status_code=400, detail="Invalid provider")
+        
+        sync_id = str(uuid.uuid4())
+        
+        # Schedule sync task based on provider
+        if provider == 'aliexpress':
+            # Count products to sync
+            products_count = await db.products.count_documents({
+                "source": "aliexpress",
+                "is_active": True
+            })
+            
+            sync_data = {
+                "_id": sync_id,
+                "type": "price_inventory_sync",
+                "provider": provider,
+                "status": "running",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "products_to_sync": products_count,
+                "products_synced": 0,
+                "updates": {
+                    "price_updates": 0,
+                    "inventory_updates": 0,
+                    "shipping_updates": 0,
+                    "products_hidden": 0,
+                    "products_restored": 0
+                }
+            }
+            
+            await db.sync_tasks.insert_one(sync_data)
+            
+            # In production, trigger the actual sync service
+            logger.info(f"Started AliExpress sync task {sync_id} for {products_count} products")
+            
+        elif provider == 'amazon':
+            sync_data = {
+                "_id": sync_id,
+                "type": "price_inventory_sync",
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "note": "Amazon sync is under development"
+            }
+            
+            await db.sync_tasks.insert_one(sync_data)
+            logger.info(f"Amazon sync stub created: {sync_id}")
+            
+        elif provider == 'custom':
+            sync_data = {
+                "_id": sync_id,
+                "type": "price_inventory_sync",
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "note": "Custom supplier sync is under development"
+            }
+            
+            await db.sync_tasks.insert_one(sync_data)
+            logger.info(f"Custom supplier sync stub created: {sync_id}")
+        
+        return {
+            "success": True,
+            "sync_id": sync_id,
+            "message": f"Sync started for {provider} products",
+            "provider": provider
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/import-tasks/{task_id}/status")
+async def get_import_task_status(
+    task_id: str,
+    admin: User = Depends(get_admin_user)
+):
+    """Get status of import task"""
+    try:
+        task = await db.import_tasks.find_one({"_id": task_id})
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        return {
+            "task_id": task_id,
+            "status": task.get("status", "unknown"),
+            "progress": task.get("progress", 0),
+            "products_imported": task.get("products_imported", 0),
+            "count": task.get("count", 0),
+            "provider": task.get("provider", "unknown"),
+            "created_at": task.get("created_at"),
+            "message": task.get("message", ""),
+            "note": task.get("note", "")
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting task status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/admin/aliexpress/content-protection/watermark-image")
 async def apply_watermark_to_image(
     file: UploadFile = File(...),

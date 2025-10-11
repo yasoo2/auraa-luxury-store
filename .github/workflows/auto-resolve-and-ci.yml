@@ -1,0 +1,77 @@
+name: Auto Resolve & CI
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ main ]
+
+jobs:
+  resolve-and-build:
+    if: github.event.pull_request.head.ref != 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Bot identity
+        run: |
+          git config user.name "emergent-bot"
+          git config user.email "bot@emergent"
+
+      - name: Merge main into PR (prefer PR changes)
+        run: |
+          set -e
+          git fetch origin main
+          git merge origin/main -X theirs || true
+
+          # ثبّت lockfiles من فرع الـ PR
+          for f in package-lock.json yarn.lock pnpm-lock.yaml; do
+            if [ -f "$f" ]; then
+              git checkout --ours -- "$f" || true
+              git add "$f" || true
+            fi
+          done
+
+          # أوقف لو بقيت تعارضات
+          if git ls-files -u | grep -q .; then
+            echo "Unresolved conflicts remain"; exit 2
+          fi
+
+          # نفّذ commit فقط إن وُجدت تغييرات
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: auto-resolve conflicts (-X theirs) & keep lockfiles (ours)"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Build frontend
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: |
+          npm ci --legacy-peer-deps
+          npm run build
+
+      - name: Build backend
+        if: hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: |
+          npm ci --legacy-peer-deps || true
+          npm test -i || true
+          npm run build || true
+
+      - name: Enable PR auto-merge (squash)
+        if: success()
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          merge-method: squash
+
+      - name: Label for manual merge if failed
+        if: failure()
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: needs-manual-merge

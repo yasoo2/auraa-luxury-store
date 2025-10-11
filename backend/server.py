@@ -1234,6 +1234,7 @@ from services.aliexpress.scheduler import AliExpressSyncScheduler
 from services.aliexpress.models import AliExpressProduct
 from services.aliexpress.bulk_import import BulkImportService
 from services.aliexpress.category_mapper import CategoryMapper
+from services.aliexpress.sync_service import AliExpressSyncService
 from services.geoip_service import GeoIPService
 
 # Initialize AliExpress services

@@ -515,6 +515,8 @@
     - "AliExpress API Integration - Product Sync, Shipping, Customs"
     - "Complete Responsive Design for All Devices"
     - "Full Image Optimization"
+    - "Multi-Channel Notifications Implementation"
+    - "Anti-Screenshot & Content Protection"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

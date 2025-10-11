@@ -407,6 +407,7 @@ class ShippingEstimateRequest(BaseModel):
     items: List[ShippingItem]
     preferred: str = "fastest"  # or "cheapest"
     currency: Optional[str] = "SAR"
+    markup_pct: Optional[float] = 0.0
 
 class OrderCreate(BaseModel):
     shipping_address: Dict[str, Any]

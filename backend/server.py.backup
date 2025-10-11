@@ -259,22 +259,41 @@ async def get_products(
         else:
             query["price"] = {"$lte": max_price}
     if search:
+        # Search on all localized fields
         query["$or"] = [
             {"name": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}}
+            {"description": {"$regex": search, "$options": "i"}},
+            {"name_en": {"$regex": search, "$options": "i"}},
+            {"name_ar": {"$regex": search, "$options": "i"}},
+            {"description_en": {"$regex": search, "$options": "i"}},
+            {"description_ar": {"$regex": search, "$options": "i"}}
         ]
     
     products = await db.products.find(query).skip(skip).limit(limit).to_list(length=None)
+
+    # Localize name/description at server side if language provided
+    if language:
+        for p in products:
+            # Arabic
+            if language.startswith('ar'):
+                p['name'] = p.get('name_ar') or p.get('name') or p.get('name_en')
+                p['description'] = p.get('description_ar') or p.get('description') or p.get('description_en')
+            # English
+            elif language.startswith('en'):
+                p['name'] = p.get('name_en') or p.get('name') or p.get('name_ar')
+                p['description'] = p.get('description_en') or p.get('description') or p.get('description_ar')
+            # Other languages fallback to English then default
+            else:
+                p['name'] = p.get('name_en') or p.get('name') or p.get('name_ar')
+                p['description'] = p.get('description_en') or p.get('description') or p.get('description_ar')
     
     # Filter out corrupted products that don't match the schema
     valid_products = []
     for product in products:
         try:
-            # Try to create Product instance to validate
             valid_product = Product(**product)
             valid_products.append(valid_product)
         except Exception as e:
-            # Log the corrupted product for debugging
             logger.warning(f"Skipping corrupted product: {product.get('_id', 'unknown')} - Error: {str(e)}")
             continue
     

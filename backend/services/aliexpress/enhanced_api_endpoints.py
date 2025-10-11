@@ -24,18 +24,28 @@ router = APIRouter(prefix="/api/admin/aliexpress", tags=["aliexpress-admin"])
 
 
 # Initialize services (these would typically be dependency injected)
-async def get_tracking_service() -> OrderTrackingService:
+async def get_tracking_service(db: AsyncSession = Depends(get_db)) -> OrderTrackingService:
     """Get tracking service instance"""
-    # This would be properly injected in production
-    pass
+    from .auth import AliExpressAuthenticator
+    from motor.motor_asyncio import AsyncIOMotorClient
+    
+    # Initialize with proper dependencies
+    auth = AliExpressAuthenticator()
+    # Convert SQLAlchemy session to Motor for this service
+    motor_db = None  # Would need proper motor client here
+    return OrderTrackingService(auth, motor_db)
 
-async def get_notification_service() -> MultiChannelNotificationService:
+async def get_notification_service(db: AsyncSession = Depends(get_db)) -> MultiChannelNotificationService:
     """Get notification service instance"""
-    pass
+    from motor.motor_asyncio import AsyncIOMotorClient
+    motor_db = None  # Would need proper motor client here
+    return MultiChannelNotificationService(motor_db)
 
-async def get_protection_service() -> ContentProtectionService:
+async def get_protection_service(db: AsyncSession = Depends(get_db)) -> ContentProtectionService:
     """Get content protection service instance"""
-    pass
+    from motor.motor_asyncio import AsyncIOMotorClient
+    motor_db = None  # Would need proper motor client here
+    return ContentProtectionService(motor_db)
 
 
 @router.post("/orders/create-dropship")

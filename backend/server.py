@@ -2124,6 +2124,41 @@ async def quick_import_multi_supplier(
             
             # In production, this would trigger actual import
             logger.info(f"Started AliExpress quick import task {task_id} for {count} products")
+            # Kick off background async processing to update progress
+            async def _run_and_track():
+                try:
+                    await db.import_tasks.update_one({"_id": task_id}, {"$set": {"status": "processing", "updated_at": datetime.utcnow()}})
+                    total_target = count
+                    processed_total = 0
+
+                    async def _progress_cb(incr: int):
+                        nonlocal processed_total
+                        processed_total += incr
+                        percent = round((processed_total / total_target) * 100, 2) if total_target > 0 else 0
+                        await db.import_tasks.update_one(
+                            {"_id": task_id},
+                            {"$set": {"products_imported": processed_total, "progress": percent, "updated_at": datetime.utcnow()}}
+                        )
+
+                    # Distribute evenly across categories
+                    categories = category_mapper.get_all_categories()
+                    per_cat = max(1, total_target // len(categories))
+                    remainder = total_target % len(categories)
+
+                    # Import per category with progress callback
+                    for idx, cat in enumerate(categories):
+                        target = per_cat + (1 if idx < remainder else 0)
+                        if target <= 0:
+                            continue
+                        await aliexpress_bulk_import.import_category_products(cat, target, progress_callback=_progress_cb)
+
+                    await db.import_tasks.update_one({"_id": task_id}, {"$set": {"status": "completed", "updated_at": datetime.utcnow()}})
+                except Exception as e:
+                    await db.import_tasks.update_one({"_id": task_id}, {"$set": {"status": "failed", "message": str(e), "updated_at": datetime.utcnow()}})
+
+            import asyncio
+            asyncio.create_task(_run_and_track())
+
             
         elif provider == 'amazon':
             # Stub for Amazon import

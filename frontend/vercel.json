@@ -1,5 +1,7 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "yarn build",
   "outputDirectory": "build",
-  "framework": "create-react-app"
+  "installCommand": "yarn install --frozen-lockfile",
+  "framework": "create-react-app",
+  "devCommand": "yarn start"
 }

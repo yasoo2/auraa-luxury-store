@@ -1785,13 +1785,14 @@ async def estimate_shipping(payload: ShippingEstimateRequest):
             "country": country,
             "preferred": preferred,
             "shipping_cost": {
-                "USD": round(total_shipping_usd, 2),
-                curr: round(total_shipping_converted, 2)
+                "USD": round(total_shipping_usd * (1 + markup_pct/100.0), 2),
+                curr: round(total_shipping_converted * (1 + markup_pct/100.0), 2)
             },
             "estimated_days": {
                 "min": min_days,
                 "max": max_days
-            }
+            },
+            "applied_markup_pct": markup_pct
         }
     except HTTPException:
         raise

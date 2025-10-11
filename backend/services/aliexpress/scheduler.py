@@ -228,13 +228,14 @@ class AliExpressSyncScheduler:
             max_instances=1
         )
         
-        # Daily cleanup of old sync logs (keep 30 days)
+        # Schedule daily maintenance
         self.scheduler.add_job(
-            self.cleanup_old_logs,
-            trigger=CronTrigger(hour=2, minute=0),  # 2 AM daily
-            id='log_cleanup',
-            name='Cleanup Old Sync Logs',
-            replace_existing=True
+            self.daily_maintenance,
+            CronTrigger(hour=2, minute=0),
+            id="daily_maintenance",
+            name="Daily Maintenance",
+            replace_existing=True,
+            max_instances=1
         )
         
         self.scheduler.start()

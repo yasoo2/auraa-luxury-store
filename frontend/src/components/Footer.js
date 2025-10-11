@@ -122,14 +122,20 @@ const Footer = () => {
             © 2024 Auraa Luxury. جميع الحقوق محفوظة.
           </div>
           <div className="flex space-x-4 text-sm">
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              سياسة الخصوصية
+            <a href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'سياسة الخصوصية' : 'Privacy Policy'}
             </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              شروط الاستخدام
+            <a href="/terms-of-service" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'شروط الاستخدام' : 'Terms of Service'}
             </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              سياسة الإرجاع
+            <a href="/return-policy" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'سياسة الإرجاع' : 'Return Policy'}
+            </a>
+            <a href="/contact" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'اتصل بنا' : 'Contact Us'}
+            </a>
+            <a href="/about" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'عنا' : 'About Us'}
             </a>
           </div>
         </div>

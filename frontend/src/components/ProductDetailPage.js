@@ -28,6 +28,20 @@ const ProductDetailPage = () => {
   const [shippingInfo, setShippingInfo] = useState({ loading: true, cost: 0, days: null, error: null });
   const [detectedCountry, setDetectedCountry] = useState('SA');
 
+  const getLocalizedName = (p) => {
+    if (!p) return '';
+    if (language === 'ar') return p.name_ar || p.name || p.name_en || '';
+    if (language === 'en') return p.name_en || p.name || p.name_ar || '';
+    return p.name_en || p.name || p.name_ar || '';
+  };
+
+  const getLocalizedDescription = (p) => {
+    if (!p) return '';
+    if (language === 'ar') return p.description_ar || p.description || p.description_en || '';
+    if (language === 'en') return p.description_en || p.description || p.description_ar || '';
+    return p.description_en || p.description || p.description_ar || '';
+  };
+
   useEffect(() => {
     fetchProduct();
   }, [id]);
@@ -41,7 +55,7 @@ const ProductDetailPage = () => {
       estimateShippingSingle();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product, detectedCountry, currency]);
+  }, [product, detectedCountry, currency, language]);
 
   const injectJSONLD = (p) => {
     if (typeof document === 'undefined') return;
@@ -50,9 +64,9 @@ const ProductDetailPage = () => {
     const data = {
       '@context': 'https://schema.org',
       '@type': 'Product',
-      name: p.name,
+      name: getLocalizedName(p),
       image: p.images,
-      description: p.description,
+      description: getLocalizedDescription(p),
       brand: { '@type': 'Brand', name: 'Auraa Luxury' },
       offers: {
         '@type': 'Offer',
@@ -84,8 +98,8 @@ const ProductDetailPage = () => {
       setRelatedProducts(relatedResponse.data.filter(p => p.id !== response.data.id));
       setLoading(false);
       setSEO({
-        title: `${response.data.name} | Auraa Luxury`,
-        description: response.data.description?.slice(0, 150),
+        title: `${getLocalizedName(response.data)} | Auraa Luxury`,
+        description: getLocalizedDescription(response.data)?.slice(0, 150),
         canonical: `https://www.auraaluxury.com/product/${response.data.id}`,
         ogImage: response.data.images?.[0]
       });
@@ -167,7 +181,7 @@ const ProductDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 mb-8 text-sm">
@@ -175,7 +189,7 @@ const ProductDetailPage = () => {
           <span className="text-gray-500">/</span>
           <Link to="/products" className="text-amber-600 hover:text-amber-700">{isRTL ? 'المنتجات' : 'Products'}</Link>
           <span className="text-gray-500">/</span>
-          <span className="text-gray-900 font-medium">{product.name}</span>
+          <span className="text-gray-900 font-medium">{getLocalizedName(product)}</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -185,7 +199,7 @@ const ProductDetailPage = () => {
               <picture>
                 <source srcSet={`${product.images[selectedImage]}?format=avif`} type="image/avif" />
                 <source srcSet={`${product.images[selectedImage]}?format=webp`} type="image/webp" />
-                <img src={product.images[selectedImage]} alt={product.name} className="w-full h-96 lg:h-[500px] img-product-card" data-testid="product-main-image" style={{ aspectRatio: '4 / 3' }} />
+                <img src={product.images[selectedImage]} alt={getLocalizedName(product)} className="w-full h-96 lg:h-[500px] img-product-card" data-testid="product-main-image" style={{ aspectRatio: '4 / 3' }} />
               </picture>
             </Card>
             {product.images.length > 1 && (
@@ -195,7 +209,7 @@ const ProductDetailPage = () => {
                     <picture>
                       <source srcSet={`${image}?format=avif`} type="image/avif" />
                       <source srcSet={`${image}?format=webp`} type="image/webp" />
-                      <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full img-product-card" />
+                      <img src={image} alt={`${getLocalizedName(product)} ${index + 1}`} className="w-full h-full img-product-card" />
                     </picture>
                   </button>
                 ))}
@@ -206,7 +220,7 @@ const ProductDetailPage = () => {
           {/* Product Info */}
           <div className="space-y-6">
             <div>
-              <h1 className="font-display text-3xl lg:text-4xl font-bold text-gray-900 mb-4" data-testid="product-title">{product.name}</h1>
+              <h1 className="font-display text-3xl lg:text-4xl font-bold text-gray-900 mb-4" data-testid="product-title">{getLocalizedName(product)}</h1>
               <div className="flex items-center mb-4">
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
@@ -243,7 +257,7 @@ const ProductDetailPage = () => {
             {/* Description */}
             <div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">{isRTL ? 'الوصف' : 'Description'}</h3>
-              <p className="text-gray-700 leading-relaxed" data-testid="product-description">{product.description}</p>
+              <p className="text-gray-700 leading-relaxed" data-testid="product-description">{getLocalizedDescription(product)}</p>
             </div>
 
             {/* Quantity & Actions */}
@@ -327,14 +341,14 @@ const ProductDetailPage = () => {
                       <picture>
                         <source srcSet={`${relatedProduct.images[0]}?format=avif`} type="image/avif" />
                         <source srcSet={`${relatedProduct.images[0]}?format=webp`} type="image/webp" />
-                        <img src={relatedProduct.images[0]} alt={relatedProduct.name} className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500" />
+                        <img src={relatedProduct.images[0]} alt={getLocalizedName(relatedProduct)} className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500" />
                       </picture>
                       {relatedProduct.discount_percentage && (
                         <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">-{relatedProduct.discount_percentage}%</div>
                       )}
                     </div>
                     <div className="p-4">
-                      <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2">{relatedProduct.name}</h3>
+                      <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2">{getLocalizedName(relatedProduct)}</h3>
                       <div className="flex items-center justify-between">
                         <span className="text-lg font-bold text-amber-600">{relatedProduct.price} {isRTL ? 'ر.س' : 'SAR'}</span>
                         <div className="flex items-center">

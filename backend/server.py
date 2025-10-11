@@ -1517,6 +1517,202 @@ async def trigger_immediate_sync():
         logger.error(f"Error triggering sync: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Bulk Import Endpoints
+@api_router.post("/aliexpress/bulk-import")
+async def bulk_import_products(count: int = Query(default=1000, le=1000)):
+    """
+    🚀 Quick Import: Import up to 1000 products from AliExpress.
+    
+    Args:
+        count: Number of products to import (max 1000)
+        
+    Returns:
+        Import statistics with breakdown by category
+    """
+    if not aliexpress_bulk_import:
+        raise HTTPException(status_code=503, detail="Bulk import service not available")
+    
+    # Check feature flag
+    if os.getenv('FEATURE_ALI_IMPORT', 'false').lower() != 'true':
+        raise HTTPException(status_code=403, detail="Bulk import feature is disabled")
+    
+    try:
+        logger.info(f"Starting bulk import of {count} products")
+        
+        results = await aliexpress_bulk_import.bulk_import(total_count=count)
+        
+        return {
+            "success": True,
+            "message": f"Bulk import completed: {results['total_imported']} products imported",
+            "statistics": results
+        }
+    
+    except Exception as e:
+        logger.error(f"Bulk import failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/external-products")
+async def get_external_products(
+    source: Optional[str] = None,
+    category: Optional[str] = None,
+    pushed: Optional[bool] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """
+    Get external products (not yet in store).
+    
+    Args:
+        source: Filter by source ('aliexpress')
+        category: Filter by category
+        pushed: Filter by pushed_to_store status
+        skip: Pagination skip
+        limit: Pagination limit
+        
+    Returns:
+        List of external products with pagination
+    """
+    try:
+        # Build filter
+        filter_query = {}
+        if source:
+            filter_query['source'] = source
+        if category:
+            filter_query['category'] = category
+        if pushed is not None:
+            filter_query['pushed_to_store'] = pushed
+        
+        # Get total count
+        total = await db.external_products.count_documents(filter_query)
+        
+        # Get products
+        cursor = db.external_products.find(filter_query).skip(skip).limit(limit)
+        products = await cursor.to_list(length=limit)
+        
+        # Remove MongoDB _id
+        for product in products:
+            product['_id'] = str(product['_id'])
+        
+        return {
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "products": products
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching external products: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/push-to-store")
+async def push_products_to_store(product_ids: List[str]):
+    """
+    Push selected external products to main store.
+    
+    Args:
+        product_ids: List of external product IDs to push
+        
+    Returns:
+        Push statistics
+    """
+    if not aliexpress_bulk_import:
+        raise HTTPException(status_code=503, detail="Bulk import service not available")
+    
+    try:
+        profit_margin = float(os.getenv('MIN_PROFIT_MARGIN', '0.20'))
+        
+        results = await aliexpress_bulk_import.push_to_store(
+            product_ids,
+            profit_margin=profit_margin
+        )
+        
+        return {
+            "success": True,
+            "message": f"Pushed {results['pushed']} products to store",
+            "statistics": results
+        }
+    
+    except Exception as e:
+        logger.error(f"Error pushing to store: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/import-logs")
+async def get_import_logs(limit: int = 10):
+    """
+    Get recent import logs.
+    
+    Args:
+        limit: Number of logs to retrieve
+        
+    Returns:
+        List of import logs
+    """
+    try:
+        cursor = db.import_logs.find().sort('start_time', -1).limit(limit)
+        logs = await cursor.to_list(length=limit)
+        
+        for log in logs:
+            log['_id'] = str(log['_id'])
+        
+        return {
+            "total": len(logs),
+            "logs": logs
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching import logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# GeoIP and Country-specific Pricing
+@api_router.get("/geo/detect")
+async def detect_user_country(request: Request):
+    """
+    Detect user's country from IP and provide configuration.
+    
+    Returns:
+        Country code and configuration
+    """
+    if not geoip_service:
+        raise HTTPException(status_code=503, detail="GeoIP service not available")
+    
+    try:
+        # Get client IP
+        client_ip = request.client.host
+        
+        # Detect country
+        country_code = await geoip_service.detect_country_from_ip(client_ip)
+        
+        # Get country config
+        config = geoip_service.get_country_config(country_code)
+        
+        return {
+            "country_code": country_code,
+            "config": config,
+            "detected_from": "ip"
+        }
+    
+    except Exception as e:
+        logger.error(f"Error detecting country: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/geo/countries")
+async def get_supported_countries():
+    """Get list of all supported GCC countries."""
+    if not geoip_service:
+        raise HTTPException(status_code=503, detail="GeoIP service not available")
+    
+    try:
+        countries = geoip_service.get_all_gcc_countries()
+        configs = {code: geoip_service.get_country_config(code) for code in countries}
+        
+        return {
+            "countries": configs
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching countries: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
 

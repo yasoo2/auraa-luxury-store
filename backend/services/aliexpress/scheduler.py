@@ -208,22 +208,22 @@ class AliExpressSyncScheduler:
     def start_scheduler(self):
         """Start the scheduler with configured jobs."""
         
-        # Full product sync every 10 minutes
+        # Schedule main sync jobs - Every 10 minutes for fast updates
         self.scheduler.add_job(
             self.sync_all_products,
-            trigger=IntervalTrigger(minutes=self.sync_interval),
-            id='full_product_sync',
-            name='Full Product Synchronization',
+            IntervalTrigger(minutes=10),  # Changed to 10 minutes
+            id="sync_all_products",
+            name="Sync All Products (10min)",
             replace_existing=True,
-            max_instances=1  # Prevent overlapping executions
+            max_instances=1
         )
         
-        # Price-only sync every 5 minutes
+        # Schedule price/inventory sync - Every 5 minutes for critical updates
         self.scheduler.add_job(
-            self.sync_product_prices,
-            trigger=IntervalTrigger(minutes=5),
-            id='price_sync',
-            name='Price Update',
+            self.quick_price_sync,
+            IntervalTrigger(minutes=5),
+            id="quick_price_sync",
+            name="Quick Price & Inventory Sync (5min)",
             replace_existing=True,
             max_instances=1
         )

@@ -143,7 +143,7 @@ const QuickImportPage = () => {
 
       if (response.data.success) {
         alert(isRTL ? `تم بدء استيراد ${importCount} منتج بنجاح!` : `Successfully started importing ${importCount} products!`);
-        setImportProgress(response.data.task_id);
+        setImportProgress({ job_id: response.data.task_id, status: 'pending', percent: 0 });
         await loadExternalProducts();
       } else {
         alert(isRTL ? 'فشل في بدء الاستيراد' : 'Failed to start import');

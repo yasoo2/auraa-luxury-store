@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { setSEO } from '../utils/seo';
 import { useCart } from '../context/CartContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -15,15 +16,32 @@ const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { currency, language } = useLanguage();
+  const isRTL = language === 'ar' || language === 'he';
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [relatedProducts, setRelatedProducts] = useState([]);
 
+  const [shippingInfo, setShippingInfo] = useState({ loading: true, cost: 0, days: null, error: null });
+  const [detectedCountry, setDetectedCountry] = useState('SA');
+
   useEffect(() => {
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    detectCountry();
+  }, []);
+
+  useEffect(() => {
+    if (product && detectedCountry) {
+      estimateShippingSingle();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product, detectedCountry, currency]);
 
   const injectJSONLD = (p) => {
     if (typeof document === 'undefined') return;
@@ -48,6 +66,16 @@ const ProductDetailPage = () => {
     document.head.appendChild(script);
   };
 
+  const detectCountry = async () => {
+    try {
+      const res = await fetch(`${API}/geo/detect`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.country_code) setDetectedCountry(data.country_code);
+      }
+    } catch (e) { /* silent */ }
+  };
+
   const fetchProduct = async () => {
     try {
       const response = await axios.get(`${API}/products/${id}`);
@@ -64,21 +92,50 @@ const ProductDetailPage = () => {
       injectJSONLD(response.data);
     } catch (error) {
       console.error('Error fetching product:', error);
-      toast.error('فشل في تحميل المنتج');
+      toast.error(isRTL ? 'فشل في تحميل المنتج' : 'Failed to load product');
       navigate('/products');
+    }
+  };
+
+  const estimateShippingSingle = async () => {
+    try {
+      setShippingInfo({ loading: true, cost: 0, days: null, error: null });
+      const payload = {
+        country_code: detectedCountry,
+        preferred: 'fastest',
+        currency: currency || 'SAR',
+        markup_pct: 10,
+        items: [{ product_id: id, quantity: 1 }]
+      };
+      const res = await fetch(`${API}/shipping/estimate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.status === 400) {
+        setShippingInfo({ loading: false, cost: 0, days: null, error: 'unavailable' });
+        return;
+      }
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      const cost = data?.shipping_cost?.[currency] ?? 0;
+      const days = data?.estimated_days || null;
+      setShippingInfo({ loading: false, cost, days, error: null });
+    } catch (e) {
+      setShippingInfo({ loading: false, cost: 0, days: null, error: 'server' });
     }
   };
 
   const handleAddToCart = async () => {
     const result = await addToCart(product.id, quantity);
     if (result.success) {
-      toast.success(`تم إضافة ${quantity} قطعة إلى السلة`);
+      toast.success(isRTL ? `تم إضافة ${quantity} قطعة إلى السلة` : `${quantity} item(s) added to cart`);
     } else {
       if (result.error.includes('Authentication')) {
-        toast.error('يجب تسجيل الدخول أولاً');
+        toast.error(isRTL ? 'يجب تسجيل الدخول أولاً' : 'Please login first');
         navigate('/auth');
       } else {
-        toast.error(result.error || 'فشل في إضافة المنتج إلى السلة');
+        toast.error(result.error || (isRTL ? 'فشل في إضافة المنتج إلى السلة' : 'Failed to add to cart'));
       }
     }
   };
@@ -102,8 +159,8 @@ const ProductDetailPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">المنتج غير موجود</h2>
-          <Link to="/products"><Button className="btn-luxury">العودة للمنتجات</Button></Link>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{isRTL ? 'المنتج غير موجود' : 'Product not found'}</h2>
+          <Link to="/products"><Button className="btn-luxury">{isRTL ? 'العودة للمنتجات' : 'Back to Products'}</Button></Link>
         </div>
       </div>
     );
@@ -114,9 +171,9 @@ const ProductDetailPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 mb-8 text-sm">
-          <Link to="/" className="text-amber-600 hover:text-amber-700">الرئيسية</Link>
+          <Link to="/" className="text-amber-600 hover:text-amber-700">{isRTL ? 'الرئيسية' : 'Home'}</Link>
           <span className="text-gray-500">/</span>
-          <Link to="/products" className="text-amber-600 hover:text-amber-700">المنتجات</Link>
+          <Link to="/products" className="text-amber-600 hover:text-amber-700">{isRTL ? 'المنتجات' : 'Products'}</Link>
           <span className="text-gray-500">/</span>
           <span className="text-gray-900 font-medium">{product.name}</span>
         </nav>
@@ -156,29 +213,43 @@ const ProductDetailPage = () => {
                     <Star key={i} className={`h-5 w-5 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
                   ))}
                 </div>
-                <span className="text-lg text-gray-600 mr-3">({product.reviews_count} تقييم)</span>
+                <span className="text-lg text-gray-600 mr-3">({product.reviews_count} {isRTL ? 'تقييم' : 'reviews'})</span>
               </div>
-              <div className="flex items-center space-x-4 mb-6">
-                <span className="price-highlight text-4xl font-bold text-amber-600" data-testid="product-price">{product.price} ر.س</span>
+              <div className="flex items-center space-x-4 mb-3">
+                <span className="price-highlight text-4xl font-bold text-amber-600" data-testid="product-price">{product.price} {isRTL ? 'ر.س' : 'SAR'}</span>
                 {product.original_price && (
                   <div className="flex items-center space-x-2">
-                    <span className="text-2xl text-gray-500 line-through">{product.original_price} ر.س</span>
-                    <span className="bg-red-500 text-white px-2 py-1 rounded-full text-sm font-bold">وفر {product.discount_percentage}%</span>
+                    <span className="text-2xl text-gray-500 line-through">{product.original_price} {isRTL ? 'ر.س' : 'SAR'}</span>
+                    <span className="bg-red-500 text-white px-2 py-1 rounded-full text-sm font-bold">{isRTL ? 'وفر' : 'Save'} {product.discount_percentage}%</span>
                   </div>
+                )}
+              </div>
+              {/* Shipping quick estimate */}
+              <div className="flex items-center text-sm text-gray-700">
+                <Truck className="h-4 w-4 ml-2 text-amber-600" />
+                {shippingInfo.loading ? (
+                  <span>{isRTL ? 'حساب الشحن...' : 'Estimating shipping...'}</span>
+                ) : shippingInfo.error === 'unavailable' ? (
+                  <span>{isRTL ? 'الشحن غير متاح لبلدك' : 'Shipping not available for your country'}</span>
+                ) : (
+                  <span>
+                    {isRTL ? 'الشحن التقديري:' : 'Estimated shipping:'} {shippingInfo.cost.toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
+                    {shippingInfo.days ? ` • ${isRTL ? 'المدة' : 'ETA'}: ${shippingInfo.days.min ?? '?'}-${shippingInfo.days.max ?? '?'} ${isRTL ? 'أيام' : 'days'}` : ''}
+                  </span>
                 )}
               </div>
             </div>
 
             {/* Description */}
             <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">الوصف</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">{isRTL ? 'الوصف' : 'Description'}</h3>
               <p className="text-gray-700 leading-relaxed" data-testid="product-description">{product.description}</p>
             </div>
 
             {/* Quantity & Actions */}
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
-                <label className="text-lg font-medium text-gray-900">الكمية:</label>
+                <label className="text-lg font-medium text-gray-900">{isRTL ? 'الكمية:' : 'Quantity:'}</label>
                 <div className="flex items-center border border-gray-300 rounded-lg">
                   <button onClick={() => quantity > 1 && setQuantity(quantity - 1)} className="p-2 hover:bg-gray-100 transition-colors" disabled={quantity <= 1} data-testid="quantity-decrease">
                     <Minus className="h-4 w-4" />
@@ -188,15 +259,15 @@ const ProductDetailPage = () => {
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
-                <span className="text-sm text-gray-600">({product.stock_quantity} متوفر)</span>
+                <span className="text-sm text-gray-600">({product.stock_quantity} {isRTL ? 'متوفر' : 'in stock'})</span>
               </div>
 
               <div className="flex space-x-4">
                 <Button onClick={handleAddToCart} className="btn-luxury flex-1" data-testid="add-to-cart-button">
                   <ShoppingCart className="h-5 w-5 ml-2" />
-                  أضف إلى السلة
+                  {isRTL ? 'أضف إلى السلة' : 'Add to Cart'}
                 </Button>
-                <Button onClick={buyNow} variant="outline" className="flex-1 border-amber-600 text-amber-600 hover:bg-amber-50" data-testid="buy-now-button">اشتري الآن</Button>
+                <Button onClick={buyNow} variant="outline" className="flex-1 border-amber-600 text-amber-600 hover:bg-amber-50" data-testid="buy-now-button">{isRTL ? 'اشتري الآن' : 'Buy Now'}</Button>
                 <Button variant="outline" size="icon" className="border-gray-300"><Heart className="h-5 w-5" /></Button>
               </div>
             </div>
@@ -206,22 +277,30 @@ const ProductDetailPage = () => {
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
                 <Truck className="h-6 w-6 text-amber-600 ml-3" />
                 <div>
-                  <div className="font-medium text-gray-900">توصيل سريع</div>
-                  <div className="text-sm text-gray-600">3-7 أيام عمل</div>
+                  <div className="font-medium text-gray-900">{isRTL ? 'توصيل سريع' : 'Fast Delivery'}</div>
+                  <div className="text-sm text-gray-600">
+                    {shippingInfo.days ? (
+                      <span>
+                        {isRTL ? 'تقدير: ' : 'ETA: '} {shippingInfo.days.min ?? '?'} - {shippingInfo.days.max ?? '?'} {isRTL ? 'أيام' : 'days'}
+                      </span>
+                    ) : (
+                      <span>{isRTL ? '3-7 أيام عمل' : '3-7 business days'}</span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
                 <Shield className="h-6 w-6 text-amber-600 ml-3" />
                 <div>
-                  <div className="font-medium text-gray-900">ضمان الجودة</div>
-                  <div className="text-sm text-gray-600">ضمان سنة كاملة</div>
+                  <div className="font-medium text-gray-900">{isRTL ? 'ضمان الجودة' : 'Quality Guarantee'}</div>
+                  <div className="text-sm text-gray-600">{isRTL ? 'ضمان سنة كاملة' : '1-year full warranty'}</div>
                 </div>
               </div>
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
                 <RotateCcw className="h-6 w-6 text-amber-600 ml-3" />
                 <div>
-                  <div className="font-medium text-gray-900">سياسة الإرجاع</div>
-                  <div className="text-sm text-gray-600">خلال 30 يوم</div>
+                  <div className="font-medium text-gray-900">{isRTL ? 'سياسة الإرجاع' : 'Return Policy'}</div>
+                  <div className="text-sm text-gray-600">{isRTL ? 'خلال 30 يوم' : 'Within 30 days'}</div>
                 </div>
               </div>
             </div>
@@ -229,8 +308,8 @@ const ProductDetailPage = () => {
             {/* External Link */}
             {product.external_url && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm text-amber-800 mb-2">هذا المنتج متوفر أيضاً في:</p>
-                <a href={product.external_url} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:text-amber-700 font-medium underline">المتجر الأصلي</a>
+                <p className="text-sm text-amber-800 mb-2">{isRTL ? 'هذا المنتج متوفر أيضاً في:' : 'This product is also available at:'}</p>
+                <a href={product.external_url} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:text-amber-700 font-medium underline">{isRTL ? 'المتجر الأصلي' : 'Original Store'}</a>
               </div>
             )}
           </div>
@@ -239,7 +318,7 @@ const ProductDetailPage = () => {
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div className="mt-16">
-            <h2 className="font-display text-3xl font-bold text-gray-900 mb-8 text-center">منتجات ذات صلة</h2>
+            <h2 className="font-display text-3xl font-bold text-gray-900 mb-8 text-center">{isRTL ? 'منتجات ذات صلة' : 'Related Products'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => (
                 <Link key={relatedProduct.id} to={`/product/${relatedProduct.id}`}>
@@ -257,7 +336,7 @@ const ProductDetailPage = () => {
                     <div className="p-4">
                       <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2">{relatedProduct.name}</h3>
                       <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-amber-600">{relatedProduct.price} ر.س</span>
+                        <span className="text-lg font-bold text-amber-600">{relatedProduct.price} {isRTL ? 'ر.س' : 'SAR'}</span>
                         <div className="flex items-center">
                           <Star className="h-4 w-4 text-yellow-400 fill-current ml-1" />
                           <span className="text-sm text-gray-600">{relatedProduct.rating}</span>

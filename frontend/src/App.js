@@ -26,6 +26,13 @@ import Footer from './components/Footer';
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 
+// Legal and Info Pages
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import ReturnPolicy from './pages/ReturnPolicy';
+import ContactUs from './pages/ContactUs';
+import AboutUs from './pages/AboutUs';
+
 // UI Components
 import { Toaster } from './components/ui/sonner';
 

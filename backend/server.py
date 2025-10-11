@@ -877,7 +877,6 @@ from services.currency_service import get_currency_service
 from services.scheduler_service import get_scheduler_service
 from services.product_sync_service import get_product_sync_service
 from services.aliexpress_service import get_aliexpress_service
-from fastapi import UploadFile, File
 
 # Auto-Update Services Initialization
 currency_service = None
@@ -969,7 +968,7 @@ async def trigger_product_sync(
                 continue
         
         return {
-            "message": f"Product sync completed",
+            "message": "Product sync completed",
             "products_found": len(products),
             "products_added": added_count,
             "source": source

@@ -1728,6 +1728,7 @@ async def estimate_shipping(payload: ShippingEstimateRequest):
             preferred = "fastest"
 
         total_shipping_usd = 0.0
+        markup_pct = float(payload.markup_pct or os.getenv('SHIPPING_MARKUP_PCT', 0))
         min_days = None
         max_days = None
         unavailable_products = []

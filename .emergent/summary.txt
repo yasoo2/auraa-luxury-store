@@ -1,326 +1,90 @@
 <analysis>
-The AI engineer successfully enhanced the Auraa Luxury e-commerce application, focusing initially on responsive design and critical bug fixes. Key achievements include improving carousel and product page responsiveness, implementing click outside for dropdowns, and fixing Admin Dashboard access and  import issues. A significant portion of the work addressed persistent Vercel deployment and preview environment caching problems, which, despite local fixes and multiple attempts, required user intervention for Save to GitHub. The most recent, substantial effort involved a multi-phase implementation of a comprehensive AliExpress dropshipping integration, encompassing backend services for price/shipping/tax, DB schema, initial API endpoints, scheduler setup, and a basic Admin UI for quick import. The trajectory concludes with the user providing a vastly expanded specification for the dropshipping suite, including tracking, multi-channel notifications, and content protection.
+The AI engineer's work in this trajectory can be divided into several phases. Initially, the focus was on critical UI fixes and backend stability, specifically addressing a perceived wishlist issue (which was later found to be due to empty product data) and fixing Admin Dashboard access after login. A significant portion involved responding to an expanded user specification for AliExpress dropshipping integration, which included multi-supplier support, enhanced import/sync logic, and dedicated admin UI elements. A notable deviation occurred where the AI engineer implemented a comprehensive auto-merge and CI/CD GitHub Actions setup, seemingly for internal process improvement, without explicit user instruction in the current feature development cycle. Post-CI/CD, the user requested a review for public launch, leading to the prioritization of essential non-payment related features, specifically legal pages and order tracking. The trajectory concludes with the AI engineer actively adding routes for the newly created customer-facing order tracking page.
 </analysis>
 
 <product_requirements>
-Auraa Luxury is a high-end dropshipping e-commerce platform for accessories. The vision emphasizes a luxurious UI, full multi-language (Arabic/English, GCC focus) and multi-currency support (22 global currencies) with dynamic RTL/LTR, and comprehensive responsive design across all devices. Core features include a full-width image carousel, a robust Admin Suite for product/order/user CRUD, analytics, and integrations. Advanced functionalities like AI search, smart recommendations, product comparison, PWA, live chat, and wishlist are feature-flagged. The brand name is Auraa Luxury. Free Shipping and Cash on Delivery were removed.
-Current implementations include a refined authentication page, automatic currency conversion, and an automated CI/CD pipeline. Significant work has focused on responsive design for the homepage, product pages, and carousel, and setting up a full AliExpress dropshipping integration with automatic price/stock/shipping synchronization, country-specific pricing, VAT, and a Quick Import Admin UI, as per a detailed specification from the user.
+Auraa Luxury is a high-end dropshipping e-commerce platform for accessories, emphasizing a luxurious UI, full multi-language (Arabic/English, GCC focus) and multi-currency support with dynamic RTL/LTR, and comprehensive responsive design. Core features include a full-width image carousel, a robust Admin Suite for product/order/user CRUD, analytics, and integrations. Advanced functionalities like AI search, smart recommendations, product comparison, PWA, and live chat are feature-flagged. The platform aims to hide product sourcing details from customers and be multi-supplier ready.
+
+**Implemented So Far:**
+- Refined authentication page, automatic currency conversion, automated CI/CD pipeline (internally implemented).
+- Responsive design for homepage, product pages, carousel.
+- Full AliExpress dropshipping integration with:
+    - Automatic price/stock/shipping synchronization (every 10 minutes).
+    - Country-specific pricing, VAT.
+    - Quick Import Admin UI with supplier type selection (AliExpress, Amazon, Custom).
+    - Automatic import of 1000 products (default) with images, specs, 100% price markup, tax, customs, and shipping time.
+    - Backend API endpoints for import () and sync () supporting a  parameter.
+- Wishlist functionality (heart icon) on product listings.
+- Admin Dashboard accessibility and authentication.
+- Basic legal pages (Privacy Policy, Terms of Service, Return Policy, Contact Us).
+- Customer Order Tracking page.
 </product_requirements>
 
 <key_technical_concepts>
--   **Full-Stack:** React (frontend), FastAPI (backend).
--   **Database:** MongoDB with .
--   **UI/Styling:** Shadcn UI, Tailwind CSS, React Context API.
--   **Routing:** , Craco.
--   **Deployment:** Vercel (frontend), GitHub Actions.
--   **Internationalization:** Custom , RTL/LTR support.
--   **Automation:** APScheduler for backend tasks.
--   **Image Handling:** , .
--   **API Client:** ,  for external APIs.
--   **Integrations:** AliExpress API (HMAC/MD5 signing), SendGrid, Twilio (planned).
+- **Full-Stack:** React (frontend), FastAPI (backend).
+- **Database:** MongoDB with .
+- **UI/Styling:** Shadcn UI, Tailwind CSS, React Context API.
+- **Routing:** , Craco.
+- **Deployment:** Vercel (frontend), GitHub Actions (CI/CD auto-merge).
+- **Internationalization:** Custom , RTL/LTR support.
+- **Automation:** APScheduler for backend tasks.
+- **API Client:** ,  for external APIs.
+- **Integrations:** AliExpress API (HMAC/MD5 signing), SendGrid, Twilio (planned).
 </key_technical_concepts>
 
 <code_architecture>
 
 
 **File Summaries and Changes:**
-
-*   ****: Core FastAPI app. Modified to include new AliExpress-related services and API endpoints (, , , , ).  import was added.
-*   ****: New directory to encapsulate AliExpress integration logic.
-    *   ****: Handles AliExpress API authentication.
-    *   ****: Defines Pydantic models for AliExpress data.
-    *   ****: Updated to schedule periodic price/stock/shipping synchronization using the new .
-    *   ****: New service for mapping AliExpress categories to internal store categories.
-    *   ****: New service for detecting user country from IP (or preferred country).
-    *   ****: New service for initial bulk product import.
-    *   ****: New service responsible for mapping raw AliExpress product data to internal  schema, applying pricing rules (markup, minimum profit), and sanitizing data.
-    *   ****: New comprehensive service combining logic for bulk import, periodic synchronization of prices, stock, and shipping, and handling product publishing status.
-*   ****: Updated with AliExpress API credentials (, , ) and new pricing/tax/sync configuration variables (e.g., , , , , , ). Also includes new notification keys (, , etc.).
-*   ****: Updated to include , , , , , .
-*   ****: Minor modification (comment added) for Vercel rebuild attempts.
-*   ****: Modified to improve responsiveness of navigation buttons, play/pause controls, slide indicators, and carousel height for mobile devices.
-*   ****: Fixed duplicate variable declarations (, ) to resolve JavaScript errors. Enhanced responsive design for product listings.
-*   ****: Enhanced responsiveness of main hero section and Why Auraa Luxury section.
-*   ****: Implemented  with  to close dropdowns automatically when a click occurs outside the component.
-*   ****: Fixed  error by adding missing  and  imports from . Added authentication check () to redirect unauthenticated users from admin routes. Integrated  with a new navigation link and route.
-*   ** (NEW)**: Created as the Admin UI for AliExpress quick import and synchronization, including input fields for count/query, Quick Import and Sync Now buttons, and a status area.
-*   ****: Updated to include feature flags , , .
-*   ** (NEW)**: Configuration file for Craco, used to customize Create React App build process.
-*   ****: Updated scripts to use Craco, added Craco and necessary dependencies, and set Node engine version.
-*   ****: Updated to correctly configure Vercel for a Create React App using yarn run v1.22.22
-$ cd frontend && npm install && npm run build
-
-up to date, audited 1475 packages in 4s
-
-276 packages are looking for funding
-  run `npm fund` for details
-
-10 vulnerabilities (4 moderate, 6 high)
-
-To address all issues (including breaking changes), run:
-  npm audit fix --force
-
-Run `npm audit` for details.
-
-> auraa-frontend@1.0.0 build
-> craco build
-
-Creating an optimized production build...
-Compiled with warnings.
-
-[eslint] 
-src/App.js
-  Line 33:10:  'FEATURE_MULTI_LANG_EXTENDED' is defined but never used  no-unused-vars
-  Line 33:39:  'FEATURE_PWA_SUPPORT' is defined but never used          no-unused-vars
-  Line 33:60:  'FEATURE_LIVE_CHAT' is defined but never used            no-unused-vars
-
-src/components/AdvancedSearch.js
-  Line 7:3:    'Filter' is defined but never used                                                                          no-unused-vars
-  Line 10:3:   'Star' is defined but never used                                                                            no-unused-vars
-  Line 11:3:   'Heart' is defined but never used                                                                           no-unused-vars
-  Line 12:3:   'ShoppingCart' is defined but never used                                                                    no-unused-vars
-  Line 13:3:   'Eye' is defined but never used                                                                             no-unused-vars
-  Line 17:3:   'Palette' is defined but never used                                                                         no-unused-vars
-  Line 28:11:  't' is assigned a value but never used                                                                      no-unused-vars
-  Line 28:24:  'currency' is assigned a value but never used                                                               no-unused-vars
-  Line 96:27:  React Hook useCallback received a function whose dependencies are unknown. Pass an inline function instead  react-hooks/exhaustive-deps
-
-src/components/AuthPage.js
-  Line 4:10:  'Button' is defined but never used  no-unused-vars
-  Line 5:10:  'Input' is defined but never used   no-unused-vars
-  Line 6:10:  'Card' is defined but never used    no-unused-vars
-  Line 7:10:  'toast' is defined but never used   no-unused-vars
-
-src/components/CartPage.js
-  Line 16:9:  'navigate' is assigned a value but never used  no-unused-vars
-
-src/components/CheckoutPage.js
-  Line 42:6:  React Hook useEffect has a missing dependency: 'fetchCart'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-src/components/DeploymentSetup.js
-  Line 42:9:  'getStatusIcon' is assigned a value but never used  no-unused-vars
-
-src/components/FashionModelsCarousel.js
-  Line 3:10:  'Button' is defined but never used  no-unused-vars
-
-src/components/Footer.js
-  Line 22:15:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 25:15:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 28:15:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 86:17:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 91:17:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 125:13:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 128:13:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-  Line 131:13:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
-
-src/components/HomePage.js
-  Line 9:10:   'Card' is defined but never used    no-unused-vars
-  Line 10:10:  'Button' is defined but never used  no-unused-vars
-
-src/components/LanguageCurrencySelector.js
-  Line 5:8:  'FLAGS' is defined but never used  no-unused-vars
-
-src/components/LiveChat.js
-  Line 10:3:    'Phone' is defined but never used                                                                                                      no-unused-vars
-  Line 11:3:    'Video' is defined but never used                                                                                                      no-unused-vars
-  Line 19:3:    'Heart' is defined but never used                                                                                                      no-unused-vars
-  Line 20:3:    'ThumbsUp' is defined but never used                                                                                                   no-unused-vars
-  Line 21:12:   'ImageIcon' is defined but never used                                                                                                  no-unused-vars
-  Line 24:3:    'Camera' is defined but never used                                                                                                     no-unused-vars
-  Line 33:11:   't' is assigned a value but never used                                                                                                 no-unused-vars
-  Line 40:10:   'isTyping' is assigned a value but never used                                                                                          no-unused-vars
-  Line 90:6:    React Hook useEffect has missing dependencies: 'chatSession' and 'initializeChat'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
-  Line 149:5:   Expected a default case                                                                                                                default-case
-  Line 227:26:  Comparing to itself is potentially pointless                                                                                           no-self-compare
-
-src/components/ProductComparison.js
-  Line 3:10:   'Link' is defined but never used                                                                                        no-unused-vars
-  Line 11:3:   'Minus' is defined but never used                                                                                       no-unused-vars
-  Line 18:3:   'Palette' is defined but never used                                                                                     no-unused-vars
-  Line 19:3:   'Ruler' is defined but never used                                                                                       no-unused-vars
-  Line 21:3:   'Shield' is defined but never used                                                                                      no-unused-vars
-  Line 32:11:  't' is assigned a value but never used                                                                                  no-unused-vars
-  Line 107:6:  React Hook useEffect has a missing dependency: 'fetchComparisonData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-src/components/ProductDetailPage.js
-  Line 3:50:  'ArrowLeft' is defined but never used                                                                            no-unused-vars
-  Line 26:6:  React Hook useEffect has a missing dependency: 'fetchProduct'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-src/components/ProductsPage.js
-  Line 3:43:   'Heart' is defined but never used                                                                                 no-unused-vars
-  Line 3:71:   'Grid' is defined but never used                                                                                  no-unused-vars
-  Line 3:77:   'List' is defined but never used                                                                                  no-unused-vars
-  Line 39:10:  'showFilters' is assigned a value but never used                                                                  no-unused-vars
-  Line 39:23:  'setShowFilters' is assigned a value but never used                                                               no-unused-vars
-  Line 59:6:   React Hook useEffect has a missing dependency: 'fetchProducts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-  Line 137:9:  'removeFromComparison' is assigned a value but never used                                                         no-unused-vars
-
-src/components/ProfilePage.js
-  Line 3:33:  'Settings' is defined but never used  no-unused-vars
-
-src/components/SmartRecommendations.js
-  Line 13:3:   'Users' is defined but never used                                                                                        no-unused-vars
-  Line 15:3:   'Clock' is defined but never used                                                                                        no-unused-vars
-  Line 16:3:   'Gift' is defined but never used                                                                                         no-unused-vars
-  Line 34:11:  't' is assigned a value but never used                                                                                   no-unused-vars
-  Line 83:6:   React Hook useEffect has a missing dependency: 'fetchRecommendations'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-src/components/WishlistPage.js
-  Line 21:11:  't' is assigned a value but never used               no-unused-vars
-  Line 29:5:   'syncWithServer' is assigned a value but never used  no-unused-vars
-
-src/components/admin/ProductFormModal.js
-  Line 7:3:    'Camera' is defined but never used                   no-unused-vars
-  Line 57:10:  'imageUploading' is assigned a value but never used  no-unused-vars
-
-src/context/WishlistContext.js
-  Line 20:19:  'setLoading' is assigned a value but never used  no-unused-vars
-
-src/pages/admin/AdminDashboard.js
-  Line 20:3:   'TrendingUp' is defined but never used  no-unused-vars
-  Line 22:3:   'Zap' is defined but never used         no-unused-vars
-  Line 35:11:  't' is assigned a value but never used  no-unused-vars
-
-src/pages/admin/AliExpressPage.js
-  Line 9:3:     'DollarSign' is defined but never used               no-unused-vars
-  Line 12:3:    'ExternalLink' is defined but never used             no-unused-vars
-  Line 14:3:    'CheckCircle' is defined but never used              no-unused-vars
-  Line 15:3:    'AlertCircle' is defined but never used              no-unused-vars
-  Line 17:3:    'Filter' is defined but never used                   no-unused-vars
-  Line 18:3:    'Settings' is defined but never used                 no-unused-vars
-  Line 24:21:   'currency' is assigned a value but never used        no-unused-vars
-  Line 24:31:   'formatCurrency' is assigned a value but never used  no-unused-vars
-  Line 102:15:  'result' is assigned a value but never used          no-unused-vars
-
-src/pages/admin/AnalyticsPage.js
-  Line 6:3:     'Bar' is defined but never used                                                                                    no-unused-vars
-  Line 12:3:    'LineChart' is defined but never used                                                                              no-unused-vars
-  Line 13:3:    'Line' is defined but never used                                                                                   no-unused-vars
-  Line 22:3:    'TrendingDown' is defined but never used                                                                           no-unused-vars
-  Line 27:3:    'Eye' is defined but never used                                                                                    no-unused-vars
-  Line 37:11:   't' is assigned a value but never used                                                                             no-unused-vars
-  Line 120:6:   React Hook useEffect has a missing dependency: 'fetchAnalytics'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-  Line 166:68:  'customerMetrics' is assigned a value but never used                                                               no-unused-vars
-
-src/pages/admin/AutoUpdatePage.js
-  Line 4:3:   'Calendar' is defined but never used                                                                                                                                                                no-unused-vars
-  Line 14:3:  'Download' is defined but never used                                                                                                                                                                no-unused-vars
-  Line 40:6:  React Hook useEffect has missing dependencies: 'fetchAutoUpdateStatus', 'fetchBulkImportTasks', 'fetchCurrencyRates', and 'fetchScheduledLogs'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
-
-src/pages/admin/BulkImportPage.js
-  Line 6:3:    'FileText' is defined but never used               no-unused-vars
-  Line 12:3:   'Trash2' is defined but never used                 no-unused-vars
-  Line 14:3:   'Pause' is defined but never used                  no-unused-vars
-  Line 24:10:  'selectedFile' is assigned a value but never used  no-unused-vars
-  Line 26:10:  'importing' is assigned a value but never used     no-unused-vars
-
-src/pages/admin/EnhancedProductsPage.js
-  Line 10:3:   'DollarSign' is defined but never used                                                                            no-unused-vars
-  Line 11:12:  'ImageIcon' is defined but never used                                                                             no-unused-vars
-  Line 12:3:   'X' is defined but never used                                                                                     no-unused-vars
-  Line 14:3:   'Upload' is defined but never used                                                                                no-unused-vars
-  Line 16:3:   'Filter' is defined but never used                                                                                no-unused-vars
-  Line 20:3:   'Save' is defined but never used                                                                                  no-unused-vars
-  Line 21:3:   'Camera' is defined but never used                                                                                no-unused-vars
-  Line 23:3:   'Copy' is defined but never used                                                                                  no-unused-vars
-  Line 24:3:   'ExternalLink' is defined but never used                                                                          no-unused-vars
-  Line 27:3:   'MoreHorizontal' is defined but never used                                                                        no-unused-vars
-  Line 28:3:   'Settings' is defined but never used                                                                              no-unused-vars
-  Line 29:3:   'Tag' is defined but never used                                                                                   no-unused-vars
-  Line 31:3:   'Ruler' is defined but never used                                                                                 no-unused-vars
-  Line 32:3:   'Weight' is defined but never used                                                                                no-unused-vars
-  Line 49:10:  'uploading' is assigned a value but never used                                                                    no-unused-vars
-  Line 49:21:  'setUploading' is assigned a value but never used                                                                 no-unused-vars
-  Line 55:10:  'formData' is assigned a value but never used                                                                     no-unused-vars
-  Line 55:20:  'setFormData' is assigned a value but never used                                                                  no-unused-vars
-  Line 77:10:  'formErrors' is assigned a value but never used                                                                   no-unused-vars
-  Line 77:22:  'setFormErrors' is assigned a value but never used                                                                no-unused-vars
-  Line 88:9:   'materials' is assigned a value but never used                                                                    no-unused-vars
-  Line 124:6:  React Hook useEffect has a missing dependency: 'fetchProducts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-  Line 312:9:  'formatDate' is assigned a value but never used                                                                   no-unused-vars
-
-src/pages/admin/IntegrationsPage.js
-  Line 10:3:    'AlertCircle' is defined but never used            no-unused-vars
-  Line 16:3:    'Key' is defined but never used                    no-unused-vars
-  Line 34:11:   't' is assigned a value but never used             no-unused-vars
-  Line 41:21:   'setActiveTab' is assigned a value but never used  no-unused-vars
-  Line 183:13:  'response' is assigned a value but never used      no-unused-vars
-
-src/pages/admin/OrdersPage.js
-  Line 11:3:   'AlertCircle' is defined but never used                                                                         no-unused-vars
-  Line 23:11:  't' is assigned a value but never used                                                                          no-unused-vars
-  Line 63:6:   React Hook useEffect has a missing dependency: 'fetchOrders'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-src/pages/admin/QuickImportPage.js
-  Line 13:3:   'Filter' is defined but never used                                                                                       no-unused-vars
-  Line 14:3:   'Search' is defined but never used                                                                                       no-unused-vars
-  Line 21:11:  't' is assigned a value but never used                                                                                   no-unused-vars
-  Line 46:6:   React Hook useEffect has a missing dependency: 'loadExternalProducts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-src/pages/admin/SettingsPage.js
-  Line 14:3:   'Shield' is defined but never used      no-unused-vars
-  Line 16:3:   'Palette' is defined but never used     no-unused-vars
-  Line 19:3:   'X' is defined but never used           no-unused-vars
-  Line 28:11:  't' is assigned a value but never used  no-unused-vars
-
-src/pages/admin/UsersPage.js
-  Line 14:3:   'Edit' is defined but never used                                                                               no-unused-vars
-  Line 27:11:  't' is assigned a value but never used                                                                         no-unused-vars
-  Line 40:6:   React Hook useEffect has a missing dependency: 'fetchUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-Search for the keywords to learn more about each warning.
-To ignore, add // eslint-disable-next-line to the line before.
-
-File sizes after gzip:
-
-  321.7 kB  build/static/js/main.d809db4b.js
-  16.13 kB  build/static/css/main.ec574774.css
-
-The project was built assuming it is hosted at /.
-You can control this with the homepage field in your package.json.
-
-The build folder is ready to be deployed.
-You may serve it with a static server:
-
-  yarn global add serve
-  serve -s build
-
-Find out more about deployment here:
-
-  https://cra.link/deployment
-
-Done in 44.18s..
-*   ** (NEW)**: Created in the root for Vercel deployment configuration.
-*   ** (NEW)**: Created in the root, potentially for a workspace setup, but its final state and usage is unclear.
+- ****: Core FastAPI app. Modified to include new AliExpress-related services, API endpoints (e.g., , , ), as well as multi-supplier endpoints (, ) and basic tracking/content protection endpoints. Imports were updated.
+- ****:
+    - ****: Confirmed to handle 100% price markup implicitly or explicitly.
+    - ****: Updated to run sync jobs every 10 minutes (previously 30) and added a  method.
+    - ** (NEW)**: Service to handle order tracking logic.
+    - ** (NEW)**: Service for multi-channel notifications (planned SendGrid/Twilio).
+    - ** (NEW)**: Service for anti-screenshot/content protection.
+    - ** (NEW)**: Module for new backend API logic.
+- ****: Continues to hold AliExpress API credentials and configuration variables (e.g., , , notification keys).
+- ****: Modified to add routes for new legal pages and will be updated for Order Tracking. Imports for new pages were added.
+- ****: Modified to ensure the Shop Now button is clearly visible, accessible (z-index, pointer-events-auto), and correctly positioned on both mobile (below hero) and desktop (left-aligned with text).
+- ****: Existed, but its functionality was clarified to be dependent on product data availability.
+- ****: Modified to ensure correct display of the Admin Dashboard link based on user authentication status by adding a  for user changes.
+- ****: Modified to improve state update logic and  to ensure correct and persistent authentication state management for admin access.
+- ****: Modified to include navigation links and routes for new AliExpress-related admin pages:  and .
+- ****: Enhanced to include a Supplier Type dropdown (AliExpress, Amazon, Supplier Custom) and adapted the import/sync functions (, ) to use this  parameter. Fixed a bug where  was defined twice.
+- ** (NEW)**: Admin UI for tracking AliExpress orders.
+- ** (NEW)**: Admin UI for managing content protection.
+- ** (NEW)**: Frontend page for privacy policy.
+- ** (NEW)**: Frontend page for terms of service.
+- ** (NEW)**: Frontend page for return policy.
+- ** (NEW)**: Frontend page for contact information.
+- ** (NEW)**: Frontend page for customer order tracking.
+- ****: New directory and files for auto-merge and CI/CD GitHub Actions:
+    - ****: Configured to manage merge conflicts for lockfiles (ours) and image files (no merge).
+    - ****: GitHub Action for automatic conflict resolution, frontend/backend builds, and enabling auto-merge.
+    - ** (NEW)**: Additional auto-merge workflow.
+    - ** (NEW)**: Bash script to set up auto-merge configurations locally.
+    - ** (NEW)**: Configuration file for auto-merge.
+    - ** (NEW)**: README for the auto-merge system.
 </code_architecture>
 
 <pending_tasks>
--   Finalize full internationalization beyond basic RTL.
--   Integrate real-time AliExpress and Amazon APIs (currently placeholder logic for Amazon).
--   Develop remaining Admin Dashboard modules: CMS Pages, Theme, Media management.
--   Implement general store settings management (backend logic).
--   Implement AI functionality for advanced search and smart recommendations.
--   Implement detailed logic for product comparison, PWA features, and Live Chat.
--   Finalize automatic currency conversion to USD for payment.
--   Fix non-working heart icon (wishlist) in product listings.
--   Implement backend for Tracking & Returns.
--   Implement Multi-Channel Notifications (Email, SMS, In-App, WhatsApp).
--   Implement Anti-Screenshot & Content Protection.
+- Finalize full internationalization beyond basic RTL.
+- Implement real-time Amazon APIs (currently stub logic).
+- Develop remaining Admin Dashboard modules: CMS Pages, Theme, Media management, General store settings.
+- Implement AI functionality for advanced search and smart recommendations.
+- Implement detailed logic for product comparison, PWA features, and Live Chat.
+- Finalize automatic currency conversion to USD for payment.
+- Fully integrate backend and frontend logic for Tracking & Returns.
+- Implement Multi-Channel Notifications (Email, SMS, In-App, WhatsApp).
+- Implement Anti-Screenshot & Content Protection logic.
+- Integrate a payment gateway.
 </pending_tasks>
 
 <current_work>
-Immediately before this summary request, the AI engineer was deep into the comprehensive implementation of the AliExpress dropshipping suite. This followed extensive work on responsive design, Admin Dashboard bug fixes (missing  import, authentication for admin routes), and fixing dropdown closure behavior.
-
-The AliExpress integration involved:
-1.  **Backend Setup:** Adding credentials to , installing new libraries (, , ), creating a new  directory with modules for authentication (), data models (), category mapping (), GeoIP detection (), and a robust  for bulk import and periodic synchronization.
-2.  **API Endpoints:** Integrating new administrative API endpoints in  for country configuration, GeoIP detection, bulk import, manual sync, and sync status.
-3.  **Scheduler:** Updating  to run the  periodically (every 10 minutes) and handle daily maintenance tasks.
-4.  **Frontend Admin UI:** Creating  and integrating it into  with a dedicated navigation link (🚀 استيراد سريع), input fields for import count/query, and buttons for Quick Import and Sync Now.
-
-A significant challenge throughout this phase was the persistent caching and synchronization issues with the preview environment, which repeatedly showed older versions of the frontend despite local code being correct and working. This led to multiple troubleshooting attempts and user frustration, with the AI engineer concluding that the user would need to use the Save to GitHub feature or await automatic Vercel updates. The last action was the user providing an *even more extensive* final specification for the AliExpress integration, expanding into tracking, multi-channel notifications, and content protection.
+Immediately before this summary, the AI engineer was addressing the user's request to prepare the store for public launch by fixing all missing elements except the payment gateway. This involved adding crucial customer-facing pages. The AI engineer successfully created the following frontend pages: , , , and . These pages were then integrated into the application's routing by modifying  and were linked from the  component to ensure accessibility. The very last action was the creation of , a new page intended for customers to track their orders. The AI engineer is currently in the process of adding the routing for this  page into . This work follows the successful implementation of Admin Dashboard authentication, a multi-supplier AliExpress import/sync system, and responsive UI enhancements.
 </current_work>
 
 <optional_next_step>
-Prioritize the new features from the latest detailed AliExpress spec (e.g., Tracking & Returns, Notifications).
+Add the route for the newly created  page into .
 </optional_next_step>
-

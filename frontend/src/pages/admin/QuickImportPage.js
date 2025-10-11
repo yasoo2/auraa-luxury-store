@@ -192,6 +192,25 @@ const QuickImportPage = () => {
         </div>
       </div>
 
+      {/* Sync Now Button */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={async () => {
+            try {
+              await axios.post(`${API_URL}/api/admin/aliexpress/sync-now`);
+              alert(isRTL ? 'تم بدء المزامنة!' : 'Sync started!');
+              await loadImportLogs();
+            } catch (error) {
+              alert(isRTL ? 'فشل المزامنة' : 'Sync failed');
+            }
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          {isRTL ? 'تحديث الآن (يدوي)' : 'Sync Now (Manual)'}
+        </button>
+      </div>
+
       {/* Quick Import Section */}
       <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg p-6 mb-6 text-white">
         <div className="flex flex-col md:flex-row items-center justify-between">

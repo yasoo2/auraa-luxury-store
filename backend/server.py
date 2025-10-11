@@ -1239,10 +1239,11 @@ from services.geoip_service import GeoIPService
 
 # Initialize AliExpress services
 aliexpress_auth = None
-aliexpress_sync_service = None
+aliexpress_product_sync = None
 aliexpress_customs_calc = None
 aliexpress_scheduler = None
 aliexpress_bulk_import = None
+aliexpress_sync_service = None  # New unified sync service
 category_mapper = None
 geoip_service = None
 

@@ -246,7 +246,7 @@ class AliExpressSyncScheduler:
         self.scheduler.shutdown(wait=True)
         self.logger.info("Scheduler stopped")
     
-    async def cleanup_old_logs(self):
+    async def daily_maintenance(self):
         """Remove sync logs older than 30 days."""
         cutoff_date = datetime.utcnow() - timedelta(days=30)
         result = await self.db.sync_logs.delete_many({

@@ -1271,8 +1271,15 @@ async def init_aliexpress_services():
             # Initialize authenticator
             aliexpress_auth = AliExpressAuthenticator(app_key, app_secret)
             
-            # Initialize sync service
-            aliexpress_sync_service = ProductSyncService(
+            # Initialize product sync service (low-level)
+            aliexpress_product_sync = ProductSyncService(
+                aliexpress_auth,
+                db,
+                os.getenv('ALIEXPRESS_API_URL', 'http://gw.api.taobao.com/router/rest')
+            )
+            
+            # Initialize unified sync service (high-level)
+            aliexpress_sync_service = AliExpressSyncService(
                 aliexpress_auth,
                 db,
                 os.getenv('ALIEXPRESS_API_URL', 'http://gw.api.taobao.com/router/rest')

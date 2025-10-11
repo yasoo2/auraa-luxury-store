@@ -184,9 +184,11 @@ const FashionModelsCarousel = () => {
               : 'Discover our exclusive collection of luxury accessories designed for the modern woman'
             }
           </p>
-          {/* Luxury CTA Button */}
-          <button className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 px-6 py-2 sm:px-8 sm:py-3 rounded-full text-white font-semibold animate-pulse-gold transition-all duration-500 hover:scale-105 shadow-xl text-sm sm:text-base">
-            {isRTL ? 'تسوق الآن' : 'Shop Now'}
+          {/* Luxury CTA Button - Enhanced with proper z-index and pointer events */}
+          <button className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 px-6 py-2 sm:px-8 sm:py-3 rounded-full text-white font-semibold animate-pulse-gold transition-all duration-500 hover:scale-105 shadow-xl text-sm sm:text-base z-20 relative pointer-events-auto">
+            <a href="/products" className="block w-full h-full text-white no-underline">
+              {isRTL ? 'تسوّق الآن' : 'Shop Now'}
+            </a>
           </button>
         </div>
       </div>

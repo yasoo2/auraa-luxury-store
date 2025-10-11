@@ -33,6 +33,8 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           const response = await axios.get(`${BACKEND_URL}/api/auth/me`);
+          console.log('Token validation response:', response.data);
+          console.log('User is_admin from /me endpoint:', response.data.is_admin);
           setUser(response.data);
         } catch (error) {
           console.error('Token validation failed:', error);

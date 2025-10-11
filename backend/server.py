@@ -122,6 +122,9 @@ class Order(BaseModel):
     user_id: str
     items: List[CartItem]
     total_amount: float
+    currency: str = "SAR"
+    order_number: Optional[str] = None
+
     shipping_address: Dict[str, Any]
     payment_method: str
     status: OrderStatus = OrderStatus.pending

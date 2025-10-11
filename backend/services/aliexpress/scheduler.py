@@ -146,61 +146,37 @@ class AliExpressSyncScheduler:
     
     async def quick_price_sync(self) -> Dict[str, Any]:
         """
-        Quick price-only update for all products.
-        Faster than full sync, runs more frequently.
+        Quick price and inventory sync - faster than full sync.
+        Runs every 5 minutes for critical updates.
         """
         start_time = datetime.utcnow()
         stats = {
+            'job_type': 'quick_price_sync',
             'start_time': start_time.isoformat(),
-            'prices_updated': 0,
+            'products_processed': 0,
+            'price_updates': 0,
+            'inventory_updates': 0,
             'errors': []
         }
         
         try:
-            cursor = self.db.products.find({'sync_status': 'active'})
-            products = await cursor.to_list(length=None)
+            # Quick sync for products that need frequent updates
+            result = await self.sync_service.sync_prices_and_inventory(
+                batch_size=100,
+                priority_only=True  # Only sync high-priority products
+            )
             
-            for product in products:
-                try:
-                    # Get current product details from API
-                    updated = await self.sync_service.get_product_details(
-                        product['product_id']
-                    )
-                    
-                    if updated:
-                        # Update only price fields
-                        await self.db.products.update_one(
-                            {'product_id': product['product_id']},
-                            {
-                                '$set': {
-                                    'original_price': updated.original_price,
-                                    'sale_price': updated.sale_price,
-                                    'last_synced': datetime.utcnow()
-                                }
-                            }
-                        )
-                        stats['prices_updated'] += 1
-                        
-                except Exception as e:
-                    self.logger.warning(
-                        f"Failed to update price for {product['product_id']}: {e}"
-                    )
-                    stats['errors'].append({
-                        'product_id': product['product_id'],
-                        'error': str(e)
-                    })
-                
-                # Rate limiting delay
-                await asyncio.sleep(0.5)
-        
+            stats.update(result)
+            
         except Exception as e:
-            self.logger.error(f"Price sync failed: {e}", exc_info=True)
+            self.logger.error(f"Quick price sync failed: {str(e)}")
             stats['errors'].append(str(e))
         
         end_time = datetime.utcnow()
         stats['end_time'] = end_time.isoformat()
-        stats['duration'] = (end_time - start_time).total_seconds()
+        stats['duration_seconds'] = (end_time - start_time).total_seconds()
         
+        # Log the sync
         await self.db.sync_logs.insert_one(stats)
         
         return stats

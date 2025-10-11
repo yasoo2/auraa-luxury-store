@@ -258,7 +258,20 @@ async def get_products(
         ]
     
     products = await db.products.find(query).skip(skip).limit(limit).to_list(length=None)
-    return [Product(**product) for product in products]
+    
+    # Filter out corrupted products that don't match the schema
+    valid_products = []
+    for product in products:
+        try:
+            # Try to create Product instance to validate
+            valid_product = Product(**product)
+            valid_products.append(valid_product)
+        except Exception as e:
+            # Log the corrupted product for debugging
+            logger.warning(f"Skipping corrupted product: {product.get('_id', 'unknown')} - Error: {str(e)}")
+            continue
+    
+    return valid_products
 
 @api_router.get("/products/{product_id}", response_model=Product)
 async def get_product(product_id: str):

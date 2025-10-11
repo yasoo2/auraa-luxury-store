@@ -144,7 +144,7 @@ class AliExpressSyncScheduler:
         
         return stats
     
-    async def sync_product_prices(self) -> Dict[str, Any]:
+    async def quick_price_sync(self) -> Dict[str, Any]:
         """
         Quick price-only update for all products.
         Faster than full sync, runs more frequently.

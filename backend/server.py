@@ -1728,7 +1728,7 @@ async def get_sync_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/aliexpress/external-products")
-async def get_external_products(
+async def get_external_products_aliexpress(
     source: Optional[str] = None,
     category: Optional[str] = None,
     pushed: Optional[bool] = None,

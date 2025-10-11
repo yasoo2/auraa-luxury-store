@@ -18,7 +18,7 @@ const OrderTracking = () => {
   const [loading, setLoading] = useState(false);
   const [userOrders, setUserOrders] = useState([]);
 
-  const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+  const API_URL = process.env.REACT_APP_BACKEND_URL; // Must use env var only as per platform rules
 
   useEffect(() => {
     if (isAuthenticated && user) {

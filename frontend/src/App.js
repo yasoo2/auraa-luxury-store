@@ -81,6 +81,10 @@ function App() {
                     <Route path="/return-policy" element={<ReturnPolicy />} />
                     <Route path="/contact" element={<ContactUs />} />
                     <Route path="/about" element={<AboutUs />} />
+
+                    {/* Order Tracking */}
+                    <Route path="/order-tracking" element={<OrderTracking />} />
+                    <Route path="/track-order" element={<Navigate to="/order-tracking" replace />} />
                     
                     {/* Admin Routes */}
                     <Route path="/admin/*" element={<AdminDashboard />} />

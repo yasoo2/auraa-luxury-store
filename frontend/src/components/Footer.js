@@ -1,8 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const Footer = () => {
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
+
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -58,6 +62,11 @@ const Footer = () => {
               <li>
                 <Link to="/products?category=rings" className="text-gray-300 hover:text-white transition-colors">
                   خواتم
+                </Link>
+              </li>
+              <li>
+                <Link to="/order-tracking" className="text-gray-300 hover:text-white transition-colors">
+                  {isRTL ? 'تتبع الطلب' : 'Track Order'}
                 </Link>
               </li>
             </ul>

@@ -237,18 +237,22 @@ const QuickImportPage = () => {
               </div>
             )}
             {importProgress.stats && (
-              <div className="mt-2 text-sm grid grid-cols-3 gap-4">
+              <div className="mt-2 text-sm grid grid-cols-4 gap-4">
                 <div>
-                  <span className="opacity-80">{isRTL ? 'تم الاستيراد:' : 'Imported:'}</span>
-                  <span className="font-bold ml-2">{importProgress.stats.total_imported}</span>
+                  <span className="opacity-80">{isRTL ? 'جديد:' : 'New:'}</span>
+                  <span className="font-bold ml-2">{importProgress.stats.inserted || 0}</span>
+                </div>
+                <div>
+                  <span className="opacity-80">{isRTL ? 'محدّث:' : 'Updated:'}</span>
+                  <span className="font-bold ml-2">{importProgress.stats.updated || 0}</span>
                 </div>
                 <div>
                   <span className="opacity-80">{isRTL ? 'متخطى:' : 'Skipped:'}</span>
-                  <span className="font-bold ml-2">{importProgress.stats.total_skipped}</span>
+                  <span className="font-bold ml-2">{importProgress.stats.skipped || 0}</span>
                 </div>
                 <div>
                   <span className="opacity-80">{isRTL ? 'أخطاء:' : 'Errors:'}</span>
-                  <span className="font-bold ml-2">{importProgress.stats.total_errors}</span>
+                  <span className="font-bold ml-2">{importProgress.stats.errors?.length || 0}</span>
                 </div>
               </div>
             )}

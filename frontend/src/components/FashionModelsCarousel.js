@@ -170,8 +170,8 @@ const FashionModelsCarousel = () => {
       </button>
 
       {/* Content Overlay */}
-      <div className="absolute inset-0 flex items-center sm:items-end justify-center sm:justify-start p-4 sm:p-6 md:p-8 lg:p-12 xl:p-16">
-        <div className="text-white max-w-2xl animate-slide-in-left text-center sm:text-left" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="absolute inset-0 flex flex-col items-center justify-end sm:items-start sm:justify-center p-4 sm:p-6 md:p-8 lg:p-12 xl:p-16">
+        <div className="text-white max-w-2xl animate-slide-in-left text-center sm:text-left mb-20 sm:mb-0" dir={isRTL ? 'rtl' : 'ltr'}>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-bold mb-3 sm:mb-4 animate-text-sparkle font-display leading-tight">
             Auraa Luxury
           </h1>

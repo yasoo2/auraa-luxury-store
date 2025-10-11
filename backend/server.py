@@ -1249,8 +1249,17 @@ geoip_service = None
 async def init_aliexpress_services():
     """Initialize AliExpress services on startup."""
     global aliexpress_auth, aliexpress_sync_service, aliexpress_customs_calc, aliexpress_scheduler
+    global aliexpress_bulk_import, category_mapper, geoip_service
     
     try:
+        # Initialize GeoIP service (always available)
+        geoip_service = GeoIPService()
+        logger.info("✅ GeoIP service initialized")
+        
+        # Initialize category mapper (always available)
+        category_mapper = CategoryMapper()
+        logger.info("✅ Category mapper initialized")
+        
         app_key = os.getenv('ALIEXPRESS_APP_KEY', '')
         app_secret = os.getenv('ALIEXPRESS_APP_SECRET', '')
         
@@ -1269,6 +1278,13 @@ async def init_aliexpress_services():
             
             # Initialize customs calculator
             aliexpress_customs_calc = CustomsCalculator()
+            
+            # Initialize bulk import service
+            aliexpress_bulk_import = BulkImportService(
+                aliexpress_auth,
+                db,
+                os.getenv('ALIEXPRESS_API_URL', 'http://gw.api.taobao.com/router/rest')
+            )
             
             # Initialize and start scheduler
             sync_interval = int(os.getenv('ALIEXPRESS_SYNC_INTERVAL_MINUTES', '10'))

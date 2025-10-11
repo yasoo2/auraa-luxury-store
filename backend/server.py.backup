@@ -300,10 +300,22 @@ async def get_products(
     return valid_products
 
 @api_router.get("/products/{product_id}", response_model=Product)
-async def get_product(product_id: str):
+async def get_product(product_id: str, language: Optional[str] = Query(None)):
     product = await db.products.find_one({"id": product_id})
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Localize name/description at server side if language provided
+    if language:
+        if language.startswith('ar'):
+            product['name'] = product.get('name_ar') or product.get('name') or product.get('name_en')
+            product['description'] = product.get('description_ar') or product.get('description') or product.get('description_en')
+        elif language.startswith('en'):
+            product['name'] = product.get('name_en') or product.get('name') or product.get('name_ar')
+            product['description'] = product.get('description_en') or product.get('description') or product.get('description_ar')
+        else:
+            product['name'] = product.get('name_en') or product.get('name') or product.get('name_ar')
+            product['description'] = product.get('description_en') or product.get('description') or product.get('description_ar')
     
     try:
         return Product(**product)

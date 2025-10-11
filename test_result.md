@@ -465,8 +465,9 @@
 
 ## test_plan:
   current_focus:
+    - "AliExpress API Integration - Product Sync, Shipping, Customs"
     - "Complete Responsive Design for All Devices"
-    - "Fix Wishlist Heart Icon Functionality" 
+    - "Fix Wishlist Heart Icon Functionality"
     - "Full Image Optimization"
   stuck_tasks: []
   test_all: false

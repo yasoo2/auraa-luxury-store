@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+// Admin Dashboard - Fixed all imports and authentication
+import React, { useState, useEffect } from 'react';
 import { Link, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import EnhancedProductsPage from './EnhancedProductsPage';
 import OrdersPage from './OrdersPage';
 import UsersPage from './UsersPage';
@@ -10,6 +12,7 @@ import IntegrationsPage from './IntegrationsPage';
 import AutoUpdatePage from './AutoUpdatePage';
 import AliExpressPage from './AliExpressPage';
 import BulkImportPage from './BulkImportPage';
+import QuickImportPage from './QuickImportPage';
 import {
   Package,
   ShoppingCart,
@@ -24,14 +27,23 @@ import {
   ExternalLink,
   Upload,
   BarChart,
-  Plug
+  Plug,
+  Download
 } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { t, language } = useLanguage();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isRTL = language === 'ar';
+
+  // Redirect if not authenticated or not admin
+  useEffect(() => {
+    if (!isAuthenticated || !user?.is_admin) {
+      navigate('/');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const menuItems = [
     {
@@ -53,6 +65,11 @@ const AdminDashboard = () => {
       name: isRTL ? 'علي إكسبريس' : 'AliExpress',
       path: '/admin/aliexpress',
       icon: ExternalLink
+    },
+    {
+      name: isRTL ? '🚀 استيراد سريع' : '🚀 Quick Import',
+      path: '/admin/quick-import',
+      icon: Download
     },
     {
       name: isRTL ? 'الاستيراد المجمع' : 'Bulk Import',
@@ -150,6 +167,7 @@ const AdminDashboard = () => {
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/aliexpress" element={<AliExpressPage />} />
+            <Route path="/quick-import" element={<QuickImportPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />

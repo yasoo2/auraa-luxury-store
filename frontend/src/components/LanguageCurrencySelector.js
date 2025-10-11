@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Globe, DollarSign, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';
@@ -8,6 +8,25 @@ const LanguageCurrencySelector = () => {
   const { language, currency, switchLanguage, switchCurrency, languages, currencies } = useLanguage();
   const [showLanguages, setShowLanguages] = useState(false);
   const [showCurrencies, setShowCurrencies] = useState(false);
+  const languageRef = useRef(null);
+  const currencyRef = useRef(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (languageRef.current && !languageRef.current.contains(event.target)) {
+        setShowLanguages(false);
+      }
+      if (currencyRef.current && !currencyRef.current.contains(event.target)) {
+        setShowCurrencies(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Convert languages object to array
   const languagesList = Object.entries(languages).map(([code, info]) => ({
@@ -26,11 +45,14 @@ const LanguageCurrencySelector = () => {
 
   return (
     <div className="flex items-center space-x-2">
-      <div className="relative">
+      <div className="relative" ref={languageRef}>
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowLanguages(!showLanguages)}
+          onClick={() => {
+            setShowLanguages(!showLanguages);
+            setShowCurrencies(false); // Close currency dropdown when opening language
+          }}
           className="flex items-center space-x-1 hover:bg-gray-100"
         >
           <Globe className="h-4 w-4" />
@@ -59,11 +81,14 @@ const LanguageCurrencySelector = () => {
         )}
       </div>
 
-      <div className="relative">
+      <div className="relative" ref={currencyRef}>
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowCurrencies(!showCurrencies)}
+          onClick={() => {
+            setShowCurrencies(!showCurrencies);
+            setShowLanguages(false); // Close language dropdown when opening currency
+          }}
           className="flex items-center space-x-1 hover:bg-gray-100"
         >
           <DollarSign className="h-4 w-4" />

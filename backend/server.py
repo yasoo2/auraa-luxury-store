@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Query, File, UploadFile
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Query, File, UploadFile, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -1211,4 +1211,3 @@ async def upload_image(
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @app.on_event("shutdown")
-

@@ -12,6 +12,7 @@ import IntegrationsPage from './IntegrationsPage';
 import AutoUpdatePage from './AutoUpdatePage';
 import AliExpressPage from './AliExpressPage';
 import BulkImportPage from './BulkImportPage';
+import QuickImportPage from './QuickImportPage';
 import {
   Package,
   ShoppingCart,

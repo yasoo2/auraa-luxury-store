@@ -1884,13 +1884,6 @@ async def estimate_shipping(payload: ShippingEstimateRequest):
         logger.error(f"Shipping estimate error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-            "statistics": results
-        }
-    
-    except Exception as e:
-        logger.error(f"Sync failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 @api_router.get("/admin/aliexpress/sync-status")
 async def get_sync_status():
     """

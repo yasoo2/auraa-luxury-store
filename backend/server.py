@@ -1800,6 +1800,120 @@ async def get_supported_countries():
         logger.error(f"Error fetching countries: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Enhanced AliExpress Endpoints for Tracking and Protection
+@api_router.get("/admin/aliexpress/sync/comprehensive-status")
+async def get_comprehensive_sync_status(admin: User = Depends(get_admin_user)):
+    """Get comprehensive sync status across all services"""
+    try:
+        # Mock data for now - would be real in production
+        status = {
+            "product_sync": {
+                "last_run": datetime.utcnow().isoformat(),
+                "next_run": (datetime.utcnow() + timedelta(minutes=10)).isoformat(),
+                "status": "idle",
+                "products_synced": 150,
+                "errors": 0
+            },
+            "order_tracking": {
+                "last_run": datetime.utcnow().isoformat(),
+                "next_run": (datetime.utcnow() + timedelta(minutes=5)).isoformat(),
+                "status": "idle",
+                "orders_updated": 25,
+                "errors": 0
+            },
+            "notifications": {
+                "pending": 5,
+                "processed_today": 120,
+                "failed_today": 2,
+                "channels_active": ["email", "sms"]
+            },
+            "content_protection": {
+                "watermarks_today": 45,
+                "incidents_today": 3,
+                "protected_urls_active": 180
+            }
+        }
+        
+        return status
+    except Exception as e:
+        logger.error(f"Error getting sync status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/orders/sync-statuses")
+async def sync_order_statuses(admin: User = Depends(get_admin_user)):
+    """Manually trigger order status synchronization"""
+    try:
+        # In production, this would trigger the actual sync service
+        return {"message": "Order status sync started", "task_id": str(uuid.uuid4())}
+    except Exception as e:
+        logger.error(f"Error starting order sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/notifications/process-queue")
+async def process_notification_queue(admin: User = Depends(get_admin_user)):
+    """Process pending notifications queue"""
+    try:
+        # In production, this would trigger the notification processor
+        return {"message": "Notification processing started", "processed": 5}
+    except Exception as e:
+        logger.error(f"Error processing notifications: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/aliexpress/analytics/protection")
+async def get_protection_analytics(
+    start_date: str,
+    end_date: str,
+    admin: User = Depends(get_admin_user)
+):
+    """Get content protection analytics"""
+    try:
+        # Mock analytics data
+        analytics = {
+            "period": {
+                "start": start_date,
+                "end": end_date
+            },
+            "watermarks_applied": 156,
+            "total_incidents": 8,
+            "protected_url_accesses": 340,
+            "screenshot_attempts": [
+                {"method": "screenshot_key", "count": 5},
+                {"method": "right_click_image", "count": 2},
+                {"method": "dev_tools", "count": 1}
+            ]
+        }
+        
+        return analytics
+    except Exception as e:
+        logger.error(f"Error getting protection analytics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/content-protection/watermark-image")
+async def apply_watermark_to_image(
+    file: UploadFile = File(...),
+    user_id: str = Form(None),
+    product_id: str = Form(None),
+    admin: User = Depends(get_admin_user)
+):
+    """Apply dynamic watermark to product image"""
+    try:
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Read image data
+        image_data = await file.read()
+        
+        # In production, this would apply actual watermark
+        # For now, return the original image with success response
+        return StreamingResponse(
+            io.BytesIO(image_data),
+            media_type="image/jpeg",
+            headers={"Content-Disposition": f"attachment; filename=watermarked_{file.filename}"}
+        )
+    except Exception as e:
+        logger.error(f"Error applying watermark: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
 

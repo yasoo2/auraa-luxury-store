@@ -584,6 +584,20 @@
     message: "🔧 NEW TASKS: Multiple Fixes Required - 1) Fix logo name from 'Lora' to 'Auraa' (user correction), 2) Fix wishlist heart button functionality in product discovery, 3) Add more global currencies to expand international market support."
   - agent: "main"
     message: "🏷️ NEW TASK: Remove Arabic Brand Name - User requested to remove all Arabic brand names ('لورا لاكشري', 'أورا لاكشري') from entire store and keep only English 'Auraa Luxury' branding consistently throughout application."
+
+## backend:
+  - task: "Add dropshipping-friendly order tracking endpoints and fields"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "main"
+        comment: "Added currency, order_number, tracking_number to Order model on creation; added GET /api/orders/my-orders and GET /api/orders/track/{search_param}. Timeline is internal (no third-party shipping provider required) to suit dropshipping."
+
   - agent: "main"
     message: "🛍️ NEW TASK: Complete Product Management System - Building comprehensive product admin system by connecting ProductFormModal with EnhancedProductsPage, implementing full CRUD operations, image upload, and category management for dropshipping store."
   - agent: "testing"

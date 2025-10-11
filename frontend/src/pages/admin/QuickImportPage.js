@@ -219,11 +219,124 @@ const QuickImportPage = () => {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {isRTL ? '🚀 استيراد سريع من AliExpress' : '🚀 Quick Import from AliExpress'}
+          {isRTL ? '🚀 استيراد سريع متعدد الموردين' : '🚀 Multi-Supplier Quick Import'}
         </h1>
         <p className="text-gray-600">
-          {isRTL ? 'استيراد وإدارة المنتجات من AliExpress بنقرة واحدة' : 'Import and manage products from AliExpress with one click'}
+          {isRTL ? 'استيراد وإدارة المنتجات من موردين متعددين بنقرة واحدة' : 'Import and manage products from multiple suppliers with one click'}
         </p>
+      </div>
+
+      {/* Quick Import Controls */}
+      <div className="bg-white rounded-lg border shadow-sm p-6 mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          {isRTL ? 'استيراد سريع - 1000 منتج' : 'Quick Import - 1000 Products'}
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {/* Supplier Type Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {isRTL ? 'نوع المورد' : 'Supplier Type'}
+            </label>
+            <select 
+              value={supplierType} 
+              onChange={(e) => setSupplierType(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="aliexpress">{isRTL ? 'علي إكسبرس' : 'AliExpress'}</option>
+              <option value="amazon">{isRTL ? 'أمازون' : 'Amazon'}</option>
+              <option value="custom">{isRTL ? 'مورد مخصص' : 'Custom Supplier'}</option>
+            </select>
+          </div>
+
+          {/* Import Count */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {isRTL ? 'عدد المنتجات' : 'Product Count'}
+            </label>
+            <input 
+              type="number" 
+              value={importCount} 
+              onChange={(e) => setImportCount(parseInt(e.target.value) || 1000)}
+              min="1"
+              max="5000"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Search Query */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {isRTL ? 'كلمة البحث' : 'Search Query'}
+            </label>
+            <input 
+              type="text" 
+              value={importQuery} 
+              onChange={(e) => setImportQuery(e.target.value)}
+              placeholder={isRTL ? 'مجوهرات إكسسوارات' : 'jewelry accessories'}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col space-y-2">
+            <button
+              onClick={handleQuickImport}
+              disabled={importing}
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-2 px-4 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {importing ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {isRTL ? 'جاري الاستيراد...' : 'Importing...'}
+                </div>
+              ) : (
+                isRTL ? 'استيراد سريع' : 'Quick Import'
+              )}
+            </button>
+            
+            <button
+              onClick={handleSyncNow}
+              disabled={importing}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRTL ? 'مزامنة الآن' : 'Sync Now'}
+            </button>
+          </div>
+        </div>
+
+        {/* Import Progress */}
+        {importProgress && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              {isRTL ? `معرف المهمة: ${importProgress}` : `Task ID: ${importProgress}`}
+            </p>
+            <p className="text-sm text-blue-600">
+              {isRTL ? 'جاري معالجة الاستيراد في الخلفية...' : 'Processing import in background...'}
+            </p>
+          </div>
+        )}
+
+        {/* Supplier Info */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-md">
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">
+            {isRTL ? 'معلومات المورد المحدد:' : 'Selected Supplier Info:'}
+          </h4>
+          <div className="text-sm text-gray-600">
+            {supplierType === 'aliexpress' && (
+              <p>{isRTL ? '• استيراد من علي إكسبرس مع تطبيق هامش ربح 100%' : '• Import from AliExpress with 100% markup'}</p>
+            )}
+            {supplierType === 'amazon' && (
+              <p>{isRTL ? '• استيراد من أمازون (قيد التطوير)' : '• Import from Amazon (under development)'}</p>
+            )}
+            {supplierType === 'custom' && (
+              <p>{isRTL ? '• مورد مخصص (قيد التطوير)' : '• Custom supplier (under development)'}</p>
+            )}
+            <p>{isRTL ? '• تحديث تلقائي للأسعار والمخزون كل 10 دقائق' : '• Automatic price and inventory update every 10 minutes'}</p>
+            <p>{isRTL ? '• إضافة الضرائب والجمارك حسب الدولة' : '• Add taxes and customs by country'}</p>
+            <p>{isRTL ? '• تصنيف تلقائي للمنتجات (أقراط، قلادات، أساور، خواتم، ساعات، أطقم)' : '• Automatic categorization (Earrings, Necklaces, Bracelets, Rings, Watches, Sets)'}</p>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}

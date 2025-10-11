@@ -1,18 +1,12 @@
 {
   "name": "auraa-frontend",
-  "version": "1.0.0",
   "private": true,
+  "version": "1.0.0",
   "engines": {
     "node": ">=20"
   },
-  "scripts": {
-    "start": "craco start",
-    "build": "craco build",
-    "test": "craco test",
-    "eject": "react-scripts eject"
-  },
   "dependencies": {
-    "@craco/craco": "7",
+    "@craco/craco": "^7.1.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.7",
@@ -61,9 +55,18 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13"
+    "tailwindcss": "^3.4.1"
+  },
+  "scripts": {
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
   },
   "browserslist": {
     "production": [

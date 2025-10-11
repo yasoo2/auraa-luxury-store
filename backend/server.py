@@ -278,7 +278,12 @@ async def get_product(product_id: str):
     product = await db.products.find_one({"id": product_id})
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    return Product(**product)
+    
+    try:
+        return Product(**product)
+    except Exception as e:
+        logger.error(f"Corrupted product data for ID {product_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Product data is corrupted")
 
 @api_router.post("/products", response_model=Product)
 async def create_product(product_data: ProductCreate, admin: User = Depends(get_admin_user)):

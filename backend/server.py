@@ -1526,38 +1526,98 @@ async def trigger_immediate_sync():
         logger.error(f"Error triggering sync: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Bulk Import Endpoints
-@api_router.post("/aliexpress/bulk-import")
-async def bulk_import_products(count: int = Query(default=1000, le=1000)):
+# Bulk Import Endpoints (Admin Only)
+@api_router.post("/admin/aliexpress/import-fast")
+async def import_fast(
+    count: int = Query(default=1000, le=1000),
+    query: str = Query(default="jewelry accessories")
+):
     """
-    🚀 Quick Import: Import up to 1000 products from AliExpress.
+    🚀 Fast Import: Import products from AliExpress with query.
     
     Args:
         count: Number of products to import (max 1000)
+        query: Search query
         
     Returns:
         Import statistics with breakdown by category
     """
-    if not aliexpress_bulk_import:
-        raise HTTPException(status_code=503, detail="Bulk import service not available")
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="Sync service not available")
     
     # Check feature flag
     if os.getenv('FEATURE_ALI_IMPORT', 'false').lower() != 'true':
-        raise HTTPException(status_code=403, detail="Bulk import feature is disabled")
+        raise HTTPException(status_code=403, detail="Import feature disabled")
     
     try:
-        logger.info(f"Starting bulk import of {count} products")
+        logger.info(f"Starting fast import: {count} products, query: {query}")
         
-        results = await aliexpress_bulk_import.bulk_import(total_count=count)
+        results = await aliexpress_sync_service.import_bulk_accessories(
+            limit=count,
+            query=query
+        )
         
         return {
             "success": True,
-            "message": f"Bulk import completed: {results['total_imported']} products imported",
+            "message": f"Import completed: {results['inserted']} new, {results['updated']} updated",
             "statistics": results
         }
     
     except Exception as e:
-        logger.error(f"Bulk import failed: {e}")
+        logger.error(f"Fast import failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/sync-now")
+async def sync_now():
+    """
+    Trigger immediate price/stock/shipping sync.
+    
+    Returns:
+        Sync statistics
+    """
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="Sync service not available")
+    
+    try:
+        logger.info("Manual sync triggered")
+        
+        results = await aliexpress_sync_service.sync_prices_stock_shipping()
+        
+        return {
+            "success": True,
+            "message": f"Sync completed: {results['products_updated']} updated",
+            "statistics": results
+        }
+    
+    except Exception as e:
+        logger.error(f"Sync failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/aliexpress/sync-status")
+async def get_sync_status():
+    """
+    Get last sync status and statistics.
+    
+    Returns:
+        Last sync log
+    """
+    try:
+        # Get most recent sync log
+        cursor = db.sync_logs.find().sort('start_time', -1).limit(1)
+        logs = await cursor.to_list(length=1)
+        
+        if logs:
+            log = logs[0]
+            log['_id'] = str(log['_id'])
+            return log
+        else:
+            return {
+                "message": "No sync logs yet",
+                "status": "idle"
+            }
+    
+    except Exception as e:
+        logger.error(f"Error getting sync status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/aliexpress/external-products")

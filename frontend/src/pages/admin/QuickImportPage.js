@@ -150,6 +150,70 @@ const QuickImportPage = () => {
     setSelectedProducts(unpushedIds);
   };
 
+  // New Quick Import Function
+  const handleQuickImport = async () => {
+    if (!supplierType || importCount <= 0) {
+      alert(isRTL ? 'يرجى تحديد نوع المورد وعدد صحيح من المنتجات' : 'Please select supplier type and valid product count');
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/admin/import-fast`, {
+        count: importCount,
+        query: importQuery,
+        provider: supplierType
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        alert(isRTL ? `تم بدء استيراد ${importCount} منتج بنجاح!` : `Successfully started importing ${importCount} products!`);
+        setImportProgress(response.data.task_id);
+        await loadExternalProducts();
+      } else {
+        alert(isRTL ? 'فشل في بدء الاستيراد' : 'Failed to start import');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      alert(isRTL ? 'حدث خطأ أثناء الاستيراد: ' + error.message : 'Error during import: ' + error.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // New Sync Now Function
+  const handleSyncNow = async () => {
+    setImporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/admin/sync-now`, {
+        provider: supplierType
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        alert(isRTL ? 'تم بدء مزامنة الأسعار والمخزون بنجاح!' : 'Successfully started price and inventory sync!');
+        await loadExternalProducts();
+      } else {
+        alert(isRTL ? 'فشل في بدء المزامنة' : 'Failed to start sync');
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      alert(isRTL ? 'حدث خطأ أثناء المزامنة: ' + error.message : 'Error during sync: ' + error.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className={`p-6 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}

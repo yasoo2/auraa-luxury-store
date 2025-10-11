@@ -2178,6 +2178,33 @@ async def quick_import_multi_supplier(
         
     except Exception as e:
         logger.error(f"Error starting quick import: {e}")
+
+@api_router.get("/admin/import-jobs/{task_id}")
+async def get_quick_import_job(task_id: str, admin: User = Depends(get_admin_user)):
+    """Return live progress for quick import job (AliExpress/Amazon/Custom)."""
+    try:
+        task = await db.import_tasks.find_one({"_id": task_id})
+        if not task:
+            raise HTTPException(status_code=404, detail="Job not found")
+        total = int(task.get("count", 0) or 0)
+        processed = int(task.get("products_imported", 0) or 0)
+        progress = float(task.get("progress", 0) or 0)
+        # If progress not explicitly set, derive from processed/total
+        percent = progress if progress > 0 else (round((processed / total) * 100, 2) if total > 0 else 0.0)
+        return {
+            "job_id": task_id,
+            "provider": task.get("provider", "unknown"),
+            "status": task.get("status", "pending"),
+            "total_items": total,
+            "processed_items": processed,
+            "percent": percent,
+            "started_at": task.get("created_at"),
+            "updated_at": task.get("updated_at")
+        }
+    except Exception as e:
+        logger.error(f"Error fetching quick import job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/admin/sync-now")

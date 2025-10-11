@@ -1324,8 +1324,8 @@ async def shutdown_event():
         sched_service = get_scheduler_service(db)
         if sched_service:
             await sched_service.stop_scheduler()
-    except:
-        pass
+    except Exception as e:
+        logger.error(f"Error stopping scheduler: {e}")
     
     client.close()
     logger.info("لورا لاكشري services shut down successfully")

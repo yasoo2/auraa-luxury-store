@@ -13,6 +13,8 @@ import AutoUpdatePage from './AutoUpdatePage';
 import AliExpressPage from './AliExpressPage';
 import BulkImportPage from './BulkImportPage';
 import QuickImportPage from './QuickImportPage';
+import AliExpressTrackingPage from './AliExpressTrackingPage';
+import ContentProtectionPage from './ContentProtectionPage';
 import {
   Package,
   ShoppingCart,

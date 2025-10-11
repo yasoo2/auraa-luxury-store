@@ -1250,8 +1250,8 @@ geoip_service = None
 @app.on_event("startup")
 async def init_aliexpress_services():
     """Initialize AliExpress services on startup."""
-    global aliexpress_auth, aliexpress_sync_service, aliexpress_customs_calc, aliexpress_scheduler
-    global aliexpress_bulk_import, category_mapper, geoip_service
+    global aliexpress_auth, aliexpress_product_sync, aliexpress_customs_calc, aliexpress_scheduler
+    global aliexpress_bulk_import, aliexpress_sync_service, category_mapper, geoip_service
     
     try:
         # Initialize GeoIP service (always available)

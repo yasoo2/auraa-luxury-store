@@ -181,6 +181,8 @@ const AdminDashboard = () => {
             <Route path="/aliexpress" element={<AliExpressPage />} />
             <Route path="/quick-import" element={<QuickImportPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
+            <Route path="/aliexpress-tracking" element={<AliExpressTrackingPage />} />
+            <Route path="/content-protection" element={<ContentProtectionPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
             <Route path="/auto-update" element={<AutoUpdatePage />} />

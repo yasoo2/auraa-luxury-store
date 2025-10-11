@@ -374,7 +374,7 @@ const QuickImportPage = () => {
             </p>
           </div>
           <button
-            onClick={() => handleQuickImport(1000)}
+            onClick={handleQuickImport}
             disabled={importing}
             className="bg-white text-orange-600 px-8 py-3 rounded-lg font-bold hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
           >

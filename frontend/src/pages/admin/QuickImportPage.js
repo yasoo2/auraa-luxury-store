@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const QuickImportPage = () => {
   const { t, language } = useLanguage();

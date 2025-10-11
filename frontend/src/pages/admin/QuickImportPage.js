@@ -45,6 +45,8 @@ const QuickImportPage = () => {
   // Load data on mount
   useEffect(() => {
     loadExternalProducts();
+    let pollInterval = null;
+
     loadImportLogs();
   }, [filters]);
 

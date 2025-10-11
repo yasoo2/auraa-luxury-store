@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown } from 'lucide-react';
+import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown, Route as RouteIcon } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -19,7 +19,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const { language } = useLanguage();
-  const isRTL = language === 'ar';
+  const isRTL = language === 'ar' || language === 'he';
   const { getWishlistCount } = useWishlist();
   const { cartCount } = useCart();
 
@@ -67,6 +67,8 @@ const Navbar = () => {
     logout();
     navigate('/');
   };
+
+  const trackOrderLabel = isRTL ? 'تتبع الطلب' : 'Track Order';
 
   return (
     <nav className="nav-glass sticky top-0" style={{ zIndex: 200 }}>
@@ -135,6 +137,11 @@ const Navbar = () => {
 
             <Link to="/products" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm">
               {isRTL ? 'المنتجات' : 'Products'}
+            </Link>
+
+            {/* Track Order */}
+            <Link to="/order-tracking" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm flex items-center">
+              <RouteIcon className="h-4 w-4 mr-1" /> {trackOrderLabel}
             </Link>
           </div>
 
@@ -281,6 +288,11 @@ const Navbar = () => {
 
               <Link to="/products" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
                 {isRTL ? 'المنتجات' : 'Products'}
+              </Link>
+
+              {/* Track Order - Mobile */}
+              <Link to="/order-tracking" onClick={() => setIsMenuOpen(false)} className="block px-3 py-3 text-base font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
+                {trackOrderLabel}
               </Link>
 
               {!user && (

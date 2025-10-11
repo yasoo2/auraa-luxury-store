@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 const OrderTracking = () => {
   const { language } = useLanguage();
   const { user, isAuthenticated } = useAuth();
-  const isRTL = language === 'ar';
+  const isRTL = language === 'ar' || language === 'he';
 
   const [trackingNumber, setTrackingNumber] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
@@ -18,7 +18,7 @@ const OrderTracking = () => {
   const [loading, setLoading] = useState(false);
   const [userOrders, setUserOrders] = useState([]);
 
-  const API_URL = process.env.REACT_APP_BACKEND_URL; // Must use env var only as per platform rules
+  const API_URL = process.env.REACT_APP_BACKEND_URL; // Must use env var only
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -96,33 +96,98 @@ const OrderTracking = () => {
     return <IconComponent className="h-4 w-4" />;
   };
 
+  const statusTexts = {
+    ar: {
+      pending: 'في انتظار المعالجة',
+      processing: 'قيد المعالجة',
+      shipped: 'تم الشحن',
+      in_transit: 'في الطريق',
+      delivered: 'تم التسليم',
+      cancelled: 'ملغي'
+    },
+    en: {
+      pending: 'Pending',
+      processing: 'Processing',
+      shipped: 'Shipped',
+      in_transit: 'In Transit',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled'
+    },
+    tr: {
+      pending: 'Beklemede',
+      processing: 'İşleniyor',
+      shipped: 'Gönderildi',
+      in_transit: 'Yolda',
+      delivered: 'Teslim edildi',
+      cancelled: 'İptal edildi'
+    },
+    hi: {
+      pending: 'लंबित',
+      processing: 'प्रक्रिया में',
+      shipped: 'भेजा गया',
+      in_transit: 'रास्ते में',
+      delivered: 'सुपुर्द',
+      cancelled: 'रद्द'
+    },
+    he: {
+      pending: 'בהמתנה',
+      processing: 'בעיבוד',
+      shipped: 'נשלח',
+      in_transit: 'בדרך',
+      delivered: 'נמסר',
+      cancelled: 'בוטל'
+    },
+    es: {
+      pending: 'Pendiente',
+      processing: 'Procesando',
+      shipped: 'Enviado',
+      in_transit: 'En tránsito',
+      delivered: 'Entregado',
+      cancelled: 'Cancelado'
+    },
+    fr: {
+      pending: 'En attente',
+      processing: 'En traitement',
+      shipped: 'Expédié',
+      in_transit: 'En transit',
+      delivered: 'Livré',
+      cancelled: 'Annulé'
+    },
+    ru: {
+      pending: 'В ожидании',
+      processing: 'Обрабатывается',
+      shipped: 'Отправлено',
+      in_transit: 'В пути',
+      delivered: 'Доставлено',
+      cancelled: 'Отменено'
+    },
+    de: {
+      pending: 'Ausstehend',
+      processing: 'Wird bearbeitet',
+      shipped: 'Versandt',
+      in_transit: 'Unterwegs',
+      delivered: 'Zugestellt',
+      cancelled: 'Storniert'
+    }
+  };
+
   const getStatusText = (status) => {
-    const statusTexts = {
-      ar: {
-        'pending': 'في انتظار المعالجة',
-        'processing': 'قيد المعالجة',
-        'shipped': 'تم الشحن',
-        'in_transit': 'في الطريق',
-        'delivered': 'تم التسليم',
-        'cancelled': 'ملغي'
-      },
-      en: {
-        'pending': 'Pending',
-        'processing': 'Processing',
-        'shipped': 'Shipped',
-        'in_transit': 'In Transit',
-        'delivered': 'Delivered',
-        'cancelled': 'Cancelled'
-      }
-    };
-    return statusTexts[language][status] || status;
+    const langKey = statusTexts[language] ? language : 'en';
+    return statusTexts[langKey][status] || status;
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return isRTL 
-      ? date.toLocaleDateString('ar-SA')
-      : date.toLocaleDateString('en-US');
+    try {
+      const date = new Date(dateString);
+      const localeMap = {
+        ar: 'ar-SA', en: 'en-US', tr: 'tr-TR', hi: 'hi-IN', he: 'he-IL', es: 'es-ES', fr: 'fr-FR', ru: 'ru-RU', de: 'de-DE'
+      };
+      const baseLocale = localeMap[language] || 'en-US';
+      const gregorianLocale = `${baseLocale}-u-ca-gregory`;
+      return new Intl.DateTimeFormat(gregorianLocale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+    } catch {
+      return dateString;
+    }
   };
 
   return (

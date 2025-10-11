@@ -1241,6 +1241,9 @@ aliexpress_auth = None
 aliexpress_sync_service = None
 aliexpress_customs_calc = None
 aliexpress_scheduler = None
+aliexpress_bulk_import = None
+category_mapper = None
+geoip_service = None
 
 @app.on_event("startup")
 async def init_aliexpress_services():

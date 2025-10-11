@@ -393,6 +393,17 @@ async def remove_from_cart(product_id: str, current_user: User = Depends(get_cur
                 "total_amount": total,
                 "updated_at": datetime.now(timezone.utc)
             }
+
+class ShippingItem(BaseModel):
+    product_id: str
+    quantity: int = 1
+
+class ShippingEstimateRequest(BaseModel):
+    country_code: str
+    items: List[ShippingItem]
+    preferred: str = "fastest"  # or "cheapest"
+    currency: Optional[str] = "SAR"
+
         }
     )
     

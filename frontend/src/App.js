@@ -32,6 +32,7 @@ import TermsOfService from './pages/TermsOfService';
 import ReturnPolicy from './pages/ReturnPolicy';
 import ContactUs from './pages/ContactUs';
 import AboutUs from './pages/AboutUs';
+import OrderTracking from './pages/OrderTracking';
 
 // UI Components
 import { Toaster } from './components/ui/sonner';

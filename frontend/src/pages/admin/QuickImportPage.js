@@ -144,6 +144,26 @@ const QuickImportPage = () => {
           'Content-Type': 'application/json'
         }
       });
+        // start polling progress
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(async () => {
+          try {
+            const token = localStorage.getItem('token');
+            const jobId = response.data.task_id;
+            const res = await axios.get(`${API_URL}/api/admin/import-jobs/${jobId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const progress = res.data;
+            setImportProgress({ job_id: progress.job_id, status: progress.status, percent: progress.percent, processed: progress.processed_items, total: progress.total_items });
+            if (progress.status === 'completed' || progress.status === 'failed') {
+              clearInterval(pollInterval);
+            }
+          } catch (e) {
+            // stop polling on error
+            clearInterval(pollInterval);
+          }
+        }, 2000);
+
 
       if (response.data.success) {
         alert(isRTL ? `تم بدء استيراد ${importCount} منتج بنجاح!` : `Successfully started importing ${importCount} products!`);

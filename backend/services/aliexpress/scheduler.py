@@ -222,43 +222,6 @@ class AliExpressSyncScheduler:
         self.scheduler.shutdown(wait=True)
         self.logger.info("Scheduler stopped")
     
-    async def quick_price_sync(self) -> Dict[str, Any]:
-        """
-        Quick price and inventory sync - faster than full sync.
-        Runs every 5 minutes for critical updates.
-        """
-        start_time = datetime.utcnow()
-        stats = {
-            'job_type': 'quick_price_sync',
-            'start_time': start_time.isoformat(),
-            'products_processed': 0,
-            'price_updates': 0,
-            'inventory_updates': 0,
-            'errors': []
-        }
-        
-        try:
-            # Quick sync for products that need frequent updates
-            result = await self.sync_service.sync_prices_and_inventory(
-                batch_size=100,
-                priority_only=True  # Only sync high-priority products
-            )
-            
-            stats.update(result)
-            
-        except Exception as e:
-            self.logger.error(f"Quick price sync failed: {str(e)}")
-            stats['errors'].append(str(e))
-        
-        end_time = datetime.utcnow()
-        stats['end_time'] = end_time.isoformat()
-        stats['duration_seconds'] = (end_time - start_time).total_seconds()
-        
-        # Log the sync
-        await self.db.sync_logs.insert_one(stats)
-        
-        return stats
-    
     async def daily_maintenance(self):
         """Remove sync logs older than 30 days."""
         cutoff_date = datetime.utcnow() - timedelta(days=30)

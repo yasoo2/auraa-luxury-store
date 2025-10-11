@@ -354,6 +354,18 @@ async def add_to_cart(
         existing_item["quantity"] += quantity
     else:
         cart_items.append({
+class OrderPublic(BaseModel):
+    id: str
+    order_number: Optional[str] = None
+    tracking_number: Optional[str] = None
+    status: OrderStatus
+    created_at: datetime
+    total_amount: float
+    currency: str
+    shipping_address: Dict[str, Any]
+    items: Optional[List[CartItem]] = None
+
+
             "product_id": product_id,
             "quantity": quantity,
             "price": product["price"]

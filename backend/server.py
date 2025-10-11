@@ -44,6 +44,7 @@ class OrderStatus(str, Enum):
     pending = "pending"
     processing = "processing"
     shipped = "shipped"
+    in_transit = "in_transit"
     delivered = "delivered"
     cancelled = "cancelled"
 

@@ -66,6 +66,11 @@ const AdminDashboard = () => {
       icon: ExternalLink
     },
     {
+      name: isRTL ? '🚀 استيراد سريع' : '🚀 Quick Import',
+      path: '/admin/quick-import',
+      icon: Download
+    },
+    {
       name: isRTL ? 'الاستيراد المجمع' : 'Bulk Import',
       path: '/admin/bulk-import',
       icon: Upload

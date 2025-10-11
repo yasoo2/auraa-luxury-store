@@ -429,6 +429,10 @@ async def create_order(
         user_id=current_user.id,
         items=cart["items"],
         total_amount=cart["total_amount"],
+        currency="SAR",
+        order_number=f"AUR-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+        tracking_number=f"TRK-{str(uuid.uuid4())[:10].upper()}",
+
         shipping_address=order_data.shipping_address,
         payment_method=order_data.payment_method
     )

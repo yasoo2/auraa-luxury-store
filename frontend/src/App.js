@@ -74,6 +74,13 @@ function App() {
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
                     
+                    {/* Legal and Info Pages */}
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/terms-of-service" element={<TermsOfService />} />
+                    <Route path="/return-policy" element={<ReturnPolicy />} />
+                    <Route path="/contact" element={<ContactUs />} />
+                    <Route path="/about" element={<AboutUs />} />
+                    
                     {/* Admin Routes */}
                     <Route path="/admin/*" element={<AdminDashboard />} />
                     

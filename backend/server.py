@@ -1223,6 +1223,278 @@ async def shutdown_event():
     client.close()
     logger.info("لورا لاكشري services shut down successfully")
 
+# ============================================================================
+# AliExpress Integration
+# ============================================================================
+
+from services.aliexpress.auth import AliExpressAuthenticator
+from services.aliexpress.product_sync import ProductSyncService
+from services.aliexpress.customs_calculator import CustomsCalculator
+from services.aliexpress.scheduler import AliExpressSyncScheduler
+from services.aliexpress.models import AliExpressProduct
+
+# Initialize AliExpress services
+aliexpress_auth = None
+aliexpress_sync_service = None
+aliexpress_customs_calc = None
+aliexpress_scheduler = None
+
+@app.on_event("startup")
+async def init_aliexpress_services():
+    """Initialize AliExpress services on startup."""
+    global aliexpress_auth, aliexpress_sync_service, aliexpress_customs_calc, aliexpress_scheduler
+    
+    try:
+        app_key = os.getenv('ALIEXPRESS_APP_KEY', '')
+        app_secret = os.getenv('ALIEXPRESS_APP_SECRET', '')
+        
+        if app_key and app_secret:
+            logger.info("Initializing AliExpress services...")
+            
+            # Initialize authenticator
+            aliexpress_auth = AliExpressAuthenticator(app_key, app_secret)
+            
+            # Initialize sync service
+            aliexpress_sync_service = ProductSyncService(
+                aliexpress_auth,
+                db,
+                os.getenv('ALIEXPRESS_API_URL', 'http://gw.api.taobao.com/router/rest')
+            )
+            
+            # Initialize customs calculator
+            aliexpress_customs_calc = CustomsCalculator()
+            
+            # Initialize and start scheduler
+            sync_interval = int(os.getenv('ALIEXPRESS_SYNC_INTERVAL_MINUTES', '10'))
+            aliexpress_scheduler = AliExpressSyncScheduler(
+                aliexpress_sync_service,
+                db,
+                sync_interval
+            )
+            
+            # Start scheduler if enabled
+            if os.getenv('ENABLE_SCHEDULER', 'true').lower() == 'true':
+                aliexpress_scheduler.start_scheduler()
+                logger.info(f"AliExpress scheduler started with {sync_interval} minute interval")
+            
+            logger.info("✅ AliExpress services initialized successfully")
+        else:
+            logger.warning("⚠️ AliExpress credentials not found - services disabled")
+    
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize AliExpress services: {e}")
+
+@app.on_event("shutdown")
+async def shutdown_aliexpress_services():
+    """Shutdown AliExpress services on app shutdown."""
+    global aliexpress_scheduler
+    
+    try:
+        if aliexpress_scheduler:
+            aliexpress_scheduler.stop_scheduler()
+            logger.info("AliExpress scheduler stopped")
+    except Exception as e:
+        logger.error(f"Error stopping AliExpress scheduler: {e}")
+
+# AliExpress Product Endpoints
+@api_router.post("/aliexpress/sync-product")
+async def sync_aliexpress_product(product_id: str):
+    """
+    Synchronize a single product from AliExpress.
+    
+    Args:
+        product_id: AliExpress product ID
+        
+    Returns:
+        Sync result with product data
+    """
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await aliexpress_sync_service.sync_product(product_id)
+        
+        if result:
+            return {
+                "success": True,
+                "message": "Product synced successfully",
+                "product_id": product_id,
+                "mongodb_id": result
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Product not found on AliExpress")
+    
+    except Exception as e:
+        logger.error(f"Error syncing product {product_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/sync-batch")
+async def sync_aliexpress_batch(product_ids: List[str]):
+    """
+    Synchronize multiple products in batch.
+    
+    Args:
+        product_ids: List of AliExpress product IDs
+        
+    Returns:
+        Batch sync statistics
+    """
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        results = await aliexpress_sync_service.sync_products_batch(product_ids)
+        return {
+            "success": True,
+            "statistics": results
+        }
+    
+    except Exception as e:
+        logger.error(f"Error in batch sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/product/{product_id}")
+async def get_aliexpress_product(product_id: str):
+    """
+    Get AliExpress product from local database.
+    
+    Args:
+        product_id: AliExpress product ID
+        
+    Returns:
+        Product details with country availability
+    """
+    try:
+        product = await db.products.find_one({'product_id': product_id})
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Remove MongoDB _id field
+        product.pop('_id', None)
+        
+        return product
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/product/{product_id}/availability/{country_code}")
+async def check_product_availability(product_id: str, country_code: str):
+    """
+    Check product availability for specific country.
+    
+    Args:
+        product_id: AliExpress product ID
+        country_code: ISO country code (SA, AE, etc.)
+        
+    Returns:
+        Availability info with shipping options
+    """
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        availability = await aliexpress_sync_service.check_country_availability(
+            product_id,
+            country_code.upper()
+        )
+        
+        return availability.model_dump()
+    
+    except Exception as e:
+        logger.error(f"Error checking availability: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/customs/calculate")
+async def calculate_customs(
+    product_id: str,
+    country_code: str,
+    shipping_cost: float
+):
+    """
+    Calculate customs duties and VAT for product.
+    
+    Args:
+        product_id: AliExpress product ID
+        country_code: Destination country code
+        shipping_cost: Shipping cost in USD
+        
+    Returns:
+        Tax calculation breakdown
+    """
+    if not aliexpress_sync_service or not aliexpress_customs_calc:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        # Get product details
+        product = await aliexpress_sync_service.get_product_details(product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Determine category
+        category = aliexpress_customs_calc.categorize_product(product.title)
+        
+        # Calculate taxes
+        tax_calc = aliexpress_customs_calc.calculate_gcc_taxes(
+            country_code.upper(),
+            product.sale_price,
+            shipping_cost,
+            category
+        )
+        
+        return tax_calc.model_dump()
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error calculating customs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/scheduler/status")
+async def get_scheduler_status():
+    """
+    Get status of AliExpress synchronization scheduler.
+    
+    Returns:
+        Scheduler status and job information
+    """
+    if not aliexpress_scheduler:
+        raise HTTPException(status_code=503, detail="Scheduler not available")
+    
+    try:
+        jobs_status = aliexpress_scheduler.get_all_jobs_status()
+        
+        return {
+            "status": "running",
+            "jobs": jobs_status
+        }
+    
+    except Exception as e:
+        logger.error(f"Error getting scheduler status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/scheduler/trigger-sync")
+async def trigger_immediate_sync():
+    """
+    Trigger immediate product synchronization.
+    
+    Returns:
+        Sync results
+    """
+    if not aliexpress_scheduler:
+        raise HTTPException(status_code=503, detail="Scheduler not available")
+    
+    try:
+        results = await aliexpress_scheduler.trigger_immediate_sync()
+        return results
+    
+    except Exception as e:
+        logger.error(f"Error triggering sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
 

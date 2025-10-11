@@ -1,0 +1,9 @@
+package-lock.json merge=ours
+yarn.lock merge=ours
+pnpm-lock.yaml merge=ours
+
+*.png -merge
+*.jpg -merge
+*.jpeg -merge
+*.svg -merge
+*.ico -merge

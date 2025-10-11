@@ -4,7 +4,8 @@ Handles large-scale product import with category distribution.
 """
 
 import asyncio
-from typing import List, Dict, Any, Optional
+import inspect
+from typing import List, Dict, Any, Optional, Callable
 from datetime import datetime
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -96,7 +97,8 @@ class BulkImportService:
     async def import_category_products(
         self,
         category: AuraaCategory,
-        count: int
+        count: int,
+        progress_callback: Optional[Callable[[int], Any]] = None
     ) -> Dict[str, Any]:
         """
         Import specified number of products for a category.
@@ -104,6 +106,7 @@ class BulkImportService:
         Args:
             category: Category to import
             count: Number of products to import
+            progress_callback: Optional callback called with increment (e.g., 1) for each imported product
             
         Returns:
             Import statistics
@@ -186,6 +189,17 @@ class BulkImportService:
                         # Insert into external_products
                         await self.db.external_products.insert_one(external_product)
                         stats['imported'] += 1
+                        
+                        # progress callback
+                        if progress_callback:
+                            try:
+                                if inspect.iscoroutinefunction(progress_callback):
+                                    await progress_callback(1)
+                                else:
+                                    progress_callback(1)
+                            except Exception:
+                                # Don't break import due to callback errors
+                                pass
                         
                     except Exception as e:
                         stats['errors'].append({

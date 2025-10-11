@@ -452,6 +452,86 @@ async def get_orders(current_user: User = Depends(get_current_user)):
     orders = await db.orders.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
     return [Order(**order) for order in orders]
 
+
+@api_router.get("/orders/my-orders")
+async def get_my_orders(current_user: User = Depends(get_current_user)):
+    orders = await db.orders.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    # map to public shape
+    result = []
+    for o in orders:
+        result.append({
+            "id": o.get("id"),
+            "order_number": o.get("order_number"),
+            "tracking_number": o.get("tracking_number"),
+            "status": o.get("status", "pending"),
+            "created_at": o.get("created_at"),
+            "total_amount": o.get("total_amount", 0.0),
+            "currency": o.get("currency", "SAR"),
+            "shipping_address": o.get("shipping_address", {})
+        })
+    return {"orders": result}
+
+@api_router.get("/orders/track/{search_param}")
+async def track_order(search_param: str):
+    # allow search by tracking_number, order_number, or id
+    order = await db.orders.find_one({"tracking_number": search_param})
+    if not order:
+        order = await db.orders.find_one({"order_number": search_param})
+    if not order:
+        order = await db.orders.find_one({"id": search_param})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Build a simple internal tracking timeline suitable for dropshipping
+    created_at = order.get("created_at", datetime.now(timezone.utc))
+    events = [
+        {
+            "status": "pending",
+            "description": "Order received",
+            "location": "Warehouse",
+            "timestamp": created_at
+        },
+        {
+            "status": "processing",
+            "description": "Preparing your items",
+            "location": "Fulfillment Center",
+            "timestamp": created_at + timedelta(hours=12)
+        }
+    ]
+    if order.get("status") in ["shipped", "in_transit", "delivered"]:
+        events.append({
+            "status": "shipped",
+            "description": "Shipped from supplier",
+            "location": "Origin Facility",
+            "timestamp": created_at + timedelta(days=1)
+        })
+    if order.get("status") in ["in_transit", "delivered"]:
+        events.append({
+            "status": "in_transit",
+            "description": "In transit to destination",
+            "location": "On the way",
+            "timestamp": created_at + timedelta(days=3)
+        })
+    if order.get("status") == "delivered":
+        events.append({
+            "status": "delivered",
+            "description": "Delivered to customer",
+            "location": order.get("shipping_address", {}).get("city", "Destination"),
+            "timestamp": created_at + timedelta(days=7)
+        })
+
+    response = {
+        "order_number": order.get("order_number"),
+        "tracking_number": order.get("tracking_number"),
+        "status": order.get("status", "pending"),
+        "created_at": order.get("created_at"),
+        "total_amount": order.get("total_amount", 0.0),
+        "currency": order.get("currency", "SAR"),
+        "shipping_address": order.get("shipping_address", {}),
+        "tracking_events": events
+    }
+    return response
+
 # External Products (Simulated API integration)
 @api_router.get("/external-products")
 async def get_external_products(

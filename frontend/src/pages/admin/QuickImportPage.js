@@ -82,37 +82,7 @@ const QuickImportPage = () => {
     }
   };
 
-  const handleQuickImport = async (count = 1000, query = 'jewelry accessories') => {
-    setImporting(true);
-    setImportProgress({ status: 'running', message: 'بدء الاستيراد...', imported: 0, total: count });
-
-    try {
-      const response = await axios.post(
-        `${API_URL}/api/admin/aliexpress/import-fast?count=${count}&query=${encodeURIComponent(query)}`
-      );
-      
-      const stats = response.data.statistics;
-      setImportProgress({
-        status: 'success',
-        message: `تم استيراد ${stats.inserted} منتج جديد و تحديث ${stats.updated}!`,
-        imported: stats.inserted + stats.updated,
-        total: count,
-        stats: stats
-      });
-
-      // Reload products
-      await loadExternalProducts();
-      await loadImportLogs();
-    } catch (error) {
-      setImportProgress({
-        status: 'error',
-        message: error.response?.data?.detail || 'فشل الاستيراد',
-        error: error.message
-      });
-    } finally {
-      setImporting(false);
-    }
-  };
+  // Remove old handleQuickImport - will be replaced with new multi-supplier version
 
   const handlePushToStore = async () => {
     if (selectedProducts.length === 0) {

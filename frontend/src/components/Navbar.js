@@ -23,10 +23,18 @@ const Navbar = () => {
   const { getWishlistCount } = useWishlist();
   const { cartCount } = useCart();
 
-  // Debug user state
+  // Debug user state with re-render tracking
   console.log('Navbar - Current user:', user);
   console.log('Navbar - Is authenticated:', isAuthenticated);
   console.log('Navbar - Is admin:', user?.is_admin);
+  
+  // Force re-render when user state changes
+  useEffect(() => {
+    console.log('Navbar useEffect - User state changed:', user);
+    if (user) {
+      console.log('User object in navbar:', JSON.stringify(user, null, 2));
+    }
+  }, [user]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showCategories, setShowCategories] = useState(false);

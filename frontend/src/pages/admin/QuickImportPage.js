@@ -47,6 +47,8 @@ const QuickImportPage = () => {
     loadExternalProducts();
     let pollInterval = null;
 
+    return () => { if (pollInterval) clearInterval(pollInterval); };
+
     loadImportLogs();
   }, [filters]);
 

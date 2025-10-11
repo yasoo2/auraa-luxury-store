@@ -79,6 +79,16 @@ const AdminDashboard = () => {
       icon: Upload
     },
     {
+      name: isRTL ? '📦 تتبع الطلبات' : '📦 Order Tracking',
+      path: '/admin/aliexpress-tracking',
+      icon: Package
+    },
+    {
+      name: isRTL ? '🛡️ حماية المحتوى' : '🛡️ Content Protection',
+      path: '/admin/content-protection',
+      icon: Settings
+    },
+    {
       name: isRTL ? 'التحليلات' : 'Analytics',
       path: '/admin/analytics',
       icon: BarChart

@@ -56,10 +56,19 @@ export const AuthProvider = ({ children }) => {
       const { access_token, user: userData } = response.data;
       
       console.log('Login successful, user data:', userData);
+      console.log('User is_admin flag:', userData.is_admin);
       
+      // Store token first
+      localStorage.setItem('token', access_token);
+      
+      // Update state with a small delay to ensure proper state propagation
       setToken(access_token);
       setUser(userData);
-      localStorage.setItem('token', access_token);
+      
+      // Force re-render by triggering an additional state update
+      setTimeout(() => {
+        setUser({...userData});
+      }, 50);
       
       return { success: true };
     } catch (error) {

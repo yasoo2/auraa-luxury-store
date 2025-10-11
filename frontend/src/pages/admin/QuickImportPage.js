@@ -302,10 +302,18 @@ const QuickImportPage = () => {
         {/* Import Progress */}
         {importProgress && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">
-              {isRTL ? `معرف المهمة: ${importProgress}` : `Task ID: ${importProgress}`}
-            </p>
-            <p className="text-sm text-blue-600">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-blue-800">
+                {isRTL ? `معرف المهمة: ${importProgress.job_id}` : `Task ID: ${importProgress.job_id}`}
+              </p>
+              <p className="text-sm text-blue-800 font-semibold">
+                {importProgress.percent ?? 0}%
+              </p>
+            </div>
+            <div className="w-full bg-blue-100 rounded-full h-2 mt-2">
+              <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${importProgress.percent ?? 0}%` }}></div>
+            </div>
+            <p className="text-sm text-blue-600 mt-2">
               {isRTL ? 'جاري معالجة الاستيراد في الخلفية...' : 'Processing import in background...'}
             </p>
           </div>

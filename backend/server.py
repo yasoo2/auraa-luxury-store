@@ -2264,6 +2264,10 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
                 category = categories[i % len(categories)]
                 product_id = str(uuid.uuid4())
                 
+                # Generate unique external_id using timestamp and random number
+                import random
+                unique_suffix = int(datetime.utcnow().timestamp() * 1000) + random.randint(1000, 9999)
+                
                 product_data = {
                     "id": product_id,
                     "name": f"Luxury {category[:-1]} {i+1}",
@@ -2279,7 +2283,7 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
                     "images": [f"https://via.placeholder.com/400x400?text=Product+{i+1}"],
                     "supplier": "aliexpress",
                     "source": "aliexpress",
-                    "external_id": f"ae_{1000000 + i}",
+                    "external_id": f"ae_{unique_suffix}_{i}",
                     "stock": 50 + (i % 100),
                     "is_available": True,
                     "is_active": True,
@@ -2295,11 +2299,9 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
                     "shipping_days_max": 7
                 }
                 
-                # Check if product already exists
-                existing = await db.products.find_one({"external_id": product_data["external_id"]})
-                if not existing:
-                    await db.products.insert_one(product_data)
-                    products_imported += 1
+                # Insert product directly (no duplicate check to speed up)
+                await db.products.insert_one(product_data)
+                products_imported += 1
                 
                 # Update progress every 10 products
                 if (i + 1) % 10 == 0:

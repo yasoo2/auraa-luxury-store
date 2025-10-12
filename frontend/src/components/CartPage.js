@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Truck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -15,9 +16,17 @@ const CartPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { fetchCartCount } = useCart();
+  const { isRTL, currency } = useLanguage();
   const [cart, setCart] = useState(null);
   const [products, setProducts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [countryCode, setCountryCode] = useState('SA');
+  const [shippingEstimate, setShippingEstimate] = useState({ 
+    loading: false, 
+    cost: 0, 
+    days: null, 
+    error: null 
+  });
 
   useEffect(() => {
     if (user) {

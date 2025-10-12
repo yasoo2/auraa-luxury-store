@@ -146,7 +146,7 @@ const QuickImportPage = () => {
       });
         // start polling progress
         if (pollInterval) clearInterval(pollInterval);
-        pollInterval = setInterval(async () => {
+        const newPollInterval = setInterval(async () => {
           try {
             const token = localStorage.getItem('token');
             const jobId = response.data.task_id;
@@ -156,13 +156,16 @@ const QuickImportPage = () => {
             const progress = res.data;
             setImportProgress({ job_id: progress.job_id, status: progress.status, percent: progress.percent, processed: progress.processed_items, total: progress.total_items });
             if (progress.status === 'completed' || progress.status === 'failed') {
-              clearInterval(pollInterval);
+              clearInterval(newPollInterval);
+              setPollInterval(null);
             }
           } catch (e) {
             // stop polling on error
-            clearInterval(pollInterval);
+            clearInterval(newPollInterval);
+            setPollInterval(null);
           }
         }, 2000);
+        setPollInterval(newPollInterval);
 
 
       if (response.data.success) {

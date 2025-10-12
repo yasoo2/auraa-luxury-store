@@ -2778,6 +2778,98 @@ async def delete_media(media_id: str, admin: User = Depends(get_admin_user)):
         logger.error(f"Error deleting media: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Admin Setup Endpoints
+@api_router.get("/setup/check-admin")
+async def check_admin_exists():
+    """Check if any admin user exists in the system"""
+    try:
+        admin_count = await db.users.count_documents({"is_admin": True})
+        return {
+            "has_admin": admin_count > 0,
+            "admin_count": admin_count
+        }
+    except Exception as e:
+        logger.error(f"Error checking admin: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/setup/create-first-admin")
+async def create_first_admin(
+    email: str = Form(...),
+    password: str = Form(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...)
+):
+    """Create the first admin user - only works if no admin exists"""
+    try:
+        # Check if any admin already exists
+        admin_count = await db.users.count_documents({"is_admin": True})
+        if admin_count > 0:
+            raise HTTPException(
+                status_code=403, 
+                detail="Admin user already exists. This endpoint can only be used once."
+            )
+        
+        # Check if email already exists
+        existing_user = await db.users.find_one({"email": email})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Validate email format
+        if not email or "@" not in email:
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        
+        # Validate password length
+        if not password or len(password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+        
+        # Create admin user
+        user_id = str(uuid.uuid4())
+        hashed_password = pwd_context.hash(password)
+        
+        admin_user = {
+            "id": user_id,
+            "email": email,
+            "password": hashed_password,
+            "first_name": first_name,
+            "last_name": last_name,
+            "is_admin": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        
+        await db.users.insert_one(admin_user)
+        
+        logger.info(f"First admin user created: {email}")
+        
+        # Generate token for immediate login
+        token_data = {
+            "sub": user_id,
+            "email": email,
+            "is_admin": True,
+            "exp": datetime.utcnow() + timedelta(days=30)
+        }
+        access_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+        
+        return {
+            "success": True,
+            "message": "Admin user created successfully",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user_id,
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "is_admin": True
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating first admin: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
 

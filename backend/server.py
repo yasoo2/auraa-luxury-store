@@ -2213,7 +2213,7 @@ async def quick_import_multi_supplier(
 ):
     """Quick import products from multiple suppliers (AliExpress, Amazon, Custom)"""
     try:
-        count = request_data.get('count', 1000)
+        count = request_data.get('count', 500)
         query = request_data.get('query', 'jewelry accessories')
         provider = request_data.get('provider', 'aliexpress')
         

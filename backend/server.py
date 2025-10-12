@@ -1352,6 +1352,18 @@ async def upload_image(
         # Return the URL
         image_url = f"/static/uploads/{unique_filename}"
         
+        # Save to media library database
+        media_record = {
+            "id": str(uuid.uuid4()),
+            "filename": file.filename,
+            "url": image_url,
+            "filepath": file_path,
+            "size": len(file_content),
+            "uploaded_at": datetime.now(timezone.utc),
+            "uploaded_by": admin.id
+        }
+        await db.media_library.insert_one(media_record)
+        
         logger.info(f"Image uploaded successfully: {unique_filename}")
         return {"url": image_url, "filename": unique_filename}
         

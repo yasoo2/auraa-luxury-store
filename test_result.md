@@ -311,6 +311,61 @@
       - working: true
         agent: "testing"
         comment: "🎉 NEW SHIPPING FLOW COMPREHENSIVE TESTING COMPLETE - ALL REQUIREMENTS VERIFIED: Executed comprehensive backend testing for the new shipping flow as requested in the review. RESULTS: ✅ 11/11 tests passed (100% success rate). SHIPPING ESTIMATE API TESTING: 1) ✅ POST /api/shipping/estimate with sample cart (1-2 items): Successfully tested with product IDs from /api/products, country_code='SA', preferred='fastest', currency='SAR', markup_pct=10. Response includes success=true, shipping_cost with USD and SAR values (USD: 52.77, SAR: 52.77), applied_markup_pct=10.0, and estimated_days with min/max delivery times (3-7 days). 2) ✅ Different Preferences: Both 'fastest' and 'cheapest' preferences work correctly, returning appropriate shipping options based on delivery speed and cost optimization. 3) ✅ Error Handling: Proper 400 responses for empty items list, graceful handling of invalid countries with mock fallback data. 4) ✅ Mock Implementation: Added check_country_availability method to AliExpressSyncService with real API integration and mock fallback for testing. GEO DETECTION TESTING: 5) ✅ GET /api/geo/detect: Returns proper country_code (detected: 'SA'), endpoint working correctly for geographic detection. REGRESSION TESTING: 6) ✅ Orders API Regression: POST /api/orders with minimal payload works perfectly - creates orders with proper ID, order_number (AUR-20251011-*), and tracking_number (TRK-*). 7) ✅ Order Tracking Regression: GET /api/orders/track/{id} returns complete timeline with tracking_events array containing status, description, location, and timestamp fields. Works with both tracking_number and order_id parameters. TECHNICAL IMPLEMENTATION: Fixed missing check_country_availability method in AliExpressSyncService, implemented proper shipping options structure with price_usd, min_days, max_days, carrier, and speed fields, added mock shipping data for GCC countries (SA, AE, KW, QA, BH, OM) with realistic pricing and delivery times. CONCLUSION: All new shipping flow functionality is working perfectly with proper error handling, currency conversion, markup application, and delivery estimation. The system is ready for production use with full dropshipping shipping calculation capabilities."
+  - task: "Cart Page Dynamic Shipping Estimate"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/CartPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented dynamic shipping estimate on Cart page. Added country detection via /api/geo/detect, shipping cost calculation via /api/shipping/estimate with 10% markup, real-time display of cost and delivery duration (min-max days), loading states during calculation, error handling for unavailable shipping, checkout button disabled if shipping unavailable. Uses existing backend endpoints - no new backend changes needed. Frontend implementation complete and ready for testing."
+  - task: "SSE Live Import Progress Streaming"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented Server-Sent Events (SSE) endpoint for real-time import progress updates. Created GET /api/admin/import-tasks/{task_id}/stream endpoint that streams progress updates every second. Endpoint monitors import_tasks collection for progress changes, sends JSON data events with task status/progress/products_imported/count, automatically stops when task completes/fails/cancelled, includes 60-second timeout for stalled tasks. Frontend integration pending - needs to be added to QuickImportPage and BulkImportPage to consume SSE stream alongside existing polling mechanism."
+  - task: "Admin Dashboard CMS Pages Manager"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/admin/CMSPagesManager.js, /app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created comprehensive CMS Pages Manager for managing legal and static content pages. FRONTEND: Built CMSPagesManager.js with full CRUD interface - create/edit/delete pages, bilingual support (English/Arabic) for titles and content, page activation/deactivation, slug and route management, preview functionality, modal-based editor with rich text areas, grid layout with status indicators. BACKEND: Added 4 admin endpoints - GET /api/admin/cms-pages (list all), POST /api/admin/cms-pages (create), PUT /api/admin/cms-pages/{id} (update), DELETE /api/admin/cms-pages/{id} (delete). Uses MongoDB cms_pages collection with CMSPage model. Integrated into AdminDashboard with new menu item. Ready for managing Privacy Policy, Terms of Service, Return Policy, Contact Us and custom pages."
+  - task: "Admin Dashboard Media Library"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/admin/MediaLibrary.js, /app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created comprehensive Media Library for managing store images and files. FRONTEND: Built MediaLibrary.js with full media management - grid and list view modes, image upload (single/multiple), search functionality, copy URL to clipboard, download files, delete media, preview images with hover effects, file size display, responsive grid layout. BACKEND: Added 2 admin endpoints - GET /api/admin/media (list all media), DELETE /api/admin/media/{id} (delete with file cleanup). Enhanced existing /api/admin/upload-image to save media records to media_library collection with metadata (filename, url, filepath, size, uploaded_at, uploaded_by). Integrated into AdminDashboard with new menu item. All uploaded images now tracked in database for easy management."
+  - task: "Admin Dashboard Theme Customization"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/admin/ThemeCustomization.js, /app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created comprehensive Theme Customization system for store appearance management. FRONTEND: Built ThemeCustomization.js with full theme editor - brand colors (primary, secondary, accent, background) with color pickers, typography settings (fonts, sizes), logo upload and management, layout configuration (border radius), button styles (rounded/square/pill), visual effects toggles (animations, glassmorphism, gradients), live preview panel showing theme changes in real-time, reset to defaults functionality, save/load theme settings. BACKEND: Added 2 admin endpoints - GET /api/admin/theme (load theme), POST /api/admin/theme (save with upsert). Stores theme in theme_settings collection with default theme ID. Theme changes can be applied to DOM via CSS variables for immediate visual feedback. Integrated into AdminDashboard with new menu item. Complete theme customization system ready for production."
 
 ## frontend:
   - task: "Carousel Responsive Design Enhancement"

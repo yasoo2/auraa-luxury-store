@@ -15,8 +15,8 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: 'admin@auraa.com',
-    password: 'admin123',
+    email: '',
+    password: '',
     first_name: '',
     last_name: '',
     phone: ''

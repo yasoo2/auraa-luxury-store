@@ -2655,6 +2655,8 @@ async def delete_media(media_id: str, admin: User = Depends(get_admin_user)):
         # Delete from database
         await db.media_library.delete_one({"id": media_id})
         return {"success": True}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting media: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -25,6 +25,7 @@ import Footer from './components/Footer';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminSetup from './pages/AdminSetup';
 
 // Legal and Info Pages
 import PrivacyPolicy from './pages/PrivacyPolicy';

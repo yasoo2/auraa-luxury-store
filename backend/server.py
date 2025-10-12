@@ -2273,9 +2273,9 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
                 
                 product_data = {
                     "id": product_id,
-                    "name": f"Luxury {category[:-1]} {i+1}",
+                    "name": f"Luxury {category_display[:-1]} {i+1}",
                     "name_ar": f"إكسسوار فاخر {i+1}",
-                    "description": f"Premium quality {category.lower()} with elegant design",
+                    "description": f"Premium quality {category} with elegant design",
                     "description_ar": f"إكسسوار فاخر بتصميم أنيق",
                     "category": category,
                     "price": round(50 + (i % 200) * 2.5, 2),  # Prices between 50-550

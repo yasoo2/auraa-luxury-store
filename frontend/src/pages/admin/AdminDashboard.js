@@ -41,17 +41,29 @@ import {
 
 const AdminDashboard = () => {
   const { t, language } = useLanguage();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const isRTL = language === 'ar';
 
-  // Redirect if not authenticated or not admin
+  // Redirect if not authenticated or not admin (but wait for loading to complete)
   useEffect(() => {
-    if (!isAuthenticated || !user?.is_admin) {
+    if (!loading && (!isAuthenticated || !user?.is_admin)) {
       navigate('/');
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [loading, isAuthenticated, user, navigate]);
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
+        </div>
+      </div>
+    );
+  }
 
   const menuItems = [
     {

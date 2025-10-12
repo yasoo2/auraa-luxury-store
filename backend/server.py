@@ -2257,11 +2257,14 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
         
         # Generate simulated luxury products with AliExpress-like structure
         products_imported = 0
-        categories = ["Necklaces", "Bracelets", "Earrings", "Rings", "Watches", "Sunglasses"]
+        categories = ["necklaces", "bracelets", "earrings", "rings", "watches", "sets"]
+        category_names = ["Necklaces", "Bracelets", "Earrings", "Rings", "Watches", "Sets"]
         
         for i in range(count):
             try:
-                category = categories[i % len(categories)]
+                cat_index = i % len(categories)
+                category = categories[cat_index]
+                category_display = category_names[cat_index]
                 product_id = str(uuid.uuid4())
                 
                 # Generate unique external_id using timestamp and random number

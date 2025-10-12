@@ -77,7 +77,43 @@ const ProfilePage = () => {
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    toast.info('هذه الميزة غير متاحة في النسخة التجريبية');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(
+        `${API}/auth/profile`,
+        profileData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        toast.success('تم تحديث الملف الشخصي بنجاح');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('فشل في تحديث الملف الشخصي');
+    }
+  };
+
+  const handleAddressUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(
+        `${API}/auth/profile`,
+        { address: addressData },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        toast.success('تم حفظ العنوان بنجاح');
+        setIsEditingAddress(false);
+        // Update user context with new data
+        window.location.reload(); // Simple reload to update user context
+      }
+    } catch (error) {
+      console.error('Error saving address:', error);
+      toast.error('فشل في حفظ العنوان');
+    }
   };
 
   if (loading) {

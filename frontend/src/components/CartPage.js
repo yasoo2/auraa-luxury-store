@@ -352,14 +352,23 @@ const CartPage = () => {
               
               <div className="space-y-3">
                 <Link to="/checkout" className="block">
-                  <Button className="btn-luxury w-full" data-testid="checkout-button">
-                    إتمام الطلب
+                  <Button 
+                    className="btn-luxury w-full" 
+                    data-testid="checkout-button"
+                    disabled={shippingEstimate.error === 'unavailable'}
+                  >
+                    {isRTL ? 'إتمام الطلب' : 'Proceed to Checkout'}
                     <ArrowLeft className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
+                {shippingEstimate.error === 'unavailable' && (
+                  <p className="text-sm text-red-600 text-center">
+                    {isRTL ? 'الشحن غير متاح لبلدك حالياً' : 'Shipping unavailable for your country'}
+                  </p>
+                )}
                 <Link to="/products" className="block">
                   <Button variant="outline" className="w-full">
-                    متابعة التسوق
+                    {isRTL ? 'متابعة التسوق' : 'Continue Shopping'}
                   </Button>
                 </Link>
               </div>

@@ -2567,11 +2567,18 @@ async def update_cms_page(page_id: str, page: CMSPage, admin: User = Depends(get
     try:
         page_dict = page.dict()
         page_dict["updated_at"] = datetime.now(timezone.utc)
-        await db.cms_pages.update_one(
+        result = await db.cms_pages.update_one(
             {"id": page_id},
             {"$set": page_dict}
         )
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Page not found")
+        # Remove MongoDB _id field to avoid serialization issues
+        if '_id' in page_dict:
+            del page_dict['_id']
         return page_dict
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error updating CMS page: {e}")
         raise HTTPException(status_code=500, detail=str(e))

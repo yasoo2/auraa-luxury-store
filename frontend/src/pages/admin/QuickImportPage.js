@@ -27,7 +27,7 @@ const QuickImportPage = () => {
   const [externalProducts, setExternalProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [supplierType, setSupplierType] = useState('aliexpress'); // New supplier selection
-  const [importCount, setImportCount] = useState(1000); // Default 1000 products
+  const [importCount, setImportCount] = useState(500); // Default 500 products
   const [importQuery, setImportQuery] = useState('jewelry accessories'); // Default query
   const [filters, setFilters] = useState({
     category: '',

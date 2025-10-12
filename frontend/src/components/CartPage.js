@@ -298,26 +298,54 @@ const CartPage = () => {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <Card className="luxury-card p-6 sticky top-24">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">ملخص الطلب</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">
+                {isRTL ? 'ملخص الطلب' : 'Order Summary'}
+              </h2>
               
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">المجموع الجزئي:</span>
+                  <span className="text-gray-600">
+                    {isRTL ? 'المجموع الجزئي:' : 'Subtotal:'}
+                  </span>
                   <span className="font-medium" data-testid="subtotal">
-                    {cart.total_amount.toFixed(2)} ر.س
+                    {cart.total_amount.toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">الشحن:</span>
-                  <span className="font-medium">
-                    15.00 ر.س
+                
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600 flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    {isRTL ? 'الشحن:' : 'Shipping:'}
                   </span>
+                  <div className="text-right">
+                    {shippingEstimate.loading ? (
+                      <span className="text-sm text-gray-500">
+                        {isRTL ? 'جاري الحساب...' : 'Calculating...'}
+                      </span>
+                    ) : shippingEstimate.error === 'unavailable' ? (
+                      <span className="text-sm text-red-600">
+                        {isRTL ? 'غير متاح' : 'Unavailable'}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-medium">
+                          {shippingEstimate.cost.toFixed(2)} {isRTL ? 'ر.س' : currency}
+                        </span>
+                        {shippingEstimate.days && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {shippingEstimate.days.min}-{shippingEstimate.days.max} {isRTL ? 'أيام' : 'days'}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
+                
                 <hr className="border-gray-200" />
                 <div className="flex justify-between text-xl font-bold">
-                  <span>المجموع:</span>
+                  <span>{isRTL ? 'المجموع:' : 'Total:'}</span>
                   <span className="text-amber-600" data-testid="total-amount">
-                    {(cart.total_amount + 15).toFixed(2)} ر.س
+                    {(cart.total_amount + (shippingEstimate.cost || 0)).toFixed(2)} {isRTL ? 'ر.س' : currency}
                   </span>
                 </div>
               </div>

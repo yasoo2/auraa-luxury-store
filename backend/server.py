@@ -2408,6 +2408,77 @@ async def get_import_task_status(
         logger.error(f"Error getting task status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.get("/admin/import-tasks/{task_id}/stream")
+async def stream_import_task_progress(
+    task_id: str,
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Server-Sent Events (SSE) endpoint for real-time import progress updates.
+    Streams progress updates as they occur.
+    """
+    import asyncio
+    import json
+    
+    async def event_generator():
+        """Generate SSE events with import task progress"""
+        last_progress = -1
+        last_status = None
+        retry_count = 0
+        max_retries = 60  # 60 retries * 1s = 60s timeout
+        
+        while retry_count < max_retries:
+            try:
+                task = await db.import_tasks.find_one({"_id": task_id})
+                
+                if not task:
+                    yield f"data: {json.dumps({'error': 'Task not found'})}\n\n"
+                    break
+                
+                current_progress = task.get("progress", 0)
+                current_status = task.get("status", "unknown")
+                
+                # Send update if progress or status changed
+                if current_progress != last_progress or current_status != last_status:
+                    data = {
+                        "task_id": task_id,
+                        "status": current_status,
+                        "progress": current_progress,
+                        "products_imported": task.get("products_imported", 0),
+                        "count": task.get("count", 0),
+                        "message": task.get("message", ""),
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }
+                    yield f"data: {json.dumps(data)}\n\n"
+                    
+                    last_progress = current_progress
+                    last_status = current_status
+                
+                # Stop streaming if task is complete or failed
+                if current_status in ["completed", "failed", "cancelled"]:
+                    break
+                
+                await asyncio.sleep(1)  # Check every second
+                retry_count += 1
+                
+            except Exception as e:
+                logger.error(f"Error streaming task progress: {e}")
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                break
+        
+        # Send final completion event
+        yield f"data: {json.dumps({'status': 'stream_closed'})}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # Disable nginx buffering
+        }
+    )
+
 @api_router.post("/admin/aliexpress/content-protection/watermark-image")
 async def apply_watermark_to_image(
     file: UploadFile = File(...),

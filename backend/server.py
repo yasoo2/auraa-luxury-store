@@ -2591,6 +2591,8 @@ async def delete_cms_page(page_id: str, admin: User = Depends(get_admin_user)):
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Page not found")
         return {"success": True}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting CMS page: {e}")
         raise HTTPException(status_code=500, detail=str(e))

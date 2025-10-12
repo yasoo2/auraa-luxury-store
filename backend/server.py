@@ -2303,8 +2303,9 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
                 await db.products.insert_one(product_data)
                 products_imported += 1
                 
-                # Update progress every 10 products
-                if (i + 1) % 10 == 0:
+                # Update progress after each product (or every 10 for large imports)
+                update_frequency = 1 if count <= 20 else 10
+                if (i + 1) % update_frequency == 0 or (i + 1) == count:
                     progress = int((i + 1) / count * 100)
                     await db.import_tasks.update_one(
                         {"_id": task_id},

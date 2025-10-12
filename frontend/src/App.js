@@ -73,6 +73,7 @@ function App() {
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/setup" element={<DeploymentSetup />} />
+                    <Route path="/admin-setup" element={<AdminSetup />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
                     

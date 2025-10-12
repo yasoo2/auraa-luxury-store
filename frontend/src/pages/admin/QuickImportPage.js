@@ -41,11 +41,11 @@ const QuickImportPage = () => {
   });
   const [importLogs, setImportLogs] = useState([]);
   const [pushing, setPushing] = useState(false);
+  const [pollInterval, setPollInterval] = useState(null);
 
   // Load data on mount
   useEffect(() => {
     loadExternalProducts();
-    let pollInterval = null;
 
     return () => { if (pollInterval) clearInterval(pollInterval); };
 

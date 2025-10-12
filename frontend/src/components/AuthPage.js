@@ -221,14 +221,7 @@ const AuthPage = () => {
               </p>
             </div>
 
-            {/* Demo Account Info */}
-            <div className="mt-6 p-4 bg-amber-500/20 border border-amber-300/30 rounded-xl backdrop-blur-sm animate-float">
-              <h4 className="font-medium text-amber-200 mb-2">حساب تجريبي:</h4>
-              <div className="text-sm text-amber-100">
-                <p>البريد: admin@auraa.com</p>
-                <p>كلمة المرور: admin123</p>
-              </div>
-            </div>
+            {/* Info - Removed demo credentials for security */}
 
             {/* Security Notice */}
             <div className="mt-6 text-center text-sm text-white/60 animate-fade-in-up">

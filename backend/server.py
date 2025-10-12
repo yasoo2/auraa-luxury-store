@@ -2505,6 +2505,130 @@ async def apply_watermark_to_image(
         logger.error(f"Error applying watermark: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# =============================================================================
+# Admin Dashboard - CMS Pages, Theme, Media, Settings
+# =============================================================================
+
+class CMSPage(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    slug: str
+    title_en: str
+    title_ar: str
+    content_en: str
+    content_ar: str
+    route: str
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+@api_router.get("/admin/cms-pages")
+async def get_cms_pages(admin: User = Depends(get_admin_user)):
+    """Get all CMS pages"""
+    try:
+        pages = await db.cms_pages.find().to_list(length=None)
+        return pages
+    except Exception as e:
+        logger.error(f"Error fetching CMS pages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/cms-pages")
+async def create_cms_page(page: CMSPage, admin: User = Depends(get_admin_user)):
+    """Create new CMS page"""
+    try:
+        page_dict = page.dict()
+        await db.cms_pages.insert_one(page_dict)
+        return page_dict
+    except Exception as e:
+        logger.error(f"Error creating CMS page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/cms-pages/{page_id}")
+async def update_cms_page(page_id: str, page: CMSPage, admin: User = Depends(get_admin_user)):
+    """Update CMS page"""
+    try:
+        page_dict = page.dict()
+        page_dict["updated_at"] = datetime.now(timezone.utc)
+        await db.cms_pages.update_one(
+            {"id": page_id},
+            {"$set": page_dict}
+        )
+        return page_dict
+    except Exception as e:
+        logger.error(f"Error updating CMS page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/cms-pages/{page_id}")
+async def delete_cms_page(page_id: str, admin: User = Depends(get_admin_user)):
+    """Delete CMS page"""
+    try:
+        result = await db.cms_pages.delete_one({"id": page_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Page not found")
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Error deleting CMS page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Theme Customization Endpoints
+@api_router.get("/admin/theme")
+async def get_theme(admin: User = Depends(get_admin_user)):
+    """Get theme settings"""
+    try:
+        theme = await db.theme_settings.find_one({"_id": "default"})
+        return theme if theme else {}
+    except Exception as e:
+        logger.error(f"Error fetching theme: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/theme")
+async def save_theme(theme_data: dict, admin: User = Depends(get_admin_user)):
+    """Save theme settings"""
+    try:
+        theme_data["_id"] = "default"
+        theme_data["updated_at"] = datetime.now(timezone.utc)
+        await db.theme_settings.update_one(
+            {"_id": "default"},
+            {"$set": theme_data},
+            upsert=True
+        )
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Error saving theme: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Media Library Endpoints
+@api_router.get("/admin/media")
+async def get_media(admin: User = Depends(get_admin_user)):
+    """Get all media files"""
+    try:
+        media = await db.media_library.find().to_list(length=None)
+        return media
+    except Exception as e:
+        logger.error(f"Error fetching media: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/media/{media_id}")
+async def delete_media(media_id: str, admin: User = Depends(get_admin_user)):
+    """Delete media file"""
+    try:
+        # Get media record to delete file
+        media = await db.media_library.find_one({"id": media_id})
+        if not media:
+            raise HTTPException(status_code=404, detail="Media not found")
+        
+        # Delete file from filesystem if it exists
+        if media.get("filepath"):
+            file_path = Path(media["filepath"])
+            if file_path.exists():
+                file_path.unlink()
+        
+        # Delete from database
+        await db.media_library.delete_one({"id": media_id})
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Error deleting media: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
 

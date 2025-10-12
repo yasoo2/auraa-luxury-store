@@ -31,10 +31,17 @@ const CartPage = () => {
   useEffect(() => {
     if (user) {
       fetchCart();
+      detectCountry();
     } else {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (cart && cart.items.length > 0 && countryCode) {
+      estimateShipping();
+    }
+  }, [cart, countryCode, currency]);
 
   const fetchCart = async () => {
     try {

@@ -237,16 +237,45 @@ const ProfilePage = () => {
 
           {/* Addresses Tab */}
           <TabsContent value="addresses">
-            <Card className="luxury-card p-8 text-center">
-              <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">لا توجد عناوين</h3>
-              <p className="text-gray-600 mb-4">
-                لم تقم بحفظ أي عناوين بعد
-              </p>
-              <Button className="btn-luxury">
-                إضافة عنوان جديد
-              </Button>
-            </Card>
+            {user?.address ? (
+              <Card className="luxury-card p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center">
+                    <MapPin className="h-6 w-6 text-amber-600 ml-3" />
+                    <h3 className="text-xl font-bold text-gray-900">عنوان الشحن</h3>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingAddress(true)}
+                    className="text-amber-600 border-amber-600 hover:bg-amber-50"
+                  >
+                    تعديل
+                  </Button>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <p className="font-medium">{user.address.firstName} {user.address.lastName}</p>
+                  <p className="text-gray-600">{user.address.street}</p>
+                  <p className="text-gray-600">{user.address.city}, {user.address.state} {user.address.postalCode}</p>
+                  <p className="text-gray-600">{user.address.country}</p>
+                  <p className="text-gray-600">هاتف: {user.address.phone}</p>
+                </div>
+              </Card>
+            ) : (
+              <Card className="luxury-card p-8 text-center">
+                <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">لا توجد عناوين</h3>
+                <p className="text-gray-600 mb-4">
+                  لم تقم بحفظ أي عناوين بعد
+                </p>
+                <Button 
+                  className="btn-luxury"
+                  onClick={() => setIsEditingAddress(true)}
+                >
+                  إضافة عنوان جديد
+                </Button>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

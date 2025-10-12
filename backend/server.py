@@ -2552,7 +2552,10 @@ async def create_cms_page(page: CMSPage, admin: User = Depends(get_admin_user)):
     """Create new CMS page"""
     try:
         page_dict = page.dict()
-        await db.cms_pages.insert_one(page_dict)
+        result = await db.cms_pages.insert_one(page_dict)
+        # Remove MongoDB _id field to avoid serialization issues
+        if '_id' in page_dict:
+            del page_dict['_id']
         return page_dict
     except Exception as e:
         logger.error(f"Error creating CMS page: {e}")

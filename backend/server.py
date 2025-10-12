@@ -1690,7 +1690,7 @@ async def trigger_immediate_sync():
 # Bulk Import Endpoints (Admin Only)
 @api_router.post("/admin/aliexpress/import-fast")
 async def import_fast(
-    count: int = Query(default=1000, le=1000),
+    count: int = Query(default=500, le=1000),
     query: str = Query(default="jewelry accessories")
 ):
     """

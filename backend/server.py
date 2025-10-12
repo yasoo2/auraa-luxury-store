@@ -2618,6 +2618,10 @@ async def get_media(admin: User = Depends(get_admin_user)):
     """Get all media files"""
     try:
         media = await db.media_library.find().to_list(length=None)
+        # Remove MongoDB _id field to avoid serialization issues
+        for item in media:
+            if '_id' in item:
+                del item['_id']
         return media
     except Exception as e:
         logger.error(f"Error fetching media: {e}")

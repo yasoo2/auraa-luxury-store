@@ -243,9 +243,8 @@ async def get_products(
     max_price: Optional[float] = None,
     search: Optional[str] = None,
     skip: int = 0,
-    limit: int = 20
+    limit: int = 20,
     language: Optional[str] = Query(None, description="Preferred language (ar|en|tr|...)")
-
 ):
     query = {}
     

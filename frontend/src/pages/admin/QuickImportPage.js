@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   Package,
@@ -24,6 +24,7 @@ const QuickImportPage = () => {
   // State
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(null);
+  const pollIntervalRef = useRef(null);
   const [externalProducts, setExternalProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [supplierType, setSupplierType] = useState('aliexpress'); // New supplier selection
@@ -45,11 +46,14 @@ const QuickImportPage = () => {
   // Load data on mount
   useEffect(() => {
     loadExternalProducts();
-    let pollInterval = null;
-
-    return () => { if (pollInterval) clearInterval(pollInterval); };
-
     loadImportLogs();
+
+    return () => { 
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
   }, [filters]);
 
   const loadExternalProducts = async () => {
@@ -145,8 +149,8 @@ const QuickImportPage = () => {
         }
       });
         // start polling progress
-        if (pollInterval) clearInterval(pollInterval);
-        pollInterval = setInterval(async () => {
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = setInterval(async () => {
           try {
             const token = localStorage.getItem('token');
             const jobId = response.data.task_id;
@@ -156,11 +160,13 @@ const QuickImportPage = () => {
             const progress = res.data;
             setImportProgress({ job_id: progress.job_id, status: progress.status, percent: progress.percent, processed: progress.processed_items, total: progress.total_items });
             if (progress.status === 'completed' || progress.status === 'failed') {
-              clearInterval(pollInterval);
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
             }
           } catch (e) {
             // stop polling on error
-            clearInterval(pollInterval);
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
           }
         }, 2000);
 

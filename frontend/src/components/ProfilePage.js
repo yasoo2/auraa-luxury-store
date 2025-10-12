@@ -25,6 +25,17 @@ const ProfilePage = () => {
     email: user?.email || '',
     phone: user?.phone || ''
   });
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [addressData, setAddressData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    street: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'Saudi Arabia'
+  });
 
   useEffect(() => {
     fetchOrders();

@@ -402,10 +402,10 @@ const QuickImportPage = () => {
           <div className="mb-4 md:mb-0">
             <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
               <Download className="h-6 w-6" />
-              {isRTL ? 'استيراد سريع - 1000 منتج' : 'Quick Import - 1000 Products'}
+              {isRTL ? 'استيراد سريع - 500 منتج' : 'Quick Import - 500 Products'}
             </h2>
             <p className="text-white/90">
-              {isRTL ? 'استيراد تلقائي لـ 1000 منتج موزعة على جميع الفئات' : 'Automatic import of 1000 products across all categories'}
+              {isRTL ? 'استيراد تلقائي لـ 500 منتج موزعة على جميع الفئات' : 'Automatic import of 500 products across all categories'}
             </p>
           </div>
           <button

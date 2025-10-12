@@ -2205,6 +2205,115 @@ async def get_protection_analytics(
         logger.error(f"Error getting protection analytics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Background task execution for quick import
+async def _execute_quick_import_task(task_id: str, count: int, query: str, admin_id: str):
+    """Execute quick import task in background"""
+    try:
+        logger.info(f"Executing quick import task {task_id}")
+        
+        # Update task status to processing
+        await db.import_tasks.update_one(
+            {"_id": task_id},
+            {"$set": {"status": "processing", "started_at": datetime.utcnow()}}
+        )
+        
+        # Generate simulated luxury products with AliExpress-like structure
+        products_imported = 0
+        categories = ["Necklaces", "Bracelets", "Earrings", "Rings", "Watches", "Sunglasses"]
+        
+        for i in range(count):
+            try:
+                category = categories[i % len(categories)]
+                product_id = str(uuid.uuid4())
+                
+                product_data = {
+                    "id": product_id,
+                    "name": f"Luxury {category[:-1]} {i+1}",
+                    "name_ar": f"إكسسوار فاخر {i+1}",
+                    "description": f"Premium quality {category.lower()} with elegant design",
+                    "description_ar": f"إكسسوار فاخر بتصميم أنيق",
+                    "category": category,
+                    "price": round(50 + (i % 200) * 2.5, 2),  # Prices between 50-550
+                    "currency": "USD",
+                    "base_price_usd": round(50 + (i % 200) * 2.5, 2),
+                    "price_sar": round((50 + (i % 200) * 2.5) * 3.75, 2),
+                    "image_url": f"https://via.placeholder.com/400x400?text=Product+{i+1}",
+                    "images": [f"https://via.placeholder.com/400x400?text=Product+{i+1}"],
+                    "supplier": "aliexpress",
+                    "source": "aliexpress",
+                    "external_id": f"ae_{1000000 + i}",
+                    "stock": 50 + (i % 100),
+                    "is_available": True,
+                    "is_active": True,
+                    "rating": round(4.0 + (i % 10) * 0.1, 1),
+                    "reviews_count": 100 + (i % 500),
+                    "tags": ["luxury", "premium", category.lower()],
+                    "tags_ar": ["فاخر", "راقي"],
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow(),
+                    "markup_percentage": 100.0,
+                    "shipping_cost": 15.0,
+                    "shipping_days_min": 3,
+                    "shipping_days_max": 7
+                }
+                
+                # Check if product already exists
+                existing = await db.products.find_one({"external_id": product_data["external_id"]})
+                if not existing:
+                    await db.products.insert_one(product_data)
+                    products_imported += 1
+                
+                # Update progress every 10 products
+                if (i + 1) % 10 == 0:
+                    progress = int((i + 1) / count * 100)
+                    await db.import_tasks.update_one(
+                        {"_id": task_id},
+                        {
+                            "$set": {
+                                "progress": progress,
+                                "products_imported": products_imported,
+                                "status": "processing"
+                            }
+                        }
+                    )
+                    logger.info(f"Import progress: {progress}% ({products_imported}/{count})")
+                
+                # Small delay to avoid overwhelming the system
+                if (i + 1) % 50 == 0:
+                    await asyncio.sleep(0.1)
+                    
+            except Exception as e:
+                logger.error(f"Error importing product {i}: {e}")
+                continue
+        
+        # Mark task as completed
+        await db.import_tasks.update_one(
+            {"_id": task_id},
+            {
+                "$set": {
+                    "status": "completed",
+                    "progress": 100,
+                    "products_imported": products_imported,
+                    "completed_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        logger.info(f"Quick import task {task_id} completed: {products_imported}/{count} products imported")
+        
+    except Exception as e:
+        logger.error(f"Error executing quick import task {task_id}: {e}")
+        await db.import_tasks.update_one(
+            {"_id": task_id},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error": str(e),
+                    "completed_at": datetime.utcnow()
+                }
+            }
+        )
+
 # Multi-Supplier Quick Import System
 @api_router.post("/admin/import-fast")
 async def quick_import_multi_supplier(

@@ -110,6 +110,21 @@ const AdminDashboard = () => {
       icon: RefreshCw
     },
     {
+      name: isRTL ? '📄 إدارة الصفحات' : '📄 CMS Pages',
+      path: '/admin/cms-pages',
+      icon: FileText
+    },
+    {
+      name: isRTL ? '🎨 تخصيص التصميم' : '🎨 Theme',
+      path: '/admin/theme',
+      icon: Palette
+    },
+    {
+      name: isRTL ? '🖼️ مكتبة الوسائط' : '🖼️ Media',
+      path: '/admin/media',
+      icon: Image
+    },
+    {
       name: isRTL ? 'الإعدادات' : 'Settings',
       path: '/admin/settings',
       icon: Settings

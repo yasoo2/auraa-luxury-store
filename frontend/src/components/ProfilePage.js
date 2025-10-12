@@ -25,6 +25,17 @@ const ProfilePage = () => {
     email: user?.email || '',
     phone: user?.phone || ''
   });
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [addressData, setAddressData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    street: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'Saudi Arabia'
+  });
 
   useEffect(() => {
     fetchOrders();
@@ -66,7 +77,43 @@ const ProfilePage = () => {
 
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    toast.info('هذه الميزة غير متاحة في النسخة التجريبية');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(
+        `${API}/auth/profile`,
+        profileData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        toast.success('تم تحديث الملف الشخصي بنجاح');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('فشل في تحديث الملف الشخصي');
+    }
+  };
+
+  const handleAddressUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(
+        `${API}/auth/profile`,
+        { address: addressData },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        toast.success('تم حفظ العنوان بنجاح');
+        setIsEditingAddress(false);
+        // Update user context with new data
+        window.location.reload(); // Simple reload to update user context
+      }
+    } catch (error) {
+      console.error('Error saving address:', error);
+      toast.error('فشل في حفظ العنوان');
+    }
   };
 
   if (loading) {
@@ -237,18 +284,185 @@ const ProfilePage = () => {
 
           {/* Addresses Tab */}
           <TabsContent value="addresses">
-            <Card className="luxury-card p-8 text-center">
-              <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">لا توجد عناوين</h3>
-              <p className="text-gray-600 mb-4">
-                لم تقم بحفظ أي عناوين بعد
-              </p>
-              <Button className="btn-luxury">
-                إضافة عنوان جديد
-              </Button>
-            </Card>
+            {user?.address ? (
+              <Card className="luxury-card p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center">
+                    <MapPin className="h-6 w-6 text-amber-600 ml-3" />
+                    <h3 className="text-xl font-bold text-gray-900">عنوان الشحن</h3>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingAddress(true)}
+                    className="text-amber-600 border-amber-600 hover:bg-amber-50"
+                  >
+                    تعديل
+                  </Button>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <p className="font-medium">{user.address.firstName} {user.address.lastName}</p>
+                  <p className="text-gray-600">{user.address.street}</p>
+                  <p className="text-gray-600">{user.address.city}, {user.address.state} {user.address.postalCode}</p>
+                  <p className="text-gray-600">{user.address.country}</p>
+                  <p className="text-gray-600">هاتف: {user.address.phone}</p>
+                </div>
+              </Card>
+            ) : (
+              <Card className="luxury-card p-8 text-center">
+                <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">لا توجد عناوين</h3>
+                <p className="text-gray-600 mb-4">
+                  لم تقم بحفظ أي عناوين بعد
+                </p>
+                <Button 
+                  className="btn-luxury"
+                  onClick={() => setIsEditingAddress(true)}
+                >
+                  إضافة عنوان جديد
+                </Button>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
+
+        {/* Address Edit Modal */}
+        {isEditingAddress && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="luxury-card p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {user?.address ? 'تعديل العنوان' : 'إضافة عنوان جديد'}
+                </h2>
+                <button
+                  onClick={() => setIsEditingAddress(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <span className="text-2xl">×</span>
+                </button>
+              </div>
+
+              <form onSubmit={handleAddressUpdate} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      الاسم الأول
+                    </label>
+                    <Input
+                      value={addressData.firstName}
+                      onChange={(e) => setAddressData({...addressData, firstName: e.target.value})}
+                      required
+                      placeholder="أحمد"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      الاسم الأخير
+                    </label>
+                    <Input
+                      value={addressData.lastName}
+                      onChange={(e) => setAddressData({...addressData, lastName: e.target.value})}
+                      required
+                      placeholder="محمد"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    رقم الهاتف
+                  </label>
+                  <Input
+                    type="tel"
+                    value={addressData.phone}
+                    onChange={(e) => setAddressData({...addressData, phone: e.target.value})}
+                    required
+                    placeholder="+966501234567"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    عنوان الشارع ورقم المبنى
+                  </label>
+                  <Input
+                    value={addressData.street}
+                    onChange={(e) => setAddressData({...addressData, street: e.target.value})}
+                    required
+                    placeholder="شارع الملك فهد، مبنى 123"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      المدينة
+                    </label>
+                    <Input
+                      value={addressData.city}
+                      onChange={(e) => setAddressData({...addressData, city: e.target.value})}
+                      required
+                      placeholder="الرياض"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      المنطقة
+                    </label>
+                    <Input
+                      value={addressData.state}
+                      onChange={(e) => setAddressData({...addressData, state: e.target.value})}
+                      required
+                      placeholder="الرياض"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      الرمز البريدي
+                    </label>
+                    <Input
+                      value={addressData.postalCode}
+                      onChange={(e) => setAddressData({...addressData, postalCode: e.target.value})}
+                      required
+                      placeholder="12345"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      الدولة
+                    </label>
+                    <Input
+                      value={addressData.country}
+                      onChange={(e) => setAddressData({...addressData, country: e.target.value})}
+                      required
+                      placeholder="السعودية"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button type="submit" className="btn-luxury flex-1">
+                    حفظ العنوان
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditingAddress(false)}
+                    className="flex-1"
+                  >
+                    إلغاء
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ const QuickImportPage = () => {
   const [externalProducts, setExternalProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [supplierType, setSupplierType] = useState('aliexpress'); // New supplier selection
-  const [importCount, setImportCount] = useState(1000); // Default 1000 products
+  const [importCount, setImportCount] = useState(500); // Default 500 products
   const [importQuery, setImportQuery] = useState('jewelry accessories'); // Default query
   const [filters, setFilters] = useState({
     category: '',
@@ -42,6 +42,7 @@ const QuickImportPage = () => {
   });
   const [importLogs, setImportLogs] = useState([]);
   const [pushing, setPushing] = useState(false);
+  const [pollInterval, setPollInterval] = useState(null);
 
   // Load data on mount
   useEffect(() => {
@@ -169,6 +170,7 @@ const QuickImportPage = () => {
             pollIntervalRef.current = null;
           }
         }, 2000);
+        setPollInterval(newPollInterval);
 
 
       if (response.data.success) {
@@ -229,7 +231,7 @@ const QuickImportPage = () => {
       {/* Quick Import Controls */}
       <div className="bg-white rounded-lg border shadow-sm p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          {isRTL ? 'استيراد سريع - 1000 منتج' : 'Quick Import - 1000 Products'}
+          {isRTL ? 'استيراد سريع - 500 منتج' : 'Quick Import - 500 Products'}
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -257,7 +259,7 @@ const QuickImportPage = () => {
             <input 
               type="number" 
               value={importCount} 
-              onChange={(e) => setImportCount(parseInt(e.target.value) || 1000)}
+              onChange={(e) => setImportCount(parseInt(e.target.value) || 500)}
               min="1"
               max="5000"
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -405,10 +407,10 @@ const QuickImportPage = () => {
           <div className="mb-4 md:mb-0">
             <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
               <Download className="h-6 w-6" />
-              {isRTL ? 'استيراد سريع - 1000 منتج' : 'Quick Import - 1000 Products'}
+              {isRTL ? 'استيراد سريع - 500 منتج' : 'Quick Import - 500 Products'}
             </h2>
             <p className="text-white/90">
-              {isRTL ? 'استيراد تلقائي لـ 1000 منتج موزعة على جميع الفئات' : 'Automatic import of 1000 products across all categories'}
+              {isRTL ? 'استيراد تلقائي لـ 500 منتج موزعة على جميع الفئات' : 'Automatic import of 500 products across all categories'}
             </p>
           </div>
           <button

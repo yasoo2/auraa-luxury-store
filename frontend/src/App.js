@@ -25,6 +25,7 @@ import Footer from './components/Footer';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminSetup from './pages/AdminSetup';
 
 // Legal and Info Pages
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -72,6 +73,7 @@ function App() {
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/setup" element={<DeploymentSetup />} />
+                    <Route path="/admin-setup" element={<AdminSetup />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
                     

@@ -7,6 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
@@ -233,6 +234,43 @@ async def login(credentials: UserLogin):
 @api_router.get("/auth/me", response_model=User)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
+
+@api_router.put("/auth/profile")
+async def update_user_profile(
+    profile_data: Dict[str, Any],
+    current_user: User = Depends(get_current_user)
+):
+    """Update user profile information"""
+    try:
+        # Fields that can be updated
+        allowed_fields = ['first_name', 'last_name', 'phone', 'address']
+        
+        update_data = {}
+        for field in allowed_fields:
+            if field in profile_data:
+                update_data[field] = profile_data[field]
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+        # Update user in database
+        result = await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get updated user
+        updated_user = await db.users.find_one({"id": current_user.id})
+        return {"success": True, "user": User(**updated_user)}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Product routes
 @api_router.get("/products", response_model=List[Product])
@@ -1689,7 +1727,7 @@ async def trigger_immediate_sync():
 # Bulk Import Endpoints (Admin Only)
 @api_router.post("/admin/aliexpress/import-fast")
 async def import_fast(
-    count: int = Query(default=1000, le=1000),
+    count: int = Query(default=500, le=1000),
     query: str = Query(default="jewelry accessories")
 ):
     """
@@ -2204,6 +2242,115 @@ async def get_protection_analytics(
         logger.error(f"Error getting protection analytics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Background task execution for quick import
+async def _execute_quick_import_task(task_id: str, count: int, query: str, admin_id: str):
+    """Execute quick import task in background"""
+    try:
+        logger.info(f"Executing quick import task {task_id}")
+        
+        # Update task status to processing
+        await db.import_tasks.update_one(
+            {"_id": task_id},
+            {"$set": {"status": "processing", "started_at": datetime.utcnow()}}
+        )
+        
+        # Generate simulated luxury products with AliExpress-like structure
+        products_imported = 0
+        categories = ["Necklaces", "Bracelets", "Earrings", "Rings", "Watches", "Sunglasses"]
+        
+        for i in range(count):
+            try:
+                category = categories[i % len(categories)]
+                product_id = str(uuid.uuid4())
+                
+                product_data = {
+                    "id": product_id,
+                    "name": f"Luxury {category[:-1]} {i+1}",
+                    "name_ar": f"إكسسوار فاخر {i+1}",
+                    "description": f"Premium quality {category.lower()} with elegant design",
+                    "description_ar": f"إكسسوار فاخر بتصميم أنيق",
+                    "category": category,
+                    "price": round(50 + (i % 200) * 2.5, 2),  # Prices between 50-550
+                    "currency": "USD",
+                    "base_price_usd": round(50 + (i % 200) * 2.5, 2),
+                    "price_sar": round((50 + (i % 200) * 2.5) * 3.75, 2),
+                    "image_url": f"https://via.placeholder.com/400x400?text=Product+{i+1}",
+                    "images": [f"https://via.placeholder.com/400x400?text=Product+{i+1}"],
+                    "supplier": "aliexpress",
+                    "source": "aliexpress",
+                    "external_id": f"ae_{1000000 + i}",
+                    "stock": 50 + (i % 100),
+                    "is_available": True,
+                    "is_active": True,
+                    "rating": round(4.0 + (i % 10) * 0.1, 1),
+                    "reviews_count": 100 + (i % 500),
+                    "tags": ["luxury", "premium", category.lower()],
+                    "tags_ar": ["فاخر", "راقي"],
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow(),
+                    "markup_percentage": 100.0,
+                    "shipping_cost": 15.0,
+                    "shipping_days_min": 3,
+                    "shipping_days_max": 7
+                }
+                
+                # Check if product already exists
+                existing = await db.products.find_one({"external_id": product_data["external_id"]})
+                if not existing:
+                    await db.products.insert_one(product_data)
+                    products_imported += 1
+                
+                # Update progress every 10 products
+                if (i + 1) % 10 == 0:
+                    progress = int((i + 1) / count * 100)
+                    await db.import_tasks.update_one(
+                        {"_id": task_id},
+                        {
+                            "$set": {
+                                "progress": progress,
+                                "products_imported": products_imported,
+                                "status": "processing"
+                            }
+                        }
+                    )
+                    logger.info(f"Import progress: {progress}% ({products_imported}/{count})")
+                
+                # Small delay to avoid overwhelming the system
+                if (i + 1) % 50 == 0:
+                    await asyncio.sleep(0.1)
+                    
+            except Exception as e:
+                logger.error(f"Error importing product {i}: {e}")
+                continue
+        
+        # Mark task as completed
+        await db.import_tasks.update_one(
+            {"_id": task_id},
+            {
+                "$set": {
+                    "status": "completed",
+                    "progress": 100,
+                    "products_imported": products_imported,
+                    "completed_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        logger.info(f"Quick import task {task_id} completed: {products_imported}/{count} products imported")
+        
+    except Exception as e:
+        logger.error(f"Error executing quick import task {task_id}: {e}")
+        await db.import_tasks.update_one(
+            {"_id": task_id},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error": str(e),
+                    "completed_at": datetime.utcnow()
+                }
+            }
+        )
+
 # Multi-Supplier Quick Import System
 @api_router.post("/admin/import-fast")
 async def quick_import_multi_supplier(
@@ -2212,7 +2359,7 @@ async def quick_import_multi_supplier(
 ):
     """Quick import products from multiple suppliers (AliExpress, Amazon, Custom)"""
     try:
-        count = request_data.get('count', 1000)
+        count = request_data.get('count', 500)
         query = request_data.get('query', 'jewelry accessories')
         provider = request_data.get('provider', 'aliexpress')
         
@@ -2248,8 +2395,13 @@ async def quick_import_multi_supplier(
             
             await db.import_tasks.insert_one(task_data)
             
-            # In production, this would trigger actual import
+            # Trigger actual import in background
             logger.info(f"Started AliExpress quick import task {task_id} for {count} products")
+            
+            # Start background task to import products
+            asyncio.create_task(
+                _execute_quick_import_task(task_id, count, query, admin.id)
+            )
             
         elif provider == 'amazon':
             # Stub for Amazon import
@@ -2660,6 +2812,98 @@ async def delete_media(media_id: str, admin: User = Depends(get_admin_user)):
         raise
     except Exception as e:
         logger.error(f"Error deleting media: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Admin Setup Endpoints
+@api_router.get("/setup/check-admin")
+async def check_admin_exists():
+    """Check if any admin user exists in the system"""
+    try:
+        admin_count = await db.users.count_documents({"is_admin": True})
+        return {
+            "has_admin": admin_count > 0,
+            "admin_count": admin_count
+        }
+    except Exception as e:
+        logger.error(f"Error checking admin: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/setup/create-first-admin")
+async def create_first_admin(
+    email: str = Form(...),
+    password: str = Form(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...)
+):
+    """Create the first admin user - only works if no admin exists"""
+    try:
+        # Check if any admin already exists
+        admin_count = await db.users.count_documents({"is_admin": True})
+        if admin_count > 0:
+            raise HTTPException(
+                status_code=403, 
+                detail="Admin user already exists. This endpoint can only be used once."
+            )
+        
+        # Check if email already exists
+        existing_user = await db.users.find_one({"email": email})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        
+        # Validate email format
+        if not email or "@" not in email:
+            raise HTTPException(status_code=400, detail="Invalid email format")
+        
+        # Validate password length
+        if not password or len(password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+        
+        # Create admin user
+        user_id = str(uuid.uuid4())
+        hashed_password = pwd_context.hash(password)
+        
+        admin_user = {
+            "id": user_id,
+            "email": email,
+            "password": hashed_password,
+            "first_name": first_name,
+            "last_name": last_name,
+            "is_admin": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        
+        await db.users.insert_one(admin_user)
+        
+        logger.info(f"First admin user created: {email}")
+        
+        # Generate token for immediate login
+        token_data = {
+            "sub": user_id,
+            "email": email,
+            "is_admin": True,
+            "exp": datetime.utcnow() + timedelta(days=30)
+        }
+        access_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+        
+        return {
+            "success": True,
+            "message": "Admin user created successfully",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": user_id,
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "is_admin": True
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating first admin: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Mount static files

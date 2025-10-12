@@ -254,7 +254,7 @@ const QuickImportPage = () => {
             <input 
               type="number" 
               value={importCount} 
-              onChange={(e) => setImportCount(parseInt(e.target.value) || 1000)}
+              onChange={(e) => setImportCount(parseInt(e.target.value) || 500)}
               min="1"
               max="5000"
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"

@@ -236,6 +236,43 @@ async def login(credentials: UserLogin):
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
 
+@api_router.put("/auth/profile")
+async def update_user_profile(
+    profile_data: Dict[str, Any],
+    current_user: User = Depends(get_current_user)
+):
+    """Update user profile information"""
+    try:
+        # Fields that can be updated
+        allowed_fields = ['first_name', 'last_name', 'phone', 'address']
+        
+        update_data = {}
+        for field in allowed_fields:
+            if field in profile_data:
+                update_data[field] = profile_data[field]
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+        # Update user in database
+        result = await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get updated user
+        updated_user = await db.users.find_one({"id": current_user.id})
+        return {"success": True, "user": User(**updated_user)}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Product routes
 @api_router.get("/products", response_model=List[Product])
 async def get_products(

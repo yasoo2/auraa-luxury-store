@@ -2538,6 +2538,10 @@ async def get_cms_pages(admin: User = Depends(get_admin_user)):
     """Get all CMS pages"""
     try:
         pages = await db.cms_pages.find().to_list(length=None)
+        # Remove MongoDB _id field to avoid serialization issues
+        for page in pages:
+            if '_id' in page:
+                del page['_id']
         return pages
     except Exception as e:
         logger.error(f"Error fetching CMS pages: {e}")

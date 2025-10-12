@@ -2303,8 +2303,13 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
                 }
                 
                 # Insert product directly (no duplicate check to speed up)
-                await db.products.insert_one(product_data)
-                products_imported += 1
+                try:
+                    result = await db.products.insert_one(product_data)
+                    products_imported += 1
+                    logger.info(f"Product {i+1} inserted with ID: {result.inserted_id}")
+                except Exception as insert_error:
+                    logger.error(f"Error inserting product {i}: {insert_error}")
+                    logger.error(f"Product data: {product_data}")
                 
                 # Update progress after each product (or every 10 for large imports)
                 update_frequency = 1 if count <= 20 else 10

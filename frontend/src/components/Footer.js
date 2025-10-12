@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const Footer = () => {
+  const { language, isRTL } = useLanguage();
+
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -58,6 +61,11 @@ const Footer = () => {
               <li>
                 <Link to="/products?category=rings" className="text-gray-300 hover:text-white transition-colors">
                   خواتم
+                </Link>
+              </li>
+              <li>
+                <Link to="/order-tracking" className="text-gray-300 hover:text-white transition-colors">
+                  {isRTL ? 'تتبع الطلب' : 'Track Order'}
                 </Link>
               </li>
             </ul>
@@ -122,14 +130,20 @@ const Footer = () => {
             © 2024 Auraa Luxury. جميع الحقوق محفوظة.
           </div>
           <div className="flex space-x-4 text-sm">
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              سياسة الخصوصية
+            <a href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'سياسة الخصوصية' : 'Privacy Policy'}
             </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              شروط الاستخدام
+            <a href="/terms-of-service" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'شروط الاستخدام' : 'Terms of Service'}
             </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              سياسة الإرجاع
+            <a href="/return-policy" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'سياسة الإرجاع' : 'Return Policy'}
+            </a>
+            <a href="/contact" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'اتصل بنا' : 'Contact Us'}
+            </a>
+            <a href="/about" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'عنا' : 'About Us'}
             </a>
           </div>
         </div>

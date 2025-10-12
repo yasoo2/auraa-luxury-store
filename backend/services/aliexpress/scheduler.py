@@ -144,63 +144,39 @@ class AliExpressSyncScheduler:
         
         return stats
     
-    async def sync_product_prices(self) -> Dict[str, Any]:
+    async def quick_price_sync(self) -> Dict[str, Any]:
         """
-        Quick price-only update for all products.
-        Faster than full sync, runs more frequently.
+        Quick price and inventory sync - faster than full sync.
+        Runs every 5 minutes for critical updates.
         """
         start_time = datetime.utcnow()
         stats = {
+            'job_type': 'quick_price_sync',
             'start_time': start_time.isoformat(),
-            'prices_updated': 0,
+            'products_processed': 0,
+            'price_updates': 0,
+            'inventory_updates': 0,
             'errors': []
         }
         
         try:
-            cursor = self.db.products.find({'sync_status': 'active'})
-            products = await cursor.to_list(length=None)
+            # Quick sync for products that need frequent updates
+            result = await self.sync_service.sync_prices_and_inventory(
+                batch_size=100,
+                priority_only=True  # Only sync high-priority products
+            )
             
-            for product in products:
-                try:
-                    # Get current product details from API
-                    updated = await self.sync_service.get_product_details(
-                        product['product_id']
-                    )
-                    
-                    if updated:
-                        # Update only price fields
-                        await self.db.products.update_one(
-                            {'product_id': product['product_id']},
-                            {
-                                '$set': {
-                                    'original_price': updated.original_price,
-                                    'sale_price': updated.sale_price,
-                                    'last_synced': datetime.utcnow()
-                                }
-                            }
-                        )
-                        stats['prices_updated'] += 1
-                        
-                except Exception as e:
-                    self.logger.warning(
-                        f"Failed to update price for {product['product_id']}: {e}"
-                    )
-                    stats['errors'].append({
-                        'product_id': product['product_id'],
-                        'error': str(e)
-                    })
-                
-                # Rate limiting delay
-                await asyncio.sleep(0.5)
-        
+            stats.update(result)
+            
         except Exception as e:
-            self.logger.error(f"Price sync failed: {e}", exc_info=True)
+            self.logger.error(f"Quick price sync failed: {str(e)}")
             stats['errors'].append(str(e))
         
         end_time = datetime.utcnow()
         stats['end_time'] = end_time.isoformat()
-        stats['duration'] = (end_time - start_time).total_seconds()
+        stats['duration_seconds'] = (end_time - start_time).total_seconds()
         
+        # Log the sync
         await self.db.sync_logs.insert_one(stats)
         
         return stats
@@ -208,33 +184,34 @@ class AliExpressSyncScheduler:
     def start_scheduler(self):
         """Start the scheduler with configured jobs."""
         
-        # Full product sync every 10 minutes
+        # Schedule main sync jobs - Every 10 minutes for fast updates
         self.scheduler.add_job(
             self.sync_all_products,
-            trigger=IntervalTrigger(minutes=self.sync_interval),
-            id='full_product_sync',
-            name='Full Product Synchronization',
-            replace_existing=True,
-            max_instances=1  # Prevent overlapping executions
-        )
-        
-        # Price-only sync every 5 minutes
-        self.scheduler.add_job(
-            self.sync_product_prices,
-            trigger=IntervalTrigger(minutes=5),
-            id='price_sync',
-            name='Price Update',
+            IntervalTrigger(minutes=10),  # Changed to 10 minutes
+            id="sync_all_products",
+            name="Sync All Products (10min)",
             replace_existing=True,
             max_instances=1
         )
         
-        # Daily cleanup of old sync logs (keep 30 days)
+        # Schedule price/inventory sync - Every 5 minutes for critical updates
         self.scheduler.add_job(
-            self.cleanup_old_logs,
-            trigger=CronTrigger(hour=2, minute=0),  # 2 AM daily
-            id='log_cleanup',
-            name='Cleanup Old Sync Logs',
-            replace_existing=True
+            self.quick_price_sync,
+            IntervalTrigger(minutes=5),
+            id="quick_price_sync",
+            name="Quick Price & Inventory Sync (5min)",
+            replace_existing=True,
+            max_instances=1
+        )
+        
+        # Schedule daily maintenance
+        self.scheduler.add_job(
+            self.daily_maintenance,
+            CronTrigger(hour=2, minute=0),
+            id="daily_maintenance",
+            name="Daily Maintenance",
+            replace_existing=True,
+            max_instances=1
         )
         
         self.scheduler.start()
@@ -245,7 +222,7 @@ class AliExpressSyncScheduler:
         self.scheduler.shutdown(wait=True)
         self.logger.info("Scheduler stopped")
     
-    async def cleanup_old_logs(self):
+    async def daily_maintenance(self):
         """Remove sync logs older than 30 days."""
         cutoff_date = datetime.utcnow() - timedelta(days=30)
         result = await self.db.sync_logs.delete_many({

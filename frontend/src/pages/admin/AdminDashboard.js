@@ -13,6 +13,11 @@ import AutoUpdatePage from './AutoUpdatePage';
 import AliExpressPage from './AliExpressPage';
 import BulkImportPage from './BulkImportPage';
 import QuickImportPage from './QuickImportPage';
+import AliExpressTrackingPage from './AliExpressTrackingPage';
+import ContentProtectionPage from './ContentProtectionPage';
+import CMSPagesManager from './CMSPagesManager';
+import MediaLibrary from './MediaLibrary';
+import ThemeCustomization from './ThemeCustomization';
 import {
   Package,
   ShoppingCart,
@@ -28,7 +33,10 @@ import {
   Upload,
   BarChart,
   Plug,
-  Download
+  Download,
+  FileText,
+  Image,
+  Palette
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -77,6 +85,16 @@ const AdminDashboard = () => {
       icon: Upload
     },
     {
+      name: isRTL ? '📦 تتبع الطلبات' : '📦 Order Tracking',
+      path: '/admin/aliexpress-tracking',
+      icon: Package
+    },
+    {
+      name: isRTL ? '🛡️ حماية المحتوى' : '🛡️ Content Protection',
+      path: '/admin/content-protection',
+      icon: Settings
+    },
+    {
       name: isRTL ? 'التحليلات' : 'Analytics',
       path: '/admin/analytics',
       icon: BarChart
@@ -90,6 +108,21 @@ const AdminDashboard = () => {
       name: isRTL ? 'التحديثات التلقائية' : 'Auto Updates',
       path: '/admin/auto-update',
       icon: RefreshCw
+    },
+    {
+      name: isRTL ? '📄 إدارة الصفحات' : '📄 CMS Pages',
+      path: '/admin/cms-pages',
+      icon: FileText
+    },
+    {
+      name: isRTL ? '🎨 تخصيص التصميم' : '🎨 Theme',
+      path: '/admin/theme',
+      icon: Palette
+    },
+    {
+      name: isRTL ? '🖼️ مكتبة الوسائط' : '🖼️ Media',
+      path: '/admin/media',
+      icon: Image
     },
     {
       name: isRTL ? 'الإعدادات' : 'Settings',
@@ -169,9 +202,14 @@ const AdminDashboard = () => {
             <Route path="/aliexpress" element={<AliExpressPage />} />
             <Route path="/quick-import" element={<QuickImportPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
+            <Route path="/aliexpress-tracking" element={<AliExpressTrackingPage />} />
+            <Route path="/content-protection" element={<ContentProtectionPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
             <Route path="/auto-update" element={<AutoUpdatePage />} />
+            <Route path="/cms-pages" element={<CMSPagesManager />} />
+            <Route path="/theme" element={<ThemeCustomization />} />
+            <Route path="/media" element={<MediaLibrary />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>

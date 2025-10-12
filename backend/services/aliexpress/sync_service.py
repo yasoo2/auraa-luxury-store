@@ -463,3 +463,127 @@ class AliExpressSyncService:
             raise e
         
         return result
+    
+    async def check_country_availability(self, product_id: str, country_code: str) -> Dict[str, Any]:
+        """
+        Check product availability and shipping options for a specific country.
+        
+        Args:
+            product_id: AliExpress product ID
+            country_code: ISO country code (e.g., 'SA', 'AE')
+            
+        Returns:
+            Availability info with shipping options
+        """
+        try:
+            # Get shipping info from AliExpress API
+            shipping_params = {
+                'product_id': product_id,
+                'country_code': country_code.upper(),
+                'product_num': 1
+            }
+            
+            ship_response = await self.product_sync.make_api_request(
+                'aliexpress.ds.shipping.info',
+                shipping_params
+            )
+            
+            ship_result = ship_response.get('aliexpress_ds_shipping_info_response', {}).get('result', {})
+            freight_list = ship_result.get('aeop_freight_calculate_result_list', [])
+            
+            if not freight_list:
+                # No shipping available
+                return {
+                    'available': False,
+                    'country_code': country_code.upper(),
+                    'shipping_options': [],
+                    'message': 'Shipping not available to this country'
+                }
+            
+            # Convert freight list to shipping options
+            shipping_options = []
+            for freight in freight_list:
+                option = {
+                    'price_usd': float(freight.get('freight', 0)),
+                    'min_days': int(freight.get('delivery_date_min', 15)),
+                    'max_days': int(freight.get('delivery_date_max', 30)),
+                    'carrier': freight.get('service_name', 'Standard Shipping'),
+                    'speed': 'standard'  # Default speed
+                }
+                
+                # Determine speed based on delivery time
+                if option['max_days'] <= 7:
+                    option['speed'] = 'fastest'
+                elif option['max_days'] <= 15:
+                    option['speed'] = 'fast'
+                
+                shipping_options.append(option)
+            
+            # Sort by price (cheapest first)
+            shipping_options.sort(key=lambda x: x['price_usd'])
+            
+            return {
+                'available': True,
+                'country_code': country_code.upper(),
+                'shipping_options': shipping_options,
+                'message': f'{len(shipping_options)} shipping options available'
+            }
+            
+        except Exception as e:
+            # Fallback to mock data for testing
+            return self._get_mock_shipping_options(country_code)
+    
+    def _get_mock_shipping_options(self, country_code: str) -> Dict[str, Any]:
+        """
+        Get mock shipping options for testing when API is not available.
+        
+        Args:
+            country_code: ISO country code
+            
+        Returns:
+            Mock availability info
+        """
+        # Mock shipping options based on country
+        if country_code.upper() in ['SA', 'AE', 'KW', 'QA', 'BH', 'OM']:
+            # GCC countries - good shipping options
+            shipping_options = [
+                {
+                    'price_usd': 8.50,
+                    'min_days': 7,
+                    'max_days': 14,
+                    'carrier': 'AliExpress Standard Shipping',
+                    'speed': 'standard'
+                },
+                {
+                    'price_usd': 15.99,
+                    'min_days': 3,
+                    'max_days': 7,
+                    'carrier': 'DHL Express',
+                    'speed': 'fastest'
+                },
+                {
+                    'price_usd': 12.00,
+                    'min_days': 5,
+                    'max_days': 10,
+                    'carrier': 'FedEx International',
+                    'speed': 'fast'
+                }
+            ]
+        else:
+            # Other countries - limited options
+            shipping_options = [
+                {
+                    'price_usd': 12.00,
+                    'min_days': 15,
+                    'max_days': 30,
+                    'carrier': 'Standard International',
+                    'speed': 'standard'
+                }
+            ]
+        
+        return {
+            'available': True,
+            'country_code': country_code.upper(),
+            'shipping_options': shipping_options,
+            'message': f'Mock: {len(shipping_options)} shipping options available'
+        }

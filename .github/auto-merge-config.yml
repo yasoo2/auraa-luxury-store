@@ -1,0 +1,139 @@
+# Auto-merge Configuration for Auraa Luxury Project
+# This file configures automated merge behaviors and conflict resolution
+
+# Merge Strategy Configuration
+merge_strategy:
+  default_method: "squash"  # Options: merge, squash, rebase
+  conflict_resolution: "theirs"  # Prefer PR changes over main
+  
+  # File-specific merge strategies
+  file_strategies:
+    # Lock files - always keep PR version
+    lockfiles:
+      - "package-lock.json"
+      - "yarn.lock" 
+      - "pnpm-lock.yaml"
+      strategy: "ours"
+    
+    # Configuration files - prefer PR changes
+    config_files:
+      - "package.json"
+      - ".env.example"
+      - "tsconfig.json"
+      - "webpack.config.js"
+      - "vite.config.js"
+      strategy: "ours"
+    
+    # Documentation - prefer PR changes
+    documentation:
+      - "README.md"
+      - "*.md"
+      - "docs/**/*"
+      strategy: "ours"
+      
+    # Source code - prefer PR changes but allow manual review for conflicts
+    source_code:
+      - "src/**/*"
+      - "backend/**/*"
+      - "frontend/**/*"
+      strategy: "theirs_with_review"
+
+# Build Requirements
+build_requirements:
+  frontend:
+    required: true
+    working_directory: "frontend"
+    install_command: "npm ci --legacy-peer-deps"
+    build_command: "npm run build"
+    test_command: "npm test -- --watchAll=false --passWithNoTests"
+    
+  backend:
+    required: true
+    working_directory: "backend"
+    install_command: "npm ci --legacy-peer-deps"
+    build_command: "npm run build"
+    test_command: "npm test"
+    
+# Quality Gates
+quality_gates:
+  # Security checks
+  security:
+    check_sensitive_data: true
+    max_file_size_mb: 10
+    vulnerability_scan: true
+    
+  # Performance checks  
+  performance:
+    build_timeout_minutes: 10
+    test_timeout_minutes: 5
+    
+  # Code quality
+  code_quality:
+    linting: true
+    formatting_check: false  # Will be handled by CI
+    
+# Auto-merge Rules
+auto_merge:
+  # Enable auto-merge when all conditions are met
+  enabled: true
+  
+  # Required status checks (will be checked by CI)
+  required_checks:
+    - "Frontend Build"
+    - "Backend Build" 
+    - "Security Scan"
+    - "Conflict Resolution"
+    
+  # Auto-approve conditions
+  auto_approve:
+    # Auto-approve if PR is from these branches/patterns
+    allowed_branches:
+      - "feature/*"
+      - "bugfix/*" 
+      - "hotfix/*"
+      - "automation/*"
+      
+    # Skip auto-approve for these patterns (require manual review)
+    manual_review_patterns:
+      - "breaking-change/*"
+      - "security/*"
+      - "major/*"
+      
+  # Labels applied during process
+  labels:
+    processing: "🤖 auto-merge-processing"
+    success: "✅ auto-merge-ready"
+    failed: "❌ auto-merge-failed"
+    manual_needed: "🔧 needs-manual-review"
+    
+# Notification Settings
+notifications:
+  # Slack/Discord webhooks (configure in secrets)
+  slack_webhook: "${{ secrets.SLACK_WEBHOOK_URL }}"
+  
+  # GitHub issues for failed merges
+  create_issue_on_failure: true
+  
+  # Assignees for manual review
+  manual_review_assignees:
+    - "auraa-dev-team"
+    
+# Rollback Configuration
+rollback:
+  # Create backup branches before risky operations
+  create_backups: true
+  backup_retention_days: 7
+  
+  # Auto-rollback conditions
+  auto_rollback_on:
+    - "build_failure_after_merge"
+    - "test_failure_after_merge"
+    - "security_vulnerability_introduced"
+
+# Branch Protection Bypass
+# These settings work with GitHub branch protection rules
+bypass_settings:
+  # Allow automation bot to bypass certain protections
+  allow_force_push: false
+  allow_delete_branch: false  
+  bypass_required_reviews: false  # Manual reviews still required for protected branches

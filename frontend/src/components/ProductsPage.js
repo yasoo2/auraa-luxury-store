@@ -14,6 +14,7 @@ import ProductComparison from './ProductComparison';
 import LiveChat from './LiveChat';
 import HeartButton from './HeartButton';
 import { useCart } from '../context/CartContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -21,6 +22,8 @@ const API = `${BACKEND_URL}/api`;
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart } = useCart();
+  const { language } = useLanguage();
+  const isRTL = language === 'ar' || language === 'he';
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,16 +42,28 @@ const ProductsPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
-  // RTL detection
-  const isRTL = document.documentElement.dir === 'rtl' || document.documentElement.lang === 'ar';
+  const getLocalizedName = (p) => {
+    if (!p) return '';
+    if (language === 'ar') return p.name_ar || p.name || p.name_en || '';
+    if (language === 'en') return p.name_en || p.name || p.name_ar || '';
+    // Other languages fallback to English, then default name
+    return p.name_en || p.name || p.name_ar || '';
+  };
+
+  const getLocalizedDescription = (p) => {
+    if (!p) return '';
+    if (language === 'ar') return p.description_ar || p.description || p.description_en || '';
+    if (language === 'en') return p.description_en || p.description || p.description_ar || '';
+    return p.description_en || p.description || p.description_ar || '';
+  };
 
   useEffect(() => {
     setSEO({
-      title: 'Auraa Luxury | المنتجات',
-      description: 'تسوق جميع المنتجات من Auraa Luxury.',
+      title: isRTL ? 'Auraa Luxury | المنتجات' : 'Auraa Luxury | Products',
+      description: isRTL ? 'تسوق جميع المنتجات من Auraa Luxury.' : 'Shop all products from Auraa Luxury.',
       canonical: 'https://www.auraaluxury.com/products'
     });
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     fetchCategories();
@@ -93,7 +108,7 @@ const ProductsPage = () => {
       setProducts(fetchedProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('فشل في تحميل المنتجات');
+      toast.error(isRTL ? 'فشل في تحميل المنتجات' : 'Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -112,25 +127,25 @@ const ProductsPage = () => {
   const handleAddToCart = async (productId) => {
     const result = await addToCart(productId, 1);
     if (result.success) {
-      toast.success('تم إضافة المنتج إلى السلة');
+      toast.success(isRTL ? 'تم إضافة المنتج إلى السلة' : 'Added to cart');
     } else {
       if (result.error.includes('Authentication')) {
-        toast.error('يجب تسجيل الدخول أولاً');
+        toast.error(isRTL ? 'يجب تسجيل الدخول أولاً' : 'Please login first');
       } else {
-        toast.error(result.error || 'فشل في إضافة المنتج إلى السلة');
+        toast.error(result.error || (isRTL ? 'فشل في إضافة المنتج إلى السلة' : 'Failed to add to cart'));
       }
     }
   };
 
   const addToComparison = (product) => {
     if (comparisonProducts.length >= 4) {
-      toast.error('يمكنك مقارنة 4 منتجات كحد أقصى');
+      toast.error(isRTL ? 'يمكنك مقارنة 4 منتجات كحد أقصى' : 'You can compare up to 4 products');
       return;
     }
     
     if (!comparisonProducts.some(p => p.id === product.id)) {
       setComparisonProducts([...comparisonProducts, product]);
-      toast.success('تم إضافة المنتج للمقارنة');
+      toast.success(isRTL ? 'تم إضافة المنتج للمقارنة' : 'Added to comparison');
     }
   };
 
@@ -139,18 +154,18 @@ const ProductsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-4" data-testid="products-page-title">
             {filters.category 
-              ? categories.find(c => c.id === filters.category)?.name || 'المنتجات'
+              ? (categories.find(c => c.id === filters.category)?.name_en && !isRTL ? categories.find(c => c.id === filters.category)?.name_en : categories.find(c => c.id === filters.category)?.name) || (isRTL ? 'المنتجات' : 'Products')
               : filters.search 
-              ? `البحث عن: ${filters.search}`
-              : 'جميع المنتجات'
+              ? (isRTL ? `البحث عن: ${filters.search}` : `Search: ${filters.search}`)
+              : (isRTL ? 'جميع المنتجات' : 'All Products')
             }
           </h1>
-          <p className="text-xl text-gray-600">اكتشف مجموعتنا الواسعة من الاكسسوارات الفاخرة</p>
+          <p className="text-xl text-gray-600">{isRTL ? 'اكتشف مجموعتنا الواسعة من الاكسسوارات الفاخرة' : 'Discover our wide collection of luxury accessories'}</p>
           
           {/* Advanced Search */}
           <div className="mt-6">
@@ -182,45 +197,45 @@ const ProductsPage = () => {
                 <h2 className="text-base sm:text-lg font-bold text-gray-900">{isRTL ? 'تصفية النتائج' : 'Filter Results'}</h2>
               </div>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">الفئة</label>
-                <Select value={filters.category || "all"} onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{isRTL ? 'الفئة' : 'Category'}</label>
+                <Select value={filters.category || 'all'} onValueChange={(value) => handleFilterChange('category', value === 'all' ? '' : value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر الفئة" />
+                    <SelectValue placeholder={isRTL ? 'اختر الفئة' : 'Select Category'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">جميع الفئات</SelectItem>
+                    <SelectItem value="all">{isRTL ? 'جميع الفئات' : 'All Categories'}</SelectItem>
                     {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                      <SelectItem key={category.id} value={category.id}>{!isRTL && category.name_en ? category.name_en : category.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">نطاق السعر (ريال سعودي)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{isRTL ? 'نطاق السعر (ريال سعودي)' : 'Price range (SAR)'}</label>
                 <div className="flex space-x-2">
-                  <Input type="number" placeholder="من" value={filters.minPrice} onChange={(e) => handleFilterChange('minPrice', e.target.value)} className="flex-1" />
-                  <Input type="number" placeholder="إلى" value={filters.maxPrice} onChange={(e) => handleFilterChange('maxPrice', e.target.value)} className="flex-1" />
+                  <Input type="number" placeholder={isRTL ? 'من' : 'Min'} value={filters.minPrice} onChange={(e) => handleFilterChange('minPrice', e.target.value)} className="flex-1" />
+                  <Input type="number" placeholder={isRTL ? 'إلى' : 'Max'} value={filters.maxPrice} onChange={(e) => handleFilterChange('maxPrice', e.target.value)} className="flex-1" />
                 </div>
               </div>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">ترتيب حسب</label>
-                <Select value={filters.sortBy || "newest"} onValueChange={(value) => handleFilterChange('sortBy', value)}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{isRTL ? 'ترتيب حسب' : 'Sort by'}</label>
+                <Select value={filters.sortBy || 'newest'} onValueChange={(value) => handleFilterChange('sortBy', value)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="newest">الأحدث</SelectItem>
-                    <SelectItem value="price_low">السعر: من الأقل للأعلى</SelectItem>
-                    <SelectItem value="price_high">السعر: من الأعلى للأقل</SelectItem>
-                    <SelectItem value="rating">الأعلى تقييماً</SelectItem>
+                    <SelectItem value="newest">{isRTL ? 'الأحدث' : 'Newest'}</SelectItem>
+                    <SelectItem value="price_low">{isRTL ? 'السعر: من الأقل للأعلى' : 'Price: Low to High'}</SelectItem>
+                    <SelectItem value="price_high">{isRTL ? 'السعر: من الأعلى للأقل' : 'Price: High to Low'}</SelectItem>
+                    <SelectItem value="rating">{isRTL ? 'الأعلى تقييماً' : 'Top Rated'}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" className="w-full" onClick={() => { setFilters({ category: '', search: '', minPrice: '', maxPrice: '', sortBy: 'newest' }); setSearchParams({}); }}>مسح جميع المرشحات</Button>
+              <Button variant="outline" className="w-full" onClick={() => { setFilters({ category: '', search: '', minPrice: '', maxPrice: '', sortBy: 'newest' }); setSearchParams({}); }}>{isRTL ? 'مسح جميع المرشحات' : 'Clear all filters'}</Button>
             </Card>
           </div>
 
           <div className="lg:w-3/4">
             <div className="flex justify-between items-center mb-6">
-              <p className="text-gray-600">{loading ? 'جاري التحميل...' : `${products.length} منتج`}</p>
+              <p className="text-gray-600">{loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${products.length} ${isRTL ? 'منتج' : 'items'}`}</p>
               
               <div className="flex items-center gap-4">
                 {/* Comparison Toggle */}
@@ -229,7 +244,7 @@ const ProductsPage = () => {
                     onClick={() => setShowComparison(true)}
                     className="bg-purple-600 hover:bg-purple-700"
                   >
-                    مقارنة ({comparisonProducts.length})
+                    {isRTL ? 'مقارنة' : 'Compare'} ({comparisonProducts.length})
                   </Button>
                 )}
                 
@@ -241,7 +256,7 @@ const ProductsPage = () => {
                       viewMode === 'grid' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    شبكة
+                    {isRTL ? 'شبكة' : 'Grid'}
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
@@ -249,7 +264,7 @@ const ProductsPage = () => {
                       viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    قائمة
+                    {isRTL ? 'قائمة' : 'List'}
                   </button>
                 </div>
               </div>
@@ -268,9 +283,9 @@ const ProductsPage = () => {
             ) : products.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">لم نجد أي منتجات</h3>
-                <p className="text-gray-600 mb-4">جرب تغيير المرشحات أو البحث عن شيء آخر</p>
-                <Button onClick={() => { setFilters({ category: '', search: '', minPrice: '', maxPrice: '', sortBy: 'newest' }); setSearchParams({}); }}>مسح المرشحات</Button>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{isRTL ? 'لم نجد أي منتجات' : 'No products found'}</h3>
+                <p className="text-gray-600 mb-4">{isRTL ? 'جرب تغيير المرشحات أو البحث عن شيء آخر' : 'Try adjusting filters or search for something else'}</p>
+                <Button onClick={() => { setFilters({ category: '', search: '', minPrice: '', maxPrice: '', sortBy: 'newest' }); setSearchParams({}); }}>{isRTL ? 'مسح المرشحات' : 'Clear filters'}</Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
@@ -281,21 +296,21 @@ const ProductsPage = () => {
                         <picture>
                           <source srcSet={`${product.images[0]}?format=avif`} type="image/avif" />
                           <source srcSet={`${product.images[0]}?format=webp`} type="image/webp" />
-                          <img src={product.images[0]} alt={product.name} className="w-full h-48 sm:h-56 lg:h-64 object-cover group-hover:scale-110 transition-transform duration-500" />
+                          <img src={product.images[0]} alt={getLocalizedName(product)} className="w-full h-48 sm:h-56 lg:h-64 object-cover group-hover:scale-110 transition-transform duration-500" />
                         </picture>
                       </Link>
                       {product.discount_percentage && (
                         <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 rounded-full text-sm font-bold">-{product.discount_percentage}%</div>
                       )}
                       <div className="absolute bottom-4 right-4 flex space-x-2">
-                        {product.discount_percentage && (<span className="badge badge-sale">خصم</span>)}
-                        {product.rating >= 4.8 && (<span className="badge badge-hot">الأكثر مبيعًا</span>)}
-                        {(() => { const created = new Date(product.created_at); const diffDays = (Date.now() - created.getTime()) / (1000*60*60*24); return diffDays < 30; })() && (<span className="badge badge-new">جديد</span>)}
+                        {product.discount_percentage && (<span className="badge badge-sale">{isRTL ? 'خصم' : 'Sale'}</span>)}
+                        {product.rating >= 4.8 && (<span className="badge badge-hot">{isRTL ? 'الأكثر مبيعًا' : 'Best Seller'}</span>)}
+                        {(() => { const created = new Date(product.created_at); const diffDays = (Date.now() - created.getTime()) / (1000*60*60*24); return diffDays < 30; })() && (<span className="badge badge-new">{isRTL ? 'جديد' : 'New'}</span>)}
                       </div>
                       <div className="quick-add bg-white/90 backdrop-blur-sm p-3">
                         <Button onClick={() => handleAddToCart(product.id)} className="w-full">
                           <ShoppingCart className="h-4 w-4 ml-2" />
-                          إضافة سريعة
+                          {isRTL ? 'إضافة سريعة' : 'Quick add'}
                         </Button>
                       </div>
                       <div className="absolute top-4 left-4">
@@ -309,7 +324,7 @@ const ProductsPage = () => {
                     </div>
                     <div className="p-6">
                       <Link to={`/product/${product.id}`}>
-                        <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2">{product.name}</h3>
+                        <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2">{getLocalizedName(product)}</h3>
                       </Link>
                       <div className="flex items-center mb-3">
                         <div className="flex items-center">
@@ -321,14 +336,14 @@ const ProductsPage = () => {
                       </div>
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex flex-col">
-                          <span className="price-highlight text-xl font-bold text-amber-600">{product.price} ر.س</span>
-                          {product.original_price && (<span className="text-sm text-gray-500 line-through">{product.original_price} ر.س</span>)}
+                          <span className="price-highlight text-xl font-bold text-amber-600">{product.price} {isRTL ? 'ر.س' : 'SAR'}</span>
+                          {product.original_price && (<span className="text-sm text-gray-500 line-through">{product.original_price} {isRTL ? 'ر.س' : 'SAR'}</span>)}
                         </div>
                       </div>
                       <div className="flex space-x-2">
                         <Button onClick={() => handleAddToCart(product.id)} className="btn-luxury flex-1" data-testid={`add-to-cart-${product.id}`}>
                           <ShoppingCart className="h-4 w-4 ml-2" />
-                          أضف للسلة
+                          {isRTL ? 'أضف للسلة' : 'Add to Cart'}
                         </Button>
                         <Button 
                           onClick={() => addToComparison(product)}

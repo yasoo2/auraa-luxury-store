@@ -180,6 +180,7 @@ const EnhancedProductsPage = () => {
   };
 
   const handleDeleteProduct = async (productId) => {
+    // eslint-disable-next-line no-restricted-globals
     if (!confirm(isRTL ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Are you sure you want to delete this product?')) {
       return;
     }

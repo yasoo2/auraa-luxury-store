@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   Package,
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const QuickImportPage = () => {
   const { t, language } = useLanguage();
@@ -24,8 +24,12 @@ const QuickImportPage = () => {
   // State
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(null);
+  const pollIntervalRef = useRef(null);
   const [externalProducts, setExternalProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [supplierType, setSupplierType] = useState('aliexpress'); // New supplier selection
+  const [importCount, setImportCount] = useState(1000); // Default 1000 products
+  const [importQuery, setImportQuery] = useState('jewelry accessories'); // Default query
   const [filters, setFilters] = useState({
     category: '',
     pushed: false,
@@ -43,6 +47,13 @@ const QuickImportPage = () => {
   useEffect(() => {
     loadExternalProducts();
     loadImportLogs();
+
+    return () => { 
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
   }, [filters]);
 
   const loadExternalProducts = async () => {
@@ -79,37 +90,7 @@ const QuickImportPage = () => {
     }
   };
 
-  const handleQuickImport = async (count = 1000, query = 'jewelry accessories') => {
-    setImporting(true);
-    setImportProgress({ status: 'running', message: 'بدء الاستيراد...', imported: 0, total: count });
-
-    try {
-      const response = await axios.post(
-        `${API_URL}/api/admin/aliexpress/import-fast?count=${count}&query=${encodeURIComponent(query)}`
-      );
-      
-      const stats = response.data.statistics;
-      setImportProgress({
-        status: 'success',
-        message: `تم استيراد ${stats.inserted} منتج جديد و تحديث ${stats.updated}!`,
-        imported: stats.inserted + stats.updated,
-        total: count,
-        stats: stats
-      });
-
-      // Reload products
-      await loadExternalProducts();
-      await loadImportLogs();
-    } catch (error) {
-      setImportProgress({
-        status: 'error',
-        message: error.response?.data?.detail || 'فشل الاستيراد',
-        error: error.message
-      });
-    } finally {
-      setImporting(false);
-    }
-  };
+  // Remove old handleQuickImport - will be replaced with new multi-supplier version
 
   const handlePushToStore = async () => {
     if (selectedProducts.length === 0) {
@@ -147,16 +128,223 @@ const QuickImportPage = () => {
     setSelectedProducts(unpushedIds);
   };
 
+  // New Quick Import Function
+  const handleQuickImport = async () => {
+    if (!supplierType || importCount <= 0) {
+      alert(isRTL ? 'يرجى تحديد نوع المورد وعدد صحيح من المنتجات' : 'Please select supplier type and valid product count');
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/admin/import-fast`, {
+        count: importCount,
+        query: importQuery,
+        provider: supplierType
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+        // start polling progress
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = setInterval(async () => {
+          try {
+            const token = localStorage.getItem('token');
+            const jobId = response.data.task_id;
+            const res = await axios.get(`${API_URL}/api/admin/import-jobs/${jobId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const progress = res.data;
+            setImportProgress({ job_id: progress.job_id, status: progress.status, percent: progress.percent, processed: progress.processed_items, total: progress.total_items });
+            if (progress.status === 'completed' || progress.status === 'failed') {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+          } catch (e) {
+            // stop polling on error
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+        }, 2000);
+
+
+      if (response.data.success) {
+        alert(isRTL ? `تم بدء استيراد ${importCount} منتج بنجاح!` : `Successfully started importing ${importCount} products!`);
+        setImportProgress({ job_id: response.data.task_id, status: 'pending', percent: 0 });
+        await loadExternalProducts();
+      } else {
+        alert(isRTL ? 'فشل في بدء الاستيراد' : 'Failed to start import');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      alert(isRTL ? 'حدث خطأ أثناء الاستيراد: ' + error.message : 'Error during import: ' + error.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // New Sync Now Function
+  const handleSyncNow = async () => {
+    setImporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/admin/sync-now`, {
+        provider: supplierType
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        alert(isRTL ? 'تم بدء مزامنة الأسعار والمخزون بنجاح!' : 'Successfully started price and inventory sync!');
+        await loadExternalProducts();
+      } else {
+        alert(isRTL ? 'فشل في بدء المزامنة' : 'Failed to start sync');
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      alert(isRTL ? 'حدث خطأ أثناء المزامنة: ' + error.message : 'Error during sync: ' + error.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className={`p-6 ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {isRTL ? '🚀 استيراد سريع من AliExpress' : '🚀 Quick Import from AliExpress'}
+          {isRTL ? '🚀 استيراد سريع متعدد الموردين' : '🚀 Multi-Supplier Quick Import'}
         </h1>
         <p className="text-gray-600">
-          {isRTL ? 'استيراد وإدارة المنتجات من AliExpress بنقرة واحدة' : 'Import and manage products from AliExpress with one click'}
+          {isRTL ? 'استيراد وإدارة المنتجات من موردين متعددين بنقرة واحدة' : 'Import and manage products from multiple suppliers with one click'}
         </p>
+      </div>
+
+      {/* Quick Import Controls */}
+      <div className="bg-white rounded-lg border shadow-sm p-6 mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          {isRTL ? 'استيراد سريع - 1000 منتج' : 'Quick Import - 1000 Products'}
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {/* Supplier Type Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {isRTL ? 'نوع المورد' : 'Supplier Type'}
+            </label>
+            <select 
+              value={supplierType} 
+              onChange={(e) => setSupplierType(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="aliexpress">{isRTL ? 'علي إكسبرس' : 'AliExpress'}</option>
+              <option value="amazon">{isRTL ? 'أمازون' : 'Amazon'}</option>
+              <option value="custom">{isRTL ? 'مورد مخصص' : 'Custom Supplier'}</option>
+            </select>
+          </div>
+
+          {/* Import Count */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {isRTL ? 'عدد المنتجات' : 'Product Count'}
+            </label>
+            <input 
+              type="number" 
+              value={importCount} 
+              onChange={(e) => setImportCount(parseInt(e.target.value) || 1000)}
+              min="1"
+              max="5000"
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Search Query */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {isRTL ? 'كلمة البحث' : 'Search Query'}
+            </label>
+            <input 
+              type="text" 
+              value={importQuery} 
+              onChange={(e) => setImportQuery(e.target.value)}
+              placeholder={isRTL ? 'مجوهرات إكسسوارات' : 'jewelry accessories'}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col space-y-2">
+            <button
+              onClick={handleQuickImport}
+              disabled={importing}
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-2 px-4 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {importing ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {isRTL ? 'جاري الاستيراد...' : 'Importing...'}
+                </div>
+              ) : (
+                isRTL ? 'استيراد سريع' : 'Quick Import'
+              )}
+            </button>
+            
+            <button
+              onClick={handleSyncNow}
+              disabled={importing}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRTL ? 'مزامنة الآن' : 'Sync Now'}
+            </button>
+          </div>
+        </div>
+
+        {/* Import Progress */}
+        {importProgress && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-blue-800">
+                {isRTL ? `معرف المهمة: ${importProgress.job_id}` : `Task ID: ${importProgress.job_id}`}
+              </p>
+              <p className="text-sm text-blue-800 font-semibold">
+                {importProgress.percent ?? 0}%
+              </p>
+            </div>
+            <div className="w-full bg-blue-100 rounded-full h-2 mt-2">
+              <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${importProgress.percent ?? 0}%` }}></div>
+            </div>
+            <p className="text-sm text-blue-600 mt-2">
+              {isRTL ? 'جاري معالجة الاستيراد في الخلفية...' : 'Processing import in background...'}
+            </p>
+          </div>
+        )}
+
+        {/* Supplier Info */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-md">
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">
+            {isRTL ? 'معلومات المورد المحدد:' : 'Selected Supplier Info:'}
+          </h4>
+          <div className="text-sm text-gray-600">
+            {supplierType === 'aliexpress' && (
+              <p>{isRTL ? '• استيراد من علي إكسبرس مع تطبيق هامش ربح 100%' : '• Import from AliExpress with 100% markup'}</p>
+            )}
+            {supplierType === 'amazon' && (
+              <p>{isRTL ? '• استيراد من أمازون (قيد التطوير)' : '• Import from Amazon (under development)'}</p>
+            )}
+            {supplierType === 'custom' && (
+              <p>{isRTL ? '• مورد مخصص (قيد التطوير)' : '• Custom supplier (under development)'}</p>
+            )}
+            <p>{isRTL ? '• تحديث تلقائي للأسعار والمخزون كل 10 دقائق' : '• Automatic price and inventory update every 10 minutes'}</p>
+            <p>{isRTL ? '• إضافة الضرائب والجمارك حسب الدولة' : '• Add taxes and customs by country'}</p>
+            <p>{isRTL ? '• تصنيف تلقائي للمنتجات (أقراط، قلادات، أساور، خواتم، ساعات، أطقم)' : '• Automatic categorization (Earrings, Necklaces, Bracelets, Rings, Watches, Sets)'}</p>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -224,7 +412,7 @@ const QuickImportPage = () => {
             </p>
           </div>
           <button
-            onClick={() => handleQuickImport(1000)}
+            onClick={handleQuickImport}
             disabled={importing}
             className="bg-white text-orange-600 px-8 py-3 rounded-lg font-bold hover:bg-orange-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
           >

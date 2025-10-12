@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, MapPin, User, Phone, Mail } from 'lucide-react';
+import { CreditCard, MapPin, User, Phone, Mail, Truck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -14,6 +15,8 @@ const API = `${BACKEND_URL}/api`;
 
 const CheckoutPage = () => {
   const { user } = useAuth();
+  const { currency, language } = useLanguage();
+  const isRTL = language === 'ar' || language === 'he';
   const navigate = useNavigate();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,15 +40,40 @@ const CheckoutPage = () => {
     cardName: ''
   });
 
+  const [shippingEstimate, setShippingEstimate] = useState({ loading: false, cost: 0, days: null, error: null });
+
   useEffect(() => {
     fetchCart();
+    detectCountry();
   }, []);
+
+  useEffect(() => {
+    // Recalculate shipping when country or cart changes
+    if (cart && formData.country) {
+      estimateShipping();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart, formData.country, currency]);
+
+  const detectCountry = async () => {
+    try {
+      const res = await fetch(`${API}/geo/detect`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.country_code) {
+          setFormData((prev) => ({ ...prev, country: data.country_code }));
+        }
+      }
+    } catch (e) {
+      // silent
+    }
+  };
 
   const fetchCart = async () => {
     try {
       const response = await axios.get(`${API}/cart`);
       if (!response.data || response.data.items.length === 0) {
-        toast.error('السلة فارغة');
+        toast.error(isRTL ? 'السلة فارغة' : 'Cart is empty');
         navigate('/cart');
         return;
       }
@@ -53,8 +81,41 @@ const CheckoutPage = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching cart:', error);
-      toast.error('فشل في تحميل بيانات السلة');
+      toast.error(isRTL ? 'فشل في تحميل بيانات السلة' : 'Failed to load cart');
       navigate('/cart');
+    }
+  };
+
+  const estimateShipping = async () => {
+    try {
+      setShippingEstimate({ loading: true, cost: 0, days: null, error: null });
+      const payload = {
+        country_code: formData.country,
+        preferred: 'fastest',
+        currency: currency || 'SAR',
+        markup_pct: 10,
+        items: (cart?.items || []).map((it) => ({ product_id: it.product_id, quantity: it.quantity }))
+      };
+      const res = await fetch(`${API}/shipping/estimate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.status === 400) {
+        const detail = await res.json();
+        setShippingEstimate({ loading: false, cost: 0, days: null, error: 'unavailable' });
+        toast.error(isRTL ? 'الشحن غير متاح لبلدك' : 'Shipping is not available for your country');
+        return;
+      }
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      const cost = data?.shipping_cost?.[currency] ?? 0;
+      const days = data?.estimated_days || null;
+      setShippingEstimate({ loading: false, cost, days, error: null });
+    } catch (e) {
+      console.error('estimateShipping error', e);
+      setShippingEstimate({ loading: false, cost: 0, days: null, error: 'server' });
+      toast.error(isRTL ? 'تعذر حساب الشحن' : 'Failed to estimate shipping');
     }
   };
 
@@ -67,6 +128,10 @@ const CheckoutPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (shippingEstimate.error === 'unavailable') {
+      toast.error(isRTL ? 'لا يمكن إتمام الطلب: الشحن غير متاح' : 'Cannot place order: shipping unavailable');
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -88,12 +153,11 @@ const CheckoutPage = () => {
       };
 
       await axios.post(`${API}/orders`, orderData);
-      
-      toast.success('تم إنشاء الطلب بنجاح!');
+      toast.success(isRTL ? 'تم إنشاء الطلب بنجاح!' : 'Order created successfully!');
       navigate('/profile?tab=orders');
     } catch (error) {
       console.error('Error creating order:', error);
-      toast.error('فشل في إنشاء الطلب');
+      toast.error(isRTL ? 'فشل في إنشاء الطلب' : 'Failed to create order');
     } finally {
       setSubmitting(false);
     }
@@ -107,18 +171,18 @@ const CheckoutPage = () => {
     );
   }
 
-  const shippingCost = 15; // Fixed shipping cost for dropshipping
-  const totalAmount = cart.total_amount + shippingCost;
+  const shippingCost = shippingEstimate.cost || 0;
+  const totalAmount = (cart.total_amount || 0) + (shippingCost || 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="font-display text-4xl font-bold text-gray-900 mb-4" data-testid="checkout-title">
-            إتمام الطلب
+            {isRTL ? 'إتمام الطلب' : 'Checkout'}
           </h1>
           <p className="text-xl text-gray-600">
-            املأ بياناتك لإتمام عملية الشراء
+            {isRTL ? 'املأ بياناتك لإتمام عملية الشراء' : 'Fill your details to complete the purchase'}
           </p>
         </div>
 
@@ -130,7 +194,7 @@ const CheckoutPage = () => {
               <Card className="luxury-card p-6">
                 <div className="flex items-center mb-6">
                   <MapPin className="h-6 w-6 text-amber-600 ml-3" />
-                  <h2 className="text-xl font-bold text-gray-900">عنوان الشحن</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{isRTL ? 'عنوان الشحن' : 'Shipping Address'}</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -138,7 +202,7 @@ const CheckoutPage = () => {
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       name="firstName"
-                      placeholder="الاسم الأول"
+                      placeholder={isRTL ? 'الاسم الأول' : 'First Name'}
                       value={formData.firstName}
                       onChange={handleInputChange}
                       className="pl-10"
@@ -150,7 +214,7 @@ const CheckoutPage = () => {
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
                       name="lastName"
-                      placeholder="الاسم الأخير"
+                      placeholder={isRTL ? 'الاسم الأخير' : 'Last Name'}
                       value={formData.lastName}
                       onChange={handleInputChange}
                       className="pl-10"
@@ -163,7 +227,7 @@ const CheckoutPage = () => {
                     <Input
                       type="email"
                       name="email"
-                      placeholder="البريد الإلكتروني"
+                      placeholder={isRTL ? 'البريد الإلكتروني' : 'Email'}
                       value={formData.email}
                       onChange={handleInputChange}
                       className="pl-10"
@@ -176,7 +240,7 @@ const CheckoutPage = () => {
                     <Input
                       type="tel"
                       name="phone"
-                      placeholder="رقم الجوال"
+                      placeholder={isRTL ? 'رقم الجوال' : 'Phone'}
                       value={formData.phone}
                       onChange={handleInputChange}
                       className="pl-10"
@@ -187,7 +251,7 @@ const CheckoutPage = () => {
                   <div className="md:col-span-2">
                     <Input
                       name="street"
-                      placeholder="عنوار الشارع ورقم المبنى"
+                      placeholder={isRTL ? 'عنوان الشارع ورقم المبنى' : 'Street & Building Number'}
                       value={formData.street}
                       onChange={handleInputChange}
                       required
@@ -197,7 +261,7 @@ const CheckoutPage = () => {
                   <div>
                     <Input
                       name="city"
-                      placeholder="المدينة"
+                      placeholder={isRTL ? 'المدينة' : 'City'}
                       value={formData.city}
                       onChange={handleInputChange}
                       required
@@ -207,7 +271,7 @@ const CheckoutPage = () => {
                   <div>
                     <Input
                       name="state"
-                      placeholder="المنطقة/المحافظة"
+                      placeholder={isRTL ? 'المنطقة/المحافظة' : 'State/Province'}
                       value={formData.state}
                       onChange={handleInputChange}
                       required
@@ -217,7 +281,7 @@ const CheckoutPage = () => {
                   <div>
                     <Input
                       name="zipCode"
-                      placeholder="الرمز البريدي"
+                      placeholder={isRTL ? 'الرمز البريدي' : 'Postal Code'}
                       value={formData.zipCode}
                       onChange={handleInputChange}
                       required
@@ -225,17 +289,17 @@ const CheckoutPage = () => {
                     />
                   </div>
                   <div>
-                    <Select value={formData.country || "SA"} onValueChange={(value) => setFormData({...formData, country: value})}>
+                    <Select value={formData.country || 'SA'} onValueChange={(value) => setFormData({ ...formData, country: value })}>
                       <SelectTrigger data-testid="shipping-country">
-                        <SelectValue placeholder="اختر الدولة" />
+                        <SelectValue placeholder={isRTL ? 'اختر الدولة' : 'Select Country'} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="SA">المملكة العربية السعودية</SelectItem>
-                        <SelectItem value="AE">الإمارات العربية المتحدة</SelectItem>
-                        <SelectItem value="KW">الكويت</SelectItem>
-                        <SelectItem value="QA">قطر</SelectItem>
-                        <SelectItem value="BH">البحرين</SelectItem>
-                        <SelectItem value="OM">عمان</SelectItem>
+                        <SelectItem value="SA">{isRTL ? 'المملكة العربية السعودية' : 'Saudi Arabia'}</SelectItem>
+                        <SelectItem value="AE">{isRTL ? 'الإمارات العربية المتحدة' : 'United Arab Emirates'}</SelectItem>
+                        <SelectItem value="KW">{isRTL ? 'الكويت' : 'Kuwait'}</SelectItem>
+                        <SelectItem value="QA">{isRTL ? 'قطر' : 'Qatar'}</SelectItem>
+                        <SelectItem value="BH">{isRTL ? 'البحرين' : 'Bahrain'}</SelectItem>
+                        <SelectItem value="OM">{isRTL ? 'عُمان' : 'Oman'}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -246,75 +310,33 @@ const CheckoutPage = () => {
               <Card className="luxury-card p-6">
                 <div className="flex items-center mb-6">
                   <CreditCard className="h-6 w-6 text-amber-600 ml-3" />
-                  <h2 className="text-xl font-bold text-gray-900">طريقة الدفع</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{isRTL ? 'طريقة الدفع' : 'Payment Method'}</h2>
                 </div>
                 
                 <div className="space-y-4">
-                  <Select value={formData.paymentMethod || "card"} onValueChange={(value) => setFormData({...formData, paymentMethod: value})}>
+                  <Select value={formData.paymentMethod || 'card'} onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}>
                     <SelectTrigger data-testid="payment-method">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="card">💳 بطاقة ائتمانية</SelectItem>
-                      <SelectItem value="bank_transfer">🏦 تحويل بنكي</SelectItem>
+                      <SelectItem value="card">💳 {isRTL ? 'بطاقة ائتمانية' : 'Credit Card'}</SelectItem>
+                      <SelectItem value="bank_transfer">🏦 {isRTL ? 'تحويل بنكي' : 'Bank Transfer'}</SelectItem>
                     </SelectContent>
                   </Select>
-                  
                   {formData.paymentMethod === 'card' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       <div className="md:col-span-2">
-                        <Input
-                          name="cardName"
-                          placeholder="اسم حامل البطاقة"
-                          value={formData.cardName}
-                          onChange={handleInputChange}
-                          required={formData.paymentMethod === 'card'}
-                          data-testid="card-name"
-                        />
+                        <Input name="cardName" placeholder={isRTL ? 'اسم حامل البطاقة' : 'Cardholder Name'} value={formData.cardName} onChange={handleInputChange} required={formData.paymentMethod === 'card'} data-testid="card-name" />
                       </div>
                       <div className="md:col-span-2">
-                        <Input
-                          name="cardNumber"
-                          placeholder="رقم البطاقة"
-                          value={formData.cardNumber}
-                          onChange={handleInputChange}
-                          maxLength={19}
-                          required={formData.paymentMethod === 'card'}
-                          data-testid="card-number"
-                        />
+                        <Input name="cardNumber" placeholder={isRTL ? 'رقم البطاقة' : 'Card Number'} value={formData.cardNumber} onChange={handleInputChange} maxLength={19} required={formData.paymentMethod === 'card'} data-testid="card-number" />
                       </div>
                       <div>
-                        <Input
-                          name="expiryDate"
-                          placeholder="MM/YY"
-                          value={formData.expiryDate}
-                          onChange={handleInputChange}
-                          maxLength={5}
-                          required={formData.paymentMethod === 'card'}
-                          data-testid="card-expiry"
-                        />
+                        <Input name="expiryDate" placeholder="MM/YY" value={formData.expiryDate} onChange={handleInputChange} maxLength={5} required={formData.paymentMethod === 'card'} data-testid="card-expiry" />
                       </div>
                       <div>
-                        <Input
-                          name="cvv"
-                          placeholder="CVV"
-                          value={formData.cvv}
-                          onChange={handleInputChange}
-                          maxLength={4}
-                          required={formData.paymentMethod === 'card'}
-                          data-testid="card-cvv"
-                        />
+                        <Input name="cvv" placeholder="CVV" value={formData.cvv} onChange={handleInputChange} maxLength={4} required={formData.paymentMethod === 'card'} data-testid="card-cvv" />
                       </div>
-                    </div>
-                  )}
-                  
-                  {/* COD option removed for dropshipping business model */}
-                  
-                  {formData.paymentMethod === 'bank_transfer' && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-blue-800">
-                        🏦 سيتم إرسال تفاصيل التحويل البنكي عبر البريد الإلكتروني
-                      </p>
                     </div>
                   )}
                 </div>
@@ -324,40 +346,51 @@ const CheckoutPage = () => {
             {/* Order Summary */}
             <div className="lg:col-span-1">
               <Card className="luxury-card p-6 sticky top-24">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">ملخص الطلب</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-6">{isRTL ? 'ملخص الطلب' : 'Order Summary'}</h2>
                 
                 <div className="space-y-4 mb-6">
                   {cart.items.map((item, index) => (
                     <div key={index} className="flex justify-between text-sm">
                       <span className="truncate" data-testid={`summary-item-${index}`}>
-                        {item.quantity}x منتج
+                        {item.quantity}x {isRTL ? 'منتج' : 'item'}
                       </span>
-                      <span>{(item.price * item.quantity).toFixed(2)} ر.س</span>
+                      <span>
+                        {(item.price * item.quantity).toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
+                      </span>
                     </div>
                   ))}
                   
                   <hr className="border-gray-200" />
                   
                   <div className="flex justify-between">
-                    <span className="text-gray-600">المجموع الجزئي:</span>
+                    <span className="text-gray-600">{isRTL ? 'المجموع الجزئي:' : 'Subtotal:'}</span>
                     <span className="font-medium" data-testid="summary-subtotal">
-                      {cart.total_amount.toFixed(2)} ر.س
+                      {cart.total_amount.toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
                     </span>
                   </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">الشحن:</span>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">{isRTL ? 'الشحن:' : 'Shipping:'}</span>
                     <span className="font-medium">
-                      {shippingCost.toFixed(2)} ر.س
+                      {shippingEstimate.loading ? (isRTL ? 'جاري الحساب...' : 'Calculating...') : `${shippingCost.toFixed(2)} ${isRTL ? 'ر.س' : 'SAR'}`}
                     </span>
                   </div>
+
+                  {shippingEstimate.days && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Truck className="h-4 w-4 ml-2 text-amber-600" />
+                      <span>
+                        {isRTL ? 'مدة التوصيل المتوقعة:' : 'Estimated delivery:'} {shippingEstimate.days.min ?? '?'} - {shippingEstimate.days.max ?? '?'} {isRTL ? 'أيام' : 'days'}
+                      </span>
+                    </div>
+                  )}
                   
                   <hr className="border-gray-200" />
                   
                   <div className="flex justify-between text-xl font-bold">
-                    <span>المجموع:</span>
+                    <span>{isRTL ? 'المجموع:' : 'Total:'}</span>
                     <span className="text-amber-600" data-testid="summary-total">
-                      {totalAmount.toFixed(2)} ر.س
+                      {totalAmount.toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
                     </span>
                   </div>
                 </div>
@@ -365,21 +398,21 @@ const CheckoutPage = () => {
                 <Button 
                   type="submit" 
                   className="btn-luxury w-full" 
-                  disabled={submitting}
+                  disabled={submitting || shippingEstimate.error === 'unavailable'}
                   data-testid="place-order-button"
                 >
                   {submitting ? (
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span className="ml-2">جاري الطلب...</span>
+                      <span className="ml-2">{isRTL ? 'جاري الطلب...' : 'Placing order...'}</span>
                     </div>
                   ) : (
-                    'تأكيد الطلب'
+                    isRTL ? 'تأكيد الطلب' : 'Place Order'
                   )}
                 </Button>
                 
                 <div className="mt-4 text-center text-sm text-gray-500">
-                  <p>🔒 معاملاتك محمية بتشفير SSL</p>
+                  <p>🔒 {isRTL ? 'معاملاتك محمية بتشفير SSL' : 'Your transactions are protected by SSL'}</p>
                 </div>
               </Card>
             </div>

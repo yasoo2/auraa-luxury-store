@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Truck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -15,17 +16,83 @@ const CartPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { fetchCartCount } = useCart();
+  const { isRTL, currency } = useLanguage();
   const [cart, setCart] = useState(null);
   const [products, setProducts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [countryCode, setCountryCode] = useState('SA');
+  const [shippingEstimate, setShippingEstimate] = useState({ 
+    loading: false, 
+    cost: 0, 
+    days: null, 
+    error: null 
+  });
 
   useEffect(() => {
     if (user) {
       fetchCart();
+      detectCountry();
     } else {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (cart && cart.items.length > 0 && countryCode) {
+      estimateShipping();
+    }
+  }, [cart, countryCode, currency]);
+
+  const detectCountry = async () => {
+    try {
+      const response = await axios.get(`${API}/geo/detect`);
+      if (response.data && response.data.country_code) {
+        setCountryCode(response.data.country_code);
+      }
+    } catch (error) {
+      console.error('Error detecting country:', error);
+      // Default to Saudi Arabia if detection fails
+      setCountryCode('SA');
+    }
+  };
+
+  const estimateShipping = async () => {
+    try {
+      setShippingEstimate({ loading: true, cost: 0, days: null, error: null });
+      const payload = {
+        country_code: countryCode,
+        preferred: 'fastest',
+        currency: currency || 'SAR',
+        markup_pct: 10,
+        items: (cart?.items || []).map((it) => ({ 
+          product_id: it.product_id, 
+          quantity: it.quantity 
+        }))
+      };
+      
+      const res = await fetch(`${API}/shipping/estimate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.status === 400) {
+        setShippingEstimate({ loading: false, cost: 0, days: null, error: 'unavailable' });
+        toast.warning(isRTL ? 'الشحن غير متاح لبلدك' : 'Shipping unavailable for your country');
+        return;
+      }
+      
+      if (!res.ok) throw new Error('Failed');
+      
+      const data = await res.json();
+      const cost = data?.shipping_cost?.[currency] ?? 0;
+      const days = data?.estimated_days || null;
+      setShippingEstimate({ loading: false, cost, days, error: null });
+    } catch (e) {
+      console.error('estimateShipping error', e);
+      setShippingEstimate({ loading: false, cost: 15, days: { min: 3, max: 7 }, error: 'fallback' });
+    }
+  };
 
   const fetchCart = async () => {
     try {
@@ -231,40 +298,77 @@ const CartPage = () => {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <Card className="luxury-card p-6 sticky top-24">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">ملخص الطلب</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-6">
+                {isRTL ? 'ملخص الطلب' : 'Order Summary'}
+              </h2>
               
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">المجموع الجزئي:</span>
+                  <span className="text-gray-600">
+                    {isRTL ? 'المجموع الجزئي:' : 'Subtotal:'}
+                  </span>
                   <span className="font-medium" data-testid="subtotal">
-                    {cart.total_amount.toFixed(2)} ر.س
+                    {cart.total_amount.toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">الشحن:</span>
-                  <span className="font-medium">
-                    15.00 ر.س
+                
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600 flex items-center gap-2">
+                    <Truck className="h-4 w-4" />
+                    {isRTL ? 'الشحن:' : 'Shipping:'}
                   </span>
+                  <div className="text-right">
+                    {shippingEstimate.loading ? (
+                      <span className="text-sm text-gray-500">
+                        {isRTL ? 'جاري الحساب...' : 'Calculating...'}
+                      </span>
+                    ) : shippingEstimate.error === 'unavailable' ? (
+                      <span className="text-sm text-red-600">
+                        {isRTL ? 'غير متاح' : 'Unavailable'}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-medium">
+                          {shippingEstimate.cost.toFixed(2)} {isRTL ? 'ر.س' : currency}
+                        </span>
+                        {shippingEstimate.days && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {shippingEstimate.days.min}-{shippingEstimate.days.max} {isRTL ? 'أيام' : 'days'}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
+                
                 <hr className="border-gray-200" />
                 <div className="flex justify-between text-xl font-bold">
-                  <span>المجموع:</span>
+                  <span>{isRTL ? 'المجموع:' : 'Total:'}</span>
                   <span className="text-amber-600" data-testid="total-amount">
-                    {(cart.total_amount + 15).toFixed(2)} ر.س
+                    {(cart.total_amount + (shippingEstimate.cost || 0)).toFixed(2)} {isRTL ? 'ر.س' : currency}
                   </span>
                 </div>
               </div>
               
               <div className="space-y-3">
                 <Link to="/checkout" className="block">
-                  <Button className="btn-luxury w-full" data-testid="checkout-button">
-                    إتمام الطلب
+                  <Button 
+                    className="btn-luxury w-full" 
+                    data-testid="checkout-button"
+                    disabled={shippingEstimate.error === 'unavailable'}
+                  >
+                    {isRTL ? 'إتمام الطلب' : 'Proceed to Checkout'}
                     <ArrowLeft className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
+                {shippingEstimate.error === 'unavailable' && (
+                  <p className="text-sm text-red-600 text-center">
+                    {isRTL ? 'الشحن غير متاح لبلدك حالياً' : 'Shipping unavailable for your country'}
+                  </p>
+                )}
                 <Link to="/products" className="block">
                   <Button variant="outline" className="w-full">
-                    متابعة التسوق
+                    {isRTL ? 'متابعة التسوق' : 'Continue Shopping'}
                   </Button>
                 </Link>
               </div>

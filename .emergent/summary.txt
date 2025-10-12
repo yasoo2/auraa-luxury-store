@@ -1,6 +1,71 @@
 <analysis>
+The AI engineer's trajectory involved several distinct phases. Initially, it focused on establishing core e-commerce functionalities like legal pages and customer order tracking, along with fixing minor UI issues. A significant portion was dedicated to evolving the AliExpress dropshipping integration, moving towards dynamic shipping cost/duration calculations and robust multi-language/multi-currency support. Concurrently, the engineer improved the admin experience by adding live import progress feedback. Throughout, the focus shifted from foundational elements to advanced internationalization and user experience enhancements, culminating in a proposed comprehensive roadmap for a perfect store addressing payment, notifications, and further platform refinements. The work demonstrates an iterative approach, frequently seeking user confirmation and adapting to evolving requirements.
+</analysis>
+
+<product_requirements>
+Auraa Luxury is a high-end dropshipping e-commerce platform for accessories, requiring a luxurious UI, full multi-language (Arabic/English, GCC focus, expanding to Turkish, Hindi, Hebrew, Spanish, French, Russian, German) and multi-currency support with dynamic RTL/LTR. It needs comprehensive responsive design and a robust Admin Suite for product/order/user CRUD, analytics, and integrations. The platform should hide product sourcing details from customers and support multiple suppliers. Advanced features like AI search, smart recommendations, product comparison, PWA, and live chat are planned.
+
+**Implemented So Far:**
+- Refined authentication, automatic currency conversion, automated CI/CD pipeline.
+- Responsive design for homepage, product pages, carousel.
+- Full AliExpress dropshipping integration with automatic price/stock/shipping synchronization (every 10 minutes), country-specific pricing/VAT, Quick Import Admin UI with supplier type selection, and automatic import of 1000 products with 100% price markup, tax, customs, and shipping time.
+- Wishlist functionality, Admin Dashboard accessibility.
+- Basic legal pages (Privacy Policy, Terms of Service, Return Policy, Contact Us).
+- Customer Order Tracking page with internal tracking events.
+- Dynamic shipping cost and duration estimation from AliExpress based on buyer's country, incorporating a 10% markup, displayed on product and checkout pages, blocking checkout if unavailable.
+- Live progress percentage for quick product import.
+- Frontend and backend support for product name/description localization based on user's selected language.
+</product_requirements>
+
+<key_technical_concepts>
+- **Full-Stack:** React (frontend), FastAPI (backend).
+- **Database:** MongoDB with  (UUIDs for IDs).
+- **UI/Styling:** Shadcn UI, Tailwind CSS, React Context API.
+- **Routing:** , Craco.
+- **Internationalization:** Custom , RTL/LTR support, Gregorian dates.
+- **Automation:** APScheduler for backend tasks.
+- **API Client:** ,  for external APIs.
+- **Integrations:** AliExpress API (HMAC/MD5 signing).
+- **Real-time updates:** Polling for import progress (SSE planned).
 </key_technical_concepts>
 
 <code_architecture>
 
+
+- ****: Core FastAPI app. Modified to include:
+    - New backend API endpoints for order tracking (, ).
+    - New endpoint  for dynamic shipping cost/duration, supporting AliExpress integration, currency conversion, and markup.
+    - New endpoint  for live import progress.
+    - Modifications to  and  to support localization by returning name/description based on a  query parameter.
+- ****: Modified to integrate a  to update import job status in the database, enabling live progress tracking.
+- ****: Modified to add routes for new legal pages and .
+- ****: Modified to include links to the new legal pages and the Order Tracking page.
+- ****: Modified to include a prominent link for Order Tracking on both desktop and mobile views.
+- ****: Updated to support additional languages (Turkish, Hindi, Hebrew, Spanish, French, Russian, German) and manage server-side currency rate fetching.
+- ** (NEW)**: Created for customer order tracking, displaying internal tracking events and supporting multi-language content and Gregorian dates.
+- ****: Enhanced to display live import progress percentage from the backend polling mechanism after initiating a quick import.
+- ****: Modified to display dynamic shipping estimates (cost and duration with 10% markup) and to handle product name/description localization.
+- ****: Modified to dynamically calculate and display shipping cost/duration, block checkout if shipping is unavailable, and handle product name/description localization.
+- ****: Modified to handle product name/description localization using a fallback mechanism.
+</code_architecture>
+
+<pending_tasks>
+- Integrate a payment gateway (user requested options: Tap Payments, PayTabs, HyperPay, Checkout.com, Stripe).
+- Implement multi-channel notifications (Email, SMS/WhatsApp, In-App - user requested options for SendGrid/Twilio).
+- Complete full translation for all 9 languages (user preferred automated translation then human review).
+- Implement SSE for live import progress (user approved alongside polling).
+- Add same progress bar to the Bulk Import page.
+- Develop remaining Admin Dashboard modules: CMS Pages, Theme, Media management, General store settings.
+- Implement AI functionality for advanced search and smart recommendations.
+- Implement detailed logic for product comparison, PWA features, and Live Chat.
+- Implement Anti-Screenshot & Content Protection logic.
+- Add shipping estimate to the Cart page.
+</pending_tasks>
+
+<current_work>
+Immediately before this summary, the AI engineer was addressing the user's overarching request to make the store perfect and implement everything. The engineer proposed a comprehensive roadmap in four phases (A: Core Perfection, B: Shipping & Payment, C: Admin & Content, D: Advanced Experience). This roadmap outlined steps for full multi-language support (including backend localization of products), consistent server-side currency, Gregorian dates, dynamic AliExpress shipping (already partially implemented with 10% markup on Checkout and Product Detail pages), payment gateway integration, live import progress (polling implemented, SSE proposed), and various admin/advanced features. The AI engineer is awaiting user confirmation on specific choices for Payment Gateway, Notification providers, Translation strategy, and whether to proceed with SSE implementation for live import progress. The very last action was presenting this detailed plan and asking the user to make these crucial prioritization decisions.
+</current_work>
+
+<optional_next_step>
+Based on the user's latest input, clarify choices for Payment Gateway, Notifications, Translation, and SSE to start the next phase of development.
 </optional_next_step>

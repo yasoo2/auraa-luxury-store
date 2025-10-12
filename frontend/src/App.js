@@ -26,6 +26,14 @@ import Footer from './components/Footer';
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
 
+// Legal and Info Pages
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import ReturnPolicy from './pages/ReturnPolicy';
+import ContactUs from './pages/ContactUs';
+import AboutUs from './pages/AboutUs';
+import OrderTracking from './pages/OrderTracking';
+
 // UI Components
 import { Toaster } from './components/ui/sonner';
 
@@ -66,6 +74,17 @@ function App() {
                     <Route path="/setup" element={<DeploymentSetup />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
+                    
+                    {/* Legal and Info Pages */}
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/terms-of-service" element={<TermsOfService />} />
+                    <Route path="/return-policy" element={<ReturnPolicy />} />
+                    <Route path="/contact" element={<ContactUs />} />
+                    <Route path="/about" element={<AboutUs />} />
+
+                    {/* Order Tracking */}
+                    <Route path="/order-tracking" element={<OrderTracking />} />
+                    <Route path="/track-order" element={<Navigate to="/order-tracking" replace />} />
                     
                     {/* Admin Routes */}
                     <Route path="/admin/*" element={<AdminDashboard />} />

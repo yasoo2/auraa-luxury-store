@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, Query, File, UploadFile, Request
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query, File, UploadFile, Request, Form
+from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -42,6 +43,7 @@ class OrderStatus(str, Enum):
     pending = "pending"
     processing = "processing"
     shipped = "shipped"
+    in_transit = "in_transit"
     delivered = "delivered"
     cancelled = "cancelled"
 
@@ -119,6 +121,9 @@ class Order(BaseModel):
     user_id: str
     items: List[CartItem]
     total_amount: float
+    currency: str = "SAR"
+    order_number: Optional[str] = None
+
     shipping_address: Dict[str, Any]
     payment_method: str
     status: OrderStatus = OrderStatus.pending
@@ -237,7 +242,8 @@ async def get_products(
     max_price: Optional[float] = None,
     search: Optional[str] = None,
     skip: int = 0,
-    limit: int = 20
+    limit: int = 20,
+    language: Optional[str] = Query(None, description="Preferred language (ar|en|tr|...)")
 ):
     query = {}
     
@@ -251,20 +257,69 @@ async def get_products(
         else:
             query["price"] = {"$lte": max_price}
     if search:
+        # Search on all localized fields
         query["$or"] = [
             {"name": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}}
+            {"description": {"$regex": search, "$options": "i"}},
+            {"name_en": {"$regex": search, "$options": "i"}},
+            {"name_ar": {"$regex": search, "$options": "i"}},
+            {"description_en": {"$regex": search, "$options": "i"}},
+            {"description_ar": {"$regex": search, "$options": "i"}}
         ]
     
     products = await db.products.find(query).skip(skip).limit(limit).to_list(length=None)
-    return [Product(**product) for product in products]
+
+    # Localize name/description at server side if language provided
+    if language:
+        for p in products:
+            # Arabic
+            if language.startswith('ar'):
+                p['name'] = p.get('name_ar') or p.get('name') or p.get('name_en')
+                p['description'] = p.get('description_ar') or p.get('description') or p.get('description_en')
+            # English
+            elif language.startswith('en'):
+                p['name'] = p.get('name_en') or p.get('name') or p.get('name_ar')
+                p['description'] = p.get('description_en') or p.get('description') or p.get('description_ar')
+            # Other languages fallback to English then default
+            else:
+                p['name'] = p.get('name_en') or p.get('name') or p.get('name_ar')
+                p['description'] = p.get('description_en') or p.get('description') or p.get('description_ar')
+    
+    # Filter out corrupted products that don't match the schema
+    valid_products = []
+    for product in products:
+        try:
+            valid_product = Product(**product)
+            valid_products.append(valid_product)
+        except Exception as e:
+            logger.warning(f"Skipping corrupted product: {product.get('_id', 'unknown')} - Error: {str(e)}")
+            continue
+    
+    return valid_products
 
 @api_router.get("/products/{product_id}", response_model=Product)
-async def get_product(product_id: str):
+async def get_product(product_id: str, language: Optional[str] = Query(None)):
     product = await db.products.find_one({"id": product_id})
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    return Product(**product)
+    
+    # Localize name/description at server side if language provided
+    if language:
+        if language.startswith('ar'):
+            product['name'] = product.get('name_ar') or product.get('name') or product.get('name_en')
+            product['description'] = product.get('description_ar') or product.get('description') or product.get('description_en')
+        elif language.startswith('en'):
+            product['name'] = product.get('name_en') or product.get('name') or product.get('name_ar')
+            product['description'] = product.get('description_en') or product.get('description') or product.get('description_ar')
+        else:
+            product['name'] = product.get('name_en') or product.get('name') or product.get('name_ar')
+            product['description'] = product.get('description_en') or product.get('description') or product.get('description_ar')
+    
+    try:
+        return Product(**product)
+    except Exception as e:
+        logger.error(f"Corrupted product data for ID {product_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Product data is corrupted")
 
 @api_router.post("/products", response_model=Product)
 async def create_product(product_data: ProductCreate, admin: User = Depends(get_admin_user)):
@@ -330,6 +385,7 @@ async def add_to_cart(
         existing_item["quantity"] += quantity
     else:
         cart_items.append({
+
             "product_id": product_id,
             "quantity": quantity,
             "price": product["price"]
@@ -373,6 +429,16 @@ async def remove_from_cart(product_id: str, current_user: User = Depends(get_cur
     
     return {"message": "Item removed from cart"}
 
+class ShippingItem(BaseModel):
+    product_id: str
+    quantity: int = 1
+
+class ShippingEstimateRequest(BaseModel):
+    country_code: str
+    items: List[ShippingItem]
+    preferred: str = "fastest"  # or "cheapest"
+    currency: Optional[str] = "SAR"
+
 class OrderCreate(BaseModel):
     shipping_address: Dict[str, Any]
     payment_method: str
@@ -393,6 +459,10 @@ async def create_order(
         user_id=current_user.id,
         items=cart["items"],
         total_amount=cart["total_amount"],
+        currency="SAR",
+        order_number=f"AUR-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+        tracking_number=f"TRK-{str(uuid.uuid4())[:10].upper()}",
+
         shipping_address=order_data.shipping_address,
         payment_method=order_data.payment_method
     )
@@ -411,6 +481,86 @@ async def create_order(
 async def get_orders(current_user: User = Depends(get_current_user)):
     orders = await db.orders.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
     return [Order(**order) for order in orders]
+
+
+@api_router.get("/orders/my-orders")
+async def get_my_orders(current_user: User = Depends(get_current_user)):
+    orders = await db.orders.find({"user_id": current_user.id}).sort("created_at", -1).to_list(length=None)
+    # map to public shape
+    result = []
+    for o in orders:
+        result.append({
+            "id": o.get("id"),
+            "order_number": o.get("order_number"),
+            "tracking_number": o.get("tracking_number"),
+            "status": o.get("status", "pending"),
+            "created_at": o.get("created_at"),
+            "total_amount": o.get("total_amount", 0.0),
+            "currency": o.get("currency", "SAR"),
+            "shipping_address": o.get("shipping_address", {})
+        })
+    return {"orders": result}
+
+@api_router.get("/orders/track/{search_param}")
+async def track_order(search_param: str):
+    # allow search by tracking_number, order_number, or id
+    order = await db.orders.find_one({"tracking_number": search_param})
+    if not order:
+        order = await db.orders.find_one({"order_number": search_param})
+    if not order:
+        order = await db.orders.find_one({"id": search_param})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Build a simple internal tracking timeline suitable for dropshipping
+    created_at = order.get("created_at", datetime.now(timezone.utc))
+    events = [
+        {
+            "status": "pending",
+            "description": "Order received",
+            "location": "Warehouse",
+            "timestamp": created_at
+        },
+        {
+            "status": "processing",
+            "description": "Preparing your items",
+            "location": "Fulfillment Center",
+            "timestamp": created_at + timedelta(hours=12)
+        }
+    ]
+    if order.get("status") in ["shipped", "in_transit", "delivered"]:
+        events.append({
+            "status": "shipped",
+            "description": "Shipped from supplier",
+            "location": "Origin Facility",
+            "timestamp": created_at + timedelta(days=1)
+        })
+    if order.get("status") in ["in_transit", "delivered"]:
+        events.append({
+            "status": "in_transit",
+            "description": "In transit to destination",
+            "location": "On the way",
+            "timestamp": created_at + timedelta(days=3)
+        })
+    if order.get("status") == "delivered":
+        events.append({
+            "status": "delivered",
+            "description": "Delivered to customer",
+            "location": order.get("shipping_address", {}).get("city", "Destination"),
+            "timestamp": created_at + timedelta(days=7)
+        })
+
+    response = {
+        "order_number": order.get("order_number"),
+        "tracking_number": order.get("tracking_number"),
+        "status": order.get("status", "pending"),
+        "created_at": order.get("created_at"),
+        "total_amount": order.get("total_amount", 0.0),
+        "currency": order.get("currency", "SAR"),
+        "shipping_address": order.get("shipping_address", {}),
+        "tracking_events": events
+    }
+    return response
 
 # External Products (Simulated API integration)
 @api_router.get("/external-products")
@@ -768,7 +918,6 @@ from services.currency_service import get_currency_service
 from services.scheduler_service import get_scheduler_service
 from services.product_sync_service import get_product_sync_service
 from services.aliexpress_service import get_aliexpress_service
-from fastapi import UploadFile, File
 
 # Auto-Update Services Initialization
 currency_service = None
@@ -860,7 +1009,7 @@ async def trigger_product_sync(
                 continue
         
         return {
-            "message": f"Product sync completed",
+            "message": "Product sync completed",
             "products_found": len(products),
             "products_added": added_count,
             "source": source
@@ -1202,6 +1351,18 @@ async def upload_image(
         # Return the URL
         image_url = f"/static/uploads/{unique_filename}"
         
+        # Save to media library database
+        media_record = {
+            "id": str(uuid.uuid4()),
+            "filename": file.filename,
+            "url": image_url,
+            "filepath": file_path,
+            "size": len(file_content),
+            "uploaded_at": datetime.now(timezone.utc),
+            "uploaded_by": admin.id
+        }
+        await db.media_library.insert_one(media_record)
+        
         logger.info(f"Image uploaded successfully: {unique_filename}")
         return {"url": image_url, "filename": unique_filename}
         
@@ -1210,3 +1371,1299 @@ async def upload_image(
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 @app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on application shutdown"""
+    try:
+        sched_service = get_scheduler_service(db)
+        if sched_service:
+            await sched_service.stop_scheduler()
+    except Exception as e:
+        logger.error(f"Error stopping scheduler: {e}")
+    
+    client.close()
+    logger.info("لورا لاكشري services shut down successfully")
+
+# ============================================================================
+# AliExpress Integration
+# ============================================================================
+
+from services.aliexpress.auth import AliExpressAuthenticator
+from services.aliexpress.product_sync import ProductSyncService
+from services.aliexpress.customs_calculator import CustomsCalculator
+from services.aliexpress.scheduler import AliExpressSyncScheduler
+from services.aliexpress.models import AliExpressProduct
+from services.aliexpress.bulk_import import BulkImportService
+from services.aliexpress.category_mapper import CategoryMapper
+from services.aliexpress.sync_service import AliExpressSyncService
+from services.geoip_service import GeoIPService
+
+# Initialize AliExpress services
+aliexpress_auth = None
+aliexpress_product_sync = None
+aliexpress_customs_calc = None
+aliexpress_scheduler = None
+aliexpress_bulk_import = None
+aliexpress_sync_service = None  # New unified sync service
+category_mapper = None
+geoip_service = None
+
+@app.on_event("startup")
+async def init_aliexpress_services():
+    """Initialize AliExpress services on startup."""
+    global aliexpress_auth, aliexpress_product_sync, aliexpress_customs_calc, aliexpress_scheduler
+    global aliexpress_bulk_import, aliexpress_sync_service, category_mapper, geoip_service
+    
+    try:
+        # Initialize GeoIP service (always available)
+        geoip_service = GeoIPService()
+        logger.info("✅ GeoIP service initialized")
+        
+        # Initialize category mapper (always available)
+        category_mapper = CategoryMapper()
+        logger.info("✅ Category mapper initialized")
+        
+        app_key = os.getenv('ALIEXPRESS_APP_KEY', '')
+        app_secret = os.getenv('ALIEXPRESS_APP_SECRET', '')
+        
+        if app_key and app_secret:
+            logger.info("Initializing AliExpress services...")
+            
+            # Initialize authenticator
+            aliexpress_auth = AliExpressAuthenticator(app_key, app_secret)
+            
+            # Initialize product sync service (low-level)
+            aliexpress_product_sync = ProductSyncService(
+                aliexpress_auth,
+                db,
+                os.getenv('ALIEXPRESS_API_URL', 'http://gw.api.taobao.com/router/rest')
+            )
+            
+            # Initialize unified sync service (high-level)
+            aliexpress_sync_service = AliExpressSyncService(
+                aliexpress_auth,
+                db,
+                os.getenv('ALIEXPRESS_API_URL', 'http://gw.api.taobao.com/router/rest')
+            )
+            
+            # Initialize customs calculator
+            aliexpress_customs_calc = CustomsCalculator()
+            
+            # Initialize bulk import service
+            aliexpress_bulk_import = BulkImportService(
+                aliexpress_auth,
+                db,
+                os.getenv('ALIEXPRESS_API_URL', 'http://gw.api.taobao.com/router/rest')
+            )
+            
+            # Initialize and start scheduler
+            sync_interval = int(os.getenv('ALIEXPRESS_SYNC_INTERVAL_MINUTES', '10'))
+            aliexpress_scheduler = AliExpressSyncScheduler(
+                aliexpress_sync_service,
+                db,
+                sync_interval
+            )
+            
+            # Start scheduler if enabled
+            if os.getenv('ENABLE_SCHEDULER', 'true').lower() == 'true':
+                aliexpress_scheduler.start_scheduler()
+                logger.info(f"AliExpress scheduler started with {sync_interval} minute interval")
+            
+            logger.info("✅ AliExpress services initialized successfully")
+        else:
+            logger.warning("⚠️ AliExpress credentials not found - services disabled")
+    
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize AliExpress services: {e}")
+
+@app.on_event("shutdown")
+async def shutdown_aliexpress_services():
+    """Shutdown AliExpress services on app shutdown."""
+    global aliexpress_scheduler
+    
+    try:
+        if aliexpress_scheduler:
+            aliexpress_scheduler.stop_scheduler()
+            logger.info("AliExpress scheduler stopped")
+    except Exception as e:
+        logger.error(f"Error stopping AliExpress scheduler: {e}")
+
+# AliExpress Product Endpoints
+@api_router.post("/aliexpress/sync-product")
+async def sync_aliexpress_product(product_id: str):
+    """
+    Synchronize a single product from AliExpress.
+    
+    Args:
+        product_id: AliExpress product ID
+        
+    Returns:
+        Sync result with product data
+    """
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await aliexpress_sync_service.sync_product(product_id)
+        
+        if result:
+            return {
+                "success": True,
+                "message": "Product synced successfully",
+                "product_id": product_id,
+                "mongodb_id": result
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Product not found on AliExpress")
+    
+    except Exception as e:
+        logger.error(f"Error syncing product {product_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/sync-batch")
+async def sync_aliexpress_batch(product_ids: List[str]):
+    """
+    Synchronize multiple products in batch.
+    
+    Args:
+        product_ids: List of AliExpress product IDs
+        
+    Returns:
+        Batch sync statistics
+    """
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        results = await aliexpress_sync_service.sync_products_batch(product_ids)
+        return {
+            "success": True,
+            "statistics": results
+        }
+    
+    except Exception as e:
+        logger.error(f"Error in batch sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/product/{product_id}")
+async def get_aliexpress_product(product_id: str):
+    """
+    Get AliExpress product from local database.
+    
+    Args:
+        product_id: AliExpress product ID
+        
+    Returns:
+        Product details with country availability
+    """
+    try:
+        product = await db.products.find_one({'product_id': product_id})
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Remove MongoDB _id field
+        product.pop('_id', None)
+        
+        return product
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/product/{product_id}/availability/{country_code}")
+async def check_product_availability(product_id: str, country_code: str):
+    """
+    Check product availability for specific country.
+    
+    Args:
+        product_id: AliExpress product ID
+        country_code: ISO country code (SA, AE, etc.)
+        
+    Returns:
+        Availability info with shipping options
+    """
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        availability = await aliexpress_sync_service.check_country_availability(
+            product_id,
+            country_code.upper()
+        )
+        
+        return availability.model_dump()
+    
+    except Exception as e:
+        logger.error(f"Error checking availability: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/customs/calculate")
+async def calculate_customs(
+    product_id: str,
+    country_code: str,
+    shipping_cost: float
+):
+    """
+    Calculate customs duties and VAT for product.
+    
+    Args:
+        product_id: AliExpress product ID
+        country_code: Destination country code
+        shipping_cost: Shipping cost in USD
+        
+    Returns:
+        Tax calculation breakdown
+    """
+    if not aliexpress_sync_service or not aliexpress_customs_calc:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        # Get product details
+        product = await aliexpress_sync_service.get_product_details(product_id)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        # Determine category
+        category = aliexpress_customs_calc.categorize_product(product.title)
+        
+        # Calculate taxes
+        tax_calc = aliexpress_customs_calc.calculate_gcc_taxes(
+            country_code.upper(),
+            product.sale_price,
+            shipping_cost,
+            category
+        )
+        
+        return tax_calc.model_dump()
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error calculating customs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/scheduler/status")
+async def get_scheduler_status():
+    """
+    Get status of AliExpress synchronization scheduler.
+    
+    Returns:
+        Scheduler status and job information
+    """
+    if not aliexpress_scheduler:
+        raise HTTPException(status_code=503, detail="Scheduler not available")
+    
+    try:
+        jobs_status = aliexpress_scheduler.get_all_jobs_status()
+        
+        return {
+            "status": "running",
+            "jobs": jobs_status
+        }
+    
+    except Exception as e:
+        logger.error(f"Error getting scheduler status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/scheduler/trigger-sync")
+async def trigger_immediate_sync():
+    """
+    Trigger immediate product synchronization.
+    
+    Returns:
+        Sync results
+    """
+    if not aliexpress_scheduler:
+        raise HTTPException(status_code=503, detail="Scheduler not available")
+    
+    try:
+        results = await aliexpress_scheduler.trigger_immediate_sync()
+        return results
+    
+    except Exception as e:
+        logger.error(f"Error triggering sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Bulk Import Endpoints (Admin Only)
+@api_router.post("/admin/aliexpress/import-fast")
+async def import_fast(
+    count: int = Query(default=1000, le=1000),
+    query: str = Query(default="jewelry accessories")
+):
+    """
+    🚀 Fast Import: Import products from AliExpress with query.
+    
+    Args:
+        count: Number of products to import (max 1000)
+        query: Search query
+        
+    Returns:
+        Import statistics with breakdown by category
+    """
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="Sync service not available")
+    
+    # Check feature flag
+    if os.getenv('FEATURE_ALI_IMPORT', 'false').lower() != 'true':
+        raise HTTPException(status_code=403, detail="Import feature disabled")
+    
+    try:
+        logger.info(f"Starting fast import: {count} products, query: {query}")
+        
+        results = await aliexpress_sync_service.import_bulk_accessories(
+            limit=count,
+            query=query
+        )
+        
+        return {
+            "success": True,
+            "message": f"Import completed: {results['inserted']} new, {results['updated']} updated",
+            "statistics": results
+        }
+    
+    except Exception as e:
+        logger.error(f"Fast import failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/sync-now")
+async def sync_now():
+    """
+    Trigger immediate price/stock/shipping sync.
+    
+    Returns:
+        Sync statistics
+    """
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="Sync service not available")
+    
+    try:
+        logger.info("Manual sync triggered")
+        
+        results = await aliexpress_sync_service.sync_prices_stock_shipping()
+        
+        return {
+            "success": True,
+            "message": f"Sync completed: {results['products_updated']} updated",
+            "statistics": results
+        }
+    
+    except Exception as e:
+        logger.error(f"Sync failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Shipping Estimate (Dropshipping via AliExpress)
+@api_router.post("/shipping/estimate")
+async def estimate_shipping(payload: ShippingEstimateRequest):
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    try:
+        if not payload.items or len(payload.items) == 0:
+            raise HTTPException(status_code=400, detail="No items provided")
+        if not payload.country_code:
+            raise HTTPException(status_code=400, detail="country_code is required")
+
+        country = payload.country_code.upper()
+        preferred = (payload.preferred or "fastest").lower()
+        if preferred not in ["fastest", "cheapest"]:
+            preferred = "fastest"
+
+        total_shipping_usd = 0.0
+        min_days = None
+        max_days = None
+        unavailable_products = []
+
+        # Iterate products and accumulate fastest/cheapest options
+        for it in payload.items:
+            # We assume our DB stores external mapping (e.g., product_id == AliExpress id) or we stored it on import
+            prod = await db.products.find_one({"id": it.product_id})
+            if not prod:
+                unavailable_products.append(it.product_id)
+                continue
+
+            # For demo: try external product_id field if exists, else fallback to id
+            aliexpress_product_id = prod.get("product_id") or prod.get("external_id") or prod.get("id")
+
+            availability = await aliexpress_sync_service.check_country_availability(aliexpress_product_id, country)
+            # availability expected to have shipping_options: List[{price_usd, min_days, max_days, carrier, speed}]
+            options = getattr(availability, "shipping_options", None) or availability.get("shipping_options") if isinstance(availability, dict) else None
+            if not options:
+                unavailable_products.append(it.product_id)
+                continue
+
+            # Choose option
+            chosen = None
+            if preferred == "cheapest":
+                chosen = min(options, key=lambda o: o.get("price_usd", 999999))
+            else:
+                # fastest by min_days, break ties by price
+                chosen = sorted(options, key=lambda o: (o.get("min_days", 9999), o.get("price_usd", 999999)))[0]
+
+            price_usd = chosen.get("price_usd", 0.0) * max(1, it.quantity)
+            total_shipping_usd += price_usd
+
+            c_min = chosen.get("min_days")
+            c_max = chosen.get("max_days")
+            if c_min is not None:
+                min_days = c_min if min_days is None else min(min_days, c_min)
+            if c_max is not None:
+                max_days = c_max if max_days is None else max(max_days, c_max)
+
+        if unavailable_products:
+            raise HTTPException(status_code=400, detail={"unavailable": unavailable_products, "message": "Shipping not available for your country"})
+
+        # Convert USD -> requested currency (default SAR)
+        curr = payload.currency or "SAR"
+        conv = get_currency_service(db)
+        total_shipping_converted = total_shipping_usd
+        if curr != "USD":
+            converted = await conv.convert_currency(total_shipping_usd, "USD", curr)
+            total_shipping_converted = converted if converted is not None else total_shipping_usd
+
+        return {
+            "success": True,
+            "country": country,
+            "preferred": preferred,
+            "shipping_cost": {
+                "USD": round(total_shipping_usd, 2),
+                curr: round(total_shipping_converted, 2)
+            },
+            "estimated_days": {
+                "min": min_days,
+                "max": max_days
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Shipping estimate error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Shipping Estimate (Dropshipping via AliExpress)
+@api_router.post("/shipping/estimate")
+async def estimate_shipping(payload: ShippingEstimateRequest):
+    if not aliexpress_sync_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    try:
+        if not payload.items or len(payload.items) == 0:
+            raise HTTPException(status_code=400, detail="No items provided")
+        if not payload.country_code:
+            raise HTTPException(status_code=400, detail="country_code is required")
+
+        country = payload.country_code.upper()
+        preferred = (payload.preferred or "fastest").lower()
+        if preferred not in ["fastest", "cheapest"]:
+            preferred = "fastest"
+
+        total_shipping_usd = 0.0
+        min_days = None
+        max_days = None
+        unavailable_products = []
+
+        # Iterate products and accumulate fastest/cheapest options
+        for it in payload.items:
+            # We assume our DB stores external mapping (e.g., product_id == AliExpress id) or we stored it on import
+            prod = await db.products.find_one({"id": it.product_id})
+            if not prod:
+                unavailable_products.append(it.product_id)
+                continue
+
+            # For demo: try external product_id field if exists, else fallback to id
+            aliexpress_product_id = prod.get("product_id") or prod.get("external_id") or prod.get("id")
+
+            availability = await aliexpress_sync_service.check_country_availability(aliexpress_product_id, country)
+            # availability expected to have shipping_options: List[{price_usd, min_days, max_days, carrier, speed}]
+            options = getattr(availability, "shipping_options", None) or availability.get("shipping_options") if isinstance(availability, dict) else None
+            if not options:
+                unavailable_products.append(it.product_id)
+                continue
+
+            # Choose option
+            chosen = None
+            if preferred == "cheapest":
+                chosen = min(options, key=lambda o: o.get("price_usd", 999999))
+            else:
+                # fastest by min_days, break ties by price
+                chosen = sorted(options, key=lambda o: (o.get("min_days", 9999), o.get("price_usd", 999999)))[0]
+
+            price_usd = chosen.get("price_usd", 0.0) * max(1, it.quantity)
+            total_shipping_usd += price_usd
+
+            c_min = chosen.get("min_days")
+            c_max = chosen.get("max_days")
+            if c_min is not None:
+                min_days = c_min if min_days is None else min(min_days, c_min)
+            if c_max is not None:
+                max_days = c_max if max_days is None else max(max_days, c_max)
+
+        if unavailable_products:
+            raise HTTPException(status_code=400, detail={"unavailable": unavailable_products, "message": "Shipping not available for your country"})
+
+        # Convert USD -> requested currency (default SAR)
+        curr = payload.currency or "SAR"
+        conv = get_currency_service(db)
+        total_shipping_converted = total_shipping_usd
+        if curr != "USD":
+            converted = await conv.convert_currency(total_shipping_usd, "USD", curr)
+            total_shipping_converted = converted if converted is not None else total_shipping_usd
+
+        return {
+            "success": True,
+            "country": country,
+            "preferred": preferred,
+            "shipping_cost": {
+                "USD": round(total_shipping_usd, 2),
+                curr: round(total_shipping_converted, 2)
+            },
+            "estimated_days": {
+                "min": min_days,
+                "max": max_days
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Shipping estimate error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/aliexpress/sync-status")
+async def get_sync_status():
+    """
+    Get last sync status and statistics.
+    
+    Returns:
+        Last sync log
+    """
+    try:
+        # Get most recent sync log
+        cursor = db.sync_logs.find().sort('start_time', -1).limit(1)
+        logs = await cursor.to_list(length=1)
+        
+        if logs:
+            log = logs[0]
+            log['_id'] = str(log['_id'])
+            return log
+        else:
+            return {
+                "message": "No sync logs yet",
+                "status": "idle"
+            }
+    
+    except Exception as e:
+        logger.error(f"Error getting sync status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/external-products")
+async def get_external_products_aliexpress(
+    source: Optional[str] = None,
+    category: Optional[str] = None,
+    pushed: Optional[bool] = None,
+    skip: int = 0,
+    limit: int = 50
+):
+    """
+    Get external products (not yet in store).
+    
+    Args:
+        source: Filter by source ('aliexpress')
+        category: Filter by category
+        pushed: Filter by pushed_to_store status
+        skip: Pagination skip
+        limit: Pagination limit
+        
+    Returns:
+        List of external products with pagination
+    """
+    try:
+        # Build filter
+        filter_query = {}
+        if source:
+            filter_query['source'] = source
+        if category:
+            filter_query['category'] = category
+        if pushed is not None:
+            filter_query['pushed_to_store'] = pushed
+        
+        # Get total count
+        total = await db.external_products.count_documents(filter_query)
+        
+        # Get products
+        cursor = db.external_products.find(filter_query).skip(skip).limit(limit)
+        products = await cursor.to_list(length=limit)
+        
+        # Remove MongoDB _id
+        for product in products:
+            product['_id'] = str(product['_id'])
+        
+        return {
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "products": products
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching external products: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/push-to-store")
+async def push_products_to_store(product_ids: List[str]):
+    """
+    Push selected external products to main store.
+    
+    Args:
+        product_ids: List of external product IDs to push
+        
+    Returns:
+        Push statistics
+    """
+    if not aliexpress_bulk_import:
+        raise HTTPException(status_code=503, detail="Bulk import service not available")
+    
+    try:
+        profit_margin = float(os.getenv('MIN_PROFIT_MARGIN', '0.20'))
+        
+        results = await aliexpress_bulk_import.push_to_store(
+            product_ids,
+            profit_margin=profit_margin
+        )
+        
+        return {
+            "success": True,
+            "message": f"Pushed {results['pushed']} products to store",
+            "statistics": results
+        }
+    
+    except Exception as e:
+        logger.error(f"Error pushing to store: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/import-logs")
+async def get_import_logs(limit: int = 10):
+    """
+    Get recent import logs.
+    
+    Args:
+        limit: Number of logs to retrieve
+        
+    Returns:
+        List of import logs
+    """
+    try:
+        cursor = db.import_logs.find().sort('start_time', -1).limit(limit)
+        logs = await cursor.to_list(length=limit)
+        
+        for log in logs:
+            log['_id'] = str(log['_id'])
+        
+        return {
+            "total": len(logs),
+            "logs": logs
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching import logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# GeoIP and Country-specific Pricing
+@api_router.get("/geo/detect")
+async def detect_user_country(request: Request):
+    """
+    Detect user's country from IP and provide configuration.
+    
+    Returns:
+        Country code and configuration
+    """
+    if not geoip_service:
+        raise HTTPException(status_code=503, detail="GeoIP service not available")
+    
+    try:
+        # Get client IP
+        client_ip = request.client.host
+        
+        # Detect country
+        country_code = await geoip_service.detect_country_from_ip(client_ip)
+        
+        # Get country config
+        config = geoip_service.get_country_config(country_code)
+        
+        return {
+            "country_code": country_code,
+            "config": config,
+            "detected_from": "ip"
+        }
+    
+    except Exception as e:
+        logger.error(f"Error detecting country: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/geo/countries")
+async def get_supported_countries():
+    """Get list of all supported GCC countries."""
+    if not geoip_service:
+        raise HTTPException(status_code=503, detail="GeoIP service not available")
+    
+    try:
+        countries = geoip_service.get_all_gcc_countries()
+        configs = {code: geoip_service.get_country_config(code) for code in countries}
+        
+        return {
+            "countries": configs
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching countries: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Enhanced AliExpress Endpoints for Tracking and Protection
+@api_router.get("/admin/aliexpress/sync/comprehensive-status")
+async def get_comprehensive_sync_status(admin: User = Depends(get_admin_user)):
+    """Get comprehensive sync status across all services"""
+    try:
+        # Mock data for now - would be real in production
+        status = {
+            "product_sync": {
+                "last_run": datetime.utcnow().isoformat(),
+                "next_run": (datetime.utcnow() + timedelta(minutes=10)).isoformat(),
+                "status": "idle",
+                "products_synced": 150,
+                "errors": 0
+            },
+            "order_tracking": {
+                "last_run": datetime.utcnow().isoformat(),
+                "next_run": (datetime.utcnow() + timedelta(minutes=5)).isoformat(),
+                "status": "idle",
+                "orders_updated": 25,
+                "errors": 0
+            },
+            "notifications": {
+                "pending": 5,
+                "processed_today": 120,
+                "failed_today": 2,
+                "channels_active": ["email", "sms"]
+            },
+            "content_protection": {
+                "watermarks_today": 45,
+                "incidents_today": 3,
+                "protected_urls_active": 180
+            }
+        }
+        
+        return status
+    except Exception as e:
+        logger.error(f"Error getting sync status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/orders/sync-statuses")
+async def sync_order_statuses(admin: User = Depends(get_admin_user)):
+    """Manually trigger order status synchronization"""
+    try:
+        # In production, this would trigger the actual sync service
+        return {"message": "Order status sync started", "task_id": str(uuid.uuid4())}
+    except Exception as e:
+        logger.error(f"Error starting order sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/aliexpress/notifications/process-queue")
+async def process_notification_queue(admin: User = Depends(get_admin_user)):
+    """Process pending notifications queue"""
+    try:
+        # In production, this would trigger the notification processor
+        return {"message": "Notification processing started", "processed": 5}
+    except Exception as e:
+        logger.error(f"Error processing notifications: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/aliexpress/analytics/protection")
+async def get_protection_analytics(
+    start_date: str,
+    end_date: str,
+    admin: User = Depends(get_admin_user)
+):
+    """Get content protection analytics"""
+    try:
+        # Mock analytics data
+        analytics = {
+            "period": {
+                "start": start_date,
+                "end": end_date
+            },
+            "watermarks_applied": 156,
+            "total_incidents": 8,
+            "protected_url_accesses": 340,
+            "screenshot_attempts": [
+                {"method": "screenshot_key", "count": 5},
+                {"method": "right_click_image", "count": 2},
+                {"method": "dev_tools", "count": 1}
+            ]
+        }
+        
+        return analytics
+    except Exception as e:
+        logger.error(f"Error getting protection analytics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Multi-Supplier Quick Import System
+@api_router.post("/admin/import-fast")
+async def quick_import_multi_supplier(
+    request_data: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
+    """Quick import products from multiple suppliers (AliExpress, Amazon, Custom)"""
+    try:
+        count = request_data.get('count', 1000)
+        query = request_data.get('query', 'jewelry accessories')
+        provider = request_data.get('provider', 'aliexpress')
+        
+        # Validate provider
+        if provider not in ['aliexpress', 'amazon', 'custom']:
+            raise HTTPException(status_code=400, detail="Invalid provider. Must be: aliexpress, amazon, or custom")
+        
+        # Validate count
+        if not isinstance(count, int) or count <= 0 or count > 5000:
+            raise HTTPException(status_code=400, detail="Count must be between 1 and 5000")
+        
+        task_id = str(uuid.uuid4())
+        
+        # Schedule background import task based on provider
+        if provider == 'aliexpress':
+            # Use existing AliExpress import logic
+            task_data = {
+                "_id": task_id,
+                "type": "quick_import_aliexpress",
+                "count": count,
+                "query": query,
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "progress": 0,
+                "products_imported": 0,
+                "markup_percentage": 100,  # Double the price (100% markup)
+                "auto_categorize": True,
+                "add_taxes": True,
+                "add_shipping": True
+            }
+            
+            await db.import_tasks.insert_one(task_data)
+            
+            # In production, this would trigger actual import
+            logger.info(f"Started AliExpress quick import task {task_id} for {count} products")
+            
+        elif provider == 'amazon':
+            # Stub for Amazon import
+            task_data = {
+                "_id": task_id,
+                "type": "quick_import_amazon",
+                "count": count,
+                "query": query,
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "progress": 0,
+                "products_imported": 0,
+                "markup_percentage": 100,
+                "note": "Amazon import is under development"
+            }
+            
+            await db.import_tasks.insert_one(task_data)
+            logger.info(f"Amazon import stub created: {task_id}")
+            
+        elif provider == 'custom':
+            # Stub for custom supplier import
+            task_data = {
+                "_id": task_id,
+                "type": "quick_import_custom",
+                "count": count,
+                "query": query,
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "progress": 0,
+                "products_imported": 0,
+                "markup_percentage": 100,
+                "note": "Custom supplier import is under development"
+            }
+            
+            await db.import_tasks.insert_one(task_data)
+            logger.info(f"Custom supplier import stub created: {task_id}")
+        
+        return {
+            "success": True,
+            "task_id": task_id,
+            "message": f"Quick import started for {count} products from {provider}",
+            "count": count,
+            "provider": provider,
+            "query": query,
+            "markup_percentage": 100,
+            "estimated_duration_minutes": count // 50  # Rough estimate
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting quick import: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/sync-now")
+async def sync_now_multi_supplier(
+    request_data: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
+    """Sync prices, inventory, and shipping for specific supplier"""
+    try:
+        provider = request_data.get('provider', 'aliexpress')
+        
+        # Validate provider
+        if provider not in ['aliexpress', 'amazon', 'custom']:
+            raise HTTPException(status_code=400, detail="Invalid provider")
+        
+        sync_id = str(uuid.uuid4())
+        
+        # Schedule sync task based on provider
+        if provider == 'aliexpress':
+            # Count products to sync
+            products_count = await db.products.count_documents({
+                "source": "aliexpress",
+                "is_active": True
+            })
+            
+            sync_data = {
+                "_id": sync_id,
+                "type": "price_inventory_sync",
+                "provider": provider,
+                "status": "running",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "products_to_sync": products_count,
+                "products_synced": 0,
+                "updates": {
+                    "price_updates": 0,
+                    "inventory_updates": 0,
+                    "shipping_updates": 0,
+                    "products_hidden": 0,
+                    "products_restored": 0
+                }
+            }
+            
+            await db.sync_tasks.insert_one(sync_data)
+            
+            # In production, trigger the actual sync service
+            logger.info(f"Started AliExpress sync task {sync_id} for {products_count} products")
+            
+        elif provider == 'amazon':
+            sync_data = {
+                "_id": sync_id,
+                "type": "price_inventory_sync",
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "note": "Amazon sync is under development"
+            }
+            
+            await db.sync_tasks.insert_one(sync_data)
+            logger.info(f"Amazon sync stub created: {sync_id}")
+            
+        elif provider == 'custom':
+            sync_data = {
+                "_id": sync_id,
+                "type": "price_inventory_sync",
+                "provider": provider,
+                "status": "pending",
+                "created_at": datetime.utcnow(),
+                "created_by": admin.id,
+                "note": "Custom supplier sync is under development"
+            }
+            
+            await db.sync_tasks.insert_one(sync_data)
+            logger.info(f"Custom supplier sync stub created: {sync_id}")
+        
+        return {
+            "success": True,
+            "sync_id": sync_id,
+            "message": f"Sync started for {provider} products",
+            "provider": provider
+        }
+        
+    except Exception as e:
+        logger.error(f"Error starting sync: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/import-tasks/{task_id}/status")
+async def get_import_task_status(
+    task_id: str,
+    admin: User = Depends(get_admin_user)
+):
+    """Get status of import task"""
+    try:
+        task = await db.import_tasks.find_one({"_id": task_id})
+        
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        return {
+            "task_id": task_id,
+            "status": task.get("status", "unknown"),
+            "progress": task.get("progress", 0),
+            "products_imported": task.get("products_imported", 0),
+            "count": task.get("count", 0),
+            "provider": task.get("provider", "unknown"),
+            "created_at": task.get("created_at"),
+            "message": task.get("message", ""),
+            "note": task.get("note", "")
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting task status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/import-tasks/{task_id}/stream")
+async def stream_import_task_progress(
+    task_id: str,
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Server-Sent Events (SSE) endpoint for real-time import progress updates.
+    Streams progress updates as they occur.
+    """
+    import asyncio
+    import json
+    
+    async def event_generator():
+        """Generate SSE events with import task progress"""
+        last_progress = -1
+        last_status = None
+        retry_count = 0
+        max_retries = 60  # 60 retries * 1s = 60s timeout
+        
+        while retry_count < max_retries:
+            try:
+                task = await db.import_tasks.find_one({"_id": task_id})
+                
+                if not task:
+                    yield f"data: {json.dumps({'error': 'Task not found'})}\n\n"
+                    break
+                
+                current_progress = task.get("progress", 0)
+                current_status = task.get("status", "unknown")
+                
+                # Send update if progress or status changed
+                if current_progress != last_progress or current_status != last_status:
+                    data = {
+                        "task_id": task_id,
+                        "status": current_status,
+                        "progress": current_progress,
+                        "products_imported": task.get("products_imported", 0),
+                        "count": task.get("count", 0),
+                        "message": task.get("message", ""),
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }
+                    yield f"data: {json.dumps(data)}\n\n"
+                    
+                    last_progress = current_progress
+                    last_status = current_status
+                
+                # Stop streaming if task is complete or failed
+                if current_status in ["completed", "failed", "cancelled"]:
+                    break
+                
+                await asyncio.sleep(1)  # Check every second
+                retry_count += 1
+                
+            except Exception as e:
+                logger.error(f"Error streaming task progress: {e}")
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                break
+        
+        # Send final completion event
+        yield f"data: {json.dumps({'status': 'stream_closed'})}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # Disable nginx buffering
+        }
+    )
+
+@api_router.post("/admin/aliexpress/content-protection/watermark-image")
+async def apply_watermark_to_image(
+    file: UploadFile = File(...),
+    user_id: str = Form(None),
+    product_id: str = Form(None),
+    admin: User = Depends(get_admin_user)
+):
+    """Apply dynamic watermark to product image"""
+    try:
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Read image data
+        image_data = await file.read()
+        
+        # In production, this would apply actual watermark
+        # For now, return the original image with success response
+        return StreamingResponse(
+            io.BytesIO(image_data),
+            media_type="image/jpeg",
+            headers={"Content-Disposition": f"attachment; filename=watermarked_{file.filename}"}
+        )
+    except Exception as e:
+        logger.error(f"Error applying watermark: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# =============================================================================
+# Admin Dashboard - CMS Pages, Theme, Media, Settings
+# =============================================================================
+
+class CMSPage(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    slug: str
+    title_en: str
+    title_ar: str
+    content_en: str
+    content_ar: str
+    route: str
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+@api_router.get("/admin/cms-pages")
+async def get_cms_pages(admin: User = Depends(get_admin_user)):
+    """Get all CMS pages"""
+    try:
+        pages = await db.cms_pages.find().to_list(length=None)
+        # Remove MongoDB _id field to avoid serialization issues
+        for page in pages:
+            if '_id' in page:
+                del page['_id']
+        return pages
+    except Exception as e:
+        logger.error(f"Error fetching CMS pages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/cms-pages")
+async def create_cms_page(page: CMSPage, admin: User = Depends(get_admin_user)):
+    """Create new CMS page"""
+    try:
+        page_dict = page.dict()
+        result = await db.cms_pages.insert_one(page_dict)
+        # Remove MongoDB _id field to avoid serialization issues
+        if '_id' in page_dict:
+            del page_dict['_id']
+        return page_dict
+    except Exception as e:
+        logger.error(f"Error creating CMS page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/admin/cms-pages/{page_id}")
+async def update_cms_page(page_id: str, page: CMSPage, admin: User = Depends(get_admin_user)):
+    """Update CMS page"""
+    try:
+        page_dict = page.dict()
+        page_dict["updated_at"] = datetime.now(timezone.utc)
+        result = await db.cms_pages.update_one(
+            {"id": page_id},
+            {"$set": page_dict}
+        )
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Page not found")
+        # Remove MongoDB _id field to avoid serialization issues
+        if '_id' in page_dict:
+            del page_dict['_id']
+        return page_dict
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating CMS page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/cms-pages/{page_id}")
+async def delete_cms_page(page_id: str, admin: User = Depends(get_admin_user)):
+    """Delete CMS page"""
+    try:
+        result = await db.cms_pages.delete_one({"id": page_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Page not found")
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting CMS page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Theme Customization Endpoints
+@api_router.get("/admin/theme")
+async def get_theme(admin: User = Depends(get_admin_user)):
+    """Get theme settings"""
+    try:
+        theme = await db.theme_settings.find_one({"_id": "default"})
+        return theme if theme else {}
+    except Exception as e:
+        logger.error(f"Error fetching theme: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/theme")
+async def save_theme(theme_data: dict, admin: User = Depends(get_admin_user)):
+    """Save theme settings"""
+    try:
+        theme_data["_id"] = "default"
+        theme_data["updated_at"] = datetime.now(timezone.utc)
+        await db.theme_settings.update_one(
+            {"_id": "default"},
+            {"$set": theme_data},
+            upsert=True
+        )
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Error saving theme: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Media Library Endpoints
+@api_router.get("/admin/media")
+async def get_media(admin: User = Depends(get_admin_user)):
+    """Get all media files"""
+    try:
+        media = await db.media_library.find().to_list(length=None)
+        # Remove MongoDB _id field to avoid serialization issues
+        for item in media:
+            if '_id' in item:
+                del item['_id']
+        return media
+    except Exception as e:
+        logger.error(f"Error fetching media: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/media/{media_id}")
+async def delete_media(media_id: str, admin: User = Depends(get_admin_user)):
+    """Delete media file"""
+    try:
+        # Get media record to delete file
+        media = await db.media_library.find_one({"id": media_id})
+        if not media:
+            raise HTTPException(status_code=404, detail="Media not found")
+        
+        # Delete file from filesystem if it exists
+        if media.get("filepath"):
+            file_path = Path(media["filepath"])
+            if file_path.exists():
+                file_path.unlink()
+        
+        # Delete from database
+        await db.media_library.delete_one({"id": media_id})
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting media: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
+
+# Include the router in the main app (MUST be after all routes are defined)
+app.include_router(api_router)

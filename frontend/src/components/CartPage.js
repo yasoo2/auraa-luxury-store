@@ -43,6 +43,57 @@ const CartPage = () => {
     }
   }, [cart, countryCode, currency]);
 
+  const detectCountry = async () => {
+    try {
+      const response = await axios.get(`${API}/geo/detect`);
+      if (response.data && response.data.country_code) {
+        setCountryCode(response.data.country_code);
+      }
+    } catch (error) {
+      console.error('Error detecting country:', error);
+      // Default to Saudi Arabia if detection fails
+      setCountryCode('SA');
+    }
+  };
+
+  const estimateShipping = async () => {
+    try {
+      setShippingEstimate({ loading: true, cost: 0, days: null, error: null });
+      const payload = {
+        country_code: countryCode,
+        preferred: 'fastest',
+        currency: currency || 'SAR',
+        markup_pct: 10,
+        items: (cart?.items || []).map((it) => ({ 
+          product_id: it.product_id, 
+          quantity: it.quantity 
+        }))
+      };
+      
+      const res = await fetch(`${API}/shipping/estimate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.status === 400) {
+        setShippingEstimate({ loading: false, cost: 0, days: null, error: 'unavailable' });
+        toast.warning(isRTL ? 'الشحن غير متاح لبلدك' : 'Shipping unavailable for your country');
+        return;
+      }
+      
+      if (!res.ok) throw new Error('Failed');
+      
+      const data = await res.json();
+      const cost = data?.shipping_cost?.[currency] ?? 0;
+      const days = data?.estimated_days || null;
+      setShippingEstimate({ loading: false, cost, days, error: null });
+    } catch (e) {
+      console.error('estimateShipping error', e);
+      setShippingEstimate({ loading: false, cost: 15, days: { min: 3, max: 7 }, error: 'fallback' });
+    }
+  };
+
   const fetchCart = async () => {
     try {
       const response = await axios.get(`${API}/cart`);

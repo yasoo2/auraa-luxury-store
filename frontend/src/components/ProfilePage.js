@@ -325,6 +325,144 @@ const ProfilePage = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Address Edit Modal */}
+        {isEditingAddress && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="luxury-card p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {user?.address ? 'تعديل العنوان' : 'إضافة عنوان جديد'}
+                </h2>
+                <button
+                  onClick={() => setIsEditingAddress(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <span className="text-2xl">×</span>
+                </button>
+              </div>
+
+              <form onSubmit={handleAddressUpdate} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      الاسم الأول
+                    </label>
+                    <Input
+                      value={addressData.firstName}
+                      onChange={(e) => setAddressData({...addressData, firstName: e.target.value})}
+                      required
+                      placeholder="أحمد"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      الاسم الأخير
+                    </label>
+                    <Input
+                      value={addressData.lastName}
+                      onChange={(e) => setAddressData({...addressData, lastName: e.target.value})}
+                      required
+                      placeholder="محمد"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    رقم الهاتف
+                  </label>
+                  <Input
+                    type="tel"
+                    value={addressData.phone}
+                    onChange={(e) => setAddressData({...addressData, phone: e.target.value})}
+                    required
+                    placeholder="+966501234567"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    عنوان الشارع ورقم المبنى
+                  </label>
+                  <Input
+                    value={addressData.street}
+                    onChange={(e) => setAddressData({...addressData, street: e.target.value})}
+                    required
+                    placeholder="شارع الملك فهد، مبنى 123"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      المدينة
+                    </label>
+                    <Input
+                      value={addressData.city}
+                      onChange={(e) => setAddressData({...addressData, city: e.target.value})}
+                      required
+                      placeholder="الرياض"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      المنطقة
+                    </label>
+                    <Input
+                      value={addressData.state}
+                      onChange={(e) => setAddressData({...addressData, state: e.target.value})}
+                      required
+                      placeholder="الرياض"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      الرمز البريدي
+                    </label>
+                    <Input
+                      value={addressData.postalCode}
+                      onChange={(e) => setAddressData({...addressData, postalCode: e.target.value})}
+                      required
+                      placeholder="12345"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      الدولة
+                    </label>
+                    <Input
+                      value={addressData.country}
+                      onChange={(e) => setAddressData({...addressData, country: e.target.value})}
+                      required
+                      placeholder="السعودية"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button type="submit" className="btn-luxury flex-1">
+                    حفظ العنوان
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditingAddress(false)}
+                    className="flex-1"
+                  >
+                    إلغاء
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

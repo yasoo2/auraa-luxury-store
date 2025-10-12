@@ -226,7 +226,7 @@ const QuickImportPage = () => {
       {/* Quick Import Controls */}
       <div className="bg-white rounded-lg border shadow-sm p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          {isRTL ? 'استيراد سريع - 1000 منتج' : 'Quick Import - 1000 Products'}
+          {isRTL ? 'استيراد سريع - 500 منتج' : 'Quick Import - 500 Products'}
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">

@@ -207,6 +207,9 @@ const AdminDashboard = () => {
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />
             <Route path="/auto-update" element={<AutoUpdatePage />} />
+            <Route path="/cms-pages" element={<CMSPagesManager />} />
+            <Route path="/theme" element={<ThemeCustomization />} />
+            <Route path="/media" element={<MediaLibrary />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>

@@ -15,6 +15,9 @@ import BulkImportPage from './BulkImportPage';
 import QuickImportPage from './QuickImportPage';
 import AliExpressTrackingPage from './AliExpressTrackingPage';
 import ContentProtectionPage from './ContentProtectionPage';
+import CMSPagesManager from './CMSPagesManager';
+import MediaLibrary from './MediaLibrary';
+import ThemeCustomization from './ThemeCustomization';
 import {
   Package,
   ShoppingCart,
@@ -30,7 +33,10 @@ import {
   Upload,
   BarChart,
   Plug,
-  Download
+  Download,
+  FileText,
+  Image,
+  Palette
 } from 'lucide-react';
 
 const AdminDashboard = () => {

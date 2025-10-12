@@ -100,7 +100,7 @@
 
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
-## user_problem_statement: "Implement full plan for Auraa Luxury: Phase 1 visual identity updates, create Admin Integrations page for AliExpress (dropshipping OAuth) and Amazon groundwork, and keep all existing functionality intact."
+## user_problem_statement: "Implement comprehensive enhancements for Auraa Luxury: 1) Add dynamic shipping estimates to Cart page, 2) Implement SSE for live import progress tracking, 3) Create Admin Dashboard modules (CMS Pages Manager, Theme Customization, Media Library), and keep all existing functionality intact."
 
 ## backend:
   - task: "Auto-Update API Endpoints Implementation"

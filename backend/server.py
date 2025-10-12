@@ -2249,8 +2249,13 @@ async def quick_import_multi_supplier(
             
             await db.import_tasks.insert_one(task_data)
             
-            # In production, this would trigger actual import
+            # Trigger actual import in background
             logger.info(f"Started AliExpress quick import task {task_id} for {count} products")
+            
+            # Start background task to import products
+            asyncio.create_task(
+                _execute_quick_import_task(task_id, count, query, admin.id)
+            )
             
         elif provider == 'amazon':
             # Stub for Amazon import

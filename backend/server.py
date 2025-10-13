@@ -3223,6 +3223,105 @@ async def get_clicks(
         logger.error(f"Error fetching clicks: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============================================================================
+# Google Search Console - Dynamic Sitemap
+# ============================================================================
+
+@app.get("/sitemap.xml")
+async def generate_sitemap():
+    """
+    Generate dynamic sitemap for Google Search Console
+    Includes: Products, Categories, Static Pages
+    """
+    try:
+        from xml.etree.ElementTree import Element, SubElement, tostring
+        from xml.dom import minidom
+        
+        # Create root element
+        urlset = Element('urlset')
+        urlset.set('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9')
+        
+        base_url = "https://auraaluxury.com"
+        
+        # Add static pages
+        static_pages = [
+            ('/', '1.0', 'daily'),
+            ('/products', '0.9', 'daily'),
+            ('/auth', '0.6', 'monthly'),
+            ('/cart', '0.5', 'weekly'),
+            ('/privacy-policy', '0.4', 'yearly'),
+            ('/terms-of-service', '0.4', 'yearly'),
+            ('/return-policy', '0.4', 'yearly'),
+            ('/contact-us', '0.5', 'monthly'),
+            ('/order-tracking', '0.5', 'weekly'),
+        ]
+        
+        for path, priority, changefreq in static_pages:
+            url = SubElement(urlset, 'url')
+            loc = SubElement(url, 'loc')
+            loc.text = f"{base_url}{path}"
+            lastmod = SubElement(url, 'lastmod')
+            lastmod.text = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            changefreq_elem = SubElement(url, 'changefreq')
+            changefreq_elem.text = changefreq
+            priority_elem = SubElement(url, 'priority')
+            priority_elem.text = priority
+        
+        # Add category pages
+        categories = [
+            'earrings', 'necklaces', 'bracelets', 'rings', 'watches', 'sets'
+        ]
+        
+        for category in categories:
+            url = SubElement(urlset, 'url')
+            loc = SubElement(url, 'loc')
+            loc.text = f"{base_url}/products?category={category}"
+            lastmod = SubElement(url, 'lastmod')
+            lastmod.text = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            changefreq_elem = SubElement(url, 'changefreq')
+            changefreq_elem.text = 'daily'
+            priority_elem = SubElement(url, 'priority')
+            priority_elem.text = '0.8'
+        
+        # Add product pages (fetch from database)
+        products = await db.products.find({"in_stock": True}).to_list(length=500)
+        
+        for product in products:
+            url = SubElement(urlset, 'url')
+            loc = SubElement(url, 'loc')
+            loc.text = f"{base_url}/product/{product['id']}"
+            lastmod = SubElement(url, 'lastmod')
+            # Use product's last_synced_at if available, otherwise created_at
+            last_updated = product.get('last_synced_at') or product.get('created_at') or datetime.now(timezone.utc)
+            if isinstance(last_updated, datetime):
+                lastmod.text = last_updated.strftime('%Y-%m-%d')
+            else:
+                lastmod.text = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            changefreq_elem = SubElement(url, 'changefreq')
+            changefreq_elem.text = 'weekly'
+            priority_elem = SubElement(url, 'priority')
+            priority_elem.text = '0.7'
+        
+        # Pretty print XML
+        xml_string = tostring(urlset, encoding='unicode')
+        dom = minidom.parseString(xml_string)
+        pretty_xml = dom.toprettyxml(indent="  ", encoding="UTF-8")
+        
+        logger.info(f"Sitemap generated with {len(static_pages) + len(categories) + len(products)} URLs")
+        
+        return Response(
+            content=pretty_xml,
+            media_type="application/xml",
+            headers={
+                "Content-Type": "application/xml; charset=UTF-8",
+                "Cache-Control": "public, max-age=3600"  # Cache for 1 hour
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating sitemap: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate sitemap")
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
 

@@ -100,7 +100,7 @@ const ProductDetailPage = () => {
       setSEO({
         title: `${getLocalizedName(response.data)} | Auraa Luxury`,
         description: getLocalizedDescription(response.data)?.slice(0, 150),
-        canonical: `https://www.auraaluxury.com/product/${response.data.id}`,
+        canonical: `${window.location.origin}/product/${response.data.id}`,
         ogImage: response.data.images?.[0]
       });
       injectJSONLD(response.data);

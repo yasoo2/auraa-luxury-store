@@ -33,7 +33,7 @@ const AliExpressTrackingPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [syncStatus, setSyncStatus] = useState({});
 
-  const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+  const API_URL = process.env.REACT_APP_BACKEND_URL;
 
   useEffect(() => {
     loadOrders();

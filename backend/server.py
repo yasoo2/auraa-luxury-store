@@ -2918,6 +2918,283 @@ async def create_first_admin(
         logger.error(f"Error creating first admin: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============================================================================
+# AliExpress S2S Tracking Endpoints
+# ============================================================================
+
+@api_router.get("/postback")
+async def aliexpress_postback(
+    order_id: str = Query(..., description="AliExpress order ID"),
+    order_amount: float = Query(..., description="Order amount in USD"),
+    commission_fee: float = Query(..., description="Commission fee in USD"),
+    country: str = Query(..., description="Country code"),
+    item_id: str = Query(..., description="Item/Product ID"),
+    order_platform: str = Query(..., description="Order platform"),
+    source: Optional[str] = Query(None, description="Traffic source"),
+    click_id: Optional[str] = Query(None, description="Click tracking ID"),
+    request: Request = None
+):
+    """
+    AliExpress S2S Postback Endpoint
+    
+    Receives conversion data from AliExpress when an order is paid.
+    This endpoint is configured in AliExpress Portals under S2S tracking.
+    
+    **Configuration in AliExpress:**
+    - S2S URL: https://auraaluxury.com/api/postback
+    - Message Type: Order Payment
+    - Currency: Dollar
+    - Parameters: order_id, order_amount, commission_fee, country, item_id, order_platform
+    - Fixed: source=auraa_luxury
+    """
+    try:
+        # Collect all query parameters
+        raw_params = dict(request.query_params) if request else {}
+        
+        # Create conversion record
+        conversion_data = {
+            "order_id": order_id,
+            "order_amount": order_amount,
+            "commission_fee": commission_fee,
+            "country": country,
+            "item_id": item_id,
+            "order_platform": order_platform,
+            "source": source,
+            "click_id": click_id,
+            "raw": raw_params,
+            "received_at": datetime.utcnow()
+        }
+        
+        # Store in database
+        await db.ae_conversions.insert_one(conversion_data)
+        
+        # Log the conversion
+        logger.info(f"AliExpress conversion received: Order {order_id}, Amount ${order_amount}, Commission ${commission_fee}")
+        
+        # Update click tracking if click_id exists
+        if click_id:
+            await db.ae_clicks.update_one(
+                {"click_id": click_id},
+                {
+                    "$set": {
+                        "converted": True,
+                        "conversion_id": order_id,
+                        "converted_at": datetime.utcnow()
+                    }
+                }
+            )
+        
+        # Return simple OK response (required by AliExpress)
+        return Response(content="OK", status_code=200, media_type="text/plain")
+        
+    except Exception as e:
+        logger.error(f"Error processing AliExpress postback: {e}")
+        return Response(content="ERR", status_code=500, media_type="text/plain")
+
+@api_router.get("/out")
+async def aliexpress_redirect(
+    url: str = Query(..., description="AliExpress affiliate link"),
+    product_id: Optional[str] = Query(None, description="Internal product ID"),
+    request: Request = None
+):
+    """
+    AliExpress Click Tracking & Redirect Endpoint
+    
+    Generates a unique click_id, tracks the click, and redirects to AliExpress.
+    
+    **Usage:**
+    - Frontend: /api/out?url=<aliexpress-affiliate-link>&product_id=<internal-id>
+    - Generates click_id and injects it into the AliExpress URL
+    - Tracks click for future conversion matching
+    
+    **Example:**
+    ```
+    /api/out?url=https://www.aliexpress.com/item/12345.html?aff_fcid=xxx
+    ```
+    """
+    try:
+        import secrets
+        import time
+        
+        # Generate unique click_id
+        timestamp = str(int(time.time() * 1000))
+        random_part = secrets.token_urlsafe(8)
+        click_id = f"{random_part}_{timestamp}"
+        
+        # Get user info
+        user_agent = request.headers.get("user-agent", "") if request else ""
+        
+        # Get IP address (handle proxy headers)
+        ip_address = None
+        if request:
+            ip_address = (
+                request.headers.get("x-forwarded-for", "").split(",")[0].strip() or
+                request.headers.get("x-real-ip", "") or
+                request.client.host if request.client else None
+            )
+        
+        # Store click tracking
+        click_data = {
+            "click_id": click_id,
+            "product_id": product_id,
+            "affiliate_url": url,
+            "user_agent": user_agent,
+            "ip_address": ip_address,
+            "created_at": datetime.utcnow(),
+            "converted": False
+        }
+        
+        await db.ae_clicks.insert_one(click_data)
+        
+        logger.info(f"Click tracked: {click_id} -> {url[:100]}")
+        
+        # Inject click_id into AliExpress URL
+        separator = "&" if "?" in url else "?"
+        redirect_url = f"{url}{separator}aff_fcid={click_id}"
+        
+        # Create redirect response
+        response = RedirectResponse(url=redirect_url, status_code=302)
+        
+        # Set cookie for client-side tracking (optional)
+        response.set_cookie(
+            key="auraa_click",
+            value=click_id,
+            max_age=7 * 24 * 3600,  # 7 days
+            httponly=False,
+            samesite="lax"
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error in click tracking redirect: {e}")
+        # Fallback: redirect to original URL
+        return RedirectResponse(url=url, status_code=302)
+
+@api_router.get("/admin/conversions")
+async def get_conversions(
+    limit: int = Query(50, le=500),
+    skip: int = Query(0, ge=0),
+    order_id: Optional[str] = Query(None),
+    country: Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get AliExpress conversions (Admin only)
+    
+    Returns list of tracked conversions with filtering options.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        # Build query filter
+        query = {}
+        
+        if order_id:
+            query["order_id"] = order_id
+        
+        if country:
+            query["country"] = country.upper()
+        
+        if from_date or to_date:
+            date_filter = {}
+            if from_date:
+                date_filter["$gte"] = datetime.fromisoformat(from_date.replace("Z", "+00:00"))
+            if to_date:
+                date_filter["$lte"] = datetime.fromisoformat(to_date.replace("Z", "+00:00"))
+            if date_filter:
+                query["received_at"] = date_filter
+        
+        # Get conversions
+        conversions = await db.ae_conversions.find(query).sort("received_at", -1).skip(skip).limit(limit).to_list(length=limit)
+        
+        # Get total count
+        total = await db.ae_conversions.count_documents(query)
+        
+        # Calculate statistics
+        pipeline = [
+            {"$match": query},
+            {
+                "$group": {
+                    "_id": None,
+                    "total_orders": {"$sum": 1},
+                    "total_revenue": {"$sum": "$order_amount"},
+                    "total_commission": {"$sum": "$commission_fee"}
+                }
+            }
+        ]
+        
+        stats_result = await db.ae_conversions.aggregate(pipeline).to_list(length=1)
+        stats = stats_result[0] if stats_result else {
+            "total_orders": 0,
+            "total_revenue": 0,
+            "total_commission": 0
+        }
+        
+        return {
+            "success": True,
+            "conversions": conversions,
+            "total": total,
+            "limit": limit,
+            "skip": skip,
+            "statistics": {
+                "total_orders": stats.get("total_orders", 0),
+                "total_revenue": round(stats.get("total_revenue", 0), 2),
+                "total_commission": round(stats.get("total_commission", 0), 2),
+                "avg_order_value": round(stats.get("total_revenue", 0) / max(stats.get("total_orders", 1), 1), 2)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching conversions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/clicks")
+async def get_clicks(
+    limit: int = Query(50, le=500),
+    skip: int = Query(0, ge=0),
+    converted_only: bool = Query(False),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get AliExpress click tracking data (Admin only)
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        query = {}
+        if converted_only:
+            query["converted"] = True
+        
+        clicks = await db.ae_clicks.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+        total = await db.ae_clicks.count_documents(query)
+        
+        # Conversion rate
+        total_clicks = await db.ae_clicks.count_documents({})
+        converted_clicks = await db.ae_clicks.count_documents({"converted": True})
+        conversion_rate = (converted_clicks / total_clicks * 100) if total_clicks > 0 else 0
+        
+        return {
+            "success": True,
+            "clicks": clicks,
+            "total": total,
+            "limit": limit,
+            "skip": skip,
+            "statistics": {
+                "total_clicks": total_clicks,
+                "converted_clicks": converted_clicks,
+                "conversion_rate": round(conversion_rate, 2)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching clicks: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
 

@@ -46,10 +46,9 @@ const QuickImportPage = () => {
   // Load data on mount
   useEffect(() => {
     loadExternalProducts();
+    loadImportLogs();
 
     return () => { if (pollInterval) clearInterval(pollInterval); };
-
-    loadImportLogs();
   }, [filters]);
 
   const loadExternalProducts = async () => {

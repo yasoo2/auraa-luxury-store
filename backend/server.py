@@ -3108,8 +3108,8 @@ async def get_conversions(
             if date_filter:
                 query["received_at"] = date_filter
         
-        # Get conversions
-        conversions = await db.ae_conversions.find(query).sort("received_at", -1).skip(skip).limit(limit).to_list(length=limit)
+        # Get conversions (exclude _id field)
+        conversions = await db.ae_conversions.find(query, {"_id": 0}).sort("received_at", -1).skip(skip).limit(limit).to_list(length=limit)
         
         # Get total count
         total = await db.ae_conversions.count_documents(query)

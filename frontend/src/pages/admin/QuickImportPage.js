@@ -15,6 +15,9 @@ import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Poll interval for import progress updates (10 minutes)
+const POLL_INTERVAL_MS = 10 * 60 * 1000;
+
 const QuickImportPage = () => {
   const { t, language } = useLanguage();
   const isRTL = language === 'ar';

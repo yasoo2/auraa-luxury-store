@@ -66,7 +66,7 @@ const ProductsPage = () => {
     meta_description: ''
   });
 
-  const [formErrors, setFormErrors] = useState({});
+  // const [formErrors, setFormErrors] = useState({}); // Reserved for future validation
 
   const categories = [
     { value: 'necklaces', label_ar: 'قلادات', label_en: 'Necklaces', icon: '📿' },

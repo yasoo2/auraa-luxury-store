@@ -160,7 +160,19 @@ const CheckoutPage = () => {
         payment_method: formData.paymentMethod
       };
 
-      await axios.post(`${API}/orders`, orderData);
+      const response = await axios.post(`${API}/orders`, orderData);
+      const order = response.data;
+      
+      // Track purchase in GA4
+      trackPurchase({
+        id: order.id || order.order_id,
+        items: cart.items,
+        total: cart.total_price + (shippingEstimate.cost || 15),
+        shipping: shippingEstimate.cost || 15,
+        tax: 0,
+        currency: currency || 'SAR'
+      });
+      
       toast.success(isRTL ? 'تم إنشاء الطلب بنجاح!' : 'Order created successfully!');
       navigate('/profile?tab=orders');
     } catch (error) {

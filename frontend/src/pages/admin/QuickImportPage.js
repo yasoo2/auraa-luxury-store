@@ -9,9 +9,7 @@ import {
   Eye,
   ArrowRight,
   TrendingUp,
-  Clock,
-  Filter,
-  Search
+  Clock
 } from 'lucide-react';
 import axios from 'axios';
 

@@ -508,6 +508,33 @@ async def create_order(
     
     await db.orders.insert_one(order.dict())
     
+    # Track purchase in Google Analytics 4 (backend confirmation)
+    try:
+        ga4_items = []
+        for item in cart["items"]:
+            ga4_items.append({
+                "item_id": item.get("product_id") or item.get("id"),
+                "item_name": item.get("product_name") or item.get("name", "Unknown Product"),
+                "price": item.get("price", 0),
+                "quantity": item.get("quantity", 1)
+            })
+        
+        # Send purchase event to GA4
+        await ga4_track_purchase(
+            user_id=current_user.id,
+            order_id=order.order_number,
+            currency=order.currency,
+            value=order.total_amount,
+            items=ga4_items,
+            shipping=15.0,  # Fixed shipping cost
+            tax=0.0,
+            country=order_data.shipping_address.get("country", "SA")
+        )
+        logger.info(f"GA4 purchase tracked for order {order.order_number}")
+    except Exception as e:
+        logger.error(f"Failed to track GA4 purchase: {e}")
+        # Don't fail order creation if GA4 tracking fails
+    
     # Clear cart
     await db.carts.update_one(
         {"user_id": current_user.id},

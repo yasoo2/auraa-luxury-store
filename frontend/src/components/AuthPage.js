@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card } from './ui/card';
-import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 
 const AuthPage = () => {

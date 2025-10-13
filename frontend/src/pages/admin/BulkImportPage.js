@@ -27,7 +27,7 @@ const BulkImportPage = () => {
   const [importResults, setImportResults] = useState([]);
   const [currentStep, setCurrentStep] = useState('upload'); // upload, preview, import, results
 
-  const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+  const API_URL = process.env.REACT_APP_BACKEND_URL;
 
   const csvTemplate = `name,name_en,description,price,category,images,stock_quantity,sku,material,color,tags
 قلادة ذهبية,Golden Necklace,قلادة ذهبية فاخرة,299.99,necklaces,https://example.com/image1.jpg,100,NK001,gold,gold,"jewelry,luxury,necklace"

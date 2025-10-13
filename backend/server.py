@@ -3170,7 +3170,7 @@ async def get_clicks(
         if converted_only:
             query["converted"] = True
         
-        clicks = await db.ae_clicks.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+        clicks = await db.ae_clicks.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
         total = await db.ae_clicks.count_documents(query)
         
         # Conversion rate

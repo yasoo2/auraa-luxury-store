@@ -37,7 +37,7 @@ import ProductFormModal from '../../components/admin/ProductFormModal';
 
 const EnhancedProductsPage = () => {
   const { language, currency } = useLanguage();
-  const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+  const API_URL = process.env.REACT_APP_BACKEND_URL;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

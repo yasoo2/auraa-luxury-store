@@ -41,7 +41,7 @@ const ProductsPage = () => {
   const [imageUploadProgress, setImageUploadProgress] = useState({});
   
   const isRTL = language === 'ar';
-  const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+  const API_URL = process.env.REACT_APP_BACKEND_URL;
 
   // Form state
   const [formData, setFormData] = useState({

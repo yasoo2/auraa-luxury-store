@@ -154,6 +154,16 @@ const ProductDetailPage = () => {
     const result = await addToCart(product.id, quantity);
     if (result.success) {
       toast.success(isRTL ? `تم إضافة ${quantity} قطعة إلى السلة` : `${quantity} item(s) added to cart`);
+      
+      // Track add to cart in GA4
+      trackAddToCart({
+        id: product.id,
+        name: getLocalizedName(product),
+        category: product.category,
+        price: product.price,
+        quantity: quantity,
+        currency: currency || 'SAR'
+      });
     } else {
       if (result.error.includes('Authentication')) {
         toast.error(isRTL ? 'يجب تسجيل الدخول أولاً' : 'Please login first');

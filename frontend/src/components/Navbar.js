@@ -105,7 +105,7 @@ const Navbar = () => {
                 <ChevronDown className={`h-4 w-4 ml-1 transform transition-transform ${showCategories ? 'rotate-180' : ''}`} />
               </button>
               {showCategories && (
-                <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
                   <div className="py-2">
                     {categories.map((category) => (
                       <Link

@@ -8,6 +8,7 @@ import axios from 'axios';
 import { setSEO } from '../utils/seo';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
+import { trackViewItem, trackAddToCart } from '../utils/analytics';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

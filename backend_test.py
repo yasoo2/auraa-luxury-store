@@ -1037,6 +1037,343 @@ class AuraaLuxuryAPITester:
         
         # Restore token
         self.token = original_token
+
+    # ========== ALIEXPRESS S2S TRACKING TESTS ==========
+    
+    def test_s2s_postback_endpoint(self):
+        """Test GET /api/postback endpoint with all required parameters"""
+        print("\n🔗 ALIEXPRESS S2S TRACKING TESTS")
+        
+        # Test with all required parameters
+        postback_params = {
+            "order_id": "AE_ORDER_123456",
+            "order_amount": 89.99,
+            "commission_fee": 8.50,
+            "country": "SA",
+            "item_id": "AE_ITEM_789",
+            "order_platform": "mobile"
+        }
+        
+        # Build query string
+        query_string = "&".join([f"{k}={v}" for k, v in postback_params.items()])
+        
+        # Make request without authentication (postback should be public)
+        original_token = self.token
+        self.token = None
+        
+        try:
+            url = f"{self.api_url}/postback?{query_string}"
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 200 and response.text == "OK":
+                self.log_test("S2S Postback - Required Params", True, f"Status: {response.status_code}, Response: {response.text}")
+            else:
+                self.log_test("S2S Postback - Required Params", False, f"Status: {response.status_code}, Response: {response.text}")
+        except Exception as e:
+            self.log_test("S2S Postback - Required Params", False, f"Request failed: {str(e)}")
+        
+        # Test with optional parameters
+        postback_params_full = {
+            **postback_params,
+            "source": "auraa_luxury",
+            "click_id": "test_click_123"
+        }
+        
+        query_string_full = "&".join([f"{k}={v}" for k, v in postback_params_full.items()])
+        
+        try:
+            url = f"{self.api_url}/postback?{query_string_full}"
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 200 and response.text == "OK":
+                self.log_test("S2S Postback - All Params", True, f"Status: {response.status_code}, Response: {response.text}")
+            else:
+                self.log_test("S2S Postback - All Params", False, f"Status: {response.status_code}, Response: {response.text}")
+        except Exception as e:
+            self.log_test("S2S Postback - All Params", False, f"Request failed: {str(e)}")
+        
+        # Test error handling (missing required parameter)
+        incomplete_params = {
+            "order_id": "AE_ORDER_ERROR",
+            "order_amount": 50.00
+            # Missing required parameters
+        }
+        
+        query_string_error = "&".join([f"{k}={v}" for k, v in incomplete_params.items()])
+        
+        try:
+            url = f"{self.api_url}/postback?{query_string_error}"
+            response = requests.get(url, timeout=10)
+            
+            # Should return error but not crash
+            if response.status_code in [400, 422, 500]:
+                self.log_test("S2S Postback - Error Handling", True, f"Properly handled missing params (Status: {response.status_code})")
+            else:
+                self.log_test("S2S Postback - Error Handling", False, f"Unexpected status for missing params: {response.status_code}")
+        except Exception as e:
+            self.log_test("S2S Postback - Error Handling", False, f"Request failed: {str(e)}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_s2s_click_tracking_endpoint(self):
+        """Test GET /api/out endpoint for click tracking and redirect"""
+        
+        # Test with AliExpress URL
+        test_url = "https://www.aliexpress.com/item/1005004567890.html?aff_fcid=existing123"
+        
+        original_token = self.token
+        self.token = None
+        
+        try:
+            url = f"{self.api_url}/out?url={test_url}"
+            response = requests.get(url, allow_redirects=False, timeout=10)
+            
+            if response.status_code == 302:
+                redirect_url = response.headers.get('Location', '')
+                if 'aff_fcid=' in redirect_url and redirect_url.startswith('https://www.aliexpress.com'):
+                    self.log_test("S2S Click Tracking - URL Redirect", True, f"Redirects to: {redirect_url[:100]}...")
+                else:
+                    self.log_test("S2S Click Tracking - URL Redirect", False, f"Invalid redirect URL: {redirect_url}")
+            else:
+                self.log_test("S2S Click Tracking - URL Redirect", False, f"Expected 302 redirect, got {response.status_code}")
+        except Exception as e:
+            self.log_test("S2S Click Tracking - URL Redirect", False, f"Request failed: {str(e)}")
+        
+        # Test with product_id parameter
+        try:
+            url = f"{self.api_url}/out?url={test_url}&product_id=test_product_123"
+            response = requests.get(url, allow_redirects=False, timeout=10)
+            
+            if response.status_code == 302:
+                redirect_url = response.headers.get('Location', '')
+                # Check if click_id is injected
+                if 'aff_fcid=' in redirect_url:
+                    self.log_test("S2S Click Tracking - With Product ID", True, f"Click ID injected successfully")
+                else:
+                    self.log_test("S2S Click Tracking - With Product ID", False, "Click ID not injected")
+            else:
+                self.log_test("S2S Click Tracking - With Product ID", False, f"Expected 302 redirect, got {response.status_code}")
+        except Exception as e:
+            self.log_test("S2S Click Tracking - With Product ID", False, f"Request failed: {str(e)}")
+        
+        # Test cookie setting
+        try:
+            url = f"{self.api_url}/out?url={test_url}"
+            response = requests.get(url, allow_redirects=False, timeout=10)
+            
+            if response.status_code == 302:
+                cookies = response.cookies
+                if 'auraa_click' in cookies:
+                    self.log_test("S2S Click Tracking - Cookie Set", True, f"Cookie 'auraa_click' set successfully")
+                else:
+                    self.log_test("S2S Click Tracking - Cookie Set", False, "Cookie 'auraa_click' not set")
+            else:
+                self.log_test("S2S Click Tracking - Cookie Set", False, f"Expected 302 redirect, got {response.status_code}")
+        except Exception as e:
+            self.log_test("S2S Click Tracking - Cookie Set", False, f"Request failed: {str(e)}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_s2s_admin_conversions_endpoint(self):
+        """Test GET /api/admin/conversions endpoint"""
+        
+        if not self.admin_token:
+            self.log_test("S2S Admin Conversions", False, "No admin token available")
+            return
+        
+        # Test admin authentication requirement
+        original_token = self.token
+        self.token = None
+        
+        success, data, status = self.make_request('GET', '/admin/conversions')
+        if not success and status == 403:
+            self.log_test("S2S Admin Conversions - No Auth", True, "Properly requires authentication (403)")
+        else:
+            self.log_test("S2S Admin Conversions - No Auth", False, f"Should return 403, got {status}")
+        
+        # Test with admin token
+        self.token = self.admin_token
+        
+        success, data, status = self.make_request('GET', '/admin/conversions')
+        
+        if success:
+            required_fields = ['success', 'conversions', 'total', 'limit', 'skip', 'statistics']
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if not missing_fields:
+                conversions = data.get('conversions', [])
+                statistics = data.get('statistics', {})
+                
+                # Check statistics structure
+                stats_fields = ['total_orders', 'total_revenue', 'total_commission', 'avg_order_value']
+                missing_stats = [field for field in stats_fields if field not in statistics]
+                
+                if not missing_stats:
+                    self.log_test("S2S Admin Conversions - Structure", True, 
+                                f"Found {len(conversions)} conversions, Stats: {statistics}")
+                else:
+                    self.log_test("S2S Admin Conversions - Structure", False, f"Missing stats: {missing_stats}")
+            else:
+                self.log_test("S2S Admin Conversions - Structure", False, f"Missing fields: {missing_fields}")
+        else:
+            self.log_test("S2S Admin Conversions - Structure", False, f"Status: {status}, Response: {data}")
+        
+        # Test filtering parameters
+        success, data, status = self.make_request('GET', '/admin/conversions?limit=10&skip=0&country=SA')
+        
+        if success:
+            self.log_test("S2S Admin Conversions - Filtering", True, 
+                        f"Filtering works, returned {len(data.get('conversions', []))} results")
+        else:
+            self.log_test("S2S Admin Conversions - Filtering", False, f"Filtering failed: {status}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_s2s_admin_clicks_endpoint(self):
+        """Test GET /api/admin/clicks endpoint"""
+        
+        if not self.admin_token:
+            self.log_test("S2S Admin Clicks", False, "No admin token available")
+            return
+        
+        # Test admin authentication requirement
+        original_token = self.token
+        self.token = None
+        
+        success, data, status = self.make_request('GET', '/admin/clicks')
+        if not success and status == 403:
+            self.log_test("S2S Admin Clicks - No Auth", True, "Properly requires authentication (403)")
+        else:
+            self.log_test("S2S Admin Clicks - No Auth", False, f"Should return 403, got {status}")
+        
+        # Test with admin token
+        self.token = self.admin_token
+        
+        success, data, status = self.make_request('GET', '/admin/clicks')
+        
+        if success:
+            required_fields = ['success', 'clicks', 'total', 'limit', 'skip', 'statistics']
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if not missing_fields:
+                clicks = data.get('clicks', [])
+                statistics = data.get('statistics', {})
+                
+                # Check statistics structure
+                stats_fields = ['total_clicks', 'converted_clicks', 'conversion_rate']
+                missing_stats = [field for field in stats_fields if field not in statistics]
+                
+                if not missing_stats:
+                    self.log_test("S2S Admin Clicks - Structure", True, 
+                                f"Found {len(clicks)} clicks, Stats: {statistics}")
+                else:
+                    self.log_test("S2S Admin Clicks - Structure", False, f"Missing stats: {missing_stats}")
+            else:
+                self.log_test("S2S Admin Clicks - Structure", False, f"Missing fields: {missing_fields}")
+        else:
+            self.log_test("S2S Admin Clicks - Structure", False, f"Status: {status}, Response: {data}")
+        
+        # Test converted_only filter
+        success, data, status = self.make_request('GET', '/admin/clicks?converted_only=true')
+        
+        if success:
+            clicks = data.get('clicks', [])
+            # All returned clicks should have converted=true
+            all_converted = all(click.get('converted', False) for click in clicks)
+            if all_converted or len(clicks) == 0:
+                self.log_test("S2S Admin Clicks - Converted Filter", True, 
+                            f"Converted filter works, returned {len(clicks)} converted clicks")
+            else:
+                self.log_test("S2S Admin Clicks - Converted Filter", False, "Filter returned non-converted clicks")
+        else:
+            self.log_test("S2S Admin Clicks - Converted Filter", False, f"Filtering failed: {status}")
+        
+        # Restore token
+        self.token = original_token
+
+    def test_s2s_complete_flow(self):
+        """Test complete S2S flow: click -> postback -> attribution"""
+        
+        # Step 1: Create a click via /api/out
+        test_url = "https://www.aliexpress.com/item/1005004567890.html"
+        
+        original_token = self.token
+        self.token = None
+        
+        click_id = None
+        
+        try:
+            url = f"{self.api_url}/out?url={test_url}&product_id=test_flow_product"
+            response = requests.get(url, allow_redirects=False, timeout=10)
+            
+            if response.status_code == 302:
+                redirect_url = response.headers.get('Location', '')
+                # Extract click_id from redirect URL
+                if 'aff_fcid=' in redirect_url:
+                    click_id = redirect_url.split('aff_fcid=')[1].split('&')[0]
+                    self.log_test("S2S Complete Flow - Step 1 (Click)", True, f"Click created with ID: {click_id}")
+                else:
+                    self.log_test("S2S Complete Flow - Step 1 (Click)", False, "Click ID not found in redirect URL")
+                    return
+            else:
+                self.log_test("S2S Complete Flow - Step 1 (Click)", False, f"Click creation failed: {response.status_code}")
+                return
+        except Exception as e:
+            self.log_test("S2S Complete Flow - Step 1 (Click)", False, f"Click creation failed: {str(e)}")
+            return
+        
+        # Step 2: Send postback with that click_id
+        if click_id:
+            postback_params = {
+                "order_id": f"FLOW_ORDER_{click_id[:8]}",
+                "order_amount": 125.50,
+                "commission_fee": 12.55,
+                "country": "SA",
+                "item_id": "FLOW_ITEM_123",
+                "order_platform": "web",
+                "click_id": click_id
+            }
+            
+            query_string = "&".join([f"{k}={v}" for k, v in postback_params.items()])
+            
+            try:
+                url = f"{self.api_url}/postback?{query_string}"
+                response = requests.get(url, timeout=10)
+                
+                if response.status_code == 200 and response.text == "OK":
+                    self.log_test("S2S Complete Flow - Step 2 (Postback)", True, f"Postback processed successfully")
+                else:
+                    self.log_test("S2S Complete Flow - Step 2 (Postback)", False, f"Postback failed: {response.status_code}")
+                    return
+            except Exception as e:
+                self.log_test("S2S Complete Flow - Step 2 (Postback)", False, f"Postback failed: {str(e)}")
+                return
+        
+        # Step 3: Verify attribution via admin endpoints
+        if self.admin_token and click_id:
+            self.token = self.admin_token
+            
+            # Check if click is marked as converted
+            success, data, status = self.make_request('GET', f'/admin/clicks?converted_only=true')
+            
+            if success:
+                clicks = data.get('clicks', [])
+                converted_click = next((click for click in clicks if click.get('click_id') == click_id), None)
+                
+                if converted_click and converted_click.get('converted'):
+                    self.log_test("S2S Complete Flow - Step 3 (Attribution)", True, 
+                                f"Click {click_id} marked as converted")
+                else:
+                    self.log_test("S2S Complete Flow - Step 3 (Attribution)", False, 
+                                f"Click {click_id} not found or not marked as converted")
+            else:
+                self.log_test("S2S Complete Flow - Step 3 (Attribution)", False, f"Failed to check attribution: {status}")
+        
+        # Restore token
+        self.token = original_token
     
     def run_all_tests(self):
         """Run all tests in sequence"""

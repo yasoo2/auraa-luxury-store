@@ -80,6 +80,13 @@ const CheckoutPage = () => {
       }
       setCart(response.data);
       setLoading(false);
+      
+      // Track begin_checkout in GA4
+      trackBeginCheckout({
+        items: response.data.items,
+        total: response.data.total_price,
+        currency: currency || 'SAR'
+      });
     } catch (error) {
       console.error('Error fetching cart:', error);
       toast.error(isRTL ? 'فشل في تحميل بيانات السلة' : 'Failed to load cart');

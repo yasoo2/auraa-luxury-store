@@ -1390,8 +1390,16 @@ class AuraaLuxuryAPITester:
         self.test_admin_login()
         self.test_user_profile()
         
-        # AUTO-UPDATE API TESTS (Priority for this review)
-        print("\n🔄 AUTO-UPDATE API TESTS (NEW FEATURES)")
+        # ALIEXPRESS S2S TRACKING TESTS (Priority for this review)
+        print("\n🔗 ALIEXPRESS S2S TRACKING TESTS (COMPREHENSIVE)")
+        self.test_s2s_postback_endpoint()
+        self.test_s2s_click_tracking_endpoint()
+        self.test_s2s_admin_conversions_endpoint()
+        self.test_s2s_admin_clicks_endpoint()
+        self.test_s2s_complete_flow()
+        
+        # AUTO-UPDATE API TESTS
+        print("\n🔄 AUTO-UPDATE API TESTS")
         self.test_auto_update_status()
         self.test_currency_rates_endpoint()
         self.test_trigger_currency_update()

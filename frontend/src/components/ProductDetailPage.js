@@ -105,6 +105,15 @@ const ProductDetailPage = () => {
         ogImage: response.data.images?.[0]
       });
       injectJSONLD(response.data);
+      
+      // Track product view in GA4
+      trackViewItem({
+        id: response.data.id,
+        name: getLocalizedName(response.data),
+        category: response.data.category,
+        price: response.data.price,
+        currency: currency || 'SAR'
+      });
     } catch (error) {
       console.error('Error fetching product:', error);
       toast.error(isRTL ? 'فشل في تحميل المنتج' : 'Failed to load product');

@@ -254,7 +254,7 @@ const SettingsPage = () => {
           <Input
             value={settings.contact_phone}
             onChange={(e) => updateSetting('contact_phone', e.target.value)}
-            placeholder="+966501234567"
+            placeholder="+905013715391"
           />
         </div>
       </div>

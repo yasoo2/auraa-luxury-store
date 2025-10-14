@@ -200,7 +200,7 @@ const ReturnPolicy = () => {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <h3 className="font-semibold text-blue-800 mb-2">📞 الهاتف</h3>
-                      <p className="text-blue-700">+966 50 123 4567</p>
+                      <p className="text-blue-700">+90 501 371 5391</p>
                       <p className="text-blue-600 text-sm">الأحد - الخميس: 9 ص - 9 م</p>
                     </div>
 
@@ -409,7 +409,7 @@ const ReturnPolicy = () => {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <h3 className="font-semibold text-blue-800 mb-2">📞 Phone</h3>
-                      <p className="text-blue-700">+966 50 123 4567</p>
+                      <p className="text-blue-700">+90 501 371 5391</p>
                       <p className="text-blue-600 text-sm">Sunday - Thursday: 9 AM - 9 PM</p>
                     </div>
 

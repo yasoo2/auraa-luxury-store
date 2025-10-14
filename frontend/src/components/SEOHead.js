@@ -42,7 +42,7 @@ const SEOHead = ({
     "description": finalDescription,
     "contactPoint": {
       "@type": "ContactPoint",
-      "telephone": "+966501234567",
+      "telephone": "+905013715391",
       "contactType": "customer service",
       "availableLanguage": ["Arabic", "English"]
     },

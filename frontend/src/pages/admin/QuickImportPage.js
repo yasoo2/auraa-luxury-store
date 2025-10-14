@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import {
   Package,
@@ -9,13 +9,14 @@ import {
   Eye,
   ArrowRight,
   TrendingUp,
-  Clock,
-  Filter,
-  Search
+  Clock
 } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+// Poll interval for import progress updates (10 minutes)
+const POLL_INTERVAL_MS = 10 * 60 * 1000;
 
 const QuickImportPage = () => {
   const { t, language } = useLanguage();
@@ -24,7 +25,6 @@ const QuickImportPage = () => {
   // State
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(null);
-  const pollIntervalRef = useRef(null);
   const [externalProducts, setExternalProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [supplierType, setSupplierType] = useState('aliexpress'); // New supplier selection
@@ -49,12 +49,7 @@ const QuickImportPage = () => {
     loadExternalProducts();
     loadImportLogs();
 
-    return () => { 
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
+    return () => { if (pollInterval) clearInterval(pollInterval); };
   }, [filters]);
 
   const loadExternalProducts = async () => {
@@ -150,8 +145,8 @@ const QuickImportPage = () => {
         }
       });
         // start polling progress
-        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = setInterval(async () => {
+        if (pollInterval) clearInterval(pollInterval);
+        const newPollInterval = setInterval(async () => {
           try {
             const token = localStorage.getItem('token');
             const jobId = response.data.task_id;
@@ -161,13 +156,13 @@ const QuickImportPage = () => {
             const progress = res.data;
             setImportProgress({ job_id: progress.job_id, status: progress.status, percent: progress.percent, processed: progress.processed_items, total: progress.total_items });
             if (progress.status === 'completed' || progress.status === 'failed') {
-              clearInterval(pollIntervalRef.current);
-              pollIntervalRef.current = null;
+              clearInterval(newPollInterval);
+              setPollInterval(null);
             }
           } catch (e) {
             // stop polling on error
-            clearInterval(pollIntervalRef.current);
-            pollIntervalRef.current = null;
+            clearInterval(newPollInterval);
+            setPollInterval(null);
           }
         }, 2000);
         setPollInterval(newPollInterval);

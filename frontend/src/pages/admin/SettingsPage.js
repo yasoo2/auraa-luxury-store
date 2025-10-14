@@ -37,8 +37,8 @@ const SettingsPage = () => {
     
     // Contact Information
     contact_email: 'info@auraa.com',
-    contact_phone: '+966501234567',
-    whatsapp_number: '+966501234567',
+    contact_phone: '+905013715391',
+    whatsapp_number: '+905013715391',
     
     // Address
     address_line1: '123 Luxury Street',
@@ -254,7 +254,7 @@ const SettingsPage = () => {
           <Input
             value={settings.contact_phone}
             onChange={(e) => updateSetting('contact_phone', e.target.value)}
-            placeholder="+966501234567"
+            placeholder="+905013715391"
           />
         </div>
       </div>
@@ -266,7 +266,7 @@ const SettingsPage = () => {
         <Input
           value={settings.whatsapp_number}
           onChange={(e) => updateSetting('whatsapp_number', e.target.value)}
-          placeholder="+966501234567"
+          placeholder="+905013715391"
         />
       </div>
 

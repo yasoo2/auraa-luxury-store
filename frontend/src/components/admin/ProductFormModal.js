@@ -165,7 +165,7 @@ const ProductFormModal = ({
       formDataUpload.append('image', file);
 
       // Upload to backend
-      const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+      const API_URL = process.env.REACT_APP_BACKEND_URL;
       const token = localStorage.getItem('token');
       
       const response = await fetch(`${API_URL}/api/admin/upload-image`, {

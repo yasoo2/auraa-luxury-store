@@ -61,7 +61,7 @@ const LanguageCurrencySelector = () => {
         </Button>
         
         {showLanguages && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px] max-h-[300px] overflow-y-auto">
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px] max-h-[300px] overflow-y-auto" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
             {languagesList.map((lang) => (
               <button
                 key={lang.code}
@@ -97,7 +97,7 @@ const LanguageCurrencySelector = () => {
         </Button>
         
         {showCurrencies && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
             {currenciesList.map((curr) => (
               <button
                 key={curr.code}

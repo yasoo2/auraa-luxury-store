@@ -8,6 +8,7 @@ import axios from 'axios';
 import { setSEO } from '../utils/seo';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
+import { trackViewItem, trackAddToCart } from '../utils/analytics';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -100,10 +101,19 @@ const ProductDetailPage = () => {
       setSEO({
         title: `${getLocalizedName(response.data)} | Auraa Luxury`,
         description: getLocalizedDescription(response.data)?.slice(0, 150),
-        canonical: `https://www.auraaluxury.com/product/${response.data.id}`,
+        canonical: `${window.location.origin}/product/${response.data.id}`,
         ogImage: response.data.images?.[0]
       });
       injectJSONLD(response.data);
+      
+      // Track product view in GA4
+      trackViewItem({
+        id: response.data.id,
+        name: getLocalizedName(response.data),
+        category: response.data.category,
+        price: response.data.price,
+        currency: currency || 'SAR'
+      });
     } catch (error) {
       console.error('Error fetching product:', error);
       toast.error(isRTL ? 'فشل في تحميل المنتج' : 'Failed to load product');
@@ -144,6 +154,16 @@ const ProductDetailPage = () => {
     const result = await addToCart(product.id, quantity);
     if (result.success) {
       toast.success(isRTL ? `تم إضافة ${quantity} قطعة إلى السلة` : `${quantity} item(s) added to cart`);
+      
+      // Track add to cart in GA4
+      trackAddToCart({
+        id: product.id,
+        name: getLocalizedName(product),
+        category: product.category,
+        price: product.price,
+        quantity: quantity,
+        currency: currency || 'SAR'
+      });
     } else {
       if (result.error.includes('Authentication')) {
         toast.error(isRTL ? 'يجب تسجيل الدخول أولاً' : 'Please login first');

@@ -37,7 +37,7 @@ const AliExpressPage = () => {
     custom_description: ''
   });
 
-  const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+  const API_URL = process.env.REACT_APP_BACKEND_URL;
 
   const categories = [
     { value: 'imported', label: isRTL ? 'منتجات مستوردة' : 'Imported Products' },

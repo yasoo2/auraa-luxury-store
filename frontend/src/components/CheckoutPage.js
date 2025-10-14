@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
+import { trackBeginCheckout, trackPurchase } from '../utils/analytics';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -79,6 +80,13 @@ const CheckoutPage = () => {
       }
       setCart(response.data);
       setLoading(false);
+      
+      // Track begin_checkout in GA4
+      trackBeginCheckout({
+        items: response.data.items,
+        total: response.data.total_price,
+        currency: currency || 'SAR'
+      });
     } catch (error) {
       console.error('Error fetching cart:', error);
       toast.error(isRTL ? 'فشل في تحميل بيانات السلة' : 'Failed to load cart');
@@ -152,7 +160,19 @@ const CheckoutPage = () => {
         payment_method: formData.paymentMethod
       };
 
-      await axios.post(`${API}/orders`, orderData);
+      const response = await axios.post(`${API}/orders`, orderData);
+      const order = response.data;
+      
+      // Track purchase in GA4
+      trackPurchase({
+        id: order.id || order.order_id,
+        items: cart.items,
+        total: cart.total_price + (shippingEstimate.cost || 15),
+        shipping: shippingEstimate.cost || 15,
+        tax: 0,
+        currency: currency || 'SAR'
+      });
+      
       toast.success(isRTL ? 'تم إنشاء الطلب بنجاح!' : 'Order created successfully!');
       navigate('/profile?tab=orders');
     } catch (error) {

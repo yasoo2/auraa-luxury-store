@@ -378,7 +378,7 @@ const ProfilePage = () => {
                     value={addressData.phone}
                     onChange={(e) => setAddressData({...addressData, phone: e.target.value})}
                     required
-                    placeholder="+966501234567"
+                    placeholder="+905013715391"
                   />
                 </div>
 

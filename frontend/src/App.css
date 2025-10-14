@@ -448,7 +448,13 @@ body {
 }
 
 /* Hero section */
-
+.hero-bg {
+  background: 
+    linear-gradient(135deg, rgba(214, 182, 81, 0.9) 0%, rgba(201, 204, 211, 0.8) 100%),
+    url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Cdefs%3E%3Cpattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"%3E%3Ccircle cx="50" cy="50" r="0.5" fill="%23ffffff" opacity="0.1"/%3E%3C/pattern%3E%3C/defs%3E%3Crect width="100" height="100" fill="url(%23grain)"/%3E%3C/svg%3E');
+  background-attachment: fixed;
+  background-size: cover, 20px 20px;
+}
 
 /* Navigation */
 .nav-glass {
@@ -679,3 +685,190 @@ body {
   }
 }
 
+/* Responsive Image Utilities - No Hard Crop */
+.img-responsive {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  background: #f9fafb;
+}
+
+/* Mobile: contain to show full accessory */
+@media (max-width: 768px) {
+  .img-product-card {
+    object-fit: contain !important;
+  }
+}
+
+/* Desktop: can use cover for better layout */
+@media (min-width: 769px) {
+  .img-product-card {
+    object-fit: cover;
+  }
+}
+
+/* Carousel images - always show full image */
+.img-carousel {
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Admin Toast Animation */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* ========================================
+   Dropdown & Menu Opacity Fix
+   ======================================== */
+
+/* Make all dropdowns, menus, and popovers opaque */
+[role="menu"],
+[role="listbox"],
+[role="dialog"],
+.dropdown-menu,
+.menu,
+.popover,
+select,
+[data-radix-popper-content-wrapper],
+[data-radix-menu-content],
+[data-radix-dropdown-menu-content],
+[data-radix-select-content],
+[data-radix-popover-content],
+.select-content,
+.menu-content,
+.dropdown-content,
+[class*="MenuContent"],
+[class*="SelectContent"],
+[class*="DropdownContent"],
+[class*="PopoverContent"] {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Dark mode support for dropdowns */
+.dark [role="menu"],
+.dark [role="listbox"],
+.dark .dropdown-menu,
+.dark .menu,
+.dark [data-radix-popper-content-wrapper],
+.dark [data-radix-menu-content],
+.dark [data-radix-dropdown-menu-content],
+.dark [data-radix-select-content] {
+  background-color: #1f2937 !important;
+  color: white !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Language and Currency selector dropdowns */
+.language-selector-menu,
+.currency-selector-menu,
+[class*="language"] [role="menu"],
+[class*="currency"] [role="menu"] {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+  min-width: 200px !important;
+}
+
+/* Profile dropdown */
+.profile-menu,
+[class*="profile"] [role="menu"] {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Admin sidebar dropdowns */
+.admin-menu [role="menu"],
+.sidebar-menu [role="menu"] {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Select dropdowns */
+select,
+.select-trigger + [role="listbox"],
+[data-radix-select-trigger] + [data-radix-select-content] {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Ensure dropdown items are visible */
+[role="menuitem"],
+[role="option"],
+.menu-item,
+.dropdown-item,
+.select-item {
+  background-color: transparent !important;
+  transition: background-color 0.2s ease !important;
+}
+
+/* Hover states for dropdown items */
+[role="menuitem"]:hover,
+[role="option"]:hover,
+.menu-item:hover,
+.dropdown-item:hover,
+.select-item:hover {
+  background-color: rgba(217, 119, 6, 0.1) !important;
+}
+
+/* Active/Selected states */
+[role="menuitem"][data-state="checked"],
+[role="option"][aria-selected="true"],
+.menu-item.active,
+.dropdown-item.active,
+.select-item[data-state="checked"] {
+  background-color: rgba(217, 119, 6, 0.15) !important;
+  font-weight: 600 !important;
+}
+
+/* Remove any blur effects */
+[role="menu"] *,
+[role="listbox"] *,
+.dropdown-menu *,
+.menu * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Navbar dropdowns specific */
+nav [role="menu"],
+header [role="menu"],
+.navbar [role="menu"],
+.header [role="menu"] {
+  background-color: white !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+  z-index: 9999 !important;
+}
+
+/* Mobile menu dropdowns */
+@media (max-width: 768px) {
+  [role="menu"],
+  [role="listbox"],
+  .dropdown-menu,
+  .menu {
+    background-color: white !important;
+    backdrop-filter: none !important;
+    opacity: 1 !important;
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+  }
+}

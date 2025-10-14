@@ -393,7 +393,7 @@ const OrderTracking = () => {
                   {isRTL ? 'تواصل معنا' : 'Contact Us'}
                 </Button>
               </a>
-              <a href="tel:+966501234567" className="inline-block">
+              <a href="tel:+905013715391" className="inline-block">
                 <Button className="w-full sm:w-auto">
                   {isRTL ? 'اتصل الآن' : 'Call Now'}
                 </Button>

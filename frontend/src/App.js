@@ -34,6 +34,8 @@ import ReturnPolicy from './pages/ReturnPolicy';
 import ContactUs from './pages/ContactUs';
 import AboutUs from './pages/AboutUs';
 import OrderTracking from './pages/OrderTracking';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // UI Components
 import { Toaster } from './components/ui/sonner';
@@ -72,6 +74,8 @@ function App() {
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/setup" element={<DeploymentSetup />} />
                     <Route path="/admin-setup" element={<AdminSetup />} />
                     <Route path="/profile" element={<ProfilePage />} />

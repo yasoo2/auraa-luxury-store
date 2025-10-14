@@ -61,7 +61,7 @@ const ProductsPage = () => {
     setSEO({
       title: isRTL ? 'Auraa Luxury | المنتجات' : 'Auraa Luxury | Products',
       description: isRTL ? 'تسوق جميع المنتجات من Auraa Luxury.' : 'Shop all products from Auraa Luxury.',
-      canonical: 'https://www.auraaluxury.com/products'
+      canonical: `${window.location.origin}/products`
     });
   }, [language]);
 

@@ -1,16 +1,7 @@
-// frontend/src/components/AuthPage.js
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react'; // أزلنا Phone لأنه لن نستخدم أيقونة مع الحقل الجديد
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card } from './ui/card';
-import { toast } from 'sonner';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-// ✅ استيراد حقل الهاتف مع الأعلام
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
 
 const AuthPage = () => {
   const { login, register } = useAuth();
@@ -24,23 +15,16 @@ const AuthPage = () => {
     password: '',
     first_name: '',
     last_name: '',
-    phone: '' // سيتم تخزينه بصيغة دولية مثل +90555...
+    phone: ''
   });
 
   const from = location.state?.from?.pathname || '/';
 
   const handleInputChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData({
+      ...formData,
       [e.target.name]: e.target.value
-    }));
-  };
-
-  // ✅ تحقّق بسيط للرقم الدولي (E.164 تقريبياً)
-  const isValidInternationalPhone = (val) => {
-    if (!val) return false;
-    const digits = val.replace(/\D/g, '');
-    return val.startsWith('+') && digits.length >= 8;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -49,34 +33,9 @@ const AuthPage = () => {
     
     try {
       let result;
-
       if (isLogin) {
-        // تسجيل الدخول
         result = await login(formData.email, formData.password);
       } else {
-        // ✅ تحقق احترافي قبل إنشاء الحساب
-        if (!formData.first_name.trim() || !formData.last_name.trim()) {
-          toast.error('الاسم الأول والاسم الأخير إجباريان');
-          setLoading(false);
-          return;
-        }
-        if (!formData.email.trim()) {
-          toast.error('البريد الإلكتروني إجباري');
-          setLoading(false);
-          return;
-        }
-        if (!isValidInternationalPhone(formData.phone)) {
-          toast.error('فضلاً اختر الدولة وتأكد من صحة رقم الهاتف (مثال: +9055…)');
-          setLoading(false);
-          return;
-        }
-        if (!formData.password || formData.password.length < 6) {
-          toast.error('كلمة المرور يجب أن تكون 6 أحرف/أرقام على الأقل');
-          setLoading(false);
-          return;
-        }
-
-        // إنشاء الحساب
         result = await register(formData);
       }
       
@@ -88,7 +47,8 @@ const AuthPage = () => {
           navigate(from, { replace: true });
         }, 100);
       } else {
-
+        console.log('Login failed:', result.error);
+        alert(result.error || 'حدث خطأ');
       }
     } catch (error) {
       console.error('Auth error:', error);
@@ -202,8 +162,38 @@ const AuthPage = () => {
                 </div>
               )}
 
-
+              <div className="relative animate-slide-in-right">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="كلمة المرور"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 pr-12 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                  required
+                  minLength={6}
+                  data-testid="password-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-300 hover:text-amber-200 transition-colors duration-200"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
               </div>
+
+              {isLogin && (
+                <div className="text-right animate-fade-in-up">
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-sm text-amber-300 hover:text-amber-200 transition-colors duration-200"
+                  >
+                    نسيت كلمة المرور؟
+                  </Link>
+                </div>
+              )}
 
               <button 
                 type="submit" 

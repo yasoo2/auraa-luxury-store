@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query, File, UploadFile, Request, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse, Response, RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -217,6 +217,20 @@ async def register(user_data: UserCreate):
     user_doc["password"] = hashed_password
     await db.users.insert_one(user_doc)
     
+    # Send welcome email
+    try:
+        email_sent = send_welcome_email(
+            to_email=user_obj.email,
+            customer_name=f"{user_obj.first_name} {user_obj.last_name}"
+        )
+        if email_sent:
+            logger.info(f"Welcome email sent to {user_obj.email}")
+        else:
+            logger.warning(f"Failed to send welcome email to {user_obj.email}")
+    except Exception as e:
+        logger.error(f"Error sending welcome email: {e}")
+        # Don't fail registration if email fails
+    
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
@@ -230,6 +244,102 @@ async def login(credentials: UserLogin):
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(email_data: dict):
+    """
+    Send password reset email
+    Expects: {"email": "user@example.com"}
+    """
+    email = email_data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+    
+    # Find user
+    user = await db.users.find_one({"email": email})
+    if not user:
+        # Return success even if user not found (security best practice)
+        return {"message": "If the email exists, a reset link has been sent"}
+    
+    # Generate reset token (valid for 1 hour)
+    reset_token = str(uuid.uuid4())
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Store reset token in database
+    await db.password_resets.insert_one({
+        "user_id": user["id"],
+        "token": reset_token,
+        "expires_at": expires_at,
+        "used": False,
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    # Send password reset email
+    try:
+        from services.email_service import send_password_reset_email
+        email_sent = send_password_reset_email(
+            to_email=user["email"],
+            customer_name=f"{user['first_name']} {user['last_name']}",
+            reset_token=reset_token
+        )
+        if email_sent:
+            logger.info(f"Password reset email sent to {user['email']}")
+        else:
+            logger.warning(f"Failed to send password reset email to {user['email']}")
+    except Exception as e:
+        logger.error(f"Error sending password reset email: {e}")
+    
+    return {"message": "If the email exists, a reset link has been sent"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(reset_data: dict):
+    """
+    Reset password using token
+    Expects: {"token": "...", "new_password": "..."}
+    """
+    token = reset_data.get("token")
+    new_password = reset_data.get("new_password")
+    
+    if not token or not new_password:
+        raise HTTPException(status_code=400, detail="Token and new password are required")
+    
+    # Validate password strength
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Find reset token
+    reset_record = await db.password_resets.find_one({
+        "token": token,
+        "used": False
+    })
+    
+    if not reset_record:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    # Check if token expired
+    if reset_record["expires_at"] < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+    
+    # Hash new password
+    hashed_password = get_password_hash(new_password)
+    
+    # Update user password
+    result = await db.users.update_one(
+        {"id": reset_record["user_id"]},
+        {"$set": {"password": hashed_password}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Mark token as used
+    await db.password_resets.update_one(
+        {"token": token},
+        {"$set": {"used": True, "used_at": datetime.now(timezone.utc)}}
+    )
+    
+    logger.info(f"Password reset successful for user {reset_record['user_id']}")
+    return {"message": "Password reset successful"}
 
 @api_router.get("/auth/me", response_model=User)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
@@ -270,9 +380,139 @@ async def update_user_profile(
         raise
     except Exception as e:
         logger.error(f"Error updating profile: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to update profile")
 
-# Product routes
+# ======================================
+# Contact Form API
+# ======================================
+
+@api_router.post("/contact")
+async def submit_contact_form(contact_data: dict):
+    """
+    Submit contact form
+    Expects: {"name": "...", "email": "...", "message": "...", "phone": "..." (optional)}
+    """
+    name = contact_data.get("name")
+    email = contact_data.get("email")
+    message = contact_data.get("message")
+    phone = contact_data.get("phone")
+    
+    # Validate required fields
+    if not name or not email or not message:
+        raise HTTPException(status_code=400, detail="Name, email, and message are required")
+    
+    # Basic email validation
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    
+    # Store in database for records
+    contact_record = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "email": email,
+        "message": message,
+        "phone": phone,
+        "created_at": datetime.now(timezone.utc),
+        "status": "new"
+    }
+    await db.contact_submissions.insert_one(contact_record)
+    
+    # Send notification email to admin
+    try:
+        from services.email_service import send_contact_notification, send_email
+        
+        # Send to admin
+        admin_sent = send_contact_notification(
+            customer_name=name,
+            customer_email=email,
+            message=message,
+            subject_line=f"Contact from {name}"
+        )
+        
+        if admin_sent:
+            logger.info(f"Contact form notification sent to admin from {email}")
+        
+        # Send auto-reply to customer
+        auto_reply_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); padding: 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Thank You for Contacting Us!</h1>
+                </div>
+                
+                <!-- Content -->
+                <div style="padding: 40px 30px;">
+                    <p style="color: #4B5563; line-height: 1.6; margin: 0 0 20px 0;">
+                        Dear {name},
+                    </p>
+                    
+                    <p style="color: #4B5563; line-height: 1.6; margin: 0 0 20px 0;">
+                        Thank you for reaching out to Auraa Luxury. We have received your message and our team will get back to you within 24 hours.
+                    </p>
+                    
+                    <div style="background-color: #F9FAFB; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                        <h3 style="margin: 0 0 10px 0; color: #1F2937; font-size: 16px;">Your Message:</h3>
+                        <p style="margin: 0; color: #6B7280; line-height: 1.6; white-space: pre-wrap;">{message}</p>
+                    </div>
+                    
+                    <p style="color: #4B5563; line-height: 1.6; margin: 20px 0;">
+                        In the meantime, feel free to explore our collection of premium accessories.
+                    </p>
+                    
+                    <!-- CTA Button -->
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="https://auraaluxury.com/products?utm_source=email&utm_medium=autoreply&utm_campaign=contact" 
+                           style="display: inline-block; background-color: #D97706; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                            Browse Products
+                        </a>
+                    </div>
+                    
+                    <p style="color: #6B7280; font-size: 14px; line-height: 1.6; margin: 0;">
+                        Best regards,<br>
+                        <strong>Auraa Luxury Team</strong><br>
+                        <a href="mailto:info@auraaluxury.com" style="color: #D97706; text-decoration: none;">info@auraaluxury.com</a>
+                    </p>
+                </div>
+                
+                <!-- Footer -->
+                <div style="background-color: #F3F4F6; padding: 20px 30px; text-align: center;">
+                    <p style="margin: 0 0 10px 0; color: #6B7280; font-size: 14px;">
+                        © 2025 Auraa Luxury. All rights reserved.
+                    </p>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 12px;">
+                        Premium Accessories | Saudi Arabia
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        customer_sent = send_email(
+            to_email=email,
+            subject="Thank You for Contacting Auraa Luxury",
+            html_content=auto_reply_html,
+            to_name=name
+        )
+        
+        if customer_sent:
+            logger.info(f"Auto-reply sent to {email}")
+            
+    except Exception as e:
+        logger.error(f"Error sending contact form emails: {e}")
+        # Don't fail the request if email fails
+    
+    return {"message": "Thank you for your message. We'll get back to you soon!"}
+
+# ======================================
+# Products API
+# ======================================
 @api_router.get("/products", response_model=List[Product])
 async def get_products(
     category: Optional[CategoryType] = None,
@@ -506,6 +746,52 @@ async def create_order(
     )
     
     await db.orders.insert_one(order.dict())
+    
+    # Track purchase in Google Analytics 4 (backend confirmation)
+    try:
+        ga4_items = []
+        for item in cart["items"]:
+            ga4_items.append({
+                "item_id": item.get("product_id") or item.get("id"),
+                "item_name": item.get("product_name") or item.get("name", "Unknown Product"),
+                "price": item.get("price", 0),
+                "quantity": item.get("quantity", 1)
+            })
+        
+        # Send purchase event to GA4
+        await ga4_track_purchase(
+            user_id=current_user.id,
+            order_id=order.order_number,
+            currency=order.currency,
+            value=order.total_amount,
+            items=ga4_items,
+            shipping=15.0,  # Fixed shipping cost
+            tax=0.0,
+            country=order_data.shipping_address.get("country", "SA")
+        )
+        logger.info(f"GA4 purchase tracked for order {order.order_number}")
+    except Exception as e:
+        logger.error(f"Failed to track GA4 purchase: {e}")
+        # Don't fail order creation if GA4 tracking fails
+    
+    # Send order confirmation email
+    try:
+        email_sent = send_order_confirmation(
+            to_email=current_user.email,
+            customer_name=f"{current_user.first_name} {current_user.last_name}",
+            order_number=order.order_number,
+            order_total=order.total_amount,
+            currency=order.currency,
+            items=cart["items"],
+            shipping_address=order_data.shipping_address
+        )
+        if email_sent:
+            logger.info(f"Order confirmation email sent for {order.order_number}")
+        else:
+            logger.warning(f"Failed to send order confirmation email for {order.order_number}")
+    except Exception as e:
+        logger.error(f"Error sending order confirmation email: {e}")
+        # Don't fail order creation if email fails
     
     # Clear cart
     await db.carts.update_one(
@@ -956,6 +1242,8 @@ from services.currency_service import get_currency_service
 from services.scheduler_service import get_scheduler_service
 from services.product_sync_service import get_product_sync_service
 from services.aliexpress_service import get_aliexpress_service
+from services.google_analytics import track_purchase as ga4_track_purchase
+from services.email_service import send_order_confirmation, send_welcome_email
 
 # Auto-Update Services Initialization
 currency_service = None
@@ -2256,18 +2544,25 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
         
         # Generate simulated luxury products with AliExpress-like structure
         products_imported = 0
-        categories = ["Necklaces", "Bracelets", "Earrings", "Rings", "Watches", "Sunglasses"]
+        categories = ["necklaces", "bracelets", "earrings", "rings", "watches", "sets"]
+        category_names = ["Necklaces", "Bracelets", "Earrings", "Rings", "Watches", "Sets"]
         
         for i in range(count):
             try:
-                category = categories[i % len(categories)]
+                cat_index = i % len(categories)
+                category = categories[cat_index]
+                category_display = category_names[cat_index]
                 product_id = str(uuid.uuid4())
+                
+                # Generate unique external_id using timestamp and random number
+                import random
+                unique_suffix = int(datetime.utcnow().timestamp() * 1000) + random.randint(1000, 9999)
                 
                 product_data = {
                     "id": product_id,
-                    "name": f"Luxury {category[:-1]} {i+1}",
+                    "name": f"Luxury {category_display[:-1]} {i+1}",
                     "name_ar": f"إكسسوار فاخر {i+1}",
-                    "description": f"Premium quality {category.lower()} with elegant design",
+                    "description": f"Premium quality {category} with elegant design",
                     "description_ar": f"إكسسوار فاخر بتصميم أنيق",
                     "category": category,
                     "price": round(50 + (i % 200) * 2.5, 2),  # Prices between 50-550
@@ -2278,7 +2573,7 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
                     "images": [f"https://via.placeholder.com/400x400?text=Product+{i+1}"],
                     "supplier": "aliexpress",
                     "source": "aliexpress",
-                    "external_id": f"ae_{1000000 + i}",
+                    "external_id": f"ae_{unique_suffix}_{i}",
                     "stock": 50 + (i % 100),
                     "is_available": True,
                     "is_active": True,
@@ -2294,14 +2589,18 @@ async def _execute_quick_import_task(task_id: str, count: int, query: str, admin
                     "shipping_days_max": 7
                 }
                 
-                # Check if product already exists
-                existing = await db.products.find_one({"external_id": product_data["external_id"]})
-                if not existing:
-                    await db.products.insert_one(product_data)
+                # Insert product directly (no duplicate check to speed up)
+                try:
+                    result = await db.products.insert_one(product_data)
                     products_imported += 1
+                    logger.info(f"Product {i+1} inserted with ID: {result.inserted_id}")
+                except Exception as insert_error:
+                    logger.error(f"Error inserting product {i}: {insert_error}")
+                    logger.error(f"Product data: {product_data}")
                 
-                # Update progress every 10 products
-                if (i + 1) % 10 == 0:
+                # Update progress after each product (or every 10 for large imports)
+                update_frequency = 1 if count <= 20 else 10
+                if (i + 1) % update_frequency == 0 or (i + 1) == count:
                     progress = int((i + 1) / count * 100)
                     await db.import_tasks.update_one(
                         {"_id": task_id},
@@ -2905,6 +3204,382 @@ async def create_first_admin(
     except Exception as e:
         logger.error(f"Error creating first admin: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# AliExpress S2S Tracking Endpoints
+# ============================================================================
+
+@api_router.get("/postback")
+async def aliexpress_postback(
+    order_id: str = Query(..., description="AliExpress order ID"),
+    order_amount: float = Query(..., description="Order amount in USD"),
+    commission_fee: float = Query(..., description="Commission fee in USD"),
+    country: str = Query(..., description="Country code"),
+    item_id: str = Query(..., description="Item/Product ID"),
+    order_platform: str = Query(..., description="Order platform"),
+    source: Optional[str] = Query(None, description="Traffic source"),
+    click_id: Optional[str] = Query(None, description="Click tracking ID"),
+    request: Request = None
+):
+    """
+    AliExpress S2S Postback Endpoint
+    
+    Receives conversion data from AliExpress when an order is paid.
+    This endpoint is configured in AliExpress Portals under S2S tracking.
+    
+    **Configuration in AliExpress:**
+    - S2S URL: https://auraaluxury.com/api/postback
+    - Message Type: Order Payment
+    - Currency: Dollar
+    - Parameters: order_id, order_amount, commission_fee, country, item_id, order_platform
+    - Fixed: source=auraa_luxury
+    """
+    try:
+        # Collect all query parameters
+        raw_params = dict(request.query_params) if request else {}
+        
+        # Create conversion record
+        conversion_data = {
+            "order_id": order_id,
+            "order_amount": order_amount,
+            "commission_fee": commission_fee,
+            "country": country,
+            "item_id": item_id,
+            "order_platform": order_platform,
+            "source": source,
+            "click_id": click_id,
+            "raw": raw_params,
+            "received_at": datetime.utcnow()
+        }
+        
+        # Store in database
+        await db.ae_conversions.insert_one(conversion_data)
+        
+        # Log the conversion
+        logger.info(f"AliExpress conversion received: Order {order_id}, Amount ${order_amount}, Commission ${commission_fee}")
+        
+        # Update click tracking if click_id exists
+        if click_id:
+            await db.ae_clicks.update_one(
+                {"click_id": click_id},
+                {
+                    "$set": {
+                        "converted": True,
+                        "conversion_id": order_id,
+                        "converted_at": datetime.utcnow()
+                    }
+                }
+            )
+        
+        # Return simple OK response (required by AliExpress)
+        return Response(content="OK", status_code=200, media_type="text/plain")
+        
+    except Exception as e:
+        logger.error(f"Error processing AliExpress postback: {e}")
+        return Response(content="ERR", status_code=500, media_type="text/plain")
+
+@api_router.get("/out")
+async def aliexpress_redirect(
+    url: str = Query(..., description="AliExpress affiliate link"),
+    product_id: Optional[str] = Query(None, description="Internal product ID"),
+    request: Request = None
+):
+    """
+    AliExpress Click Tracking & Redirect Endpoint
+    
+    Generates a unique click_id, tracks the click, and redirects to AliExpress.
+    
+    **Usage:**
+    - Frontend: /api/out?url=<aliexpress-affiliate-link>&product_id=<internal-id>
+    - Generates click_id and injects it into the AliExpress URL
+    - Tracks click for future conversion matching
+    
+    **Example:**
+    ```
+    /api/out?url=https://www.aliexpress.com/item/12345.html?aff_fcid=xxx
+    ```
+    """
+    try:
+        import secrets
+        import time
+        
+        # Generate unique click_id
+        timestamp = str(int(time.time() * 1000))
+        random_part = secrets.token_urlsafe(8)
+        click_id = f"{random_part}_{timestamp}"
+        
+        # Get user info
+        user_agent = request.headers.get("user-agent", "") if request else ""
+        
+        # Get IP address (handle proxy headers)
+        ip_address = None
+        if request:
+            ip_address = (
+                request.headers.get("x-forwarded-for", "").split(",")[0].strip() or
+                request.headers.get("x-real-ip", "") or
+                request.client.host if request.client else None
+            )
+        
+        # Store click tracking
+        click_data = {
+            "click_id": click_id,
+            "product_id": product_id,
+            "affiliate_url": url,
+            "user_agent": user_agent,
+            "ip_address": ip_address,
+            "created_at": datetime.utcnow(),
+            "converted": False
+        }
+        
+        await db.ae_clicks.insert_one(click_data)
+        
+        logger.info(f"Click tracked: {click_id} -> {url[:100]}")
+        
+        # Inject click_id into AliExpress URL
+        separator = "&" if "?" in url else "?"
+        redirect_url = f"{url}{separator}aff_fcid={click_id}"
+        
+        # Create redirect response
+        response = RedirectResponse(url=redirect_url, status_code=302)
+        
+        # Set cookie for client-side tracking (optional)
+        response.set_cookie(
+            key="auraa_click",
+            value=click_id,
+            max_age=7 * 24 * 3600,  # 7 days
+            httponly=False,
+            samesite="lax"
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error in click tracking redirect: {e}")
+        # Fallback: redirect to original URL
+        return RedirectResponse(url=url, status_code=302)
+
+@api_router.get("/admin/conversions")
+async def get_conversions(
+    limit: int = Query(50, le=500),
+    skip: int = Query(0, ge=0),
+    order_id: Optional[str] = Query(None),
+    country: Optional[str] = Query(None),
+    from_date: Optional[str] = Query(None),
+    to_date: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get AliExpress conversions (Admin only)
+    
+    Returns list of tracked conversions with filtering options.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        # Build query filter
+        query = {}
+        
+        if order_id:
+            query["order_id"] = order_id
+        
+        if country:
+            query["country"] = country.upper()
+        
+        if from_date or to_date:
+            date_filter = {}
+            if from_date:
+                date_filter["$gte"] = datetime.fromisoformat(from_date.replace("Z", "+00:00"))
+            if to_date:
+                date_filter["$lte"] = datetime.fromisoformat(to_date.replace("Z", "+00:00"))
+            if date_filter:
+                query["received_at"] = date_filter
+        
+        # Get conversions (exclude _id field)
+        conversions = await db.ae_conversions.find(query, {"_id": 0}).sort("received_at", -1).skip(skip).limit(limit).to_list(length=limit)
+        
+        # Get total count
+        total = await db.ae_conversions.count_documents(query)
+        
+        # Calculate statistics
+        pipeline = [
+            {"$match": query},
+            {
+                "$group": {
+                    "_id": None,
+                    "total_orders": {"$sum": 1},
+                    "total_revenue": {"$sum": "$order_amount"},
+                    "total_commission": {"$sum": "$commission_fee"}
+                }
+            }
+        ]
+        
+        stats_result = await db.ae_conversions.aggregate(pipeline).to_list(length=1)
+        stats = stats_result[0] if stats_result else {
+            "total_orders": 0,
+            "total_revenue": 0,
+            "total_commission": 0
+        }
+        
+        return {
+            "success": True,
+            "conversions": conversions,
+            "total": total,
+            "limit": limit,
+            "skip": skip,
+            "statistics": {
+                "total_orders": stats.get("total_orders", 0),
+                "total_revenue": round(stats.get("total_revenue", 0), 2),
+                "total_commission": round(stats.get("total_commission", 0), 2),
+                "avg_order_value": round(stats.get("total_revenue", 0) / max(stats.get("total_orders", 1), 1), 2)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching conversions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/clicks")
+async def get_clicks(
+    limit: int = Query(50, le=500),
+    skip: int = Query(0, ge=0),
+    converted_only: bool = Query(False),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get AliExpress click tracking data (Admin only)
+    """
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    try:
+        query = {}
+        if converted_only:
+            query["converted"] = True
+        
+        clicks = await db.ae_clicks.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+        total = await db.ae_clicks.count_documents(query)
+        
+        # Conversion rate
+        total_clicks = await db.ae_clicks.count_documents({})
+        converted_clicks = await db.ae_clicks.count_documents({"converted": True})
+        conversion_rate = (converted_clicks / total_clicks * 100) if total_clicks > 0 else 0
+        
+        return {
+            "success": True,
+            "clicks": clicks,
+            "total": total,
+            "limit": limit,
+            "skip": skip,
+            "statistics": {
+                "total_clicks": total_clicks,
+                "converted_clicks": converted_clicks,
+                "conversion_rate": round(conversion_rate, 2)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching clicks: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# Google Search Console - Dynamic Sitemap
+# ============================================================================
+
+@app.get("/sitemap.xml")
+async def generate_sitemap():
+    """
+    Generate dynamic sitemap for Google Search Console
+    Includes: Products, Categories, Static Pages
+    """
+    try:
+        from xml.etree.ElementTree import Element, SubElement, tostring
+        from xml.dom import minidom
+        
+        # Create root element
+        urlset = Element('urlset')
+        urlset.set('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9')
+        
+        base_url = "https://auraaluxury.com"
+        
+        # Add static pages
+        static_pages = [
+            ('/', '1.0', 'daily'),
+            ('/products', '0.9', 'daily'),
+            ('/auth', '0.6', 'monthly'),
+            ('/cart', '0.5', 'weekly'),
+            ('/privacy-policy', '0.4', 'yearly'),
+            ('/terms-of-service', '0.4', 'yearly'),
+            ('/return-policy', '0.4', 'yearly'),
+            ('/contact-us', '0.5', 'monthly'),
+            ('/order-tracking', '0.5', 'weekly'),
+        ]
+        
+        for path, priority, changefreq in static_pages:
+            url = SubElement(urlset, 'url')
+            loc = SubElement(url, 'loc')
+            loc.text = f"{base_url}{path}"
+            lastmod = SubElement(url, 'lastmod')
+            lastmod.text = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            changefreq_elem = SubElement(url, 'changefreq')
+            changefreq_elem.text = changefreq
+            priority_elem = SubElement(url, 'priority')
+            priority_elem.text = priority
+        
+        # Add category pages
+        categories = [
+            'earrings', 'necklaces', 'bracelets', 'rings', 'watches', 'sets'
+        ]
+        
+        for category in categories:
+            url = SubElement(urlset, 'url')
+            loc = SubElement(url, 'loc')
+            loc.text = f"{base_url}/products?category={category}"
+            lastmod = SubElement(url, 'lastmod')
+            lastmod.text = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            changefreq_elem = SubElement(url, 'changefreq')
+            changefreq_elem.text = 'daily'
+            priority_elem = SubElement(url, 'priority')
+            priority_elem.text = '0.8'
+        
+        # Add product pages (fetch from database)
+        products = await db.products.find({"in_stock": True}).to_list(length=500)
+        
+        for product in products:
+            url = SubElement(urlset, 'url')
+            loc = SubElement(url, 'loc')
+            loc.text = f"{base_url}/product/{product['id']}"
+            lastmod = SubElement(url, 'lastmod')
+            # Use product's last_synced_at if available, otherwise created_at
+            last_updated = product.get('last_synced_at') or product.get('created_at') or datetime.now(timezone.utc)
+            if isinstance(last_updated, datetime):
+                lastmod.text = last_updated.strftime('%Y-%m-%d')
+            else:
+                lastmod.text = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            changefreq_elem = SubElement(url, 'changefreq')
+            changefreq_elem.text = 'weekly'
+            priority_elem = SubElement(url, 'priority')
+            priority_elem.text = '0.7'
+        
+        # Pretty print XML
+        xml_string = tostring(urlset, encoding='unicode')
+        dom = minidom.parseString(xml_string)
+        pretty_xml = dom.toprettyxml(indent="  ", encoding="UTF-8")
+        
+        logger.info(f"Sitemap generated with {len(static_pages) + len(categories) + len(products)} URLs")
+        
+        return Response(
+            content=pretty_xml,
+            media_type="application/xml",
+            headers={
+                "Content-Type": "application/xml; charset=UTF-8",
+                "Cache-Control": "public, max-age=3600"  # Cache for 1 hour
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating sitemap: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate sitemap")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")

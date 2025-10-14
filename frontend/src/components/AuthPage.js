@@ -184,6 +184,17 @@ const AuthPage = () => {
                 </button>
               </div>
 
+              {isLogin && (
+                <div className="text-right animate-fade-in-up">
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-sm text-amber-300 hover:text-amber-200 transition-colors duration-200"
+                  >
+                    نسيت كلمة المرور؟
+                  </Link>
+                </div>
+              )}
+
               <button 
                 type="submit" 
                 disabled={loading}

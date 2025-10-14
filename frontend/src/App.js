@@ -74,6 +74,8 @@ function App() {
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/wishlist" element={<WishlistPage />} />
                     <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/setup" element={<DeploymentSetup />} />
                     <Route path="/admin-setup" element={<AdminSetup />} />
                     <Route path="/profile" element={<ProfilePage />} />

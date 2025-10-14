@@ -178,7 +178,7 @@ const TermsOfService = () => {
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-gray-700 font-medium">أورا لاكشري</p>
                     <p className="text-gray-600">البريد الإلكتروني: legal@auraaluxury.com</p>
-                    <p className="text-gray-600">الهاتف: +966 50 123 4567</p>
+                    <p className="text-gray-600">الهاتف: +90 501 371 5391</p>
                     <p className="text-gray-600">العنوان: الرياض، المملكة العربية السعودية</p>
                   </div>
                 </section>

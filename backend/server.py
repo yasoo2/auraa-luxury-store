@@ -381,9 +381,139 @@ async def update_user_profile(
         raise
     except Exception as e:
         logger.error(f"Error updating profile: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to update profile")
 
-# Product routes
+# ======================================
+# Contact Form API
+# ======================================
+
+@api_router.post("/contact")
+async def submit_contact_form(contact_data: dict):
+    """
+    Submit contact form
+    Expects: {"name": "...", "email": "...", "message": "...", "phone": "..." (optional)}
+    """
+    name = contact_data.get("name")
+    email = contact_data.get("email")
+    message = contact_data.get("message")
+    phone = contact_data.get("phone")
+    
+    # Validate required fields
+    if not name or not email or not message:
+        raise HTTPException(status_code=400, detail="Name, email, and message are required")
+    
+    # Basic email validation
+    if "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    
+    # Store in database for records
+    contact_record = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "email": email,
+        "message": message,
+        "phone": phone,
+        "created_at": datetime.now(timezone.utc),
+        "status": "new"
+    }
+    await db.contact_submissions.insert_one(contact_record)
+    
+    # Send notification email to admin
+    try:
+        from services.email_service import send_contact_notification, send_email
+        
+        # Send to admin
+        admin_sent = send_contact_notification(
+            customer_name=name,
+            customer_email=email,
+            message=message,
+            subject_line=f"Contact from {name}"
+        )
+        
+        if admin_sent:
+            logger.info(f"Contact form notification sent to admin from {email}")
+        
+        # Send auto-reply to customer
+        auto_reply_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); padding: 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Thank You for Contacting Us!</h1>
+                </div>
+                
+                <!-- Content -->
+                <div style="padding: 40px 30px;">
+                    <p style="color: #4B5563; line-height: 1.6; margin: 0 0 20px 0;">
+                        Dear {name},
+                    </p>
+                    
+                    <p style="color: #4B5563; line-height: 1.6; margin: 0 0 20px 0;">
+                        Thank you for reaching out to Auraa Luxury. We have received your message and our team will get back to you within 24 hours.
+                    </p>
+                    
+                    <div style="background-color: #F9FAFB; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                        <h3 style="margin: 0 0 10px 0; color: #1F2937; font-size: 16px;">Your Message:</h3>
+                        <p style="margin: 0; color: #6B7280; line-height: 1.6; white-space: pre-wrap;">{message}</p>
+                    </div>
+                    
+                    <p style="color: #4B5563; line-height: 1.6; margin: 20px 0;">
+                        In the meantime, feel free to explore our collection of premium accessories.
+                    </p>
+                    
+                    <!-- CTA Button -->
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="https://auraaluxury.com/products?utm_source=email&utm_medium=autoreply&utm_campaign=contact" 
+                           style="display: inline-block; background-color: #D97706; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                            Browse Products
+                        </a>
+                    </div>
+                    
+                    <p style="color: #6B7280; font-size: 14px; line-height: 1.6; margin: 0;">
+                        Best regards,<br>
+                        <strong>Auraa Luxury Team</strong><br>
+                        <a href="mailto:info@auraaluxury.com" style="color: #D97706; text-decoration: none;">info@auraaluxury.com</a>
+                    </p>
+                </div>
+                
+                <!-- Footer -->
+                <div style="background-color: #F3F4F6; padding: 20px 30px; text-align: center;">
+                    <p style="margin: 0 0 10px 0; color: #6B7280; font-size: 14px;">
+                        © 2025 Auraa Luxury. All rights reserved.
+                    </p>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 12px;">
+                        Premium Accessories | Saudi Arabia
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        customer_sent = send_email(
+            to_email=email,
+            subject="Thank You for Contacting Auraa Luxury",
+            html_content=auto_reply_html,
+            to_name=name
+        )
+        
+        if customer_sent:
+            logger.info(f"Auto-reply sent to {email}")
+            
+    except Exception as e:
+        logger.error(f"Error sending contact form emails: {e}")
+        # Don't fail the request if email fails
+    
+    return {"message": "Thank you for your message. We'll get back to you soon!"}
+
+# ======================================
+# Products API
+# ======================================
 @api_router.get("/products", response_model=List[Product])
 async def get_products(
     category: Optional[CategoryType] = None,

@@ -92,9 +92,36 @@ const ContactUs = () => {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {isRTL ? 'الهاتف' : 'Phone'}
                     </h3>
-                    <p className="text-gray-600">+966 50 123 4567</p>
+                    <a href="tel:+905013715391" className="text-gray-600 hover:text-blue-600">
+                      +90 501 371 5391
+                    </a>
                     <p className="text-sm text-gray-500">
                       {isRTL ? 'متاح 24/7' : 'Available 24/7'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              {/* WhatsApp */}
+              <Card className="p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-green-100 p-3 rounded-full">
+                    <MessageSquare className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {isRTL ? 'واتساب' : 'WhatsApp'}
+                    </h3>
+                    <a 
+                      href="https://wa.me/905013715391" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-gray-600 hover:text-green-600"
+                    >
+                      +90 501 371 5391
+                    </a>
+                    <p className="text-sm text-gray-500">
+                      {isRTL ? 'تواصل سريع' : 'Quick messaging'}
                     </p>
                   </div>
                 </div>
@@ -103,8 +130,8 @@ const ContactUs = () => {
               {/* Email */}
               <Card className="p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-center space-x-4">
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <Mail className="h-6 w-6 text-green-600" />
+                  <div className="bg-purple-100 p-3 rounded-full">
+                    <Mail className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">

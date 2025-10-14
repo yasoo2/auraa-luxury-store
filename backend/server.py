@@ -535,6 +535,25 @@ async def create_order(
         logger.error(f"Failed to track GA4 purchase: {e}")
         # Don't fail order creation if GA4 tracking fails
     
+    # Send order confirmation email
+    try:
+        email_sent = send_order_confirmation(
+            to_email=current_user.email,
+            customer_name=f"{current_user.first_name} {current_user.last_name}",
+            order_number=order.order_number,
+            order_total=order.total_amount,
+            currency=order.currency,
+            items=cart["items"],
+            shipping_address=order_data.shipping_address
+        )
+        if email_sent:
+            logger.info(f"Order confirmation email sent for {order.order_number}")
+        else:
+            logger.warning(f"Failed to send order confirmation email for {order.order_number}")
+    except Exception as e:
+        logger.error(f"Error sending order confirmation email: {e}")
+        # Don't fail order creation if email fails
+    
     # Clear cart
     await db.carts.update_one(
         {"user_id": current_user.id},

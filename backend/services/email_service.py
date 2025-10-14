@@ -256,7 +256,7 @@ def send_welcome_email(to_email: str, customer_name: str) -> bool:
                 
                 <!-- CTA Button -->
                 <div style="text-align: center; margin-bottom: 30px;">
-                    <a href="https://auraaluxury.com/products" 
+                    <a href="https://auraaluxury.com/products?utm_source=email&utm_medium=welcome&utm_campaign=new_user" 
                        style="display: inline-block; background-color: #D97706; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
                         Start Shopping
                     </a>

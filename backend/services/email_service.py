@@ -175,7 +175,7 @@ def send_order_confirmation(
                 
                 <!-- Track Order Button -->
                 <div style="text-align: center; margin-bottom: 30px;">
-                    <a href="https://auraaluxury.com/order-tracking" 
+                    <a href="https://auraaluxury.com/order-tracking?utm_source=email&utm_medium=order_confirmation&utm_campaign=transactional" 
                        style="display: inline-block; background-color: #D97706; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
                         Track Your Order
                     </a>

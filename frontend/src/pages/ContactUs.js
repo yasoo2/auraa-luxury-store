@@ -47,7 +47,6 @@ const ContactUs = () => {
           email: '',
           phone: '',
           message: ''
-          message: ''
         });
         setIsSubmitted(false);
       }, 3000);

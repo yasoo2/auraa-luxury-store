@@ -176,15 +176,15 @@ TTL: Auto
 ```
 Type: TXT
 Name: @
-Content: v=spf1 include:_spf.google.com ~all
+Content: v=spf1 include:mailgun.org ~all
 TTL: Auto
 ```
 
-**DKIM:**
+**DKIM (من Mailgun Dashboard):**
 ```
 Type: TXT
-Name: google._domainkey
-Content: [من Google Admin Console]
+Name: [domain key من Mailgun]
+Content: [DKIM value من Mailgun Dashboard]
 TTL: Auto
 ```
 
@@ -192,9 +192,11 @@ TTL: Auto
 ```
 Type: TXT
 Name: _dmarc
-Content: v=DMARC1; p=quarantine; rua=mailto:admin@auraaluxury.com
+Content: v=DMARC1; p=none; rua=mailto:info@auraaluxury.com
 TTL: Auto
 ```
+
+**لماذا p=none؟** لأننا نستخدم Gmail SMTP للإرسال و Mailgun للاستقبال. بعد المراقبة يمكن تغييره إلى `p=quarantine`.
 
 **Google Site Verification:**
 ```

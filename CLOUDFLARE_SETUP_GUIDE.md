@@ -147,18 +147,28 @@ Proxy status: Proxied (☁️ برتقالي)
 TTL: Auto
 ```
 
-### 3.3 MX Records (البريد الإلكتروني)
+### MX Records (البريد الإلكتروني)
 
 **⚠️ مهم جداً: MX Records يجب أن تكون DNS Only (رمادي)**
 
+**Mailgun MX Records:**
 ```
 Type: MX
 Name: @
-Mail server: smtp.google.com
-Priority: 1
+Mail server: mxa.mailgun.org
+Priority: 10
+Proxy status: DNS only (☁️ رمادي)
+TTL: Auto
+
+Type: MX
+Name: @
+Mail server: mxb.mailgun.org
+Priority: 10
 Proxy status: DNS only (☁️ رمادي)
 TTL: Auto
 ```
+
+**ملاحظة:** نستخدم Mailgun لاستقبال البريد، Gmail SMTP للإرسال.
 
 ### 3.4 TXT Records
 

@@ -218,6 +218,20 @@ async def register(user_data: UserCreate):
     user_doc["password"] = hashed_password
     await db.users.insert_one(user_doc)
     
+    # Send welcome email
+    try:
+        email_sent = send_welcome_email(
+            to_email=user_obj.email,
+            customer_name=f"{user_obj.first_name} {user_obj.last_name}"
+        )
+        if email_sent:
+            logger.info(f"Welcome email sent to {user_obj.email}")
+        else:
+            logger.warning(f"Failed to send welcome email to {user_obj.email}")
+    except Exception as e:
+        logger.error(f"Error sending welcome email: {e}")
+        # Don't fail registration if email fails
+    
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}

@@ -47,12 +47,12 @@ const ContactUs = () => {
           email: '',
           phone: '',
           message: ''
-        });
-          orderNumber: ''
+          message: ''
         });
         setIsSubmitted(false);
       }, 3000);
     } catch (error) {
+      console.error('Contact form error:', error);
       toast.error(isRTL ? 'حدث خطأ في إرسال الرسالة. حاول مرة أخرى.' : 'Error sending message. Please try again.');
     } finally {
       setIsSubmitting(false);

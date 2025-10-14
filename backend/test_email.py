@@ -6,6 +6,10 @@ Quick script to test SMTP configuration and email sending
 import asyncio
 import sys
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv('/app/backend/.env')
 
 # Add backend to path
 sys.path.insert(0, '/app/backend')

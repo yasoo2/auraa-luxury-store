@@ -37,8 +37,8 @@ const SettingsPage = () => {
     
     // Contact Information
     contact_email: 'info@auraa.com',
-    contact_phone: '+966501234567',
-    whatsapp_number: '+966501234567',
+    contact_phone: '+905013715391',
+    whatsapp_number: '+905013715391',
     
     // Address
     address_line1: '123 Luxury Street',

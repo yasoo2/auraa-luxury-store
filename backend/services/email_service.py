@@ -378,7 +378,7 @@ def send_password_reset_email(
                 
                 <!-- CTA Button -->
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="{reset_link}" 
+                    <a href="{reset_link}&utm_source=email&utm_medium=password_reset&utm_campaign=transactional" 
                        style="display: inline-block; background-color: #D97706; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
                         Reset Password
                     </a>

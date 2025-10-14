@@ -110,7 +110,20 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-center space-x-2">
                 <Phone className="h-4 w-4 text-amber-400 ml-2" />
-                <span className="text-gray-300">+966 50 123 4567</span>
+                <a href="tel:+905013715391" className="text-gray-300 hover:text-amber-400 transition-colors">
+                  +90 501 371 5391
+                </a>
+              </li>
+              <li className="flex items-center space-x-2">
+                <MessageCircle className="h-4 w-4 text-amber-400 ml-2" />
+                <a 
+                  href="https://wa.me/905013715391" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-gray-300 hover:text-amber-400 transition-colors"
+                >
+                  واتساب: +90 501 371 5391
+                </a>
               </li>
               <li className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-amber-400 ml-2" />

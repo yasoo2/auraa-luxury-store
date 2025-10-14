@@ -266,7 +266,7 @@ const SettingsPage = () => {
         <Input
           value={settings.whatsapp_number}
           onChange={(e) => updateSetting('whatsapp_number', e.target.value)}
-          placeholder="+966501234567"
+          placeholder="+905013715391"
         />
       </div>
 

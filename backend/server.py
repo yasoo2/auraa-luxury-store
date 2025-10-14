@@ -246,6 +246,102 @@ async def login(credentials: UserLogin):
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
 
+@api_router.post("/auth/forgot-password")
+async def forgot_password(email_data: dict):
+    """
+    Send password reset email
+    Expects: {"email": "user@example.com"}
+    """
+    email = email_data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+    
+    # Find user
+    user = await db.users.find_one({"email": email})
+    if not user:
+        # Return success even if user not found (security best practice)
+        return {"message": "If the email exists, a reset link has been sent"}
+    
+    # Generate reset token (valid for 1 hour)
+    reset_token = str(uuid.uuid4())
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Store reset token in database
+    await db.password_resets.insert_one({
+        "user_id": user["id"],
+        "token": reset_token,
+        "expires_at": expires_at,
+        "used": False,
+        "created_at": datetime.now(timezone.utc)
+    })
+    
+    # Send password reset email
+    try:
+        from services.email_service import send_password_reset_email
+        email_sent = send_password_reset_email(
+            to_email=user["email"],
+            customer_name=f"{user['first_name']} {user['last_name']}",
+            reset_token=reset_token
+        )
+        if email_sent:
+            logger.info(f"Password reset email sent to {user['email']}")
+        else:
+            logger.warning(f"Failed to send password reset email to {user['email']}")
+    except Exception as e:
+        logger.error(f"Error sending password reset email: {e}")
+    
+    return {"message": "If the email exists, a reset link has been sent"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(reset_data: dict):
+    """
+    Reset password using token
+    Expects: {"token": "...", "new_password": "..."}
+    """
+    token = reset_data.get("token")
+    new_password = reset_data.get("new_password")
+    
+    if not token or not new_password:
+        raise HTTPException(status_code=400, detail="Token and new password are required")
+    
+    # Validate password strength
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Find reset token
+    reset_record = await db.password_resets.find_one({
+        "token": token,
+        "used": False
+    })
+    
+    if not reset_record:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    # Check if token expired
+    if reset_record["expires_at"] < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+    
+    # Hash new password
+    hashed_password = get_password_hash(new_password)
+    
+    # Update user password
+    result = await db.users.update_one(
+        {"id": reset_record["user_id"]},
+        {"$set": {"password": hashed_password}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Mark token as used
+    await db.password_resets.update_one(
+        {"token": token},
+        {"$set": {"used": True, "used_at": datetime.now(timezone.utc)}}
+    )
+    
+    logger.info(f"Password reset successful for user {reset_record['user_id']}")
+    return {"message": "Password reset successful"}
+
 @api_router.get("/auth/me", response_model=User)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user

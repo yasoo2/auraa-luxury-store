@@ -34,6 +34,8 @@ import ReturnPolicy from './pages/ReturnPolicy';
 import ContactUs from './pages/ContactUs';
 import AboutUs from './pages/AboutUs';
 import OrderTracking from './pages/OrderTracking';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // UI Components
 import { Toaster } from './components/ui/sonner';

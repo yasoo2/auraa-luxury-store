@@ -5,6 +5,9 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL || '';
 
 const ContactUs = () => {
   const { language } = useLanguage();
@@ -14,9 +17,7 @@ const ContactUs = () => {
     name: '',
     email: '',
     phone: '',
-    subject: '',
-    message: '',
-    orderNumber: ''
+    message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -34,8 +35,7 @@ const ContactUs = () => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await axios.post(`${API}/contact`, formData);
       
       setIsSubmitted(true);
       toast.success(isRTL ? 'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.' : 'Message sent successfully! We will contact you soon.');
@@ -46,8 +46,8 @@ const ContactUs = () => {
           name: '',
           email: '',
           phone: '',
-          subject: '',
-          message: '',
+          message: ''
+        });
           orderNumber: ''
         });
         setIsSubmitted(false);

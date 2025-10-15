@@ -254,9 +254,16 @@ async def register(user_data: UserCreate, response: Response):
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin, response: Response):
-    user = await db.users.find_one({"email": credentials.email})
+    # Search by email or phone
+    user = await db.users.find_one({
+        "$or": [
+            {"email": credentials.identifier},
+            {"phone": credentials.identifier}
+        ]
+    })
+    
     if not user or not verify_password(credentials.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="بيانات الدخول غير صحيحة")
     
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})

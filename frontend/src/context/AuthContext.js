@@ -51,8 +51,8 @@ export const AuthProvider = ({ children }) => {
     try {
       // Support both single object and separate email/password parameters
       const credentials = typeof emailOrCredentials === 'string' 
-        ? { email: emailOrCredentials, password: password }
-        : emailOrCredentials;
+        ? { identifier: emailOrCredentials, password: password }
+        : { identifier: emailOrCredentials.email, password: emailOrCredentials.password };
 
       const response = await axios.post(`${BACKEND_URL}/api/auth/login`, credentials);
       const { access_token, user: userData } = response.data;

@@ -94,11 +94,11 @@ export const WishlistProvider = ({ children }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      toast.success('تم إضافة المنتج إلى المفضلة ❤️');
+      toast.success(isRTL ? 'تم إضافة المنتج إلى المفضلة ❤️' : 'Added to wishlist ❤️');
     } catch (error) {
       console.error('Error syncing with server:', error);
       // Keep local changes even if server sync fails
-      toast.success('تم إضافة المنتج إلى المفضلة ❤️');
+      toast.success(isRTL ? 'تم إضافة المنتج إلى المفضلة ❤️' : 'Added to wishlist ❤️');
     }
   };
 

@@ -102,6 +102,13 @@ const AuthPage = () => {
               </p>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 animate-shake">
+                <p className="text-red-200 text-center text-sm font-medium">{error}</p>
+              </div>
+            )}
+
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
               {!isLogin && (

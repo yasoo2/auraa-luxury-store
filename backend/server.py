@@ -66,6 +66,7 @@ class User(BaseModel):
     address: Optional[Dict[str, Any]] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_admin: bool = False
+    is_super_admin: bool = False
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -75,7 +76,7 @@ class UserCreate(BaseModel):
     phone: str
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    identifier: str  # Can be email or phone
     password: str
 
 class Product(BaseModel):
@@ -253,9 +254,97 @@ async def register(user_data: UserCreate, response: Response):
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin, response: Response):
-    user = await db.users.find_one({"email": credentials.email})
-    if not user or not verify_password(credentials.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    # First check if super admin
+    super_admin = await db.super_admins.find_one({
+        "identifier": credentials.identifier,
+        "is_active": True
+    })
+    
+    if super_admin:
+        # Verify super admin password
+        if not verify_password(credentials.password, super_admin["password_hash"]):
+            raise HTTPException(
+                status_code=401,
+                detail="wrong_password"
+            )
+        
+        # Update last login
+        await db.super_admins.update_one(
+            {"id": super_admin["id"]},
+            {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Find or create corresponding user account
+        user = await db.users.find_one({
+            "$or": [
+                {"email": credentials.identifier},
+                {"phone": credentials.identifier}
+            ]
+        })
+        
+        if not user:
+            # Create user account for super admin
+            user_id = str(uuid.uuid4())
+            user_doc = {
+                "id": user_id,
+                "email": super_admin["identifier"] if super_admin["type"] == "email" else "",
+                "phone": super_admin["identifier"] if super_admin["type"] == "phone" else "",
+                "first_name": "Super",
+                "last_name": "Admin",
+                "password": super_admin["password_hash"],
+                "is_admin": True,
+                "is_super_admin": True,
+                "email_verified": True,
+                "phone_verified": True,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(user_doc)
+            user = user_doc
+        else:
+            # Update user to mark as super admin
+            await db.users.update_one(
+                {"id": user["id"]},
+                {"$set": {"is_admin": True, "is_super_admin": True}}
+            )
+            user["is_super_admin"] = True
+        
+        # Create access token
+        access_token = create_access_token(data={"sub": user["id"], "is_super_admin": True})
+        user_obj = User(**{k: v for k, v in user.items() if k != "password"})
+        
+        # Set cookie
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            domain=".auraaluxury.com",
+            max_age=1800
+        )
+        
+        return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
+    
+    # Regular user login
+    user = await db.users.find_one({
+        "$or": [
+            {"email": credentials.identifier},
+            {"phone": credentials.identifier}
+        ]
+    })
+    
+    # Specific error messages
+    if not user:
+        raise HTTPException(
+            status_code=404, 
+            detail="account_not_found"  # Frontend will translate
+        )
+    
+    if not verify_password(credentials.password, user["password"]):
+        raise HTTPException(
+            status_code=401, 
+            detail="wrong_password"  # Frontend will translate
+        )
     
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
@@ -272,6 +361,140 @@ async def login(credentials: UserLogin, response: Response):
     )
     
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
+
+# OAuth Endpoints
+@api_router.get("/auth/oauth/{provider}/url")
+async def get_oauth_url(provider: str, redirect_url: str):
+    """Get OAuth URL for Google or Facebook"""
+    from auth.oauth_service import oauth_service
+    
+    try:
+        oauth_url = oauth_service.get_oauth_url(provider, redirect_url)
+        return {"url": oauth_url, "provider": provider}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api_router.post("/auth/oauth/session")
+async def process_oauth_session(
+    session_data: dict,
+    response: Response
+):
+    """
+    Process OAuth session after user returns from OAuth provider
+    Expects: { session_id: string }
+    """
+    from auth.oauth_service import oauth_service
+    
+    session_id = session_data.get("session_id")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id_required")
+    
+    # Get user data from Emergent Auth
+    oauth_data = await oauth_service.get_user_from_session(session_id)
+    
+    if not oauth_data:
+        raise HTTPException(status_code=401, detail="oauth_session_invalid")
+    
+    # Check if user exists by email
+    user = await db.users.find_one({"email": oauth_data["email"]})
+    
+    if user:
+        # Existing user - update last login
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Link OAuth account if not already linked
+        provider = session_data.get("provider", "google")
+        linked_accounts = user.get("linked_accounts", [])
+        
+        if not any(acc.get("provider") == provider for acc in linked_accounts):
+            await db.users.update_one(
+                {"id": user["id"]},
+                {"$push": {"linked_accounts": {
+                    "provider": provider,
+                    "provider_id": oauth_data["id"],
+                    "email": oauth_data["email"],
+                    "name": oauth_data["name"],
+                    "picture": oauth_data.get("picture", ""),
+                    "linked_at": datetime.now(timezone.utc).isoformat()
+                }}}
+            )
+    else:
+        # New user - create account
+        new_user_id = str(uuid.uuid4())
+        
+        # Extract name parts
+        name_parts = oauth_data.get("name", "User").split(" ", 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+        
+        user_doc = {
+            "id": new_user_id,
+            "email": oauth_data["email"],
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone": "",  # Will be added later if needed
+            "password": "",  # OAuth users don't need password
+            "is_admin": False,
+            "email_verified": True,  # OAuth emails are pre-verified
+            "phone_verified": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "last_login": datetime.now(timezone.utc).isoformat(),
+            "linked_accounts": [{
+                "provider": session_data.get("provider", "google"),
+                "provider_id": oauth_data["id"],
+                "email": oauth_data["email"],
+                "name": oauth_data["name"],
+                "picture": oauth_data.get("picture", ""),
+                "linked_at": datetime.now(timezone.utc).isoformat()
+            }]
+        }
+        
+        await db.users.insert_one(user_doc)
+        user = user_doc
+    
+    # Create access token
+    access_token = create_access_token(data={"sub": user["id"]})
+    user_obj = User(**{k: v for k, v in user.items() if k != "password"})
+    
+    # Set cookie
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        domain=".auraaluxury.com",
+        max_age=1800
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user_obj,
+        "needs_phone": not user.get("phone")  # Indicate if phone is needed
+    }
+
+# Delete Account Endpoint
+@api_router.delete("/auth/delete-account")
+async def delete_account(current_user: dict = Depends(get_current_user)):
+    """Delete user account and all associated data"""
+    user_id = current_user["id"]
+    
+    try:
+        # Delete user data
+        await db.users.delete_one({"id": user_id})
+        await db.cart.delete_many({"user_id": user_id})
+        await db.orders.delete_many({"user_id": user_id})
+        await db.wishlist.delete_many({"user_id": user_id})
+        
+        return {"message": "account_deleted"}
+    except Exception as e:
+        logger.error(f"Error deleting account: {e}")
+        raise HTTPException(status_code=500, detail="delete_failed")
 
 @api_router.post("/auth/forgot-password")
 async def forgot_password(email_data: dict):

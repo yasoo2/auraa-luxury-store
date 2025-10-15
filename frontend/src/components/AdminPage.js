@@ -162,7 +162,7 @@ const AdminPage = () => {
       };
       
       await axios.post(`${API}/products`, productData);
-      toast.success('تم إضافة المنتج بنجاح');
+      toast.success(isRTL ? 'تم إضافة المنتج بنجاح' : 'Product added successfully');
       setIsAddProductOpen(false);
       setNewProduct({
         name: '',

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useLanguage } from './LanguageContext';
 
 const WishlistContext = createContext();
 

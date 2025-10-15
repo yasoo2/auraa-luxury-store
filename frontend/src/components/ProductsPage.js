@@ -334,25 +334,33 @@ const ProductsPage = () => {
                         />
                       </div>
                     </div>
-                    <div className="p-6">
-                      <Link to={`/product/${product.id}`}>
-                        <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2">{getLocalizedName(product)}</h3>
-                      </Link>
-                      <div className="flex items-center mb-3">
-                        <div className="flex items-center">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                          ))}
+                    <div className={viewMode === 'grid' ? "p-6" : "p-6 flex-1 flex flex-col justify-between"}>
+                      <div>
+                        <Link to={`/product/${product.id}`}>
+                          <h3 className={viewMode === 'grid' 
+                            ? "font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2" 
+                            : "font-bold text-xl mb-2 text-gray-900 group-hover:text-amber-600 transition-colors"
+                          }>{getLocalizedName(product)}</h3>
+                        </Link>
+                        {viewMode === 'list' && (
+                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">{getLocalizedDescription(product)}</p>
+                        )}
+                        <div className="flex items-center mb-3">
+                          <div className="flex items-center">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-600 mr-2">({product.reviews_count})</span>
                         </div>
-                        <span className="text-sm text-gray-600 mr-2">({product.reviews_count})</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex flex-col">
-                          <span className="price-highlight text-xl font-bold text-amber-600">{product.price} {isRTL ? 'ر.س' : 'SAR'}</span>
-                          {product.original_price && (<span className="text-sm text-gray-500 line-through">{product.original_price} {isRTL ? 'ر.س' : 'SAR'}</span>)}
+                        <div className={viewMode === 'grid' ? "flex items-center justify-between mb-4" : "flex items-center space-x-4 mb-4"}>
+                          <div className="flex flex-col">
+                            <span className="price-highlight text-xl font-bold text-amber-600">{product.price} {isRTL ? 'ر.س' : 'SAR'}</span>
+                            {product.original_price && (<span className="text-sm text-gray-500 line-through">{product.original_price} {isRTL ? 'ر.س' : 'SAR'}</span>)}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className={viewMode === 'grid' ? "flex space-x-2" : "flex space-x-2 mt-4"}>
                         <Button onClick={() => handleAddToCart(product.id)} className="btn-luxury flex-1" data-testid={`add-to-cart-${product.id}`}>
                           <ShoppingCart className="h-4 w-4 ml-2" />
                           {isRTL ? 'أضف للسلة' : 'Add to Cart'}

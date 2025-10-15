@@ -55,11 +55,15 @@ const AuthPage = () => {
         }, 100);
       } else {
         console.log('Login failed:', result.error);
-        setError(result.error || 'حدث خطأ');
+        // Translate error message
+        const errorKey = result.error || 'حدث خطأ';
+        const translatedError = getAuthTranslation(errorKey, language) || errorKey;
+        setError(translatedError);
       }
     } catch (error) {
       console.error('Auth error:', error);
-      setError('حدث خطأ غير متوقع: ' + error.message);
+      const translatedError = getAuthTranslation('oauth_session_invalid', language);
+      setError(translatedError);
     } finally {
       setLoading(false);
     }

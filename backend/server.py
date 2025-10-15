@@ -209,7 +209,7 @@ async def register(user_data: UserCreate, response: Response):
     existing_user = await db.users.find_one({"email": user_data.email})
     if existing_user:
         logger.warning(f"Email already registered: {user_data.email}")
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام بريد آخر")
     
     # Create user
     hashed_password = get_password_hash(user_data.password)

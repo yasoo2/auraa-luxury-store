@@ -76,7 +76,7 @@ class UserCreate(BaseModel):
     phone: str
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    identifier: str  # Can be email or phone
     password: str
 
 class Product(BaseModel):

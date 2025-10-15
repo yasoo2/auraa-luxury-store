@@ -10,17 +10,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from passlib.context import CryptContext
+import bcrypt
 
 # Load environment
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    """Hash password using bcrypt"""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 def seed_super_admins():
     """Seed initial super admin accounts"""

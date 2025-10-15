@@ -137,7 +137,7 @@ export const WishlistProvider = ({ children }) => {
   const clearWishlist = () => {
     setWishlistItems([]);
     saveWishlistToStorage([]);
-    toast.success('تم مسح جميع المفضلة');
+    toast.success(isRTL ? 'تم مسح جميع المفضلة' : 'Wishlist cleared');
   };
 
   const getWishlistCount = () => {

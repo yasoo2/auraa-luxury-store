@@ -114,7 +114,45 @@ export const authTranslations = {
     delete_account: 'Delete Account',
     confirm_delete: 'Are you sure you want to delete your account? This action cannot be undone',
     cancel: 'Cancel',
-    confirm: 'Confirm'
+    confirm: 'Confirm',
+    
+    // Super Admin
+    super_admin_management: 'Super Admin Management',
+    super_admins: 'Super Admins',
+    add_super_admin: 'Add Super Admin',
+    remove_super_admin: 'Remove Super Admin',
+    transfer_super_admin: 'Transfer Rights',
+    super_admin_list: 'Super Admin List',
+    identifier: 'Email / Phone',
+    created_at: 'Created At',
+    last_login: 'Last Login',
+    actions: 'Actions',
+    enter_current_password: 'Enter Current Password',
+    current_password: 'Current Password',
+    new_identifier: 'New Email or Phone',
+    new_password: 'New Password',
+    target_identifier: 'Target Email or Phone',
+    
+    // Super Admin Errors
+    invalid_super_admin_credentials: 'Invalid super admin credentials',
+    not_super_admin: 'You do not have super admin privileges',
+    super_admin_already_exists: 'This account is already a super admin',
+    super_admin_not_found: 'Super admin not found',
+    cannot_remove_self: 'You cannot remove yourself',
+    must_keep_one_super_admin: 'Must keep at least one super admin',
+    identifier_already_taken: 'This email or phone is already taken',
+    target_user_not_found: 'Target user not found',
+    target_already_super_admin: 'Target is already a super admin',
+    
+    // Super Admin Success
+    super_admin_added_successfully: 'Super admin added successfully',
+    super_admin_removed_successfully: 'Super admin removed successfully',
+    profile_updated_successfully: 'Profile updated successfully',
+    super_admin_transferred_successfully: 'Super admin rights transferred successfully',
+    
+    // Confirmations
+    confirm_remove_super_admin: 'Are you sure you want to remove this super admin?',
+    confirm_transfer: 'Are you sure you want to transfer super admin rights? You will lose your current privileges',
   }
 };
 

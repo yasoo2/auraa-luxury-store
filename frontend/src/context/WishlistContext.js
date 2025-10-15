@@ -115,10 +115,10 @@ export const WishlistProvider = ({ children }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      toast.success('تم إزالة المنتج من المفضلة');
+      toast.success(isRTL ? 'تم إزالة المنتج من المفضلة' : 'Removed from wishlist');
     } catch (error) {
       console.error('Error syncing with server:', error);
-      toast.success('تم إزالة المنتج من المفضلة');
+      toast.success(isRTL ? 'تم إزالة المنتج من المفضلة' : 'Removed from wishlist');
     }
   };
 

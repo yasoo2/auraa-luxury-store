@@ -145,9 +145,9 @@ const AuthPage = () => {
               <div className="relative animate-slide-in-left">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
                 <input
-                  type="email"
+                  type={isLogin ? "text" : "email"}
                   name="email"
-                  placeholder="البريد الإلكتروني"
+                  placeholder={isLogin ? "البريد الإلكتروني أو رقم الهاتف" : "البريد الإلكتروني"}
                   value={formData.email}
                   onChange={handleInputChange}
                   className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"

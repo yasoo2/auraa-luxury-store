@@ -392,8 +392,7 @@ const SettingsPage = () => {
         <div className="space-y-3">
           {[
             { key: 'payment_stripe', label: isRTL ? 'ستريب (بطاقات ائتمانية)' : 'Stripe (Credit Cards)' },
-            { key: 'payment_paypal', label: isRTL ? 'باي بال' : 'PayPal' },
-            { key: 'payment_bank_transfer', label: isRTL ? 'تحويل بنكي' : 'Bank Transfer' }
+            { key: 'payment_paypal', label: isRTL ? 'باي بال' : 'PayPal' }
           ].map((payment) => (
             <label key={payment.key} className="flex items-center">
               <input

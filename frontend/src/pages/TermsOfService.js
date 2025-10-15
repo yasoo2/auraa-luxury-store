@@ -255,7 +255,7 @@ const TermsOfService = () => {
                     <li>Prices in Saudi Riyal including VAT</li>
                     <li>Prices may change without prior notice</li>
                     <li>Payment required at time of order</li>
-                    <li>We accept credit cards and bank transfer</li>
+                    <li>We accept credit cards and secure online payment</li>
                   </ul>
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">Order Cancellation</h3>

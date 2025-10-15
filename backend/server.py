@@ -254,7 +254,78 @@ async def register(user_data: UserCreate, response: Response):
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin, response: Response):
-    # Search by email or phone
+    # First check if super admin
+    super_admin = await db.super_admins.find_one({
+        "identifier": credentials.identifier,
+        "is_active": True
+    })
+    
+    if super_admin:
+        # Verify super admin password
+        if not verify_password(credentials.password, super_admin["password_hash"]):
+            raise HTTPException(
+                status_code=401,
+                detail="wrong_password"
+            )
+        
+        # Update last login
+        await db.super_admins.update_one(
+            {"id": super_admin["id"]},
+            {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Find or create corresponding user account
+        user = await db.users.find_one({
+            "$or": [
+                {"email": credentials.identifier},
+                {"phone": credentials.identifier}
+            ]
+        })
+        
+        if not user:
+            # Create user account for super admin
+            user_id = str(uuid.uuid4())
+            user_doc = {
+                "id": user_id,
+                "email": super_admin["identifier"] if super_admin["type"] == "email" else "",
+                "phone": super_admin["identifier"] if super_admin["type"] == "phone" else "",
+                "first_name": "Super",
+                "last_name": "Admin",
+                "password": super_admin["password_hash"],
+                "is_admin": True,
+                "is_super_admin": True,
+                "email_verified": True,
+                "phone_verified": True,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(user_doc)
+            user = user_doc
+        else:
+            # Update user to mark as super admin
+            await db.users.update_one(
+                {"id": user["id"]},
+                {"$set": {"is_admin": True, "is_super_admin": True}}
+            )
+            user["is_super_admin"] = True
+        
+        # Create access token
+        access_token = create_access_token(data={"sub": user["id"], "is_super_admin": True})
+        user_obj = User(**{k: v for k, v in user.items() if k != "password"})
+        
+        # Set cookie
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            domain=".auraaluxury.com",
+            max_age=1800
+        )
+        
+        return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
+    
+    # Regular user login
     user = await db.users.find_one({
         "$or": [
             {"email": credentials.identifier},

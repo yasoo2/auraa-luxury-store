@@ -37,7 +37,45 @@ export const authTranslations = {
     delete_account: 'حذف الحساب',
     confirm_delete: 'هل أنت متأكد من حذف حسابك؟ هذا الإجراء لا يمكن التراجع عنه',
     cancel: 'إلغاء',
-    confirm: 'تأكيد'
+    confirm: 'تأكيد',
+    
+    // Super Admin
+    super_admin_management: 'إدارة المديرين الرئيسيين',
+    super_admins: 'المديرون الرئيسيون',
+    add_super_admin: 'إضافة مدير رئيسي',
+    remove_super_admin: 'إزالة مدير رئيسي',
+    transfer_super_admin: 'نقل الصلاحيات',
+    super_admin_list: 'قائمة المديرين الرئيسيين',
+    identifier: 'البريد الإلكتروني / الهاتف',
+    created_at: 'تاريخ الإنشاء',
+    last_login: 'آخر تسجيل دخول',
+    actions: 'الإجراءات',
+    enter_current_password: 'أدخل كلمة المرور الحالية',
+    current_password: 'كلمة المرور الحالية',
+    new_identifier: 'البريد الإلكتروني أو الهاتف الجديد',
+    new_password: 'كلمة المرور الجديدة',
+    target_identifier: 'البريد الإلكتروني أو الهاتف المستهدف',
+    
+    // Super Admin Errors
+    invalid_super_admin_credentials: 'بيانات المدير الرئيسي غير صحيحة',
+    not_super_admin: 'ليس لديك صلاحيات المدير الرئيسي',
+    super_admin_already_exists: 'هذا الحساب مدير رئيسي بالفعل',
+    super_admin_not_found: 'المدير الرئيسي غير موجود',
+    cannot_remove_self: 'لا يمكنك إزالة نفسك',
+    must_keep_one_super_admin: 'يجب الإبقاء على مدير رئيسي واحد على الأقل',
+    identifier_already_taken: 'هذا البريد الإلكتروني أو الهاتف مستخدم بالفعل',
+    target_user_not_found: 'المستخدم المستهدف غير موجود',
+    target_already_super_admin: 'الهدف مدير رئيسي بالفعل',
+    
+    // Super Admin Success
+    super_admin_added_successfully: 'تم إضافة المدير الرئيسي بنجاح',
+    super_admin_removed_successfully: 'تم إزالة المدير الرئيسي بنجاح',
+    profile_updated_successfully: 'تم تحديث الملف الشخصي بنجاح',
+    super_admin_transferred_successfully: 'تم نقل صلاحيات المدير الرئيسي بنجاح',
+    
+    // Confirmations
+    confirm_remove_super_admin: 'هل أنت متأكد من إزالة هذا المدير الرئيسي؟',
+    confirm_transfer: 'هل أنت متأكد من نقل صلاحيات المدير الرئيسي؟ ستفقد صلاحياتك الحالية',
   },
   en: {
     // Login/Register

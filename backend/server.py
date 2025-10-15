@@ -201,7 +201,7 @@ async def root():
 
 # Auth routes
 @api_router.post("/auth/register")
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, response: Response):
     # Log incoming data for debugging
     logger.info(f"Registration attempt for email: {user_data.email}")
     
@@ -238,6 +238,18 @@ async def register(user_data: UserCreate):
     
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
+    
+    # Set cookie for production domain
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        domain=".auraaluxury.com",
+        max_age=1800  # 30 minutes (same as token expiry)
+    )
+    
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
 
 @api_router.post("/auth/login")

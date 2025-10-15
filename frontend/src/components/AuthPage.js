@@ -31,6 +31,7 @@ const AuthPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(''); // Clear previous errors
     
     try {
       let result;
@@ -49,11 +50,11 @@ const AuthPage = () => {
         }, 100);
       } else {
         console.log('Login failed:', result.error);
-        alert(result.error || 'حدث خطأ');
+        setError(result.error || 'حدث خطأ');
       }
     } catch (error) {
       console.error('Auth error:', error);
-      alert('حدث خطأ غير متوقع: ' + error.message);
+      setError('حدث خطأ غير متوقع: ' + error.message);
     } finally {
       setLoading(false);
     }

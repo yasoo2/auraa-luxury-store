@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useLanguage } from './LanguageContext';
 
 const WishlistContext = createContext();
 
@@ -16,6 +17,8 @@ export const useWishlist = () => {
 };
 
 export const WishlistProvider = ({ children }) => {
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -91,11 +94,11 @@ export const WishlistProvider = ({ children }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      toast.success('تم إضافة المنتج إلى المفضلة ❤️');
+      toast.success(isRTL ? 'تم إضافة المنتج إلى المفضلة ❤️' : 'Added to wishlist ❤️');
     } catch (error) {
       console.error('Error syncing with server:', error);
       // Keep local changes even if server sync fails
-      toast.success('تم إضافة المنتج إلى المفضلة ❤️');
+      toast.success(isRTL ? 'تم إضافة المنتج إلى المفضلة ❤️' : 'Added to wishlist ❤️');
     }
   };
 
@@ -112,10 +115,10 @@ export const WishlistProvider = ({ children }) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      toast.success('تم إزالة المنتج من المفضلة');
+      toast.success(isRTL ? 'تم إزالة المنتج من المفضلة' : 'Removed from wishlist');
     } catch (error) {
       console.error('Error syncing with server:', error);
-      toast.success('تم إزالة المنتج من المفضلة');
+      toast.success(isRTL ? 'تم إزالة المنتج من المفضلة' : 'Removed from wishlist');
     }
   };
 
@@ -134,7 +137,7 @@ export const WishlistProvider = ({ children }) => {
   const clearWishlist = () => {
     setWishlistItems([]);
     saveWishlistToStorage([]);
-    toast.success('تم مسح جميع المفضلة');
+    toast.success(isRTL ? 'تم مسح جميع المفضلة' : 'Wishlist cleared');
   };
 
   const getWishlistCount = () => {

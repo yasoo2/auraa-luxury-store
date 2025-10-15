@@ -8,12 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { toast } from 'sonner';
+import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const AdminPage = () => {
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -105,7 +108,7 @@ const AdminPage = () => {
     setSavingIntegrations(true);
     try {
       await axios.post(`${API}/admin/integrations`, integrations);
-      toast.success('تم حفظ إعدادات التكامل بنجاح');
+      toast.success(isRTL ? 'تم حفظ إعدادات التكامل بنجاح' : 'Integration settings saved successfully');
       fetchIntegrations();
     } catch (error) {
       console.error('Error saving integrations:', error);
@@ -162,7 +165,7 @@ const AdminPage = () => {
       };
       
       await axios.post(`${API}/products`, productData);
-      toast.success('تم إضافة المنتج بنجاح');
+      toast.success(isRTL ? 'تم إضافة المنتج بنجاح' : 'Product added successfully');
       setIsAddProductOpen(false);
       setNewProduct({
         name: '',

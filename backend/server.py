@@ -200,7 +200,7 @@ async def root():
 
 # Auth routes
 @api_router.post("/auth/register")
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, response: Response):
     # Log incoming data for debugging
     logger.info(f"Registration attempt for email: {user_data.email}")
     
@@ -208,7 +208,7 @@ async def register(user_data: UserCreate):
     existing_user = await db.users.find_one({"email": user_data.email})
     if existing_user:
         logger.warning(f"Email already registered: {user_data.email}")
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام بريد آخر")
     
     # Create user
     hashed_password = get_password_hash(user_data.password)
@@ -237,16 +237,40 @@ async def register(user_data: UserCreate):
     
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
+    
+    # Set cookie for production domain
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        domain=".auraaluxury.com",
+        max_age=1800  # 30 minutes (same as token expiry)
+    )
+    
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
 
 @api_router.post("/auth/login")
-async def login(credentials: UserLogin):
+async def login(credentials: UserLogin, response: Response):
     user = await db.users.find_one({"email": credentials.email})
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
+    
+    # Set cookie for production domain
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        domain=".auraaluxury.com",
+        max_age=1800  # 30 minutes (same as token expiry)
+    )
+    
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
 
 @api_router.post("/auth/forgot-password")

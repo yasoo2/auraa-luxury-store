@@ -79,7 +79,7 @@ const TermsOfService = () => {
                     <li>الأسعار بالريال السعودي شاملة ضريبة القيمة المضافة</li>
                     <li>قد تتغير الأسعار دون إشعار مسبق</li>
                     <li>الدفع مطلوب وقت تقديم الطلب</li>
-                    <li>نقبل البطاقات الائتمانية والتحويل البنكي</li>
+                    <li>نقبل البطاقات الائتمانية والدفع الإلكتروني الآمن</li>
                   </ul>
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">إلغاء الطلبات</h3>
@@ -255,7 +255,7 @@ const TermsOfService = () => {
                     <li>Prices in Saudi Riyal including VAT</li>
                     <li>Prices may change without prior notice</li>
                     <li>Payment required at time of order</li>
-                    <li>We accept credit cards and bank transfer</li>
+                    <li>We accept credit cards and secure online payment</li>
                   </ul>
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">Order Cancellation</h3>

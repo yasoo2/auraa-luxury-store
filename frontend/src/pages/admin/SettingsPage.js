@@ -71,7 +71,6 @@ const SettingsPage = () => {
     payment_cod: false, // Disabled for dropshipping
     payment_stripe: false,
     payment_paypal: false,
-    payment_bank_transfer: true,
     
     // Shipping
     shipping_local_price: 25,
@@ -393,8 +392,7 @@ const SettingsPage = () => {
         <div className="space-y-3">
           {[
             { key: 'payment_stripe', label: isRTL ? 'ستريب (بطاقات ائتمانية)' : 'Stripe (Credit Cards)' },
-            { key: 'payment_paypal', label: isRTL ? 'باي بال' : 'PayPal' },
-            { key: 'payment_bank_transfer', label: isRTL ? 'تحويل بنكي' : 'Bank Transfer' }
+            { key: 'payment_paypal', label: isRTL ? 'باي بال' : 'PayPal' }
           ].map((payment) => (
             <label key={payment.key} className="flex items-center">
               <input

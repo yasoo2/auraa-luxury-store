@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -15,6 +16,8 @@ const API = `${BACKEND_URL}/api`;
 
 const ProfilePage = () => {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
   const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +89,7 @@ const ProfilePage = () => {
       );
       
       if (response.data.success) {
-        toast.success('تم تحديث الملف الشخصي بنجاح');
+        toast.success(isRTL ? 'تم تحديث الملف الشخصي بنجاح' : 'Profile updated successfully');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -105,7 +108,7 @@ const ProfilePage = () => {
       );
       
       if (response.data.success) {
-        toast.success('تم حفظ العنوان بنجاح');
+        toast.success(isRTL ? 'تم حفظ العنوان بنجاح' : 'Address saved successfully');
         setIsEditingAddress(false);
         // Update user context with new data
         window.location.reload(); // Simple reload to update user context
@@ -263,7 +266,7 @@ const ProfilePage = () => {
                         <div>
                           <p className="text-sm text-gray-600">طريقة الدفع:</p>
                           <p className="font-medium">
-                            {order.payment_method === 'card' ? 'بطاقة ائتمانية' : 'تحويل بنكي'}
+                            {order.payment_method === 'card' ? 'بطاقة ائتمانية' : 'دفع إلكتروني'}
                           </p>
                         </div>
                       </div>

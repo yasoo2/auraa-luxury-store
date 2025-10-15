@@ -10,6 +10,7 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -30,6 +31,7 @@ const AuthPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(''); // Clear previous errors
     
     try {
       let result;
@@ -48,11 +50,11 @@ const AuthPage = () => {
         }, 100);
       } else {
         console.log('Login failed:', result.error);
-        alert(result.error || 'حدث خطأ');
+        setError(result.error || 'حدث خطأ');
       }
     } catch (error) {
       console.error('Auth error:', error);
-      alert('حدث خطأ غير متوقع: ' + error.message);
+      setError('حدث خطأ غير متوقع: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -60,6 +62,7 @@ const AuthPage = () => {
 
   const switchMode = () => {
     setIsLogin(!isLogin);
+    setError(''); // Clear error when switching modes
     setFormData({
       email: '',
       password: '',
@@ -98,6 +101,13 @@ const AuthPage = () => {
                 {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى Auraa Luxury'}
               </p>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 animate-shake">
+                <p className="text-red-200 text-center text-sm font-medium">{error}</p>
+              </div>
+            )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">

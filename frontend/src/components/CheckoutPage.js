@@ -340,7 +340,6 @@ const CheckoutPage = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="card">💳 {isRTL ? 'بطاقة ائتمانية' : 'Credit Card'}</SelectItem>
-                      <SelectItem value="bank_transfer">🏦 {isRTL ? 'تحويل بنكي' : 'Bank Transfer'}</SelectItem>
                     </SelectContent>
                   </Select>
                   {formData.paymentMethod === 'card' && (

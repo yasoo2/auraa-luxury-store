@@ -51,19 +51,33 @@ const WishlistPage = () => {
     });
   };
 
-  const shareWishlist = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: isRTL ? 'قائمة المفضلة - Auraa Luxury' : 'My Wishlist - Auraa Luxury',
-        text: isRTL ? 
-          `تحقق من قائمة المفضلة الخاصة بي في Auraa Luxury - ${getWishlistCount()} منتج` :
-          `Check out my wishlist at Auraa Luxury - ${getWishlistCount()} items`,
-        url: window.location.href
-      });
-    } else {
-      // Fallback for browsers that don't support Web Share API
-      navigator.clipboard.writeText(window.location.href);
-      alert(isRTL ? 'تم نسخ الرابط' : 'Link copied to clipboard');
+  const shareWishlist = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: isRTL ? 'قائمة المفضلة - Auraa Luxury' : 'My Wishlist - Auraa Luxury',
+          text: isRTL ? 
+            `تحقق من قائمة المفضلة الخاصة بي في Auraa Luxury - ${getWishlistCount()} منتج` :
+            `Check out my wishlist at Auraa Luxury - ${getWishlistCount()} items`,
+          url: window.location.href
+        });
+      } else {
+        // Fallback for browsers that don't support Web Share API
+        await navigator.clipboard.writeText(window.location.href);
+        alert(isRTL ? 'تم نسخ الرابط إلى الحافظة ✓' : 'Link copied to clipboard ✓');
+      }
+    } catch (error) {
+      // User cancelled the share or error occurred
+      if (error.name !== 'AbortError') {
+        // Try clipboard fallback if share fails
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          alert(isRTL ? 'تم نسخ الرابط إلى الحافظة ✓' : 'Link copied to clipboard ✓');
+        } catch (clipboardError) {
+          console.error('Error sharing:', error);
+          alert(isRTL ? 'حدث خطأ أثناء المشاركة' : 'Error sharing wishlist');
+        }
+      }
     }
   };
 

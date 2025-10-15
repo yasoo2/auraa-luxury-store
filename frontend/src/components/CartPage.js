@@ -142,10 +142,10 @@ const CartPage = () => {
       await axios.delete(`${API}/cart/remove/${productId}`);
       await fetchCart(); // Refresh cart
       await fetchCartCount(); // Update cart count in navbar
-      toast.success('تم إزالة المنتج من السلة');
+      toast.success(isRTL ? 'تم إزالة المنتج من السلة' : 'Item removed from cart');
     } catch (error) {
       console.error('Error removing item:', error);
-      toast.error('فشل في إزالة المنتج');
+      toast.error(isRTL ? 'فشل في إزالة المنتج' : 'Failed to remove item');
     }
   };
 

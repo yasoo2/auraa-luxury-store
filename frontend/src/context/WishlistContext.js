@@ -17,6 +17,8 @@ export const useWishlist = () => {
 };
 
 export const WishlistProvider = ({ children }) => {
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(false);
 

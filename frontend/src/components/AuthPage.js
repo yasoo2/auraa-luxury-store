@@ -81,6 +81,46 @@ const AuthPage = () => {
     });
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const redirectUrl = `${window.location.origin}/auth/oauth-callback`;
+      const response = await axios.get(`${BACKEND_URL}/api/auth/oauth/google/url`, {
+        params: { redirect_url: redirectUrl }
+      });
+      
+      // Save provider info
+      sessionStorage.setItem('oauth_provider', 'google');
+      
+      // Redirect to Google OAuth
+      window.location.href = response.data.url;
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      setError(getAuthTranslation('oauth_session_invalid', language));
+      setLoading(false);
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    setLoading(true);
+    try {
+      const redirectUrl = `${window.location.origin}/auth/oauth-callback`;
+      const response = await axios.get(`${BACKEND_URL}/api/auth/oauth/facebook/url`, {
+        params: { redirect_url: redirectUrl }
+      });
+      
+      // Save provider info
+      sessionStorage.setItem('oauth_provider', 'facebook');
+      
+      // Redirect to Facebook OAuth
+      window.location.href = response.data.url;
+    } catch (error) {
+      console.error('Facebook OAuth error:', error);
+      setError(getAuthTranslation('oauth_session_invalid', language));
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Luxury Background */}

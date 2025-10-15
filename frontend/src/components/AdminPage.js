@@ -105,7 +105,7 @@ const AdminPage = () => {
     setSavingIntegrations(true);
     try {
       await axios.post(`${API}/admin/integrations`, integrations);
-      toast.success('تم حفظ إعدادات التكامل بنجاح');
+      toast.success(isRTL ? 'تم حفظ إعدادات التكامل بنجاح' : 'Integration settings saved successfully');
       fetchIntegrations();
     } catch (error) {
       console.error('Error saving integrations:', error);

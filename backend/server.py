@@ -262,8 +262,18 @@ async def login(credentials: UserLogin, response: Response):
         ]
     })
     
-    if not user or not verify_password(credentials.password, user["password"]):
-        raise HTTPException(status_code=401, detail="بيانات الدخول غير صحيحة")
+    # Specific error messages
+    if not user:
+        raise HTTPException(
+            status_code=404, 
+            detail="account_not_found"  # Frontend will translate
+        )
+    
+    if not verify_password(credentials.password, user["password"]):
+        raise HTTPException(
+            status_code=401, 
+            detail="wrong_password"  # Frontend will translate
+        )
     
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})

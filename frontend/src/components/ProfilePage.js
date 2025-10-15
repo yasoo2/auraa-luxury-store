@@ -105,7 +105,7 @@ const ProfilePage = () => {
       );
       
       if (response.data.success) {
-        toast.success('تم حفظ العنوان بنجاح');
+        toast.success(isRTL ? 'تم حفظ العنوان بنجاح' : 'Address saved successfully');
         setIsEditingAddress(false);
         // Update user context with new data
         window.location.reload(); // Simple reload to update user context

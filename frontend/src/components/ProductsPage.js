@@ -297,12 +297,18 @@ const ProductsPage = () => {
                     ? "product-card overflow-hidden group" 
                     : "product-card overflow-hidden group flex flex-row"
                   } data-testid={`product-${product.id}`}>
-                    <div className="relative overflow-hidden">
+                    <div className={viewMode === 'grid' 
+                      ? "relative overflow-hidden" 
+                      : "relative overflow-hidden w-48 flex-shrink-0"
+                    }>
                       <Link to={`/product/${product.id}`}>
                         <picture>
                           <source srcSet={`${product.images[0]}?format=avif`} type="image/avif" />
                           <source srcSet={`${product.images[0]}?format=webp`} type="image/webp" />
-                          <img src={product.images[0]} alt={getLocalizedName(product)} className="w-full h-48 sm:h-56 lg:h-64 object-cover group-hover:scale-110 transition-transform duration-500" />
+                          <img src={product.images[0]} alt={getLocalizedName(product)} className={viewMode === 'grid' 
+                            ? "w-full h-48 sm:h-56 lg:h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
+                            : "w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                          } />
                         </picture>
                       </Link>
                       {product.discount_percentage && (

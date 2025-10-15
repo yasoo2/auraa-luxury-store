@@ -288,9 +288,15 @@ const ProductsPage = () => {
                 <Button onClick={() => { setFilters({ category: '', search: '', minPrice: '', maxPrice: '', sortBy: 'newest' }); setSearchParams({}); }}>{isRTL ? 'مسح المرشحات' : 'Clear filters'}</Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+              <div className={viewMode === 'grid' 
+                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6" 
+                : "flex flex-col space-y-4"
+              }>
                 {products.map((product) => (
-                  <Card key={product.id} className="product-card overflow-hidden group" data-testid={`product-${product.id}`}>
+                  <Card key={product.id} className={viewMode === 'grid' 
+                    ? "product-card overflow-hidden group" 
+                    : "product-card overflow-hidden group flex flex-row"
+                  } data-testid={`product-${product.id}`}>
                     <div className="relative overflow-hidden">
                       <Link to={`/product/${product.id}`}>
                         <picture>

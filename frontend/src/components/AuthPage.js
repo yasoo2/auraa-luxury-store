@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { getAuthTranslation } from '../translations/auth';
+import axios from 'axios';
 
 const AuthPage = () => {
   const { login, register } = useAuth();

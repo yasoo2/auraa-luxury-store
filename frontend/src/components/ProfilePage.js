@@ -263,7 +263,7 @@ const ProfilePage = () => {
                         <div>
                           <p className="text-sm text-gray-600">طريقة الدفع:</p>
                           <p className="font-medium">
-                            {order.payment_method === 'card' ? 'بطاقة ائتمانية' : 'تحويل بنكي'}
+                            {order.payment_method === 'card' ? 'بطاقة ائتمانية' : 'دفع إلكتروني'}
                           </p>
                         </div>
                       </div>

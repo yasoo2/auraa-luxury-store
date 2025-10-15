@@ -8,8 +8,10 @@ import axios from 'axios';
 
 const AuthPage = () => {
   const { login, register } = useAuth();
+  const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);

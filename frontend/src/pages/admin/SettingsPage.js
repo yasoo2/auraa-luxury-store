@@ -71,7 +71,6 @@ const SettingsPage = () => {
     payment_cod: false, // Disabled for dropshipping
     payment_stripe: false,
     payment_paypal: false,
-    payment_bank_transfer: true,
     
     // Shipping
     shipping_local_price: 25,

@@ -86,7 +86,7 @@ const ProfilePage = () => {
       );
       
       if (response.data.success) {
-        toast.success('تم تحديث الملف الشخصي بنجاح');
+        toast.success(isRTL ? 'تم تحديث الملف الشخصي بنجاح' : 'Profile updated successfully');
       }
     } catch (error) {
       console.error('Error updating profile:', error);

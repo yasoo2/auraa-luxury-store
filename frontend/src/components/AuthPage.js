@@ -62,6 +62,7 @@ const AuthPage = () => {
 
   const switchMode = () => {
     setIsLogin(!isLogin);
+    setError(''); // Clear error when switching modes
     setFormData({
       email: '',
       password: '',

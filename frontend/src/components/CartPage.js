@@ -130,10 +130,10 @@ const CartPage = () => {
       }
       await fetchCart(); // Refresh cart
       await fetchCartCount(); // Update cart count in navbar
-      toast.success('تم تحديث السلة');
+      toast.success(isRTL ? 'تم تحديث السلة' : 'Cart updated');
     } catch (error) {
       console.error('Error updating quantity:', error);
-      toast.error('فشل في تحديث الكمية');
+      toast.error(isRTL ? 'فشل في تحديث الكمية' : 'Failed to update quantity');
     }
   };
 

@@ -16,6 +16,8 @@ const API = `${BACKEND_URL}/api`;
 
 const ProfilePage = () => {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
   const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);

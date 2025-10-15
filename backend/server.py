@@ -201,9 +201,13 @@ async def root():
 # Auth routes
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate):
+    # Log incoming data for debugging
+    logger.info(f"Registration attempt for email: {user_data.email}")
+    
     # Check if user exists
     existing_user = await db.users.find_one({"email": user_data.email})
     if existing_user:
+        logger.warning(f"Email already registered: {user_data.email}")
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Create user

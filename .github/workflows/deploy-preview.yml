@@ -33,7 +33,7 @@ jobs:
           cd frontend
           yarn build
         env:
-          REACT_APP_BACKEND_URL: https://ali-sync.preview.emergentagent.com
+          REACT_APP_BACKEND_URL: https://luxury-backend.preview.emergentagent.com
 
       - name: Deploy Preview to Vercel
         uses: amondnet/vercel-action@v25

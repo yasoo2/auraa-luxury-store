@@ -147,18 +147,28 @@ Proxy status: Proxied (☁️ برتقالي)
 TTL: Auto
 ```
 
-### 3.3 MX Records (البريد الإلكتروني)
+### MX Records (البريد الإلكتروني)
 
 **⚠️ مهم جداً: MX Records يجب أن تكون DNS Only (رمادي)**
 
+**Mailgun MX Records:**
 ```
 Type: MX
 Name: @
-Mail server: smtp.google.com
-Priority: 1
+Mail server: mxa.mailgun.org
+Priority: 10
+Proxy status: DNS only (☁️ رمادي)
+TTL: Auto
+
+Type: MX
+Name: @
+Mail server: mxb.mailgun.org
+Priority: 10
 Proxy status: DNS only (☁️ رمادي)
 TTL: Auto
 ```
+
+**ملاحظة:** نستخدم Mailgun لاستقبال البريد، Gmail SMTP للإرسال.
 
 ### 3.4 TXT Records
 
@@ -166,15 +176,15 @@ TTL: Auto
 ```
 Type: TXT
 Name: @
-Content: v=spf1 include:_spf.google.com ~all
+Content: v=spf1 include:mailgun.org ~all
 TTL: Auto
 ```
 
-**DKIM:**
+**DKIM (من Mailgun Dashboard):**
 ```
 Type: TXT
-Name: google._domainkey
-Content: [من Google Admin Console]
+Name: [domain key من Mailgun]
+Content: [DKIM value من Mailgun Dashboard]
 TTL: Auto
 ```
 
@@ -182,9 +192,11 @@ TTL: Auto
 ```
 Type: TXT
 Name: _dmarc
-Content: v=DMARC1; p=quarantine; rua=mailto:admin@auraaluxury.com
+Content: v=DMARC1; p=none; rua=mailto:info@auraaluxury.com
 TTL: Auto
 ```
+
+**لماذا p=none؟** لأننا نستخدم Gmail SMTP للإرسال و Mailgun للاستقبال. بعد المراقبة يمكن تغييره إلى `p=quarantine`.
 
 **Google Site Verification:**
 ```

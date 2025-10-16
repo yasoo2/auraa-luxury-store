@@ -149,10 +149,13 @@ const AuthPage = () => {
               </div>
               <h1 className="font-display text-3xl font-bold text-white animate-text-sparkle mb-2">Auraa Luxury</h1>
               <h2 className="text-xl font-semibold text-amber-200 mb-2 animate-fade-in-up" data-testid="auth-title">
-                {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
+                {getAuthTranslation(isLogin ? 'login' : 'register', language)}
               </h2>
               <p className="text-white/80 animate-slide-in-right">
-                {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى Auraa Luxury'}
+                {isLogin 
+                  ? (language === 'ar' ? 'أهلاً بعودتك!' : 'Welcome back!') 
+                  : (language === 'ar' ? 'انضم إلى Auraa Luxury' : 'Join Auraa Luxury')
+                }
               </p>
             </div>
 

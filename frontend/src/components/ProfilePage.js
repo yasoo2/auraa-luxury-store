@@ -93,7 +93,7 @@ const ProfilePage = () => {
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('فشل في تحديث الملف الشخصي');
+      toast.error(isRTL ? 'فشل في تحديث الملف الشخصي' : 'Failed to update profile');
     }
   };
 

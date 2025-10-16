@@ -269,6 +269,7 @@ async def register(user_data: UserCreate, response: Response):
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin, response: Response):
     logger.info(f"🔐 Login attempt for identifier: {credentials.identifier}")
+    logger.info(f"🔐 Password length: {len(credentials.password)}, repr: {repr(credentials.password[:20] if len(credentials.password) > 20 else credentials.password)}")
     
     # First check if super admin
     super_admin = await db.super_admins.find_one({
@@ -280,6 +281,7 @@ async def login(credentials: UserLogin, response: Response):
     
     if super_admin:
         logger.info(f"✅ Super admin authenticated, verifying password...")
+        logger.info(f"🔑 Hash in DB (first 30 chars): {super_admin['password_hash'][:30]}")
         # Verify super admin password
         password_valid = verify_password(credentials.password, super_admin["password_hash"])
         logger.info(f"🔑 Password verification result: {password_valid}")

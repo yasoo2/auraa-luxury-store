@@ -269,15 +269,24 @@ async def register(user_data: UserCreate, response: Response):
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin, response: Response):
+    logger.info(f"🔐 Login attempt for identifier: {credentials.identifier}")
+    
     # First check if super admin
     super_admin = await db.super_admins.find_one({
         "identifier": credentials.identifier,
         "is_active": True
     })
     
+    logger.info(f"🔍 Super admin found: {super_admin is not None}")
+    
     if super_admin:
+        logger.info(f"✅ Super admin authenticated, verifying password...")
         # Verify super admin password
-        if not verify_password(credentials.password, super_admin["password_hash"]):
+        password_valid = verify_password(credentials.password, super_admin["password_hash"])
+        logger.info(f"🔑 Password verification result: {password_valid}")
+        
+        if not password_valid:
+            logger.warning(f"❌ Wrong password for super admin: {credentials.identifier}")
             raise HTTPException(
                 status_code=401,
                 detail="wrong_password"

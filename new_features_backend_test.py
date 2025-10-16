@@ -15,7 +15,7 @@ import threading
 import queue
 
 class NewFeaturesAPITester:
-    def __init__(self, base_url="https://luxury-backend.preview.emergentagent.com"):
+    def __init__(self, base_url="https://eshop-multichannel.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.admin_token = None

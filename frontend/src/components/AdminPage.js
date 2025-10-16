@@ -63,7 +63,7 @@ const AdminPage = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('فشل في تحميل المنتجات');
+      toast.error(isRTL ? 'فشل في تحميل المنتجات' : 'Failed to load products');
       setLoading(false);
     }
   };

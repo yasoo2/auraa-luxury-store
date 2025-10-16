@@ -51,7 +51,7 @@ const ProfilePage = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('فشل في تحميل الطلبات');
+      toast.error(isRTL ? 'فشل في تحميل الطلبات' : 'Failed to load orders');
       setLoading(false);
     }
   };

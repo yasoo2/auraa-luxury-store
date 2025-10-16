@@ -63,7 +63,7 @@ const AdminPage = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('فشل في تحميل المنتجات');
+      toast.error(isRTL ? 'فشل في تحميل المنتجات' : 'Failed to load products');
       setLoading(false);
     }
   };
@@ -112,7 +112,7 @@ const AdminPage = () => {
       fetchIntegrations();
     } catch (error) {
       console.error('Error saving integrations:', error);
-      toast.error('فشل في حفظ إعدادات التكامل');
+      toast.error(isRTL ? 'فشل في حفظ إعدادات التكامل' : 'Failed to save integration settings');
     } finally {
       setSavingIntegrations(false);
     }
@@ -181,16 +181,16 @@ const AdminPage = () => {
       fetchProducts();
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('فشل في إضافة المنتج');
+      toast.error(isRTL ? 'فشل في إضافة المنتج' : 'Failed to add product');
     }
   };
 
   const deleteProduct = async (productId) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+    if (window.confirm(isRTL ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Are you sure you want to delete this product?')) {
       try {
-        toast.info('هذه الميزة غير متاحة في النسخة التجريبية');
+        toast.info(isRTL ? 'هذه الميزة غير متاحة في النسخة التجريبية' : 'This feature is not available in demo version');
       } catch (error) {
-        toast.error('فشل في حذف المنتج');
+        toast.error(isRTL ? 'فشل في حذف المنتج' : 'Failed to delete product');
       }
     }
   };

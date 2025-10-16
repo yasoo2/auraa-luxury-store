@@ -51,7 +51,7 @@ const ProfilePage = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('فشل في تحميل الطلبات');
+      toast.error(isRTL ? 'فشل في تحميل الطلبات' : 'Failed to load orders');
       setLoading(false);
     }
   };
@@ -93,7 +93,7 @@ const ProfilePage = () => {
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('فشل في تحديث الملف الشخصي');
+      toast.error(isRTL ? 'فشل في تحديث الملف الشخصي' : 'Failed to update profile');
     }
   };
 
@@ -115,7 +115,7 @@ const ProfilePage = () => {
       }
     } catch (error) {
       console.error('Error saving address:', error);
-      toast.error('فشل في حفظ العنوان');
+      toast.error(isRTL ? 'فشل في حفظ العنوان' : 'Failed to save address');
     }
   };
 

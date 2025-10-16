@@ -149,10 +149,13 @@ const AuthPage = () => {
               </div>
               <h1 className="font-display text-3xl font-bold text-white animate-text-sparkle mb-2">Auraa Luxury</h1>
               <h2 className="text-xl font-semibold text-amber-200 mb-2 animate-fade-in-up" data-testid="auth-title">
-                {isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد'}
+                {getAuthTranslation(isLogin ? 'login' : 'register', language)}
               </h2>
               <p className="text-white/80 animate-slide-in-right">
-                {isLogin ? 'أهلاً بعودتك!' : 'انضم إلى Auraa Luxury'}
+                {isLogin 
+                  ? (language === 'ar' ? 'أهلاً بعودتك!' : 'Welcome back!') 
+                  : (language === 'ar' ? 'انضم إلى Auraa Luxury' : 'Join Auraa Luxury')
+                }
               </p>
             </div>
 
@@ -212,7 +215,7 @@ const AuthPage = () => {
                   }`}
                 >
                   <Mail className="inline h-4 w-4 mr-2" />
-                  {language === 'ar' ? 'بريد إلكتروني' : 'Email'}
+                  {getAuthTranslation('email', language)}
                 </button>
                 <button
                   type="button"
@@ -224,7 +227,7 @@ const AuthPage = () => {
                   }`}
                 >
                   <Phone className="inline h-4 w-4 mr-2" />
-                  {language === 'ar' ? 'رقم الهاتف' : 'Phone'}
+                  {getAuthTranslation('phone', language)}
                 </button>
               </div>
             )}
@@ -238,7 +241,7 @@ const AuthPage = () => {
                     <input
                       type="text"
                       name="first_name"
-                      placeholder="الاسم الأول"
+                      placeholder={getAuthTranslation('first_name', language)}
                       value={formData.first_name}
                       onChange={handleInputChange}
                       className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
@@ -251,7 +254,7 @@ const AuthPage = () => {
                     <input
                       type="text"
                       name="last_name"
-                      placeholder="الاسم الأخير"
+                      placeholder={getAuthTranslation('last_name', language)}
                       value={formData.last_name}
                       onChange={handleInputChange}
                       className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
@@ -269,7 +272,7 @@ const AuthPage = () => {
                   <input
                     type="email"
                     name="email"
-                    placeholder={language === 'ar' ? "البريد الإلكتروني" : "Email Address"}
+                    placeholder={getAuthTranslation('email', language)}
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
@@ -309,7 +312,7 @@ const AuthPage = () => {
                     <input
                       type="email"
                       name="email"
-                      placeholder={language === 'ar' ? "البريد الإلكتروني" : "Email Address"}
+                      placeholder={getAuthTranslation('email', language)}
                       value={formData.email}
                       onChange={handleInputChange}
                       className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
@@ -340,28 +343,12 @@ const AuthPage = () => {
                 </>
               )}
 
-              {!isLogin && (
-                <div className="relative animate-fade-in-up">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
-                  <input
-                    type="tel"
-                    name="phone"
-                    placeholder="رقم الجوال"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
-                    required
-                    data-testid="phone-input"
-                  />
-                </div>
-              )}
-
               <div className="relative animate-slide-in-right">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
-                  placeholder="كلمة المرور"
+                  placeholder={getAuthTranslation('password', language)}
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 pr-12 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
@@ -384,7 +371,7 @@ const AuthPage = () => {
                     to="/forgot-password" 
                     className="text-sm text-amber-300 hover:text-amber-200 transition-colors duration-200"
                   >
-                    نسيت كلمة المرور؟
+                    {getAuthTranslation('forgot_password', language)}
                   </Link>
                 </div>
               )}
@@ -398,10 +385,10 @@ const AuthPage = () => {
                 {loading ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span className="ml-2">جاري...</span>
+                    <span className="ml-2">{language === 'ar' ? 'جاري...' : 'Loading...'}</span>
                   </div>
                 ) : (
-                  isLogin ? 'تسجيل الدخول' : 'إنشاء حساب'
+                  getAuthTranslation(isLogin ? 'login' : 'register', language)
                 )}
               </button>
             </form>
@@ -409,7 +396,10 @@ const AuthPage = () => {
             {/* Switch Mode */}
             <div className="mt-6 text-center animate-fade-in-up">
               <p className="text-white/80">
-                {isLogin ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟'}
+                {isLogin 
+                  ? (language === 'ar' ? 'ليس لديك حساب؟' : "Don't have an account?") 
+                  : (language === 'ar' ? 'لديك حساب بالفعل؟' : 'Already have an account?')
+                }
                 {' '}
                 <button
                   type="button"
@@ -417,7 +407,7 @@ const AuthPage = () => {
                   className="text-amber-300 hover:text-amber-200 font-medium underline transition-colors duration-200"
                   data-testid="switch-auth-mode"
                 >
-                  {isLogin ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+                  {getAuthTranslation(isLogin ? 'register' : 'login', language)}
                 </button>
               </p>
             </div>

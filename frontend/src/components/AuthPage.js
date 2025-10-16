@@ -364,7 +364,7 @@ const AuthPage = () => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
-                  placeholder="كلمة المرور"
+                  placeholder={getAuthTranslation('password', language)}
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 pr-12 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"

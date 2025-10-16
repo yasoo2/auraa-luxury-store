@@ -4,6 +4,8 @@ import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getAuthTranslation } from '../translations/auth';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import axios from 'axios';
 
 const AuthPage = () => {

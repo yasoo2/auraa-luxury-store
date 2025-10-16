@@ -343,22 +343,6 @@ const AuthPage = () => {
                 </>
               )}
 
-              {!isLogin && (
-                <div className="relative animate-fade-in-up">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
-                  <input
-                    type="tel"
-                    name="phone"
-                    placeholder={getAuthTranslation('phone', language)}
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
-                    required
-                    data-testid="phone-input"
-                  />
-                </div>
-              )}
-
               <div className="relative animate-slide-in-right">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
                 <input

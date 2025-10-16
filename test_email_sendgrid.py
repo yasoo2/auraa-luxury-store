@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 load_dotenv(backend_path / '.env')
 
 # Import email service
-from services.email_service import send_email, send_welcome_email, send_order_confirmation_email
+from services.email_service import send_email, send_welcome_email, send_order_confirmation
 
 def test_simple_email():
     """Test simple email"""

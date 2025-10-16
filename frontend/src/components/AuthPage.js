@@ -349,7 +349,7 @@ const AuthPage = () => {
                   <input
                     type="tel"
                     name="phone"
-                    placeholder="رقم الجوال"
+                    placeholder={getAuthTranslation('phone', language)}
                     value={formData.phone}
                     onChange={handleInputChange}
                     className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"

@@ -186,11 +186,11 @@ const AdminPage = () => {
   };
 
   const deleteProduct = async (productId) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+    if (window.confirm(isRTL ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Are you sure you want to delete this product?')) {
       try {
-        toast.info('هذه الميزة غير متاحة في النسخة التجريبية');
+        toast.info(isRTL ? 'هذه الميزة غير متاحة في النسخة التجريبية' : 'This feature is not available in demo version');
       } catch (error) {
-        toast.error('فشل في حذف المنتج');
+        toast.error(isRTL ? 'فشل في حذف المنتج' : 'Failed to delete product');
       }
     }
   };

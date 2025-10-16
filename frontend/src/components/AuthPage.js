@@ -199,6 +199,36 @@ const AuthPage = () => {
               </div>
             )}
 
+            {/* Login Method Toggle (only for login) */}
+            {isLogin && (
+              <div className="flex space-x-2 bg-white/10 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setLoginMethod('email')}
+                  className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
+                    loginMethod === 'email'
+                      ? 'bg-amber-500 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  <Mail className="inline h-4 w-4 mr-2" />
+                  {language === 'ar' ? 'بريد إلكتروني' : 'Email'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginMethod('phone')}
+                  className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
+                    loginMethod === 'phone'
+                      ? 'bg-amber-500 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  <Phone className="inline h-4 w-4 mr-2" />
+                  {language === 'ar' ? 'رقم الهاتف' : 'Phone'}
+                </button>
+              </div>
+            )}
+
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
               {!isLogin && (

@@ -1,0 +1,40 @@
+name: Auto Merge to Main
+
+on:
+  push:
+    branches:
+      - conflict_021025_2043
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+      
+      - name: Merge to main
+        run: |
+          echo "🔄 Starting auto-merge from conflict_021025_2043 to main..."
+          
+          # Switch to main branch
+          git checkout main
+          git pull origin main
+          
+          # Merge conflict_021025_2043 into main
+          git merge origin/conflict_021025_2043 --no-ff -m "Auto-merge: conflict_021025_2043 → main [skip ci]"
+          
+          # Push to main
+          git push origin main
+          
+          echo "✅ Successfully merged conflict_021025_2043 into main"
+          echo "🚀 Vercel will automatically deploy the changes"
+

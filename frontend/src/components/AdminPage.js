@@ -112,7 +112,7 @@ const AdminPage = () => {
       fetchIntegrations();
     } catch (error) {
       console.error('Error saving integrations:', error);
-      toast.error('فشل في حفظ إعدادات التكامل');
+      toast.error(isRTL ? 'فشل في حفظ إعدادات التكامل' : 'Failed to save integration settings');
     } finally {
       setSavingIntegrations(false);
     }

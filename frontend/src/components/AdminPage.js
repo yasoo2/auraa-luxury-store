@@ -181,7 +181,7 @@ const AdminPage = () => {
       fetchProducts();
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('فشل في إضافة المنتج');
+      toast.error(isRTL ? 'فشل في إضافة المنتج' : 'Failed to add product');
     }
   };
 

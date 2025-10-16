@@ -412,7 +412,10 @@ const AuthPage = () => {
             {/* Switch Mode */}
             <div className="mt-6 text-center animate-fade-in-up">
               <p className="text-white/80">
-                {isLogin ? 'ليس لديك حساب؟' : 'لديك حساب بالفعل؟'}
+                {isLogin 
+                  ? (language === 'ar' ? 'ليس لديك حساب؟' : "Don't have an account?") 
+                  : (language === 'ar' ? 'لديك حساب بالفعل؟' : 'Already have an account?')
+                }
                 {' '}
                 <button
                   type="button"
@@ -420,7 +423,7 @@ const AuthPage = () => {
                   className="text-amber-300 hover:text-amber-200 font-medium underline transition-colors duration-200"
                   data-testid="switch-auth-mode"
                 >
-                  {isLogin ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+                  {getAuthTranslation(isLogin ? 'register' : 'login', language)}
                 </button>
               </p>
             </div>

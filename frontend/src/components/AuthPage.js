@@ -13,6 +13,7 @@ const AuthPage = () => {
   const location = useLocation();
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
   const [isLogin, setIsLogin] = useState(true);
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

@@ -115,7 +115,7 @@ const ProfilePage = () => {
       }
     } catch (error) {
       console.error('Error saving address:', error);
-      toast.error('فشل في حفظ العنوان');
+      toast.error(isRTL ? 'فشل في حفظ العنوان' : 'Failed to save address');
     }
   };
 

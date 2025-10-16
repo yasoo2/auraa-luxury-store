@@ -215,7 +215,7 @@ const AuthPage = () => {
                   }`}
                 >
                   <Mail className="inline h-4 w-4 mr-2" />
-                  {language === 'ar' ? 'بريد إلكتروني' : 'Email'}
+                  {getAuthTranslation('email', language)}
                 </button>
                 <button
                   type="button"
@@ -227,7 +227,7 @@ const AuthPage = () => {
                   }`}
                 >
                   <Phone className="inline h-4 w-4 mr-2" />
-                  {language === 'ar' ? 'رقم الهاتف' : 'Phone'}
+                  {getAuthTranslation('phone', language)}
                 </button>
               </div>
             )}

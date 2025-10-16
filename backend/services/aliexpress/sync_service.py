@@ -312,6 +312,20 @@ class AliExpressSyncService:
                     
                     if updated.get('hidden'):
                         stats['products_hidden'] += 1
+
+    async def sync_products_batch(self, product_ids: List[str]) -> Dict[str, Any]:
+        """
+        Sync a batch of products by their IDs
+        Delegates to ProductSyncService
+        
+        Args:
+            product_ids: List of AliExpress product IDs
+            
+        Returns:
+            Dict with sync results
+        """
+        return await self.product_sync.sync_products_batch(product_ids)
+
                     elif updated.get('restored'):
                         stats['products_restored'] += 1
                     elif updated.get('updated'):

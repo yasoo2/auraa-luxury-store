@@ -1042,14 +1042,11 @@ async def create_order(
     
     # Send order confirmation email
     try:
-        email_sent = send_order_confirmation(
-            to_email=current_user.email,
-            customer_name=f"{current_user.first_name} {current_user.last_name}",
-            order_number=order.order_number,
-            order_total=order.total_amount,
-            currency=order.currency,
-            items=cart["items"],
-            shipping_address=order_data.shipping_address
+        email_sent = send_order_confirmation_email(
+            user_email=current_user.email,
+            user_name=f"{current_user.first_name} {current_user.last_name}",
+            order_id=order.order_number,
+            total_amount=order.total_amount
         )
         if email_sent:
             logger.info(f"Order confirmation email sent for {order.order_number}")
@@ -1509,7 +1506,7 @@ from services.scheduler_service import get_scheduler_service
 from services.product_sync_service import get_product_sync_service
 from services.aliexpress_service import get_aliexpress_service
 from services.google_analytics import track_purchase as ga4_track_purchase
-from services.email_service import send_order_confirmation, send_welcome_email
+from services.email_service import send_order_confirmation_email, send_welcome_email
 
 # Auto-Update Services Initialization
 currency_service = None

@@ -10,6 +10,11 @@ export const authTranslations = {
     password: 'كلمة المرور',
     first_name: 'الاسم الأول',
     last_name: 'الاسم الأخير',
+    welcome_back: 'أهلاً بعودتك!',
+    join_auraa: 'انضم إلى Auraa Luxury',
+    no_account: 'ليس لديك حساب؟',
+    have_account: 'لديك حساب بالفعل؟',
+    loading: 'جاري...',
     
     // OAuth
     continue_with_google: 'متابعة مع جوجل',

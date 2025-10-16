@@ -19,6 +19,7 @@ import io
 from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
+from passlib.context import CryptContext
 from enum import Enum
 
 ROOT_DIR = Path(__file__).parent
@@ -36,6 +37,7 @@ api_router = APIRouter(prefix="/api")
 # Security
 security = HTTPBearer()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key-change-in-production')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

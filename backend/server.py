@@ -35,8 +35,7 @@ api_router = APIRouter(prefix="/api")
 
 # Security
 security = HTTPBearer()
-# Password hashing is now done directly with bcrypt (see verify_password and get_password_hash functions)
-SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'auraa-luxury-secret-key-2024')
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -3847,7 +3846,12 @@ async def generate_sitemap():
         raise HTTPException(status_code=500, detail="Failed to generate sitemap")
 
 # Mount static files
-app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
+import os
+static_dir = "/app/backend/static"
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+else:
+    logger.warning(f"Static directory {static_dir} does not exist, skipping mount")
 
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

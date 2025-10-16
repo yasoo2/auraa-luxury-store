@@ -387,7 +387,7 @@ const AuthPage = () => {
                     to="/forgot-password" 
                     className="text-sm text-amber-300 hover:text-amber-200 transition-colors duration-200"
                   >
-                    نسيت كلمة المرور؟
+                    {getAuthTranslation('forgot_password', language)}
                   </Link>
                 </div>
               )}

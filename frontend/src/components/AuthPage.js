@@ -241,7 +241,7 @@ const AuthPage = () => {
                     <input
                       type="text"
                       name="first_name"
-                      placeholder="الاسم الأول"
+                      placeholder={getAuthTranslation('first_name', language)}
                       value={formData.first_name}
                       onChange={handleInputChange}
                       className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"

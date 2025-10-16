@@ -135,10 +135,11 @@ def test_simple_email():
         success = send_order_confirmation(
             to_email=test_email,
             customer_name="Test User",
-            order_id=test_order["id"],
+            order_number=test_order["id"],
             order_total=test_order["total"],
+            currency="SAR",
             items=test_order["items"],
-            currency="SAR"
+            shipping_address=test_order["shipping_address"]
         )
         
         if success:

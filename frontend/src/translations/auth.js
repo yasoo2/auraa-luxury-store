@@ -92,6 +92,11 @@ export const authTranslations = {
     password: 'Password',
     first_name: 'First Name',
     last_name: 'Last Name',
+    welcome_back: 'Welcome back!',
+    join_auraa: 'Join Auraa Luxury',
+    no_account: "Don't have an account?",
+    have_account: 'Already have an account?',
+    loading: 'Loading...',
     
     // OAuth
     continue_with_google: 'Continue with Google',

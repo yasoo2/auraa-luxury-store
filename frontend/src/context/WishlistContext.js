@@ -67,7 +67,7 @@ export const WishlistProvider = ({ children }) => {
 
   const addToWishlist = async (product) => {
     if (isInWishlist(product.id)) {
-      toast.info('المنتج موجود بالفعل في المفضلة');
+      toast.info(isRTL ? 'المنتج موجود بالفعل في المفضلة' : 'Product already in wishlist');
       return;
     }
 

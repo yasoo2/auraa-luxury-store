@@ -114,7 +114,7 @@ const CartPage = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching cart:', error);
-      toast.error('فشل في تحميل السلة');
+      toast.error(isRTL ? 'فشل في تحميل السلة' : 'Failed to load cart');
       setLoading(false);
     }
   };

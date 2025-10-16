@@ -4,6 +4,8 @@ import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getAuthTranslation } from '../translations/auth';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 import axios from 'axios';
 
 const AuthPage = () => {
@@ -13,6 +15,7 @@ const AuthPage = () => {
   const location = useLocation();
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
   const [isLogin, setIsLogin] = useState(true);
+  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,7 +44,9 @@ const AuthPage = () => {
     try {
       let result;
       if (isLogin) {
-        result = await login(formData.email, formData.password);
+        // Use email or phone based on login method
+        const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
+        result = await login(identifier, formData.password);
       } else {
         result = await register(formData);
       }
@@ -194,6 +199,36 @@ const AuthPage = () => {
               </div>
             )}
 
+            {/* Login Method Toggle (only for login) */}
+            {isLogin && (
+              <div className="flex space-x-2 bg-white/10 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setLoginMethod('email')}
+                  className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
+                    loginMethod === 'email'
+                      ? 'bg-amber-500 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  <Mail className="inline h-4 w-4 mr-2" />
+                  {language === 'ar' ? 'بريد إلكتروني' : 'Email'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLoginMethod('phone')}
+                  className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
+                    loginMethod === 'phone'
+                      ? 'bg-amber-500 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  <Phone className="inline h-4 w-4 mr-2" />
+                  {language === 'ar' ? 'رقم الهاتف' : 'Phone'}
+                </button>
+              </div>
+            )}
+
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
               {!isLogin && (
@@ -227,19 +262,83 @@ const AuthPage = () => {
                 </div>
               )}
 
-              <div className="relative animate-slide-in-left">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
-                <input
-                  type={isLogin ? "text" : "email"}
-                  name="email"
-                  placeholder={isLogin ? "البريد الإلكتروني أو رقم الهاتف" : "البريد الإلكتروني"}
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
-                  required
-                  data-testid="email-input"
-                />
-              </div>
+              {/* Email or Phone Input based on loginMethod */}
+              {isLogin && loginMethod === 'email' && (
+                <div className="relative animate-slide-in-left">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder={language === 'ar' ? "البريد الإلكتروني" : "Email Address"}
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                    required
+                    data-testid="email-input"
+                  />
+                </div>
+              )}
+
+              {isLogin && loginMethod === 'phone' && (
+                <div className="animate-slide-in-left">
+                  <PhoneInput
+                    country={'sa'}
+                    value={formData.phone}
+                    onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
+                    inputProps={{
+                      name: 'phone',
+                      required: true,
+                      className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
+                    }}
+                    containerClass="phone-input-container"
+                    buttonClass="phone-input-button"
+                    dropdownClass="phone-input-dropdown"
+                    searchClass="phone-input-search"
+                    enableSearch={true}
+                    searchPlaceholder={language === 'ar' ? "ابحث عن بلد..." : "Search country..."}
+                    inputClass="phone-input-field"
+                  />
+                </div>
+              )}
+
+              {/* Register: Both Email and Phone required */}
+              {!isLogin && (
+                <>
+                  <div className="relative animate-slide-in-left">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder={language === 'ar' ? "البريد الإلكتروني" : "Email Address"}
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                      required
+                      data-testid="email-input"
+                    />
+                  </div>
+
+                  <div className="animate-slide-in-left">
+                    <PhoneInput
+                      country={'sa'}
+                      value={formData.phone}
+                      onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
+                      inputProps={{
+                        name: 'phone',
+                        required: true,
+                        className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
+                      }}
+                      containerClass="phone-input-container"
+                      buttonClass="phone-input-button"
+                      dropdownClass="phone-input-dropdown"
+                      searchClass="phone-input-search"
+                      enableSearch={true}
+                      searchPlaceholder={language === 'ar' ? "ابحث عن بلد..." : "Search country..."}
+                      inputClass="phone-input-field"
+                    />
+                  </div>
+                </>
+              )}
 
               {!isLogin && (
                 <div className="relative animate-fade-in-up">

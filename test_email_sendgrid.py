@@ -132,12 +132,13 @@ def test_simple_email():
             }
         }
         
-        success = send_order_confirmation_email(
+        success = send_order_confirmation(
             to_email=test_email,
             customer_name="Test User",
             order_id=test_order["id"],
             order_total=test_order["total"],
-            items=test_order["items"]
+            items=test_order["items"],
+            currency="SAR"
         )
         
         if success:

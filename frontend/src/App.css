@@ -142,6 +142,92 @@ body {
   animation: shake 0.5s ease-in-out;
 }
 
+/* Phone Input Styling */
+.phone-input-container {
+  width: 100%;
+}
+
+.phone-input-container .react-tel-input .form-control {
+  width: 100% !important;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 12px;
+  color: white !important;
+  font-size: 16px;
+  padding-left: 56px !important;
+}
+
+.phone-input-container .react-tel-input .form-control:focus {
+  border-color: rgb(251, 191, 36) !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: none;
+}
+
+.phone-input-container .react-tel-input .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.phone-input-container .react-tel-input .flag-dropdown {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 12px 0 0 12px;
+}
+
+.phone-input-container .react-tel-input .flag-dropdown:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.phone-input-container .react-tel-input .selected-flag {
+  background: transparent !important;
+  padding: 0 0 0 12px;
+}
+
+.phone-input-container .react-tel-input .selected-flag:hover,
+.phone-input-container .react-tel-input .selected-flag.open {
+  background: transparent !important;
+}
+
+.phone-input-container .react-tel-input .country-list {
+  background: rgba(17, 24, 39, 0.98) !important;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.phone-input-container .react-tel-input .country-list .country {
+  padding: 10px 12px;
+  color: white !important;
+}
+
+.phone-input-container .react-tel-input .country-list .country:hover {
+  background: rgba(251, 191, 36, 0.2) !important;
+}
+
+.phone-input-container .react-tel-input .country-list .country.highlight {
+  background: rgba(251, 191, 36, 0.3) !important;
+}
+
+.phone-input-container .react-tel-input .country-list .search {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white !important;
+  padding: 8px 12px;
+  margin: 8px;
+  border-radius: 8px;
+}
+
+.phone-input-container .react-tel-input .country-list .search::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.phone-input-container .react-tel-input .country-list .search:focus {
+  border-color: rgb(251, 191, 36);
+  outline: none;
+}
+
 /* Fashion Carousel Styles */
 .carousel-slide-enter {
   opacity: 0;

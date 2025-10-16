@@ -26,6 +26,31 @@ class CurrencyService:
         self.base_url = f"https://v6.exchangerate-api.com/v6/{self.api_key}"
         self.supported_currencies = ["USD", "SAR", "AED", "QAR", "KWD", "BHD", "OMR"]
         self.cache_duration = timedelta(hours=1)  # Update rates every hour
+    
+    async def _get_fallback_rates(self, base_currency: str = "USD") -> Dict[str, float]:
+        """
+        Fallback static exchange rates when API is unavailable
+        Approximate rates as of October 2025
+        """
+        static_rates = {
+            "USD": 1.0,
+            "SAR": 3.75,      # Saudi Riyal
+            "AED": 3.67,      # UAE Dirham
+            "QAR": 3.64,      # Qatari Riyal
+            "KWD": 0.31,      # Kuwaiti Dinar
+            "BHD": 0.38,      # Bahraini Dinar
+            "OMR": 0.38,      # Omani Rial
+            "EUR": 0.92,      # Euro
+            "GBP": 0.79,      # British Pound
+            "TRY": 34.0,      # Turkish Lira
+        }
+        
+        if base_currency == "USD":
+            return static_rates
+        
+        # Convert rates if base is not USD
+        base_rate = static_rates.get(base_currency, 1.0)
+        return {curr: rate / base_rate for curr, rate in static_rates.items()}
         
     async def get_latest_rates(self, base_currency: str = "USD") -> Dict[str, float]:
         """

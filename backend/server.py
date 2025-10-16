@@ -240,8 +240,8 @@ async def register(user_data: UserCreate, response: Response):
     # Send welcome email
     try:
         email_sent = send_welcome_email(
-            to_email=user_obj.email,
-            customer_name=f"{user_obj.first_name} {user_obj.last_name}"
+            user_email=user_obj.email,
+            user_name=f"{user_obj.first_name} {user_obj.last_name}"
         )
         if email_sent:
             logger.info(f"Welcome email sent to {user_obj.email}")

@@ -44,7 +44,9 @@ const AuthPage = () => {
     try {
       let result;
       if (isLogin) {
-        result = await login(formData.email, formData.password);
+        // Use email or phone based on login method
+        const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
+        result = await login(identifier, formData.password);
       } else {
         result = await register(formData);
       }

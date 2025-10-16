@@ -37,11 +37,16 @@ class CurrencyService:
         Returns:
             Dictionary of currency codes to exchange rates
         """
+        # Use fallback static rates if API key is not set
+        if self.api_key == "free":
+            logger.info("Using static fallback exchange rates (no API key configured)")
+            return await self._get_fallback_rates(base_currency)
+        
         url = f"{self.base_url}/latest/{base_currency}"
         
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as response:
                     if response.status == 200:
                         data = await response.json()
                         

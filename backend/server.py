@@ -3885,9 +3885,7 @@ async def generate_sitemap():
 # Mount static files
 app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
 
-# Include super admin routes
-from routes import super_admin_simple
-app.include_router(super_admin_simple.router, prefix="/api")
+# Super admin routes will be added directly to api_router below
 
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

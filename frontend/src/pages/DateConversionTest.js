@@ -24,8 +24,8 @@ const DateConversionTest = () => {
           </h1>
           <p className="text-gray-600 mb-4">
             {language === 'ar' 
-              ? 'هذه الصفحة لاختبار تحويل التاريخ من الميلادي إلى الهجري عند اختيار اللغة العربية'
-              : 'This page tests date conversion from Gregorian to Hijri when Arabic language is selected'}
+              ? 'جميع التواريخ في المتجر تعرض بالتقويم الميلادي (Gregorian) بغض النظر عن اللغة المختارة'
+              : 'All dates in the store are displayed in Gregorian calendar regardless of selected language'}
           </p>
 
           {/* Language Toggle */}

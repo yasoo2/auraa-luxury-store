@@ -82,7 +82,7 @@ async def log_admin_action(
     })
 
 # Dependency to get current super admin
-async def get_current_super_admin(identifier: str, db: AsyncIOMotorDatabase):
+async def get_current_super_admin(identifier: str):
     """Get current super admin (must be called with verification)"""
     admin = await db.super_admins.find_one({
         "identifier": identifier,
@@ -97,8 +97,7 @@ async def get_current_super_admin(identifier: str, db: AsyncIOMotorDatabase):
 # Routes
 @router.get("/list", response_model=List[SuperAdminResponse])
 async def list_super_admins(
-    current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_admin_identifier: str
 ):
     """List all super admins (requires super admin access)"""
     # Verify caller is super admin

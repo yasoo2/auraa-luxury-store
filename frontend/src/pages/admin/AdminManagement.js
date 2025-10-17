@@ -49,7 +49,7 @@ const AdminManagement = () => {
       }
 
       const response = await axios.get(
-        `${BACKEND_URL}/api/super-admin/manage/list-all-admins`,
+        `${BACKEND_URL}/api/admin/super-admin-list-all-admins`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -71,7 +71,7 @@ const AdminManagement = () => {
       if (!token) return;
 
       const response = await axios.get(
-        `${BACKEND_URL}/api/super-admin/manage/statistics`,
+        `${BACKEND_URL}/api/admin/super-admin-statistics`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }

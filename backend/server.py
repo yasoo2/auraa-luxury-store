@@ -19,6 +19,7 @@ import io
 from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
+from passlib.context import CryptContext
 from enum import Enum
 
 ROOT_DIR = Path(__file__).parent
@@ -35,8 +36,8 @@ api_router = APIRouter(prefix="/api")
 
 # Security
 security = HTTPBearer()
-# Password hashing is now done directly with bcrypt (see verify_password and get_password_hash functions)
-SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'auraa-luxury-secret-key-2024')
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key-change-in-production')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -258,22 +259,19 @@ async def register(user_data: UserCreate, response: Response):
     user_doc["password"] = hashed_password
     await db.users.insert_one(user_doc)
     
-    # Send welcome email (only if email is provided)
-    if user_obj.email:
-        try:
-            email_sent = send_welcome_email(
-                to_email=user_obj.email,
-                customer_name=f"{user_obj.first_name} {user_obj.last_name}"
-            )
-            if email_sent:
-                logger.info(f"Welcome email sent to {user_obj.email}")
-            else:
-                logger.warning(f"Failed to send welcome email to {user_obj.email}")
-        except Exception as e:
-            logger.error(f"Error sending welcome email: {e}")
-            # Don't fail registration if email fails
-    else:
-        logger.info(f"User registered with phone only: {user_obj.phone}")
+    # Send welcome email
+    try:
+        email_sent = send_welcome_email(
+            user_email=user_obj.email,
+            user_name=f"{user_obj.first_name} {user_obj.last_name}"
+        )
+        if email_sent:
+            logger.info(f"Welcome email sent to {user_obj.email}")
+        else:
+            logger.warning(f"Failed to send welcome email to {user_obj.email}")
+    except Exception as e:
+        logger.error(f"Error sending welcome email: {e}")
+        # Don't fail registration if email fails
     
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
@@ -1077,14 +1075,11 @@ async def create_order(
     
     # Send order confirmation email
     try:
-        email_sent = send_order_confirmation(
-            to_email=current_user.email,
-            customer_name=f"{current_user.first_name} {current_user.last_name}",
-            order_number=order.order_number,
-            order_total=order.total_amount,
-            currency=order.currency,
-            items=cart["items"],
-            shipping_address=order_data.shipping_address
+        email_sent = send_order_confirmation_email(
+            user_email=current_user.email,
+            user_name=f"{current_user.first_name} {current_user.last_name}",
+            order_id=order.order_number,
+            total_amount=order.total_amount
         )
         if email_sent:
             logger.info(f"Order confirmation email sent for {order.order_number}")
@@ -1544,7 +1539,7 @@ from services.scheduler_service import get_scheduler_service
 from services.product_sync_service import get_product_sync_service
 from services.aliexpress_service import get_aliexpress_service
 from services.google_analytics import track_purchase as ga4_track_purchase
-from services.email_service import send_order_confirmation, send_welcome_email
+from services.email_service import send_order_confirmation_email, send_welcome_email
 
 # Auto-Update Services Initialization
 currency_service = None
@@ -3883,7 +3878,12 @@ async def generate_sitemap():
         raise HTTPException(status_code=500, detail="Failed to generate sitemap")
 
 # Mount static files
-app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
+import os
+static_dir = "/app/backend/static"
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+else:
+    logger.warning(f"Static directory {static_dir} does not exist, skipping mount")
 
 # Include super admin routes
 from routes import super_admin

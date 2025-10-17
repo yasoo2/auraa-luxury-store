@@ -121,7 +121,7 @@ const DateConversionTest = () => {
         {/* Explanation */}
         <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl shadow-xl p-8 mt-6 text-white">
           <h3 className="text-2xl font-bold mb-4">
-            {language === 'ar' ? '📌 كيف يعمل التحويل؟' : '📌 How Does Conversion Work?'}
+            {language === 'ar' ? '📌 نظام التاريخ في المتجر' : '📌 Date System in Store'}
           </h3>
           <ul className="space-y-3 text-lg">
             <li className="flex items-start gap-3">

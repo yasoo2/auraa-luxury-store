@@ -4089,7 +4089,7 @@ async def change_user_role(
         "new_role": request.new_role
     }
 
-@api_router.post("/super-admin/manage/reset-password")
+@api_router.post("/admin/super-admin-reset-password")
 async def reset_admin_password(
     request: ResetPasswordRequest,
     current_user: User = Depends(get_current_user)

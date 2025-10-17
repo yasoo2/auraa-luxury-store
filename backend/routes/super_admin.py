@@ -677,14 +677,9 @@ async def delete_admin(
 
 @router.get("/manage/statistics")
 async def get_admin_statistics(
-    current_admin_identifier: str,
-    current_password: str,
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Get admin statistics (Super Admin only)"""
-    # Verify super admin
-    await verify_super_admin(current_admin_identifier, current_password, db)
-    
     # Count statistics
     total_users = await db.users.count_documents({})
     total_admins = await db.users.count_documents({"is_admin": True})

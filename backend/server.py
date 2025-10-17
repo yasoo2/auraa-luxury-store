@@ -216,14 +216,36 @@ async def root():
 # Auth routes
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate, response: Response):
-    # Log incoming data for debugging
-    logger.info(f"Registration attempt for email: {user_data.email}")
+    # Validate: At least email OR phone must be provided
+    if not user_data.email and not user_data.phone:
+        logger.warning("Registration attempt without email or phone")
+        raise HTTPException(
+            status_code=400, 
+            detail="email_or_phone_required"  # Frontend will translate
+        )
     
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data.email})
-    if existing_user:
-        logger.warning(f"Email already registered: {user_data.email}")
-        raise HTTPException(status_code=400, detail="هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام بريد آخر")
+    # Log incoming data for debugging
+    logger.info(f"Registration attempt - Email: {user_data.email}, Phone: {user_data.phone}")
+    
+    # Check if email exists (if provided)
+    if user_data.email:
+        existing_user_email = await db.users.find_one({"email": user_data.email})
+        if existing_user_email:
+            logger.warning(f"Email already registered: {user_data.email}")
+            raise HTTPException(
+                status_code=400, 
+                detail="email_already_registered"  # Frontend will translate
+            )
+    
+    # Check if phone exists (if provided)
+    if user_data.phone:
+        existing_user_phone = await db.users.find_one({"phone": user_data.phone})
+        if existing_user_phone:
+            logger.warning(f"Phone already registered: {user_data.phone}")
+            raise HTTPException(
+                status_code=400, 
+                detail="phone_already_registered"  # Frontend will translate
+            )
     
     # Create user
     hashed_password = get_password_hash(user_data.password)
@@ -236,19 +258,22 @@ async def register(user_data: UserCreate, response: Response):
     user_doc["password"] = hashed_password
     await db.users.insert_one(user_doc)
     
-    # Send welcome email
-    try:
-        email_sent = send_welcome_email(
-            to_email=user_obj.email,
-            customer_name=f"{user_obj.first_name} {user_obj.last_name}"
-        )
-        if email_sent:
-            logger.info(f"Welcome email sent to {user_obj.email}")
-        else:
-            logger.warning(f"Failed to send welcome email to {user_obj.email}")
-    except Exception as e:
-        logger.error(f"Error sending welcome email: {e}")
-        # Don't fail registration if email fails
+    # Send welcome email (only if email is provided)
+    if user_obj.email:
+        try:
+            email_sent = send_welcome_email(
+                to_email=user_obj.email,
+                customer_name=f"{user_obj.first_name} {user_obj.last_name}"
+            )
+            if email_sent:
+                logger.info(f"Welcome email sent to {user_obj.email}")
+            else:
+                logger.warning(f"Failed to send welcome email to {user_obj.email}")
+        except Exception as e:
+            logger.error(f"Error sending welcome email: {e}")
+            # Don't fail registration if email fails
+    else:
+        logger.info(f"User registered with phone only: {user_obj.phone}")
     
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})

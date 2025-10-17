@@ -98,17 +98,15 @@ const AdminManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
 
       await axios.post(
-        `${BACKEND_URL}/api/super-admin/manage/change-role`,
+        `${BACKEND_URL}/api/admin/super-admin-change-role`,
         {
           user_id: userId,
           new_role: newRole,
           current_password: password
         },
         {
-          params: { current_admin_identifier: identifier },
           headers: { Authorization: `Bearer ${token}` }
         }
       );
@@ -130,17 +128,15 @@ const AdminManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
 
       await axios.post(
-        `${BACKEND_URL}/api/super-admin/manage/reset-password`,
+        `${BACKEND_URL}/api/admin/super-admin-reset-password`,
         {
           user_id: selectedAdmin.id,
           new_password: newPassword,
           current_password: password
         },
         {
-          params: { current_admin_identifier: identifier },
           headers: { Authorization: `Bearer ${token}` }
         }
       );

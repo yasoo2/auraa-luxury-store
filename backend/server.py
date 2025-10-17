@@ -3887,7 +3887,7 @@ app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static"
 
 # Include super admin routes
 from routes import super_admin
-app.include_router(super_admin.router)
+app.include_router(super_admin.router, prefix="/api")
 
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

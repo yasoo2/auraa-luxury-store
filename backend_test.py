@@ -1550,16 +1550,16 @@ class AuraaLuxuryAPITester:
         self.token = original_token
     
     def test_admin_statistics_endpoint(self):
-        """Test GET /api/super-admin/manage/statistics endpoint"""
+        """Test GET /api/admin/super-admin-statistics endpoint"""
         if not self.super_admin_token:
-            self.log_test("Admin Statistics", False, "No super admin token available")
+            self.log_test("Super Admin Statistics", False, "No super admin token available")
             return
         
         # Use super admin token
         original_token = self.token
         self.token = self.super_admin_token
         
-        success, data, status = self.make_request('GET', '/super-admin/manage/statistics')
+        success, data, status = self.make_request('GET', '/admin/super-admin-statistics')
         
         if success:
             required_fields = ['total_users', 'total_admins', 'total_super_admins', 'active_admins', 'inactive_admins', 'recent_actions']
@@ -1570,14 +1570,55 @@ class AuraaLuxuryAPITester:
                 total_admins = data.get('total_admins', 0)
                 total_super_admins = data.get('total_super_admins', 0)
                 active_admins = data.get('active_admins', 0)
+                inactive_admins = data.get('inactive_admins', 0)
                 recent_actions = data.get('recent_actions', [])
                 
-                self.log_test("Admin Statistics", True, 
-                            f"Users: {total_users}, Admins: {total_admins}, Super Admins: {total_super_admins}, Active: {active_admins}, Recent Actions: {len(recent_actions)}")
+                # Verify data types and logical consistency
+                if (isinstance(total_users, int) and total_users >= 0 and
+                    isinstance(total_admins, int) and total_admins >= 0 and
+                    isinstance(total_super_admins, int) and total_super_admins >= 0 and
+                    isinstance(active_admins, int) and active_admins >= 0 and
+                    isinstance(inactive_admins, int) and inactive_admins >= 0 and
+                    isinstance(recent_actions, list)):
+                    
+                    self.log_test("Super Admin Statistics", True, 
+                                f"Users: {total_users}, Admins: {total_admins}, Super Admins: {total_super_admins}, Active: {active_admins}, Inactive: {inactive_admins}, Recent Actions: {len(recent_actions)}")
+                    
+                    # Test logical consistency
+                    if total_super_admins <= total_admins <= total_users and active_admins + inactive_admins == total_admins:
+                        self.log_test("Super Admin Statistics Consistency", True, "Statistics counts are logically consistent")
+                    else:
+                        self.log_test("Super Admin Statistics Consistency", False, 
+                                    f"Inconsistent counts: SuperAdmins({total_super_admins}) <= Admins({total_admins}) <= Users({total_users}), Active+Inactive({active_admins + inactive_admins}) == Admins({total_admins})")
+                else:
+                    self.log_test("Super Admin Statistics", False, f"Invalid data types in response")
             else:
-                self.log_test("Admin Statistics", False, f"Missing response fields: {missing_fields}")
+                self.log_test("Super Admin Statistics", False, f"Missing response fields: {missing_fields}")
         else:
-            self.log_test("Admin Statistics", False, f"Status: {status}, Response: {data}")
+            self.log_test("Super Admin Statistics", False, f"Status: {status}, Response: {data}")
+        
+        # Test access control - regular admin should not access this endpoint
+        if self.admin_token:
+            self.token = self.admin_token
+            success_admin, data_admin, status_admin = self.make_request('GET', '/admin/super-admin-statistics')
+            
+            if not success_admin and status_admin == 403:
+                self.log_test("Super Admin Statistics - Admin Access Control", True, 
+                            "Regular admin properly blocked from super admin endpoint (403)")
+            else:
+                self.log_test("Super Admin Statistics - Admin Access Control", False, 
+                            f"Regular admin should be blocked, got status: {status_admin}")
+        
+        # Test access control - no token
+        self.token = None
+        success_no_auth, data_no_auth, status_no_auth = self.make_request('GET', '/admin/super-admin-statistics')
+        
+        if not success_no_auth and status_no_auth in [401, 403]:
+            self.log_test("Super Admin Statistics - No Auth", True, 
+                        f"Unauthenticated access properly blocked ({status_no_auth})")
+        else:
+            self.log_test("Super Admin Statistics - No Auth", False, 
+                        f"Unauthenticated access should be blocked, got status: {status_no_auth}")
         
         # Restore token
         self.token = original_token

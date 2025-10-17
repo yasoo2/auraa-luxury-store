@@ -160,17 +160,15 @@ const AdminManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
 
       await axios.post(
-        `${BACKEND_URL}/api/super-admin/manage/toggle-status`,
+        `${BACKEND_URL}/api/admin/super-admin-toggle-status`,
         {
           user_id: userId,
           is_active: !currentStatus,
           current_password: password
         },
         {
-          params: { current_admin_identifier: identifier },
           headers: { Authorization: `Bearer ${token}` }
         }
       );
@@ -192,13 +190,11 @@ const AdminManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
 
       await axios.delete(
-        `${BACKEND_URL}/api/super-admin/manage/delete-admin/${userId}`,
+        `${BACKEND_URL}/api/admin/super-admin-delete/${userId}`,
         {
           params: {
-            current_admin_identifier: identifier,
             current_password: password
           },
           headers: { Authorization: `Bearer ${token}` }

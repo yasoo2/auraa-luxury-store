@@ -417,11 +417,15 @@ async def list_all_admins(
 @router.post("/manage/change-role")
 async def change_user_role(
     request: AdminManagementModels.ChangeRoleRequest,
-    current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_user: User = Depends(get_current_user)
 ):
     """Change user role (Super Admin only)"""
-    # Verify super admin
+    # Verify user is super admin
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Verify super admin password
+    current_admin_identifier = current_user.email or current_user.phone
     current_admin = await verify_super_admin(
         current_admin_identifier,
         request.current_password,

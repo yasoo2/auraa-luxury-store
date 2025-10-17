@@ -38,6 +38,7 @@ import AboutUs from './pages/AboutUs';
 import OrderTracking from './pages/OrderTracking';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import DateTestPage from './pages/DateTestPage';
 
 // UI Components
 import { Toaster } from './components/ui/sonner';

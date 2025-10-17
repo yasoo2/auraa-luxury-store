@@ -422,6 +422,17 @@
         comment: "❌ PRODUCTION LOGIN API TESTING FAILED - CREDENTIALS MISMATCH: Executed comprehensive testing of login API on production server https://api.auraaluxury.com as requested in review. RESULTS: ❌ Login failed with provided credentials. DETAILED FINDINGS: 1) ✅ Production server is reachable and responding correctly (GET /api/ returns 200 with 'Welcome to لورا لاكشري API'). 2) ✅ Login API endpoint is functional and properly handling requests. 3) ✅ Account younes.sowady2011@gmail.com EXISTS in production database (confirmed by 401 'wrong_password' vs 404 'account_not_found' for other accounts). 4) ❌ Password 'younes2025' is INCORRECT for this account (returns 401 'wrong_password'). 5) ❌ Tested 13 common password variations - none work. 6) ❌ Other super admin accounts (phone: 00905013715391, email: info@auraaluxury.com) do NOT exist in production (404 'account_not_found'). 7) ❌ Default admin account (admin@auraa.com) does NOT exist in production. PRODUCTION DATABASE STATE: Database appears to have only 1 super admin account (younes.sowady2011@gmail.com) but with different password than provided in review request. Products: 0, Categories: 6. CONCLUSION: Backend login API is working correctly, but the credentials provided in review request (younes.sowady2011@gmail.com / younes2025) are incorrect for production environment. The account exists but has a different password. This indicates either: 1) Password was changed after seed script, 2) Different password used in production setup, 3) Credentials in review request are outdated/incorrect."
 
 ## frontend:
+  - task: "Flexible Registration System Testing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/AuthPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing flexible registration system where users can register with EITHER email OR phone number (not both required). Need to verify: 1) Register with Email Only, 2) Register with Phone Only, 3) Register with Both, 4) Register with Neither (Error Case). Also verify UI shows proper placeholders and info messages."
   - task: "Carousel Responsive Design Enhancement"
     implemented: true
     working: true

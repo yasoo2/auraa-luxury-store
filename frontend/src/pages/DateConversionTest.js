@@ -89,12 +89,12 @@ const DateConversionTest = () => {
                   </div>
 
                   {/* Converted Date (Based on Language) */}
-                  <div className={`p-4 rounded-lg ${language === 'ar' ? 'bg-green-50' : 'bg-blue-50'}`}>
+                  <div className={`p-4 rounded-lg ${language === 'ar' ? 'bg-blue-50' : 'bg-blue-50'}`}>
                     <p className="text-sm text-gray-600 mb-2 font-semibold">
-                      {language === 'ar' ? 'التاريخ الهجري المحول:' : 'Converted Date:'}
+                      {language === 'ar' ? 'التاريخ الميلادي (بصيغة اللغة المختارة):' : 'Gregorian Date (in selected language format):'}
                     </p>
                     <p className="text-lg font-bold text-gray-800" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-                      {formatDate(date, language, { format: 'full', showCalendarType: true })}
+                      {formatDate(date, language, { format: 'full' })}
                     </p>
                   </div>
                 </div>

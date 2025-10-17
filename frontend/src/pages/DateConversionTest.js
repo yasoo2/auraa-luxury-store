@@ -55,7 +55,7 @@ const DateConversionTest = () => {
           <div className="mt-4 p-4 bg-blue-100 rounded-lg">
             <p className="font-semibold text-blue-800">
               {language === 'ar' 
-                ? `اللغة الحالية: العربية - يتم عرض التواريخ بالتقويم الهجري`
+                ? `اللغة الحالية: العربية - يتم عرض التواريخ بالتقويم الميلادي`
                 : `Current Language: English - Dates shown in Gregorian calendar`}
             </p>
           </div>

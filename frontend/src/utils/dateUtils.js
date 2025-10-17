@@ -1,12 +1,10 @@
 /**
- * Date Utilities - Gregorian & Hijri Date Formatting
- * Automatically switches between Gregorian and Hijri based on language
+ * Date Utilities - Gregorian Date Formatting
+ * All dates are displayed in Gregorian calendar regardless of language
  */
 
-import HijriDate from 'hijri-date';
-
 /**
- * Format date based on language (Arabic = Hijri, Others = Gregorian)
+ * Format date in Gregorian calendar (for all languages)
  * @param {Date|string} date - Date to format
  * @param {string} language - Current language (ar, en, etc)
  * @param {object} options - Formatting options
@@ -18,7 +16,6 @@ export const formatDate = (date, language = 'en', options = {}) => {
   const {
     includeTime = false,
     format = 'full', // 'full', 'short', 'medium'
-    showCalendarType = true, // Show "هـ" or "م" suffix
   } = options;
 
   try {
@@ -28,12 +25,7 @@ export const formatDate = (date, language = 'en', options = {}) => {
       return '-';
     }
 
-    // For Arabic, use Hijri calendar
-    if (language === 'ar') {
-      return formatHijriDate(dateObj, format, includeTime, showCalendarType);
-    }
-
-    // For other languages, use Gregorian
+    // Always use Gregorian calendar for all languages
     return formatGregorianDate(dateObj, language, format, includeTime);
   } catch (error) {
     console.error('Error formatting date:', error);

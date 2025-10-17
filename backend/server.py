@@ -3887,10 +3887,6 @@ app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static"
 
 # Include super admin routes
 from routes import super_admin
-def get_db():
-    return db
-
-super_admin.router.dependency_overrides[AsyncIOMotorDatabase] = get_db
 app.include_router(super_admin.router, prefix="/api")
 
 # Include the router in the main app (MUST be after all routes are defined)

@@ -70,11 +70,11 @@ class User(BaseModel):
     is_super_admin: bool = False
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
     password: str
     first_name: str
     last_name: str
-    phone: str
+    phone: Optional[str] = None
 
 class UserLogin(BaseModel):
     identifier: str  # Can be email or phone

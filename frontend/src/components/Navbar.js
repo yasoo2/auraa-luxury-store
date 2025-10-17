@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown, Route as RouteIcon } from 'lucide-react';
+import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown, Route as RouteIcon, ShieldAlert } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -198,7 +198,17 @@ const Navbar = () => {
                 
                 {/* Admin Button - Always visible if admin */}
                 {user && user.is_admin && (
-                  <Link to="/admin" className="px-2 py-1 text-xs sm:text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors whitespace-nowrap">إدارة</Link>
+                  <Link to="/admin" className="px-2 py-1 text-xs sm:text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors whitespace-nowrap">
+                    {isRTL ? 'إدارة' : 'Admin'}
+                  </Link>
+                )}
+                
+                {/* Super Admin Management Button */}
+                {user && user.is_super_admin && (
+                  <Link to="/admin-management" className="px-2 py-1 text-xs sm:text-sm bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full hover:from-red-600 hover:to-orange-600 transition-colors whitespace-nowrap flex items-center gap-1">
+                    <ShieldAlert className="h-3 w-3" />
+                    {isRTL ? 'إدارة المسؤولين' : 'Admin Mgmt'}
+                  </Link>
                 )}
               </div>
             ) : (

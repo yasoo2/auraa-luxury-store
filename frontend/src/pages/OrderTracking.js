@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
+import { formatDate as formatDateUtil } from '../utils/dateUtils';
 
 const OrderTracking = () => {
   const { language } = useLanguage();
@@ -177,17 +178,7 @@ const OrderTracking = () => {
   };
 
   const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString);
-      const localeMap = {
-        ar: 'ar-SA', en: 'en-US', tr: 'tr-TR', hi: 'hi-IN', he: 'he-IL', es: 'es-ES', fr: 'fr-FR', ru: 'ru-RU', de: 'de-DE'
-      };
-      const baseLocale = localeMap[language] || 'en-US';
-      const gregorianLocale = `${baseLocale}-u-ca-gregory`;
-      return new Intl.DateTimeFormat(gregorianLocale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
-    } catch {
-      return dateString;
-    }
+    return formatDateUtil(dateString, language, { format: 'medium' });
   };
 
   return (

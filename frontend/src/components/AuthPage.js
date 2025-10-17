@@ -48,6 +48,16 @@ const AuthPage = () => {
         const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
         result = await login(identifier, formData.password);
       } else {
+        // Registration: Validate that at least email OR phone is provided
+        if (!formData.email && !formData.phone) {
+          const errorMsg = language === 'ar' 
+            ? 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل'
+            : 'Please provide either email or phone number';
+          setError(errorMsg);
+          setLoading(false);
+          return;
+        }
+        
         result = await register(formData);
       }
       
@@ -305,7 +315,7 @@ const AuthPage = () => {
                 </div>
               )}
 
-              {/* Register: Both Email and Phone required */}
+              {/* Register: Email OR Phone (at least one required) */}
               {!isLogin && (
                 <>
                   <div className="relative animate-slide-in-left">
@@ -313,11 +323,10 @@ const AuthPage = () => {
                     <input
                       type="email"
                       name="email"
-                      placeholder={getAuthTranslation('email', language)}
+                      placeholder={`${getAuthTranslation('email', language)} ${language === 'ar' ? '(اختياري)' : '(Optional)'}`}
                       value={formData.email}
                       onChange={handleInputChange}
                       className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
-                      required
                       data-testid="email-input"
                     />
                   </div>
@@ -327,9 +336,10 @@ const AuthPage = () => {
                       country={'sa'}
                       value={formData.phone}
                       onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
+                      placeholder={`${language === 'ar' ? 'رقم الهاتف (اختياري)' : 'Phone Number (Optional)'}`}
                       inputProps={{
                         name: 'phone',
-                        required: true,
+                        required: false,
                         className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
                       }}
                       containerClass="phone-input-container"
@@ -340,6 +350,14 @@ const AuthPage = () => {
                       searchPlaceholder={language === 'ar' ? "ابحث عن بلد..." : "Search country..."}
                       inputClass="phone-input-field"
                     />
+                  </div>
+                  
+                  {/* Info message: At least one contact method required */}
+                  <div className="text-center text-xs text-amber-200/80 animate-fade-in-up">
+                    {language === 'ar' 
+                      ? '* يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل'
+                      : '* At least one contact method (email or phone) is required'
+                    }
                   </div>
                 </>
               )}

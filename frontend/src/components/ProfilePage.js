@@ -9,6 +9,7 @@ import { Badge } from './ui/badge';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { formatDate } from '../utils/dateUtils';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -239,7 +240,8 @@ const ProfilePage = () => {
                           طلب رقم: #{order.id.slice(-8)}
                         </h3>
                         <p className="text-gray-600">
-                          تاريخ الطلب: {new Date(order.created_at).toLocaleDateString('ar-SA')}
+                          {isRTL ? 'تاريخ الطلب: ' : 'Order Date: '}
+                          {formatDate(order.created_at, language, { format: 'medium' })}
                         </p>
                       </div>
                       <div className="flex items-center space-x-2 mt-4 md:mt-0">

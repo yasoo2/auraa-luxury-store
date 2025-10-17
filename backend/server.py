@@ -71,11 +71,11 @@ class User(BaseModel):
     is_super_admin: bool = False
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
     password: str
     first_name: str
     last_name: str
-    phone: str
+    phone: Optional[str] = None
 
 class UserLogin(BaseModel):
     identifier: str  # Can be email or phone
@@ -217,14 +217,36 @@ async def root():
 # Auth routes
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate, response: Response):
-    # Log incoming data for debugging
-    logger.info(f"Registration attempt for email: {user_data.email}")
+    # Validate: At least email OR phone must be provided
+    if not user_data.email and not user_data.phone:
+        logger.warning("Registration attempt without email or phone")
+        raise HTTPException(
+            status_code=400, 
+            detail="email_or_phone_required"  # Frontend will translate
+        )
     
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data.email})
-    if existing_user:
-        logger.warning(f"Email already registered: {user_data.email}")
-        raise HTTPException(status_code=400, detail="هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام بريد آخر")
+    # Log incoming data for debugging
+    logger.info(f"Registration attempt - Email: {user_data.email}, Phone: {user_data.phone}")
+    
+    # Check if email exists (if provided)
+    if user_data.email:
+        existing_user_email = await db.users.find_one({"email": user_data.email})
+        if existing_user_email:
+            logger.warning(f"Email already registered: {user_data.email}")
+            raise HTTPException(
+                status_code=400, 
+                detail="email_already_registered"  # Frontend will translate
+            )
+    
+    # Check if phone exists (if provided)
+    if user_data.phone:
+        existing_user_phone = await db.users.find_one({"phone": user_data.phone})
+        if existing_user_phone:
+            logger.warning(f"Phone already registered: {user_data.phone}")
+            raise HTTPException(
+                status_code=400, 
+                detail="phone_already_registered"  # Frontend will translate
+            )
     
     # Create user
     hashed_password = get_password_hash(user_data.password)
@@ -3862,6 +3884,10 @@ if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 else:
     logger.warning(f"Static directory {static_dir} does not exist, skipping mount")
+
+# Include super admin routes
+from routes import super_admin
+app.include_router(super_admin.router, prefix="/api")
 
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

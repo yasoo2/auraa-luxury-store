@@ -557,7 +557,6 @@ async def reset_admin_password(
     
     # Log action
     await log_admin_action(
-        db,
         "password_reset",
         current_admin_identifier,
         {

@@ -103,7 +103,7 @@ async def get_current_super_admin(identifier: str, db: AsyncIOMotorDatabase):
 @router.get("/list", response_model=List[SuperAdminResponse])
 async def list_super_admins(
     current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """List all super admins (requires super admin access)"""
     # Verify caller is super admin
@@ -130,7 +130,7 @@ async def add_super_admin(
     new_admin: SuperAdminCreate,
     current_admin_identifier: str,
     current_password: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Add new super admin (requires password verification)"""
     # Verify current admin
@@ -173,7 +173,7 @@ async def remove_super_admin(
     admin_id: str,
     current_admin_identifier: str,
     current_password: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Remove super admin (requires password verification, must keep at least one)"""
     # Verify current admin
@@ -215,7 +215,7 @@ async def update_super_admin_profile(
     updates: SuperAdminUpdate,
     current_admin_identifier: str,
     current_password: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Update own super admin profile"""
     # Verify current admin
@@ -257,7 +257,7 @@ async def update_super_admin_profile(
 async def transfer_super_admin(
     transfer: SuperAdminTransfer,
     current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Transfer super admin rights to another account"""
     # Verify current admin
@@ -331,7 +331,7 @@ async def transfer_super_admin(
 async def get_audit_logs(
     current_admin_identifier: str,
     limit: int = 50,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Get admin audit logs"""
     # Verify caller is super admin
@@ -379,7 +379,7 @@ class AdminManagementModels:
 async def list_all_admins(
     current_admin_identifier: str,
     current_password: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """List all admins and super admins (Super Admin only)"""
     # Verify super admin
@@ -424,7 +424,7 @@ async def list_all_admins(
 async def change_user_role(
     request: AdminManagementModels.ChangeRoleRequest,
     current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Change user role (Super Admin only)"""
     # Verify super admin
@@ -527,7 +527,7 @@ async def change_user_role(
 async def reset_admin_password(
     request: AdminManagementModels.ResetPasswordRequest,
     current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Reset admin password (Super Admin only)"""
     # Verify super admin
@@ -575,7 +575,7 @@ async def reset_admin_password(
 async def toggle_admin_status(
     request: AdminManagementModels.ToggleStatusRequest,
     current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Enable/Disable admin account (Super Admin only)"""
     # Verify super admin
@@ -629,7 +629,7 @@ async def delete_admin(
     user_id: str,
     current_admin_identifier: str,
     current_password: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Delete admin account (Super Admin only, DANGEROUS!)"""
     # Verify super admin
@@ -682,7 +682,7 @@ async def delete_admin(
 async def get_admin_statistics(
     current_admin_identifier: str,
     current_password: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     """Get admin statistics (Super Admin only)"""
     # Verify super admin

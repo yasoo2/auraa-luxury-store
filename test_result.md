@@ -424,15 +424,18 @@
 ## frontend:
   - task: "Flexible Registration System Testing"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/components/AuthPage.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "testing"
         comment: "Testing flexible registration system where users can register with EITHER email OR phone number (not both required). Need to verify: 1) Register with Email Only, 2) Register with Phone Only, 3) Register with Both, 4) Register with Neither (Error Case). Also verify UI shows proper placeholders and info messages."
+      - working: true
+        agent: "testing"
+        comment: "🎉 FLEXIBLE REGISTRATION SYSTEM COMPREHENSIVE TESTING COMPLETE - ALL REQUIREMENTS VERIFIED: Executed extensive testing of the new flexible registration system as requested in the review. RESULTS: ✅ ALL 4 TEST SCENARIOS PASSED SUCCESSFULLY. DESKTOP TESTING RESULTS: 1) ✅ Register with Email Only (No Phone): Successfully registered user 'Ahmed Al-Rashid' with email 'ahmed.test@example.com' and empty phone field. Backend logs confirm registration success (200 OK) and welcome email sent. 2) ✅ Register with Phone Only (No Email): Successfully registered user 'Fatima Al-Zahra' with phone '+966501234567' and empty email field. Registration completed successfully. 3) ✅ Register with Both Email and Phone: Successfully registered user 'Omar Al-Mansouri' with both email 'omar.test@example.com' and phone '+966507654321'. Backend logs confirm successful registration with both contact methods. 4) ✅ Register with Neither Email nor Phone (Error Case): Correctly displayed Arabic error message 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل' when attempting to register without either contact method. UI VERIFICATION COMPLETE: ✅ Email field placeholder shows '(اختياري)' indicating optional status. ✅ Phone field placeholder shows '(اختياري)' indicating optional status. ✅ Info message displays '* يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل' in Arabic. ✅ Neither email nor phone fields have 'required' HTML attribute, confirming flexible validation. MOBILE RESPONSIVE TESTING: ✅ All form elements visible and accessible on mobile (390x844 viewport). ✅ Error handling works correctly on mobile - Arabic error message displays properly. ✅ Successful registration flow works on mobile - user redirected to homepage after successful registration. BACKEND INTEGRATION VERIFIED: ✅ Backend correctly validates 'at least email OR phone' requirement (returns 422 for neither, 200 for either/both). ✅ Welcome emails sent only when email provided, phone-only registrations work without email. ✅ All registration attempts properly logged in backend with correct contact method tracking. CONCLUSION: The flexible registration system is working perfectly across all devices and scenarios. Users can successfully register with email only, phone only, or both, with proper error handling when neither is provided. The system meets all requirements specified in the review request."
   - task: "Carousel Responsive Design Enhancement"
     implemented: true
     working: true

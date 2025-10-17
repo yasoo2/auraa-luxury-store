@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { formatDate } from '../../utils/dateUtils';
 import { toast } from 'sonner';
 import { 
   Shield, ShieldAlert, User, Mail, Phone, Key, 

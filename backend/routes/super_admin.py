@@ -8,6 +8,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
 import bcrypt
+from motor.motor_asyncio import AsyncIOMotorDatabase
 import os
 
 router = APIRouter(prefix="/super-admin", tags=["Super Admin"])

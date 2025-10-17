@@ -503,7 +503,6 @@ async def change_user_role(
     
     # Log action
     await log_admin_action(
-        db,
         "role_changed",
         current_admin_identifier,
         {

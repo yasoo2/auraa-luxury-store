@@ -97,6 +97,7 @@ function App() {
                     
                     {/* Admin Routes */}
                     <Route path="/admin/*" element={<AdminDashboard />} />
+                    <Route path="/admin-management" element={<AdminManagement />} />
                     
                     {/* Redirect unknown routes to home */}
                     <Route path="*" element={<Navigate to="/" replace />} />

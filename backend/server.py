@@ -3927,7 +3927,7 @@ async def log_admin_action(action: str, performed_by: str, details: dict):
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
 
-@api_router.get("/super-admin/manage/list-all-admins")
+@api_router.get("/admin/super-admin-list-all-admins")
 async def list_all_admins(current_user: User = Depends(get_current_user)):
     """List all admins and super admins (Super Admin only)"""
     if not current_user.is_super_admin:

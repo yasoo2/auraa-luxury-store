@@ -60,9 +60,10 @@ const formatHijriDate = (date, format, includeTime, showSuffix) => {
       'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
     ];
 
-    const day = hijri.getDate();
-    const month = hijri.getMonth(); // 0-11
-    const year = hijri.getFullYear();
+    // Get Hijri date components
+    const day = hijri.date || 1;
+    const month = (hijri.month || 1) - 1; // Convert to 0-indexed
+    const year = hijri.year || 1446;
 
     let formattedDate = '';
 

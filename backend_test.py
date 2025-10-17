@@ -676,6 +676,110 @@ class AuraaLuxuryAPITester:
         # Restore token
         self.token = original_token
 
+    def test_super_admin_login_and_statistics(self):
+        """Test Super Admin login and statistics API endpoint"""
+        print("\n🔐 SUPER ADMIN LOGIN AND STATISTICS TESTING")
+        
+        # Test super admin login with provided credentials
+        super_admin_credentials = {
+            "identifier": "younes.sowady2011@gmail.com",
+            "password": "younes2025"
+        }
+        
+        success, data, status = self.make_request('POST', '/auth/login', super_admin_credentials)
+        
+        if success and data.get('access_token'):
+            self.super_admin_token = data['access_token']
+            user_data = data.get('user', {})
+            is_admin = user_data.get('is_admin', False)
+            is_super_admin = user_data.get('is_super_admin', False)
+            
+            if is_super_admin:
+                self.log_test("Super Admin Login", True, 
+                            f"Super admin logged in successfully, is_admin: {is_admin}, is_super_admin: {is_super_admin}")
+                
+                # Test super admin statistics endpoint
+                original_token = self.token
+                self.token = self.super_admin_token
+                
+                success_stats, data_stats, status_stats = self.make_request('GET', '/admin/super-admin-statistics')
+                
+                if success_stats:
+                    # Verify required fields in response
+                    required_fields = ['total_users', 'total_admins', 'total_super_admins', 'active_admins', 'inactive_admins', 'recent_actions']
+                    missing_fields = [field for field in required_fields if field not in data_stats]
+                    
+                    if not missing_fields:
+                        # Verify data types
+                        total_users = data_stats.get('total_users')
+                        total_admins = data_stats.get('total_admins')
+                        total_super_admins = data_stats.get('total_super_admins')
+                        active_admins = data_stats.get('active_admins')
+                        inactive_admins = data_stats.get('inactive_admins')
+                        recent_actions = data_stats.get('recent_actions')
+                        
+                        if (isinstance(total_users, int) and total_users >= 0 and
+                            isinstance(total_admins, int) and total_admins >= 0 and
+                            isinstance(total_super_admins, int) and total_super_admins >= 0 and
+                            isinstance(active_admins, int) and active_admins >= 0 and
+                            isinstance(inactive_admins, int) and inactive_admins >= 0 and
+                            isinstance(recent_actions, list)):
+                            
+                            self.log_test("Super Admin Statistics API", True, 
+                                        f"Statistics: Users={total_users}, Admins={total_admins}, "
+                                        f"SuperAdmins={total_super_admins}, Active={active_admins}, "
+                                        f"Inactive={inactive_admins}, RecentActions={len(recent_actions)}")
+                            
+                            # Verify logical consistency
+                            if total_super_admins <= total_admins <= total_users:
+                                self.log_test("Super Admin Statistics Consistency", True, 
+                                            "Statistics counts are logically consistent")
+                            else:
+                                self.log_test("Super Admin Statistics Consistency", False, 
+                                            f"Inconsistent counts: SuperAdmins({total_super_admins}) > Admins({total_admins}) > Users({total_users})")
+                        else:
+                            self.log_test("Super Admin Statistics API", False, 
+                                        f"Invalid data types in response: {data_stats}")
+                    else:
+                        self.log_test("Super Admin Statistics API", False, 
+                                    f"Missing required fields: {missing_fields}")
+                else:
+                    self.log_test("Super Admin Statistics API", False, 
+                                f"Status: {status_stats}, Response: {data_stats}")
+                
+                # Test access control - regular admin should not access this endpoint
+                if self.admin_token:
+                    self.token = self.admin_token
+                    success_admin, data_admin, status_admin = self.make_request('GET', '/admin/super-admin-statistics')
+                    
+                    if not success_admin and status_admin == 403:
+                        self.log_test("Super Admin Statistics - Admin Access Control", True, 
+                                    "Regular admin properly blocked from super admin endpoint (403)")
+                    else:
+                        self.log_test("Super Admin Statistics - Admin Access Control", False, 
+                                    f"Regular admin should be blocked, got status: {status_admin}")
+                
+                # Test access control - no token
+                self.token = None
+                success_no_auth, data_no_auth, status_no_auth = self.make_request('GET', '/admin/super-admin-statistics')
+                
+                if not success_no_auth and status_no_auth in [401, 403]:
+                    self.log_test("Super Admin Statistics - No Auth", True, 
+                                f"Unauthenticated access properly blocked ({status_no_auth})")
+                else:
+                    self.log_test("Super Admin Statistics - No Auth", False, 
+                                f"Unauthenticated access should be blocked, got status: {status_no_auth}")
+                
+                # Restore token
+                self.token = original_token
+                
+            else:
+                self.log_test("Super Admin Login", False, 
+                            f"User is not super admin, is_admin: {is_admin}, is_super_admin: {is_super_admin}")
+        else:
+            self.log_test("Super Admin Login", False, 
+                        f"Status: {status}, Response: {data}")
+
     # ========== AUTO-UPDATE API TESTS ==========
     
     def test_auto_update_status(self):

@@ -524,11 +524,15 @@ async def change_user_role(
 @router.post("/manage/reset-password")
 async def reset_admin_password(
     request: AdminManagementModels.ResetPasswordRequest,
-    current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_user: User = Depends(get_current_user)
 ):
     """Reset admin password (Super Admin only)"""
-    # Verify super admin
+    # Verify user is super admin
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Verify super admin password
+    current_admin_identifier = current_user.email or current_user.phone
     await verify_super_admin(current_admin_identifier, request.current_password, db)
     
     # Get target user

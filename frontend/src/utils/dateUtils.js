@@ -34,64 +34,6 @@ export const formatDate = (date, language = 'en', options = {}) => {
 };
 
 /**
- * Format date in Hijri calendar (Arabic)
- */
-const formatHijriDate = (date, format, includeTime, showSuffix) => {
-  try {
-    const hijri = new HijriDate(date);
-    
-    const hijriMonths = [
-      'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني', 
-      'جمادى الأولى', 'جمادى الثانية', 'رجب', 'شعبان',
-      'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
-    ];
-
-    const hijriMonthsShort = [
-      'محرم', 'صفر', 'ربيع1', 'ربيع2',
-      'جمادى1', 'جمادى2', 'رجب', 'شعبان',
-      'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
-    ];
-
-    // Get Hijri date components
-    const day = hijri.date || 1;
-    const month = (hijri.month || 1) - 1; // Convert to 0-indexed
-    const year = hijri.year || 1446;
-
-    let formattedDate = '';
-
-    switch (format) {
-      case 'full':
-        formattedDate = `${day} ${hijriMonths[month]} ${year}`;
-        break;
-      case 'short':
-        formattedDate = `${day}/${month + 1}/${year}`;
-        break;
-      case 'medium':
-        formattedDate = `${day} ${hijriMonthsShort[month]} ${year}`;
-        break;
-      default:
-        formattedDate = `${day} ${hijriMonths[month]} ${year}`;
-    }
-
-    if (showSuffix && format !== 'short') {
-      formattedDate += ' هـ';
-    }
-
-    if (includeTime) {
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      formattedDate += ` - ${hours}:${minutes}`;
-    }
-
-    return formattedDate;
-  } catch (error) {
-    console.error('Error formatting Hijri date:', error);
-    // Fallback to Gregorian
-    return formatGregorianDate(date, 'ar', format, includeTime);
-  }
-};
-
-/**
  * Format date in Gregorian calendar
  */
 const formatGregorianDate = (date, language, format, includeTime) => {

@@ -3977,11 +3977,21 @@ async def get_admin_statistics(current_user: User = Depends(get_current_user)):
     # Count statistics
     total_users = await db.users.count_documents({})
     total_admins = await db.users.count_documents({"is_admin": True})
-    total_super_admins = await db.super_admins.count_documents({"is_active": True})
+    total_super_admins = await db.users.count_documents({"is_super_admin": True})
     active_admins = await db.users.count_documents({"is_admin": True, "is_active": True})
     
-    # Recent actions
-    recent_actions = await db.admin_audit_logs.find().sort("timestamp", -1).limit(10).to_list(length=10)
+    # Recent actions (only if the collection exists)
+    recent_actions = []
+    try:
+        recent_actions_cursor = db.admin_audit_logs.find().sort("timestamp", -1).limit(10)
+        recent_actions = await recent_actions_cursor.to_list(length=10)
+        # Convert ObjectId to string if present
+        for action in recent_actions:
+            if "_id" in action:
+                action.pop("_id")
+    except Exception:
+        # If collection doesn't exist, just return empty list
+        recent_actions = []
     
     return {
         "total_users": total_users,

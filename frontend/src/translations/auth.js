@@ -26,6 +26,7 @@ export const authTranslations = {
     wrong_password: 'كلمة المرور غير صحيحة',
     email_already_registered: 'هذا البريد الإلكتروني مسجل مسبقاً',
     phone_already_registered: 'رقم الهاتف مسجل مسبقاً',
+    email_or_phone_required: 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل',
     invalid_email: 'البريد الإلكتروني غير صحيح',
     invalid_phone: 'رقم الهاتف غير صحيح',
     password_too_short: 'كلمة المرور قصيرة جداً (8 أحرف على الأقل)',

@@ -1391,6 +1391,15 @@ class AuraaLuxuryAPITester:
         self.test_admin_login()
         self.test_user_profile()
         
+        # SUPER ADMIN MANAGEMENT TESTS (Priority for this review)
+        print("\n🔐 SUPER ADMIN MANAGEMENT API TESTS")
+        self.test_super_admin_login()
+        self.test_list_all_admins_endpoint()
+        self.test_admin_statistics_endpoint()
+        self.test_change_role_endpoint()
+        self.test_reset_password_endpoint()
+        self.test_super_admin_endpoints_authentication()
+        
         # ALIEXPRESS S2S TRACKING TESTS (Priority for this review)
         print("\n🔗 ALIEXPRESS S2S TRACKING TESTS (COMPREHENSIVE)")
         self.test_s2s_postback_endpoint()

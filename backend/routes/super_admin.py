@@ -67,7 +67,6 @@ async def verify_super_admin(identifier: str, password: str, database=None) -> d
     return admin
 
 async def log_admin_action(
-    db: AsyncIOMotorDatabase,
     action: str,
     performed_by: str,
     details: dict

@@ -4138,5 +4138,115 @@ async def reset_admin_password(
         "user_id": request.user_id
     }
 
+
+class ToggleStatusRequest(BaseModel):
+    user_id: str
+    is_active: bool
+    current_password: str
+
+@api_router.post("/admin/super-admin-toggle-status")
+async def toggle_admin_status(
+    request: ToggleStatusRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Enable/Disable admin account (Super Admin only)"""
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Verify super admin password
+    current_admin_identifier = current_user.email or current_user.phone
+    await verify_super_admin_password(current_admin_identifier, request.current_password)
+    
+    # Get target user
+    target_user = await db.users.find_one({"id": request.user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    
+    # Prevent super admin from disabling themselves
+    target_identifier = target_user.get("email") or target_user.get("phone")
+    if target_identifier == current_admin_identifier:
+        raise HTTPException(status_code=400, detail="cannot_disable_self")
+    
+    # Update status
+    await db.users.update_one(
+        {"id": request.user_id},
+        {"$set": {"is_active": request.is_active}}
+    )
+    
+    # Also update in super_admins if applicable
+    await db.super_admins.update_many(
+        {"identifier": target_identifier},
+        {"$set": {"is_active": request.is_active}}
+    )
+    
+    # Log action
+    await log_admin_action(
+        "status_changed",
+        current_admin_identifier,
+        {
+            "target_user": target_identifier,
+            "new_status": "active" if request.is_active else "inactive"
+        }
+    )
+    
+    return {
+        "message": "status_updated_successfully",
+        "user_id": request.user_id,
+        "is_active": request.is_active
+    }
+
+@api_router.delete("/admin/super-admin-delete/{user_id}")
+async def delete_admin(
+    user_id: str,
+    current_password: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete admin account (Super Admin only, DANGEROUS!)"""
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Verify super admin password
+    current_admin_identifier = current_user.email or current_user.phone
+    await verify_super_admin_password(current_admin_identifier, current_password)
+    
+    # Get target user
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    
+    # Prevent super admin from deleting themselves
+    target_identifier = target_user.get("email") or target_user.get("phone")
+    if target_identifier == current_admin_identifier:
+        raise HTTPException(status_code=400, detail="cannot_delete_self")
+    
+    # Check if this is the last super admin
+    if target_user.get("is_super_admin"):
+        super_admin_count = await db.super_admins.count_documents({"is_active": True})
+        if super_admin_count <= 1:
+            raise HTTPException(status_code=400, detail="cannot_delete_last_super_admin")
+    
+    # Log action before deletion
+    await log_admin_action(
+        "admin_deleted",
+        current_admin_identifier,
+        {
+            "target_user": target_identifier,
+            "was_super_admin": target_user.get("is_super_admin", False),
+            "was_admin": target_user.get("is_admin", False)
+        }
+    )
+    
+    # Delete from users
+    await db.users.delete_one({"id": user_id})
+    
+    # Delete from super_admins
+    await db.super_admins.delete_many({"identifier": target_identifier})
+    
+    return {
+        "message": "admin_deleted_successfully",
+        "user_id": user_id
+    }
+
+
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

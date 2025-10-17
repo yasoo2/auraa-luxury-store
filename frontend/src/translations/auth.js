@@ -109,6 +109,7 @@ export const authTranslations = {
     wrong_password: 'Wrong password',
     email_already_registered: 'This email is already registered',
     phone_already_registered: 'This phone number is already registered',
+    email_or_phone_required: 'Please provide either email or phone number',
     invalid_email: 'Invalid email address',
     invalid_phone: 'Invalid phone number',
     password_too_short: 'Password too short (minimum 8 characters)',

@@ -39,6 +39,7 @@ import OrderTracking from './pages/OrderTracking';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import DateTestPage from './pages/DateTestPage';
+import DateConversionTest from './pages/DateConversionTest';
 
 // UI Components
 import { Toaster } from './components/ui/sonner';
@@ -102,6 +103,7 @@ function App() {
                     
                     {/* Date Test Page (for testing Hijri conversion) */}
                     <Route path="/date-test" element={<DateTestPage />} />
+                    <Route path="/date-conversion-test" element={<DateConversionTest />} />
                     
                     {/* Redirect unknown routes to home */}
                     <Route path="*" element={<Navigate to="/" replace />} />

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import uuid
 import bcrypt
 
-router = APIRouter(prefix="/super-admin", tags=["Super Admin"])
+router = APIRouter(prefix="/admin/super-admin", tags=["Super Admin"])
 
 # Import from main server
 import sys

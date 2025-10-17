@@ -24,7 +24,8 @@ const AuthPage = () => {
     password: '',
     first_name: '',
     last_name: '',
-    phone: ''
+    phone: '',
+    country: 'SA' // Default to Saudi Arabia
   });
 
   const from = location.state?.from?.pathname || '/';
@@ -326,7 +327,7 @@ const AuthPage = () => {
                     <PhoneInput
                       country={'sa'}
                       value={formData.phone}
-                      onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
+                      onChange={(phone, country) => setFormData({ ...formData, phone: '+' + phone, country: country.countryCode.toUpperCase() })}
                       inputProps={{
                         name: 'phone',
                         required: true,

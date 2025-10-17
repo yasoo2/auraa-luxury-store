@@ -3941,13 +3941,8 @@ async def list_all_admins(current_user: User = Depends(get_current_user)):
         ]
     }).to_list(length=1000)
     
-    # Get super admin details
-    super_admins = await db.super_admins.find({"is_active": True}).to_list(length=100)
-    super_admin_identifiers = {sa["identifier"] for sa in super_admins}
-    
     result = []
     for admin in admins:
-        identifier = admin.get("email") or admin.get("phone")
         result.append({
             "id": admin["id"],
             "email": admin.get("email"),
@@ -3955,7 +3950,7 @@ async def list_all_admins(current_user: User = Depends(get_current_user)):
             "first_name": admin.get("first_name", ""),
             "last_name": admin.get("last_name", ""),
             "is_admin": admin.get("is_admin", False),
-            "is_super_admin": identifier in super_admin_identifiers,
+            "is_super_admin": admin.get("is_super_admin", False),
             "is_active": admin.get("is_active", True),
             "created_at": admin.get("created_at", ""),
             "last_login": admin.get("last_login")

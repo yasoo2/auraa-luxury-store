@@ -275,6 +275,50 @@ const AdminManagement = () => {
           </div>
         </div>
 
+        {/* Current User Profile Card */}
+        {user && (
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl shadow-2xl p-6 mb-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  {isRTL ? 'الحساب الحالي' : 'Current Account'}
+                </h3>
+                <p className="text-2xl font-bold">
+                  {user.first_name} {user.last_name}
+                </p>
+                <p className="text-purple-100 mt-1">
+                  {user.email || user.phone}
+                </p>
+                <div className="flex gap-2 mt-2">
+                  {user.is_super_admin && (
+                    <span className="px-3 py-1 bg-red-600 rounded-full text-sm font-semibold">
+                      {isRTL ? 'سوبر أدمن' : 'Super Admin'}
+                    </span>
+                  )}
+                  {user.is_admin && !user.is_super_admin && (
+                    <span className="px-3 py-1 bg-amber-600 rounded-full text-sm font-semibold">
+                      {isRTL ? 'مسؤول' : 'Admin'}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedAdmin(user);
+                    setShowResetPasswordModal(true);
+                  }}
+                  className="px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
+                >
+                  <Key className="h-4 w-4" />
+                  {isRTL ? 'تغيير كلمة المرور' : 'Change Password'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Statistics */}
         {statistics && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

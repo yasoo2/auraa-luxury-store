@@ -103,6 +103,7 @@ function App() {
                     
                     {/* Date Test Page (for testing Hijri conversion) */}
                     <Route path="/date-test" element={<DateTestPage />} />
+                    <Route path="/date-conversion-test" element={<DateConversionTest />} />
                     
                     {/* Redirect unknown routes to home */}
                     <Route path="*" element={<Navigate to="/" replace />} />

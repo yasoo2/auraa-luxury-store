@@ -350,6 +350,14 @@ const AuthPage = () => {
                       inputClass="phone-input-field"
                     />
                   </div>
+                  
+                  {/* Info message: At least one contact method required */}
+                  <div className="text-center text-xs text-amber-200/80 animate-fade-in-up">
+                    {language === 'ar' 
+                      ? '* يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل'
+                      : '* At least one contact method (email or phone) is required'
+                    }
+                  </div>
                 </>
               )}
 

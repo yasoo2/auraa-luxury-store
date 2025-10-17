@@ -125,35 +125,35 @@ const DateConversionTest = () => {
           </h3>
           <ul className="space-y-3 text-lg">
             <li className="flex items-start gap-3">
-              <span className="text-2xl">1️⃣</span>
+              <span className="text-2xl">✅</span>
               <span>
                 {language === 'ar'
-                  ? 'عند اختيار اللغة العربية، يتم تحويل جميع التواريخ تلقائياً من الميلادي إلى الهجري'
-                  : 'When Arabic language is selected, all dates are automatically converted from Gregorian to Hijri'}
+                  ? 'جميع التواريخ في المتجر تعرض بالتقويم الميلادي (Gregorian)'
+                  : 'All dates in the store are displayed in Gregorian calendar'}
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="text-2xl">2️⃣</span>
+              <span className="text-2xl">✅</span>
               <span>
                 {language === 'ar'
-                  ? 'يستخدم النظام مكتبة hijri-date لضمان دقة التحويل'
-                  : 'The system uses hijri-date library to ensure accurate conversion'}
+                  ? 'لا يتم التحويل إلى التاريخ الهجري حتى عند اختيار اللغة العربية'
+                  : 'No conversion to Hijri calendar even when Arabic language is selected'}
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="text-2xl">3️⃣</span>
+              <span className="text-2xl">✅</span>
               <span>
                 {language === 'ar'
-                  ? 'يتم إضافة علامة "هـ" للتواريخ الهجرية للتمييز'
-                  : 'A "هـ" suffix is added to Hijri dates for distinction'}
+                  ? 'التواريخ تعرض بصيغة مناسبة للغة المختارة (عربي أو إنجليزي)'
+                  : 'Dates are displayed in format appropriate for selected language (Arabic or English)'}
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="text-2xl">4️⃣</span>
+              <span className="text-2xl">✅</span>
               <span>
                 {language === 'ar'
-                  ? 'التحويل يعمل في جميع صفحات التطبيق (الملف الشخصي، تتبع الطلبات، صفحة الإدارة)'
-                  : 'Conversion works across all app pages (Profile, Order Tracking, Admin pages)'}
+                  ? 'يعمل بشكل متسق في جميع صفحات التطبيق'
+                  : 'Works consistently across all application pages'}
               </span>
             </li>
           </ul>

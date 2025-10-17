@@ -3968,7 +3968,7 @@ async def list_all_admins(current_user: User = Depends(get_current_user)):
         "admin_count": len([r for r in result if r["is_admin"] and not r["is_super_admin"]])
     }
 
-@api_router.get("/super-admin/manage/statistics")
+@api_router.get("/admin/super-admin-statistics")
 async def get_admin_statistics(current_user: User = Depends(get_current_user)):
     """Get admin statistics (Super Admin only)"""
     if not current_user.is_super_admin:

@@ -26,6 +26,7 @@ import Footer from './components/Footer';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminManagement from './pages/admin/AdminManagement';
 import AdminSetup from './pages/AdminSetup';
 
 // Legal and Info Pages
@@ -37,6 +38,7 @@ import AboutUs from './pages/AboutUs';
 import OrderTracking from './pages/OrderTracking';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import DateTestPage from './pages/DateTestPage';
 
 // UI Components
 import { Toaster } from './components/ui/sonner';
@@ -96,6 +98,10 @@ function App() {
                     
                     {/* Admin Routes */}
                     <Route path="/admin/*" element={<AdminDashboard />} />
+                    <Route path="/admin-management" element={<AdminManagement />} />
+                    
+                    {/* Date Test Page (for testing Hijri conversion) */}
+                    <Route path="/date-test" element={<DateTestPage />} />
                     
                     {/* Redirect unknown routes to home */}
                     <Route path="*" element={<Navigate to="/" replace />} />

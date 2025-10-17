@@ -422,6 +422,20 @@
         comment: "❌ PRODUCTION LOGIN API TESTING FAILED - CREDENTIALS MISMATCH: Executed comprehensive testing of login API on production server https://api.auraaluxury.com as requested in review. RESULTS: ❌ Login failed with provided credentials. DETAILED FINDINGS: 1) ✅ Production server is reachable and responding correctly (GET /api/ returns 200 with 'Welcome to لورا لاكشري API'). 2) ✅ Login API endpoint is functional and properly handling requests. 3) ✅ Account younes.sowady2011@gmail.com EXISTS in production database (confirmed by 401 'wrong_password' vs 404 'account_not_found' for other accounts). 4) ❌ Password 'younes2025' is INCORRECT for this account (returns 401 'wrong_password'). 5) ❌ Tested 13 common password variations - none work. 6) ❌ Other super admin accounts (phone: 00905013715391, email: info@auraaluxury.com) do NOT exist in production (404 'account_not_found'). 7) ❌ Default admin account (admin@auraa.com) does NOT exist in production. PRODUCTION DATABASE STATE: Database appears to have only 1 super admin account (younes.sowady2011@gmail.com) but with different password than provided in review request. Products: 0, Categories: 6. CONCLUSION: Backend login API is working correctly, but the credentials provided in review request (younes.sowady2011@gmail.com / younes2025) are incorrect for production environment. The account exists but has a different password. This indicates either: 1) Password was changed after seed script, 2) Different password used in production setup, 3) Credentials in review request are outdated/incorrect."
 
 ## frontend:
+  - task: "Flexible Registration System Testing"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/AuthPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing flexible registration system where users can register with EITHER email OR phone number (not both required). Need to verify: 1) Register with Email Only, 2) Register with Phone Only, 3) Register with Both, 4) Register with Neither (Error Case). Also verify UI shows proper placeholders and info messages."
+      - working: true
+        agent: "testing"
+        comment: "🎉 FLEXIBLE REGISTRATION SYSTEM COMPREHENSIVE TESTING COMPLETE - ALL REQUIREMENTS VERIFIED: Executed extensive testing of the new flexible registration system as requested in the review. RESULTS: ✅ ALL 4 TEST SCENARIOS PASSED SUCCESSFULLY. DESKTOP TESTING RESULTS: 1) ✅ Register with Email Only (No Phone): Successfully registered user 'Ahmed Al-Rashid' with email 'ahmed.test@example.com' and empty phone field. Backend logs confirm registration success (200 OK) and welcome email sent. 2) ✅ Register with Phone Only (No Email): Successfully registered user 'Fatima Al-Zahra' with phone '+966501234567' and empty email field. Registration completed successfully. 3) ✅ Register with Both Email and Phone: Successfully registered user 'Omar Al-Mansouri' with both email 'omar.test@example.com' and phone '+966507654321'. Backend logs confirm successful registration with both contact methods. 4) ✅ Register with Neither Email nor Phone (Error Case): Correctly displayed Arabic error message 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل' when attempting to register without either contact method. UI VERIFICATION COMPLETE: ✅ Email field placeholder shows '(اختياري)' indicating optional status. ✅ Phone field placeholder shows '(اختياري)' indicating optional status. ✅ Info message displays '* يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل' in Arabic. ✅ Neither email nor phone fields have 'required' HTML attribute, confirming flexible validation. MOBILE RESPONSIVE TESTING: ✅ All form elements visible and accessible on mobile (390x844 viewport). ✅ Error handling works correctly on mobile - Arabic error message displays properly. ✅ Successful registration flow works on mobile - user redirected to homepage after successful registration. BACKEND INTEGRATION VERIFIED: ✅ Backend correctly validates 'at least email OR phone' requirement (returns 422 for neither, 200 for either/both). ✅ Welcome emails sent only when email provided, phone-only registrations work without email. ✅ All registration attempts properly logged in backend with correct contact method tracking. CONCLUSION: The flexible registration system is working perfectly across all devices and scenarios. Users can successfully register with email only, phone only, or both, with proper error handling when neither is provided. The system meets all requirements specified in the review request."
   - task: "Carousel Responsive Design Enhancement"
     implemented: true
     working: true
@@ -787,9 +801,7 @@
 
 ## test_plan:
   current_focus:
-    - "Verify OrderTracking route renders at /order-tracking"
-    - "Footer link navigates to /order-tracking"
-    - "Basic UI loads without console errors"
+    - "Flexible Registration System Testing"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -797,6 +809,8 @@
 ## agent_communication:
   - agent: "main"
     message: "Routing for OrderTracking is implemented using the common path '/order-tracking' with redirect from '/track-order'. Footer includes a visible link. Please run UI tests to verify navigation and rendering."
+  - agent: "testing"
+    message: "Completed comprehensive testing of flexible registration system. All 4 test scenarios passed successfully: email-only registration, phone-only registration, both email and phone registration, and proper error handling when neither is provided. System works perfectly on both desktop and mobile. Backend integration confirmed working correctly with proper validation and email handling."
   - agent: "testing"
     message: "🎉 FOCUSED ORDER TRACKING UI TESTING COMPLETE - ALL REQUIREMENTS VERIFIED: Completed comprehensive testing of Order Tracking functionality as requested in the review. RESULTS: ✅ ALL TESTS PASSED SUCCESSFULLY (100% success rate). VERIFIED FUNCTIONALITY: 1) Home page loads without console errors. 2) Footer 'تتبع الطلب' (Track Order) link found and working correctly with hover functionality. 3) Navigation to '/order-tracking' successful from footer link. 4) Direct '/track-order' URL redirects properly to '/order-tracking'. 5) Order tracking page renders with proper Arabic heading 'تتبع الطلبات'. 6) All required form inputs present and functional (tracking number, order number, Track button). 7) Backend URL configuration uses environment variables correctly (no hardcoded URLs). 8) Screenshots captured for documentation (home page, footer hover, order tracking page). TECHNICAL VERIFICATION: React Router configuration working correctly, OrderTracking component properly integrated with RTL support, Footer component linking correctly, responsive design implemented with Tailwind CSS. CONCLUSION: Order Tracking routing and link implementation is working perfectly and ready for production use."
   - agent: "testing"

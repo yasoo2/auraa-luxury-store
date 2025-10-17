@@ -372,10 +372,12 @@ class AdminManagementModels:
 
 @router.get("/manage/list-all-admins")
 async def list_all_admins(
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_user: User = Depends(get_current_user)
 ):
     """List all admins and super admins (Super Admin only) - Uses JWT token"""
-    # Note: Authentication handled by JWT middleware in frontend
+    # Verify user is super admin
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
     
     # Get all users who are admins or super admins
     admins = await db.users.find({

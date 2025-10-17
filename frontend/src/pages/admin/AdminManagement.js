@@ -454,7 +454,7 @@ const AdminManagement = () => {
                         {admin.last_login ? (
                           <div className="flex items-center justify-center gap-1">
                             <Clock className="h-4 w-4" />
-                            {new Date(admin.last_login).toLocaleDateString()}
+                            {formatDate(admin.last_login, language, { format: 'short' })}
                           </div>
                         ) : (
                           '-'

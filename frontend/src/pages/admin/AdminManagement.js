@@ -42,20 +42,15 @@ const AdminManagement = () => {
   const fetchAdmins = async () => {
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
       
-      if (!password && !token) {
-        setShowPasswordModal(true);
+      if (!token) {
+        toast.error(isRTL ? 'يرجى تسجيل الدخول' : 'Please login');
         return;
       }
 
       const response = await axios.get(
         `${BACKEND_URL}/api/super-admin/manage/list-all-admins`,
         {
-          params: {
-            current_admin_identifier: identifier,
-            current_password: password || 'temp'
-          },
           headers: { Authorization: `Bearer ${token}` }
         }
       );
@@ -64,12 +59,7 @@ const AdminManagement = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching admins:', error);
-      if (error.response?.status === 401) {
-        setShowPasswordModal(true);
-        toast.error(isRTL ? 'كلمة المرور غير صحيحة' : 'Incorrect password');
-      } else {
-        toast.error(isRTL ? 'فشل في تحميل المسؤولين' : 'Failed to load admins');
-      }
+      toast.error(isRTL ? 'فشل في تحميل المسؤولين' : 'Failed to load admins');
       setLoading(false);
     }
   };
@@ -77,15 +67,12 @@ const AdminManagement = () => {
   const fetchStatistics = async () => {
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
       
+      if (!token) return;
+
       const response = await axios.get(
         `${BACKEND_URL}/api/super-admin/manage/statistics`,
         {
-          params: {
-            current_admin_identifier: identifier,
-            current_password: password || 'temp'
-          },
           headers: { Authorization: `Bearer ${token}` }
         }
       );

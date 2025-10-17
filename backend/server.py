@@ -65,6 +65,7 @@ class User(BaseModel):
     first_name: str
     last_name: str
     phone: str
+    country: Optional[str] = 'SA'  # ISO country code
     address: Optional[Dict[str, Any]] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_admin: bool = False
@@ -76,6 +77,7 @@ class UserCreate(BaseModel):
     first_name: str
     last_name: str
     phone: str
+    country: Optional[str] = 'SA'  # ISO country code
 
 class UserLogin(BaseModel):
     identifier: str  # Can be email or phone
@@ -2004,6 +2006,7 @@ aliexpress_customs_calc = None
 aliexpress_scheduler = None
 aliexpress_bulk_import = None
 aliexpress_sync_service = None  # New unified sync service
+real_aliexpress_service = None  # Real product service with scraping
 category_mapper = None
 geoip_service = None
 
@@ -2011,7 +2014,7 @@ geoip_service = None
 async def init_aliexpress_services():
     """Initialize AliExpress services on startup."""
     global aliexpress_auth, aliexpress_product_sync, aliexpress_customs_calc, aliexpress_scheduler
-    global aliexpress_bulk_import, aliexpress_sync_service, category_mapper, geoip_service
+    global aliexpress_bulk_import, aliexpress_sync_service, real_aliexpress_service, category_mapper, geoip_service
     
     try:
         # Initialize GeoIP service (always available)
@@ -2070,7 +2073,13 @@ async def init_aliexpress_services():
             
             logger.info("✅ AliExpress services initialized successfully")
         else:
-            logger.warning("⚠️ AliExpress credentials not found - services disabled")
+            logger.warning("⚠️ AliExpress credentials not found - using web scraping mode")
+        
+        # Always initialize Real AliExpress Service (uses web scraping)
+        from services.aliexpress.real_product_service import get_real_aliexpress_service
+        profit_margin = float(os.getenv('PROFIT_MARGIN', '50.0'))
+        real_aliexpress_service = await get_real_aliexpress_service(db, profit_margin)
+        logger.info("✅ Real AliExpress Service initialized (web scraping mode)")
     
     except Exception as e:
         logger.error(f"❌ Failed to initialize AliExpress services: {e}")
@@ -3854,6 +3863,222 @@ async def generate_sitemap():
     except Exception as e:
         logger.error(f"Error generating sitemap: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate sitemap")
+
+# ======================================
+# Real AliExpress Service Endpoints (Web Scraping)
+# ======================================
+
+@api_router.post("/aliexpress/real/search")
+async def search_aliexpress_products(
+    keywords: str,
+    country: Optional[str] = "SA",
+    limit: int = 20,
+    auto_import: bool = False,
+    category: str = "imported"
+):
+    """
+    Search for products on AliExpress using web scraping.
+    
+    Args:
+        keywords: Search keywords
+        country: Target country for pricing (SA, AE, etc.)
+        limit: Maximum number of results
+        auto_import: Automatically import products to database
+        category: Store category for imported products
+    
+    Returns:
+        Search results with complete pricing
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.search_and_import_products(
+            keywords=keywords,
+            country_code=country,
+            limit=limit,
+            auto_import=auto_import,
+            category=category
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error searching AliExpress: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/real/product/{product_id}")
+async def get_real_aliexpress_product(
+    product_id: str,
+    country: Optional[str] = "SA"
+):
+    """
+    Get detailed product information from AliExpress with pricing.
+    
+    Args:
+        product_id: AliExpress product ID
+        country: Target country for pricing
+    
+    Returns:
+        Complete product information with pricing
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        product = await real_aliexpress_service.get_product_with_pricing(
+            product_id=product_id,
+            country_code=country
+        )
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        return product
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/real/import/{product_id}")
+async def import_real_aliexpress_product(
+    product_id: str,
+    country: Optional[str] = "SA",
+    category: str = "imported",
+    custom_name: Optional[str] = None,
+    custom_description: Optional[str] = None,
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Import a product from AliExpress to the store.
+    
+    Args:
+        product_id: AliExpress product ID
+        country: Target country for default pricing
+        category: Store category
+        custom_name: Custom product name (optional)
+        custom_description: Custom description (optional)
+    
+    Returns:
+        Import result
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.import_product(
+            product_id=product_id,
+            country_code=country,
+            category=category,
+            custom_name=custom_name,
+            custom_description=custom_description
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error importing product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/real/bulk-import")
+async def bulk_import_real_products(
+    keywords: str,
+    count: int = 50,
+    country: Optional[str] = "SA",
+    category: str = "imported",
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Bulk import products from AliExpress.
+    
+    Args:
+        keywords: Search keywords
+        count: Number of products to import
+        country: Target country
+        category: Store category
+    
+    Returns:
+        Import statistics
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.bulk_import_products(
+            keywords=keywords,
+            count=count,
+            country_code=country,
+            category=category
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error in bulk import: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/real/sync-pricing/{product_id}")
+async def sync_real_product_pricing(
+    product_id: str,
+    countries: Optional[List[str]] = None,
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Sync pricing for a product across multiple countries.
+    
+    Args:
+        product_id: Store product ID
+        countries: List of country codes (optional)
+    
+    Returns:
+        Sync results
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.sync_product_pricing(
+            product_id=product_id,
+            countries=countries
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error syncing pricing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/real/availability/{product_id}")
+async def check_real_product_availability(
+    product_id: str,
+    country: str
+):
+    """
+    Check product availability for a specific country.
+    
+    Args:
+        product_id: Store product ID
+        country: Country code
+    
+    Returns:
+        Availability information with pricing
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.get_product_availability(
+            product_id=product_id,
+            country_code=country
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error checking availability: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Mount static files
 import os

@@ -48,6 +48,16 @@ const AuthPage = () => {
         const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
         result = await login(identifier, formData.password);
       } else {
+        // Registration: Validate that at least email OR phone is provided
+        if (!formData.email && !formData.phone) {
+          const errorMsg = language === 'ar' 
+            ? 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل'
+            : 'Please provide either email or phone number';
+          setError(errorMsg);
+          setLoading(false);
+          return;
+        }
+        
         result = await register(formData);
       }
       

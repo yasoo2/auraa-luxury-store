@@ -3992,7 +3992,7 @@ async def get_admin_statistics(current_user: User = Depends(get_current_user)):
         "recent_actions": recent_actions
     }
 
-@api_router.post("/super-admin/manage/change-role")
+@api_router.post("/admin/super-admin-change-role")
 async def change_user_role(
     request: ChangeRoleRequest,
     current_user: User = Depends(get_current_user)

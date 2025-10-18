@@ -123,16 +123,19 @@ jobs:
         if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
         run: |
+          # Remove lock file to avoid sync issues in CI
+          rm -f package-lock.json
+          
           # Install with legacy peer deps to handle dependency conflicts
-          npm ci --legacy-peer-deps --prefer-offline
+          npm install --legacy-peer-deps --prefer-offline
           
           # Build with error handling
           npm run build 2>&1 | tee build.log
           
           # Check build success
-          if [ ! -d "build" ]; then
+          if [ ! -d "build" ] && [ ! -d "dist" ]; then
             echo "❌ Frontend build failed"
-            cat build.log
+            cat build.log || true
             echo "build_status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi

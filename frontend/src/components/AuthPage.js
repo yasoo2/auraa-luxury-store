@@ -24,7 +24,8 @@ const AuthPage = () => {
     password: '',
     first_name: '',
     last_name: '',
-    phone: ''
+    phone: '',
+    country: 'SA' // Default to Saudi Arabia
   });
 
   const from = location.state?.from?.pathname || '/';
@@ -48,16 +49,6 @@ const AuthPage = () => {
         const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
         result = await login(identifier, formData.password);
       } else {
-        // Registration: Validate that at least email OR phone is provided
-        if (!formData.email && !formData.phone) {
-          const errorMsg = language === 'ar' 
-            ? 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل'
-            : 'Please provide either email or phone number';
-          setError(errorMsg);
-          setLoading(false);
-          return;
-        }
-        
         result = await register(formData);
       }
       
@@ -193,7 +184,8 @@ const AuthPage = () => {
                   <span>{getAuthTranslation('continue_with_google', language)}</span>
                 </button>
                 
-                <button
+                {/* Facebook OAuth temporarily disabled - will be enabled after Facebook App setup */}
+                {/* <button
                   onClick={handleFacebookLogin}
                   disabled={loading}
                   className="w-full bg-[#1877F2] text-white rounded-xl px-4 py-3 flex items-center justify-center space-x-2 hover:bg-[#166FE5] transition-colors disabled:opacity-50"
@@ -202,7 +194,7 @@ const AuthPage = () => {
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                   </svg>
                   <span>{getAuthTranslation('continue_with_facebook', language)}</span>
-                </button>
+                </button> */}
                 
                 <div className="flex items-center space-x-4 my-4">
                   <div className="flex-1 border-t border-white/30"></div>
@@ -314,7 +306,7 @@ const AuthPage = () => {
                 </div>
               )}
 
-              {/* Register: Email OR Phone (at least one required) */}
+              {/* Register: Both Email and Phone required */}
               {!isLogin && (
                 <>
                   <div className="relative animate-slide-in-left">
@@ -322,10 +314,11 @@ const AuthPage = () => {
                     <input
                       type="email"
                       name="email"
-                      placeholder={`${getAuthTranslation('email', language)} ${language === 'ar' ? '(اختياري)' : '(Optional)'}`}
+                      placeholder={getAuthTranslation('email', language)}
                       value={formData.email}
                       onChange={handleInputChange}
                       className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                      required
                       data-testid="email-input"
                     />
                   </div>
@@ -334,11 +327,10 @@ const AuthPage = () => {
                     <PhoneInput
                       country={'sa'}
                       value={formData.phone}
-                      onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
-                      placeholder={`${language === 'ar' ? 'رقم الهاتف (اختياري)' : 'Phone Number (Optional)'}`}
+                      onChange={(phone, country) => setFormData({ ...formData, phone: '+' + phone, country: country.countryCode.toUpperCase() })}
                       inputProps={{
                         name: 'phone',
-                        required: false,
+                        required: true,
                         className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
                       }}
                       containerClass="phone-input-container"
@@ -349,14 +341,6 @@ const AuthPage = () => {
                       searchPlaceholder={language === 'ar' ? "ابحث عن بلد..." : "Search country..."}
                       inputClass="phone-input-field"
                     />
-                  </div>
-                  
-                  {/* Info message: At least one contact method required */}
-                  <div className="text-center text-xs text-amber-200/80 animate-fade-in-up">
-                    {language === 'ar' 
-                      ? '* يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل'
-                      : '* At least one contact method (email or phone) is required'
-                    }
                   </div>
                 </>
               )}

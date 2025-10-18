@@ -35,6 +35,26 @@ db = client[os.environ['DB_NAME']]
 
 # Create the main app
 app = FastAPI(title="لورا لاكشري API", version="1.0.0")
+
+# ⚠️ CRITICAL: CORS MUST be configured FIRST before any other middleware
+# This ensures it works in production deployments (Render, etc.)
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=[
+        "https://auraaluxury.com",
+        "https://www.auraaluxury.com",
+        "https://api.auraaluxury.com",
+        "https://auraa-admin-1.preview.emergentagent.com",
+        "http://localhost:3000",
+        "http://localhost:8001",
+        "*"  # Fallback for development
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
 api_router = APIRouter(prefix="/api")
 
 # Security

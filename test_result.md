@@ -814,7 +814,7 @@
 
 ## test_plan:
   current_focus:
-    - "Flexible Registration System Testing"
+    - "Fix Unresponsive Logo Upload Button in Admin Settings"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

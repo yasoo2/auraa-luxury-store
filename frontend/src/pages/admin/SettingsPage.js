@@ -269,7 +269,7 @@ const SettingsPage = () => {
                   id="logo-upload" 
                   name="logo-upload" 
                   type="file" 
-                  accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
                   className="sr-only"
                   onChange={handleLogoUpload}
                 />
@@ -287,12 +287,12 @@ const SettingsPage = () => {
                     id="logo-upload" 
                     name="logo-upload" 
                     type="file" 
-                    accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
                     className="sr-only"
                     onChange={handleLogoUpload}
                   />
                 </label>
-                <p className="mt-1 text-sm text-gray-500">PNG, JPG, SVG up to 2MB</p>
+                <p className="mt-1 text-sm text-gray-500">PNG, JPG, WebP up to 2MB</p>
               </div>
             </div>
           )}

@@ -1,21 +1,22 @@
-name: Deploy Backend to Render
+name: Deploy Backend to Render (DISABLED - Using Kubernetes)
+
+# This workflow is disabled as we deploy via Kubernetes, not Render
+# Keep for reference only
 
 on:
-  push:
-    branches: [ main, feat/admin-suite-complete ]
-    paths:
-      - 'backend/**'
+  workflow_dispatch: {}  # Manual trigger only
+  # push:
+  #   branches: [ main ]
+  #   paths:
+  #     - 'backend/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: false  # Disabled - using Kubernetes deployment
     steps:
       - name: Trigger Render Deploy Hook
         run: |
-          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
-            echo "🚀 Triggering Render deployment..."
-            curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
-            echo "✅ Deploy hook triggered successfully"
-          else
-            echo "⚠️  RENDER_DEPLOY_HOOK not set - skipping deploy"
-          fi
+          echo "⚠️ This workflow is disabled"
+          echo "Backend is deployed via Kubernetes (supervisor)"
+          echo "No action needed"

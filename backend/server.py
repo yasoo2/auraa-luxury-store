@@ -88,6 +88,7 @@ class UserCreate(BaseModel):
     first_name: str
     last_name: str
     phone: Optional[str] = None
+    turnstile_token: Optional[str] = None  # Cloudflare Turnstile token
 
 class UserLogin(BaseModel):
     identifier: str  # Can be email or phone

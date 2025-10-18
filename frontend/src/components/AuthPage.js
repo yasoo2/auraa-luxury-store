@@ -427,6 +427,11 @@ const AuthPage = () => {
                 </div>
               )}
 
+              {/* Cloudflare Turnstile */}
+              <div className="flex justify-center my-4">
+                <div ref={turnstileRef} className="cf-turnstile" data-theme="light"></div>
+              </div>
+
               <button 
                 type="submit" 
                 disabled={loading}

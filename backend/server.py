@@ -1322,6 +1322,94 @@ async def upsert_integration_settings(payload: IntegrationSettingsUpdate, curren
     updated = await db.settings.find_one({"id": existing["id"]})
     return IntegrationSettings(**updated)
 
+# Store Settings Model
+class StoreSettings(BaseModel):
+    id: str = None
+    # Store Information
+    store_name: str = "Auraa Luxury"
+    store_name_ar: str = "Auraa Luxury"
+    store_description: str = "Premium accessories for discerning customers"
+    store_description_ar: str = "إكسسوارات فاخرة للعملاء المميزين"
+    # Contact Information
+    contact_email: str = "info@auraa.com"
+    contact_phone: str = "+905013715391"
+    whatsapp_number: str = "+905013715391"
+    # Address
+    address_line1: str = "123 Luxury Street"
+    address_line1_ar: str = "123 شارع الفخامة"
+    city: str = "Riyadh"
+    city_ar: str = "الرياض"
+    country: str = "Saudi Arabia"
+    country_ar: str = "المملكة العربية السعودية"
+    postal_code: str = "12345"
+    # Business Settings
+    currency_primary: str = "SAR"
+    currency_secondary: str = "USD"
+    tax_rate: float = 15
+    free_shipping_threshold: float = 200
+    # Notifications
+    notify_new_orders: bool = True
+    notify_low_stock: bool = True
+    notify_reviews: bool = True
+    low_stock_threshold: int = 10
+    # Social Media
+    facebook_url: str = ""
+    instagram_url: str = ""
+    twitter_url: str = ""
+    tiktok_url: str = ""
+    # Payment Methods
+    payment_cod: bool = False
+    payment_stripe: bool = False
+    payment_paypal: bool = False
+    # Shipping
+    shipping_local_price: float = 25
+    shipping_express_price: float = 50
+    shipping_free_threshold: float = 200
+    # Theme
+    primary_color: str = "#D97706"
+    secondary_color: str = "#FEF3C7"
+    logo_url: str = ""
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
+
+@api_router.get("/admin/settings")
+async def get_store_settings(current_user: User = Depends(get_admin_user)):
+    """Get store settings"""
+    try:
+        settings = await db.store_settings.find_one({"id": "default"})
+        if not settings:
+            # Return default settings
+            default_settings = StoreSettings(id="default")
+            return default_settings.dict()
+        return settings
+    except Exception as e:
+        logger.error(f"Error fetching store settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch settings: {str(e)}")
+
+@api_router.put("/admin/settings")
+async def update_store_settings(settings: dict, current_user: User = Depends(get_admin_user)):
+    """Update store settings"""
+    try:
+        settings["id"] = "default"
+        settings["updated_at"] = datetime.now(timezone.utc)
+        
+        # Upsert settings
+        await db.store_settings.update_one(
+            {"id": "default"},
+            {"$set": settings},
+            upsert=True
+        )
+        
+        updated = await db.store_settings.find_one({"id": "default"})
+        return updated
+    except Exception as e:
+        logger.error(f"Error updating store settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update settings: {str(e)}")
+
 # Initialize admin user and sample data
 @api_router.post("/init-data")
 async def initialize_sample_data():

@@ -19,7 +19,9 @@ const API = `${BACKEND_URL}/api`;
 
 const AdminPage = () => {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const isRTL = language === 'ar';
+  const isSuperAdmin = user?.is_super_admin || false;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);

@@ -609,7 +609,8 @@ async def get_oauth_url(provider: str, redirect_url: str):
 @api_router.post("/auth/oauth/session")
 async def process_oauth_session(
     session_data: dict,
-    response: Response
+    response: Response,
+    request: Request
 ):
     """
     Process OAuth session after user returns from OAuth provider

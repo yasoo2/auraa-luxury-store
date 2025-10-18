@@ -36,6 +36,26 @@ db = client[os.environ['DB_NAME']]
 
 # Create the main app
 app = FastAPI(title="لورا لاكشري API", version="1.0.0")
+
+# ⚠️ CRITICAL: CORS MUST be configured FIRST before any other middleware
+# This ensures it works in production deployments (Render, etc.)
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=[
+        "https://auraaluxury.com",
+        "https://www.auraaluxury.com",
+        "https://api.auraaluxury.com",
+        "https://auraa-admin-1.preview.emergentagent.com",
+        "http://localhost:3000",
+        "http://localhost:8001",
+        "*"  # Fallback for development
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
 api_router = APIRouter(prefix="/api")
 
 # Security
@@ -337,6 +357,20 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 @api_router.get("/")
 async def root():
     return {"message": "Welcome to لورا لاكشري API"}
+
+@api_router.get("/cors-test")
+async def cors_test(request: Request):
+    """Test endpoint to verify CORS headers are being sent"""
+    return {
+        "message": "CORS test successful",
+        "origin": request.headers.get("origin", "No origin header"),
+        "cors_enabled": True,
+        "allowed_origins": [
+            "https://auraaluxury.com",
+            "https://www.auraaluxury.com",
+            "https://api.auraaluxury.com"
+        ]
+    }
 
 # Auth routes
 @api_router.post("/auth/register")
@@ -1733,22 +1767,7 @@ async def setup_deployment():
         logger.error(f"Error in deployment setup: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Deployment setup error: {str(e)}")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=[
-        "https://auraaluxury.com",
-        "https://www.auraaluxury.com",
-        "https://api.auraaluxury.com",
-        "https://auraa-admin-1.preview.emergentagent.com",
-        "http://localhost:3000",
-        "http://localhost:8001",
-        "*"  # Fallback for development
-    ],
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
+# CORS middleware moved to top of file (after app creation) for proper loading in production
 
 # Configure logging
 logging.basicConfig(

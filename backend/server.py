@@ -542,14 +542,15 @@ async def login(credentials: UserLogin, response: Response, request: Request):
         access_token = create_access_token(data={"sub": user["id"], "is_super_admin": True})
         user_obj = User(**{k: v for k, v in user.items() if k != "password"})
         
-        # Set cookie
+        # Set cookie with dynamic domain
+        cookie_domain = get_cookie_domain(request)
         response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,
             secure=True,
             samesite="none",
-            domain=".auraaluxury.com",
+            domain=cookie_domain,
             max_age=1800
         )
         

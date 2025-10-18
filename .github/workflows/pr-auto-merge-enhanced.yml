@@ -123,9 +123,6 @@ jobs:
         if: hashFiles('frontend/package.json') != ''
         working-directory: frontend
         run: |
-          # Remove lock file to avoid sync issues in CI
-          rm -f package-lock.json
-          
           # Install with legacy peer deps to handle dependency conflicts
           npm install --legacy-peer-deps --prefer-offline
           

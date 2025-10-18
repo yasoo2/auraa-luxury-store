@@ -4276,5 +4276,196 @@ async def delete_admin(
     }
 
 
+# ============================================
+# Verification Code System for Admin Actions
+# ============================================
+
+def generate_verification_code() -> str:
+    """Generate 6-digit verification code"""
+    return ''.join([str(random.randint(0, 9)) for _ in range(6)])
+
+@api_router.post("/admin/send-verification-code")
+async def send_verification_code_endpoint(
+    request: SendVerificationRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Send verification code to Super Admin for sensitive actions
+    Super Admin only
+    """
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Validate action
+    valid_actions = ['delete_user', 'change_password', 'change_role']
+    if request.action not in valid_actions:
+        raise HTTPException(status_code=400, detail="Invalid action")
+    
+    # Validate contact method
+    if request.contact_method not in ['email', 'phone']:
+        raise HTTPException(status_code=400, detail="Invalid contact method")
+    
+    # Get target user
+    target_user = await db.users.find_one({"id": request.target_user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Target user not found")
+    
+    # Generate code
+    code = generate_verification_code()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+    
+    # Get contact info
+    if request.contact_method == 'email':
+        contact = current_user.email
+        if not contact:
+            raise HTTPException(status_code=400, detail="Super admin email not found")
+    else:  # phone
+        contact = current_user.phone
+        if not contact:
+            raise HTTPException(status_code=400, detail="Super admin phone not found")
+    
+    # Store verification code
+    verification_doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user.id,
+        "contact": contact,
+        "code": code,
+        "action": request.action,
+        "target_user_id": request.target_user_id,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "used": False
+    }
+    
+    await db.verification_codes.insert_one(verification_doc)
+    
+    # Send code
+    if request.contact_method == 'email':
+        # Send email
+        recipient_name = f"{current_user.first_name} {current_user.last_name}"
+        success = send_verification_code(
+            to_email=contact,
+            recipient_name=recipient_name,
+            code=code,
+            action=request.action,
+            language='ar'  # Default to Arabic
+        )
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to send verification email")
+    else:
+        # SMS not implemented yet
+        # For now, just return the code in response (temporary)
+        return {
+            "message": "verification_code_generated",
+            "contact": contact,
+            "method": "phone",
+            "code": code,  # Temporary: remove in production
+            "note": "SMS service not implemented yet. Code shown for testing."
+        }
+    
+    return {
+        "message": "verification_code_sent",
+        "contact": contact,
+        "method": request.contact_method,
+        "expires_in_minutes": 10
+    }
+
+@api_router.post("/admin/verify-code")
+async def verify_code_endpoint(
+    request: VerifyCodeRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Verify code and return token for action execution
+    Super Admin only
+    """
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Find verification code
+    verification = await db.verification_codes.find_one({
+        "user_id": current_user.id,
+        "code": request.code,
+        "action": request.action,
+        "target_user_id": request.target_user_id,
+        "used": False
+    })
+    
+    if not verification:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    
+    # Check expiry
+    expires_at = datetime.fromisoformat(verification["expires_at"])
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=400, detail="Verification code expired")
+    
+    # Mark as used
+    await db.verification_codes.update_one(
+        {"id": verification["id"]},
+        {"$set": {"used": True}}
+    )
+    
+    # Generate action token (valid for 5 minutes)
+    action_token = jwt.encode(
+        {
+            "user_id": current_user.id,
+            "action": request.action,
+            "target_user_id": request.target_user_id,
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5)
+        },
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+    
+    return {
+        "message": "code_verified",
+        "action_token": action_token,
+        "expires_in_minutes": 5
+    }
+
+@api_router.get("/admin/users/all")
+async def get_all_users(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all users (admins + regular users)
+    Super Admin only
+    """
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Get all users
+    users = await db.users.find({}).to_list(length=10000)
+    
+    result = []
+    for user in users:
+        result.append({
+            "id": user["id"],
+            "email": user.get("email"),
+            "phone": user.get("phone"),
+            "first_name": user.get("first_name", ""),
+            "last_name": user.get("last_name", ""),
+            "is_admin": user.get("is_admin", False),
+            "is_super_admin": user.get("is_super_admin", False),
+            "is_active": user.get("is_active", True),
+            "created_at": user.get("created_at", ""),
+            "last_login": user.get("last_login")
+        })
+    
+    # Separate admins and users
+    admins = [u for u in result if u["is_admin"] or u["is_super_admin"]]
+    regular_users = [u for u in result if not u["is_admin"] and not u["is_super_admin"]]
+    
+    return {
+        "admins": admins,
+        "users": regular_users,
+        "total_admins": len(admins),
+        "total_users": len(regular_users),
+        "total": len(result)
+    }
+
+
+
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

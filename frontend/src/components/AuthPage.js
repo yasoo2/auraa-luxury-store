@@ -107,15 +107,10 @@ const AuthPage = () => {
         result = await register({ ...formData, turnstile_token: turnstileToken });
       }
       
-      console.log('Login result:', result);
       if (result.success) {
-        console.log('Login successful, navigating to:', from);
-        // Small delay to ensure state update
-        setTimeout(() => {
-          navigate(from, { replace: true });
-        }, 100);
+        // Immediate navigation without delay
+        navigate(from, { replace: true });
       } else {
-        console.log('Login failed:', result.error);
         // Translate error message
         const errorKey = result.error || 'حدث خطأ';
         const translatedError = getAuthTranslation(errorKey, language) || errorKey;

@@ -391,8 +391,35 @@ async def register(user_data: UserCreate, response: Response):
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
 
 @api_router.post("/auth/login")
-async def login(credentials: UserLogin, response: Response):
+async def login(credentials: UserLogin, response: Response, request: Request):
     logger.info(f"🔐 Login attempt for identifier: {credentials.identifier}")
+    
+    # Get client IP for rate limiting and Turnstile
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Rate Limiting
+    is_allowed, seconds_until_reset = check_rate_limit(credentials.identifier, "login")
+    if not is_allowed:
+        logger.warning(f"🚫 Rate limit exceeded for: {credentials.identifier}")
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many login attempts. Please try again in {seconds_until_reset} seconds."
+        )
+    
+    # Cloudflare Turnstile Verification
+    if credentials.turnstile_token:
+        turnstile_valid = await verify_turnstile(credentials.turnstile_token, client_ip)
+        if not turnstile_valid:
+            logger.warning(f"🚫 Turnstile verification failed for: {credentials.identifier}")
+            raise HTTPException(
+                status_code=403,
+                detail="Security verification failed. Please try again."
+            )
+    else:
+        logger.warning(f"⚠️ No Turnstile token provided for: {credentials.identifier}")
+        # In production, you might want to make this required
+        # raise HTTPException(status_code=403, detail="Security verification required")
+    
     logger.info(f"🔐 Password length: {len(credentials.password)}, repr: {repr(credentials.password[:20] if len(credentials.password) > 20 else credentials.password)}")
     
     # First check if super admin

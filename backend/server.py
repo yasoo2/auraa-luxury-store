@@ -365,6 +365,20 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 async def root():
     return {"message": "Welcome to لورا لاكشري API"}
 
+@api_router.get("/cors-test")
+async def cors_test(request: Request):
+    """Test endpoint to verify CORS headers are being sent"""
+    return {
+        "message": "CORS test successful",
+        "origin": request.headers.get("origin", "No origin header"),
+        "cors_enabled": True,
+        "allowed_origins": [
+            "https://auraaluxury.com",
+            "https://www.auraaluxury.com",
+            "https://api.auraaluxury.com"
+        ]
+    }
+
 # Auth routes
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate, response: Response, request: Request):

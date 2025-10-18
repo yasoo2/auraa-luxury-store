@@ -91,7 +91,7 @@ const AuthPage = () => {
           return;
         }
         
-        result = await register(formData);
+        result = await register({ ...formData, turnstile_token: turnstileToken });
       }
       
       console.log('Login result:', result);

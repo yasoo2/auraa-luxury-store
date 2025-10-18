@@ -1813,22 +1813,7 @@ async def setup_deployment():
         logger.error(f"Error in deployment setup: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Deployment setup error: {str(e)}")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=[
-        "https://auraaluxury.com",
-        "https://www.auraaluxury.com",
-        "https://api.auraaluxury.com",
-        "https://auraa-admin-1.preview.emergentagent.com",
-        "http://localhost:3000",
-        "http://localhost:8001",
-        "*"  # Fallback for development
-    ],
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
+# CORS middleware moved to top of file (after app creation) for proper loading in production
 
 # Configure logging
 logging.basicConfig(

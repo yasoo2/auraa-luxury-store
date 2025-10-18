@@ -163,9 +163,9 @@ const SettingsPage = () => {
     }
 
     // Validate file type
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      toast.error(isRTL ? 'نوع الملف غير مدعوم. استخدم PNG, JPG أو SVG' : 'Unsupported file type. Use PNG, JPG or SVG');
+      toast.error(isRTL ? 'نوع الملف غير مدعوم. استخدم PNG, JPG أو WebP' : 'Unsupported file type. Use PNG, JPG or WebP');
       return;
     }
 

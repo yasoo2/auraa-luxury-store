@@ -92,6 +92,69 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     identifier: str  # Can be email or phone
     password: str
+    turnstile_token: Optional[str] = None  # Cloudflare Turnstile token
+
+# Helper function: Verify Cloudflare Turnstile token
+async def verify_turnstile(token: str, ip: str = None) -> bool:
+    """Verify Cloudflare Turnstile token"""
+    if not TURNSTILE_SECRET_KEY or not token:
+        logger.warning("Turnstile verification skipped - missing secret key or token")
+        return True  # Allow in development if not configured
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                TURNSTILE_VERIFY_URL,
+                json={
+                    "secret": TURNSTILE_SECRET_KEY,
+                    "response": token,
+                    "remoteip": ip
+                },
+                timeout=10.0
+            )
+            
+            result = response.json()
+            logger.info(f"Turnstile verification result: {result}")
+            return result.get("success", False)
+    except Exception as e:
+        logger.error(f"Turnstile verification error: {str(e)}")
+        return False
+
+# Helper function: Rate Limiting
+def check_rate_limit(identifier: str, endpoint: str) -> tuple[bool, Optional[int]]:
+    """
+    Check if request should be rate limited
+    Returns: (is_allowed, seconds_until_reset)
+    """
+    key = f"{endpoint}:{identifier}"
+    current_time = time.time()
+    
+    if key in rate_limit_storage:
+        limit_data = rate_limit_storage[key]
+        
+        # Reset if window expired
+        if current_time > limit_data["reset_time"]:
+            rate_limit_storage[key] = {
+                "attempts": 1,
+                "reset_time": current_time + RATE_LIMIT_WINDOW
+            }
+            return True, None
+        
+        # Check if limit exceeded
+        if limit_data["attempts"] >= RATE_LIMIT_ATTEMPTS:
+            seconds_until_reset = int(limit_data["reset_time"] - current_time)
+            return False, seconds_until_reset
+        
+        # Increment attempts
+        limit_data["attempts"] += 1
+        return True, None
+    else:
+        # First attempt
+        rate_limit_storage[key] = {
+            "attempts": 1,
+            "reset_time": current_time + RATE_LIMIT_WINDOW
+        }
+        return True, None
 
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

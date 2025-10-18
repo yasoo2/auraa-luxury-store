@@ -419,6 +419,22 @@
         comment: "🎉 SUPER ADMIN STATISTICS API TESTING COMPLETE - ALL REQUIREMENTS VERIFIED: Executed comprehensive testing of the Super Admin Statistics API endpoint as specifically requested in the review. RESULTS: ✅ 4/4 tests passed (100% success rate). SUPER ADMIN LOGIN TESTING: 1) ✅ Login with younes.sowady2011@gmail.com / younes2025 - Login successful, returns HTTP 200, access_token obtained, user object contains is_admin: true and is_super_admin: true, User ID: 0f1b7c60-12aa-4a6a-b5a7-ed4c5a36ca17. STATISTICS API TESTING: 2) ✅ GET /api/admin/super-admin-statistics with admin token - Returns HTTP 200 with complete response structure. 3) ✅ Response includes all required fields: total_users (27), total_admins (3), total_super_admins (2), active_admins (0), inactive_admins (3), recent_actions (array with 2 items). 4) ✅ Data types validation - All numeric fields are integers >= 0, recent_actions is array. 5) ✅ Logical consistency - SuperAdmins (2) <= Admins (3) <= Users (27), Active + Inactive (0 + 3) = Total Admins (3). NO 500 ERRORS: 6) ✅ Confirmed no 500 errors - endpoint returns status 200 consistently. ACCESS CONTROL TESTING: 7) ✅ Unauthenticated access properly blocked with 403 status. 8) ✅ Super admin authentication required and working correctly. BACKEND URL: Testing performed against https://auraa-admin-1.preview.emergentagent.com/api as configured in frontend/.env. CONCLUSION: The Super Admin Statistics API endpoint is working perfectly. All review requirements have been met: login successful, API returns 200 with proper data structure, no 500 errors, and statistics counts are correct and logically consistent."
 
 ## frontend:
+  - task: "Fix Unresponsive Logo Upload Button in Admin Settings"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/admin/SettingsPage.js, /app/frontend/package.json"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported in Arabic: 'عند رفع ملف الشعار لا يستجيب' (When uploading the logo file, it doesn't respond). Screenshot confirmed logo upload button in settings page is unresponsive - no file dialog opens when clicked."
+      - working: "NA"
+        agent: "main"
+        comment: "✅ LOGO UPLOAD FIX IMPLEMENTED: Root cause identified - file input element had NO onChange event handler. CHANGES MADE: 1) Added 'sonner' toast library import for user feedback. 2) Created handleLogoUpload function with proper file validation (size < 2MB, types: PNG/JPG/WebP), FormData upload to /api/admin/upload-image endpoint, success/error toast notifications, settings state update with uploaded logo URL. 3) Connected onChange={handleLogoUpload} to file input element. 4) Added logo preview display when logo_url exists in settings state. 5) Updated file accept attribute to 'image/png,image/jpeg,image/jpg,image/webp' (removed SVG as backend doesn't support it). 6) Fixed ajv dependency conflict that was preventing frontend from starting by removing forced ajv@6.12.6 resolutions/overrides from package.json (was causing webpack build failure). BACKEND VERIFICATION: Upload endpoint /api/admin/upload-image exists and working correctly at line 1959 in server.py - accepts image files, validates size/type, processes with PIL, saves to /app/backend/static/uploads/, stores metadata in media_library collection, returns image URL. Static files properly mounted at /static path. TECHNICAL DETAILS: File size validation (max 2MB), file type validation (PNG/JPG/WebP only), loading state during upload, Arabic/English bilingual error messages, preview image display after successful upload, change logo button when logo exists. Logo upload functionality should now be fully responsive and working. Needs testing to verify complete end-to-end functionality."
+
+## frontend:
   - task: "Flexible Registration System Testing"
     implemented: true
     working: true

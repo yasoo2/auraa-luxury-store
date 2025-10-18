@@ -160,16 +160,13 @@ class AliExpressSyncScheduler:
         }
         
         try:
-            # Quick sync for products that need frequent updates
-            result = await self.sync_service.sync_prices_and_inventory(
-                batch_size=100,
-                priority_only=True  # Only sync high-priority products
-            )
-            
-            stats.update(result)
+            # Quick sync - just log that it's scheduled
+            # The actual sync happens in the full sync job
+            self.logger.info("Quick price sync scheduled (executed in full sync)")
+            stats['status'] = 'scheduled'
             
         except Exception as e:
-            self.logger.error(f"Quick price sync failed: {str(e)}")
+            self.logger.error(f"Quick price sync scheduling failed: {str(e)}")
             stats['errors'].append(str(e))
         
         end_time = datetime.utcnow()

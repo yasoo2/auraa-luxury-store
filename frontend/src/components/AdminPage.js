@@ -535,6 +535,13 @@ const AdminPage = () => {
               </Card>
             </div>
           </TabsContent>
+
+          {/* Admin Management Tab - Super Admin Only */}
+          {isSuperAdmin && (
+            <TabsContent value="admin-management">
+              <AdminManagementSection />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

@@ -421,7 +421,7 @@
 ## frontend:
   - task: "Fix Unresponsive Logo Upload Button in Admin Settings"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/frontend/src/pages/admin/SettingsPage.js, /app/frontend/package.json"
     stuck_count: 0
     priority: "high"

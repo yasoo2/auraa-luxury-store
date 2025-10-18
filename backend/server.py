@@ -430,14 +430,15 @@ async def register(user_data: UserCreate, response: Response, request: Request):
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
     
-    # Set cookie for production domain
+    # Set cookie with dynamic domain
+    cookie_domain = get_cookie_domain(request)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=".auraaluxury.com",
+        domain=cookie_domain,
         max_age=1800  # 30 minutes (same as token expiry)
     )
     

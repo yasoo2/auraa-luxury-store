@@ -203,11 +203,16 @@ const Navbar = () => {
                   </Link>
                 )}
                 
-                {/* Super Admin Management Button */}
+                {/* Super Admin Management Button - Improved Responsive Design */}
                 {user && user.is_super_admin && (
-                  <Link to="/admin-management" className="px-2 py-1 text-xs sm:text-sm bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full hover:from-red-600 hover:to-orange-600 transition-colors whitespace-nowrap flex items-center gap-1">
-                    <ShieldAlert className="h-3 w-3" />
-                    {isRTL ? 'إدارة المسؤولين' : 'Admin Mgmt'}
+                  <Link 
+                    to="/admin-management" 
+                    className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full hover:from-red-600 hover:to-orange-600 transition-all duration-200 whitespace-nowrap flex items-center gap-1 sm:gap-1.5 font-medium shadow-md hover:shadow-lg"
+                    style={{ minWidth: 'fit-content' }}
+                  >
+                    <ShieldAlert className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                    <span className="hidden sm:inline">{isRTL ? 'إدارة المسؤولين' : 'Admin Mgmt'}</span>
+                    <span className="inline sm:hidden">{isRTL ? 'إدارة' : 'Mgmt'}</span>
                   </Link>
                 )}
               </div>

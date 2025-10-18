@@ -4,8 +4,7 @@ import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, MessageCircle } from
 import { useLanguage } from '../context/LanguageContext';
 
 const Footer = () => {
-  const { language } = useLanguage();
-  const isRTL = language === 'ar';
+  const { language, isRTL } = useLanguage();
 
   return (
     <footer className="bg-gray-900 text-white">

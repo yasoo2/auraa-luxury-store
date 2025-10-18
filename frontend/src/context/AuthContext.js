@@ -107,6 +107,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('wishlist'); // Clear wishlist on logout
     delete axios.defaults.headers.common['Authorization'];
   };
 

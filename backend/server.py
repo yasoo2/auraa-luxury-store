@@ -477,11 +477,7 @@ async def login(credentials: UserLogin, response: Response, request: Request):
                 detail="Security verification failed. Please try again."
             )
     else:
-        logger.warning(f"⚠️ No Turnstile token provided for: {credentials.identifier}")
-        # In production, you might want to make this required
-        # raise HTTPException(status_code=403, detail="Security verification required")
-    
-    logger.info(f"🔐 Password length: {len(credentials.password)}, repr: {repr(credentials.password[:20] if len(credentials.password) > 20 else credentials.password)}")
+        logger.debug(f"⚠️ No Turnstile token provided for: {credentials.identifier}")
     
     # First check if super admin
     super_admin = await db.super_admins.find_one({
@@ -489,17 +485,12 @@ async def login(credentials: UserLogin, response: Response, request: Request):
         "is_active": True
     })
     
-    logger.info(f"🔍 Super admin found: {super_admin is not None}")
-    
     if super_admin:
-        logger.info(f"✅ Super admin authenticated, verifying password...")
-        logger.info(f"🔑 Hash in DB (first 30 chars): {super_admin['password_hash'][:30]}")
         # Verify super admin password
         password_valid = verify_password(credentials.password, super_admin["password_hash"])
-        logger.info(f"🔑 Password verification result: {password_valid}")
         
         if not password_valid:
-            logger.warning(f"❌ Wrong password for super admin: {credentials.identifier}")
+            logger.warning(f"❌ Wrong password for: {credentials.identifier}")
             raise HTTPException(
                 status_code=401,
                 detail="wrong_password"

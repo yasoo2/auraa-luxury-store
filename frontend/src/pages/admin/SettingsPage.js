@@ -152,6 +152,47 @@ const SettingsPage = () => {
     setSaved(false);
   };
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(isRTL ? 'حجم الملف يجب أن يكون أقل من 2 ميجابايت' : 'File size must be less than 2MB');
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(isRTL ? 'نوع الملف غير مدعوم. استخدم PNG, JPG أو SVG' : 'Unsupported file type. Use PNG, JPG or SVG');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      toast.loading(isRTL ? 'جاري رفع الشعار...' : 'Uploading logo...');
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/admin/upload-image`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      toast.dismiss();
+      setSettings(prev => ({ ...prev, logo_url: response.data.url }));
+      setSaved(false);
+      toast.success(isRTL ? 'تم رفع الشعار بنجاح' : 'Logo uploaded successfully');
+    } catch (error) {
+      toast.dismiss();
+      console.error('Error uploading logo:', error);
+      toast.error(isRTL ? 'فشل في رفع الشعار' : 'Failed to upload logo');
+    }
+  };
+
   const renderGeneralTab = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -53,6 +53,32 @@ RATE_LIMIT_WINDOW = 900  # 15 minutes in seconds
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+# Helper function: Get cookie domain based on environment
+def get_cookie_domain(request: Request) -> Optional[str]:
+    """
+    Dynamically determine cookie domain based on request host
+    Returns None for localhost/Vercel preview, proper domain for production
+    """
+    if not request or not request.headers.get("host"):
+        return None
+    
+    host = request.headers.get("host", "")
+    
+    # Localhost/development - no domain restriction
+    if "localhost" in host or "127.0.0.1" in host:
+        return None
+    
+    # Vercel preview URLs - no domain restriction
+    if "vercel.app" in host or "emergentagent.com" in host:
+        return None
+    
+    # Production domain
+    if "auraaluxury.com" in host:
+        return ".auraaluxury.com"
+    
+    # Default: no domain restriction (works everywhere)
+    return None
+
 # Enums
 class OrderStatus(str, Enum):
     pending = "pending"

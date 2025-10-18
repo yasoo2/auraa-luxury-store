@@ -67,13 +67,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "🔨 Installing frontend dependencies..."
-          # Remove lock file if exists to avoid sync issues
-          if [ -f "package-lock.json" ]; then
-            echo "Removing package-lock.json to avoid sync issues..."
-            rm -f package-lock.json
-          fi
-          
-          # Fresh install with legacy peer deps
+          # Use npm install with legacy-peer-deps to handle conflicts
           npm install --legacy-peer-deps --prefer-offline
           
           echo "🔨 Building frontend..."

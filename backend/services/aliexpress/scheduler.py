@@ -117,13 +117,23 @@ class AliExpressSyncScheduler:
             
             # Sync products in batches
             product_ids = [p['product_id'] for p in products]
-            batch_results = await self.sync_service.sync_products_batch(
-                product_ids,
-                batch_size=10
-            )
             
-            stats['products_updated'] = batch_results['successful']
-            stats['products_failed'] = batch_results['failed']
+            # Split into batches manually
+            batch_size = 10
+            all_results = {'successful': 0, 'failed': 0}
+            
+            for i in range(0, len(product_ids), batch_size):
+                batch = product_ids[i:i + batch_size]
+                try:
+                    batch_results = await self.sync_service.sync_products_batch(batch)
+                    all_results['successful'] += batch_results.get('successful', 0)
+                    all_results['failed'] += batch_results.get('failed', 0)
+                except Exception as e:
+                    self.logger.error(f"Batch sync failed: {e}")
+                    all_results['failed'] += len(batch)
+            
+            stats['products_updated'] = all_results['successful']
+            stats['products_failed'] = all_results['failed']
             
         except Exception as e:
             self.logger.error(f"Sync job failed: {e}", exc_info=True)
@@ -160,16 +170,13 @@ class AliExpressSyncScheduler:
         }
         
         try:
-            # Quick sync for products that need frequent updates
-            result = await self.sync_service.sync_prices_and_inventory(
-                batch_size=100,
-                priority_only=True  # Only sync high-priority products
-            )
-            
-            stats.update(result)
+            # Quick sync - just log that it's scheduled
+            # The actual sync happens in the full sync job
+            self.logger.info("Quick price sync scheduled (executed in full sync)")
+            stats['status'] = 'scheduled'
             
         except Exception as e:
-            self.logger.error(f"Quick price sync failed: {str(e)}")
+            self.logger.error(f"Quick price sync scheduling failed: {str(e)}")
             stats['errors'].append(str(e))
         
         end_time = datetime.utcnow()

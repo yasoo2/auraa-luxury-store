@@ -162,6 +162,28 @@ class IntegrationSettings(BaseModel):
     amazon_region: Optional[str] = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# Verification Code Models
+class VerificationCode(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    contact: str  # email or phone
+    code: str  # 6-digit code
+    action: str  # 'delete_user', 'change_password', 'change_role'
+    target_user_id: Optional[str] = None  # for admin actions
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    used: bool = False
+
+class SendVerificationRequest(BaseModel):
+    action: str  # 'delete_user', 'change_password', 'change_role'
+    target_user_id: str
+    contact_method: str  # 'email' or 'phone'
+
+class VerifyCodeRequest(BaseModel):
+    code: str
+    action: str
+    target_user_id: str
+
 # Helper functions
 def verify_password(plain_password, hashed_password):
     """Verify password using bcrypt directly"""

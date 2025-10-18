@@ -415,3 +415,130 @@ def send_password_reset_email(
     """
     
     return send_email(to_email, subject, html_content, customer_name)
+
+
+def send_verification_code(
+    to_email: str,
+    recipient_name: str,
+    code: str,
+    action: str,
+    language: str = 'ar'
+) -> bool:
+    """
+    Send verification code email for admin actions
+    
+    Args:
+        to_email: Recipient email
+        recipient_name: Name of recipient
+        code: 6-digit verification code
+        action: Action type (delete_user, change_password, change_role)
+        language: Language for email content ('ar' or 'en')
+    
+    Returns:
+        bool: True if successful
+    """
+    
+    # Action translations
+    action_translations = {
+        'delete_user': {
+            'ar': 'حذف مستخدم',
+            'en': 'Delete User'
+        },
+        'change_password': {
+            'ar': 'تغيير كلمة المرور',
+            'en': 'Change Password'
+        },
+        'change_role': {
+            'ar': 'تغيير الصلاحيات',
+            'en': 'Change Role'
+        }
+    }
+    
+    action_text = action_translations.get(action, {}).get(language, action)
+    
+    if language == 'ar':
+        subject = f'كود التحقق - {action_text}'
+        greeting = f'مرحباً {recipient_name}،'
+        message = f'تم طلب إجراء: <strong>{action_text}</strong>'
+        code_label = 'كود التحقق الخاص بك:'
+        warning = 'إذا لم تطلب هذا الإجراء، يرجى تجاهل هذه الرسالة.'
+        expiry = 'صالح لمدة 10 دقائق'
+        regards = 'مع تحياتنا،<br>فريق Auraa Luxury'
+    else:
+        subject = f'Verification Code - {action_text}'
+        greeting = f'Hello {recipient_name},'
+        message = f'Action requested: <strong>{action_text}</strong>'
+        code_label = 'Your verification code:'
+        warning = 'If you did not request this action, please ignore this email.'
+        expiry = 'Valid for 10 minutes'
+        regards = 'Best regards,<br>Auraa Luxury Team'
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="{language}" dir="{'rtl' if language == 'ar' else 'ltr'}">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    Auraa Luxury
+                </h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
+                    {subject}
+                </p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 40px 30px;">
+                <p style="color: #333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                    {greeting}
+                </p>
+                
+                <p style="color: #555; font-size: 15px; line-height: 1.6; margin: 0 0 30px 0;">
+                    {message}
+                </p>
+                
+                <!-- Verification Code Box -->
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; padding: 30px; text-align: center; margin: 30px 0;">
+                    <p style="color: white; font-size: 14px; margin: 0 0 10px 0; opacity: 0.9;">
+                        {code_label}
+                    </p>
+                    <div style="background: white; border-radius: 10px; padding: 20px; display: inline-block;">
+                        <span style="font-size: 36px; font-weight: 700; color: #667eea; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                            {code}
+                        </span>
+                    </div>
+                    <p style="color: rgba(255,255,255,0.8); font-size: 12px; margin: 15px 0 0 0;">
+                        {expiry}
+                    </p>
+                </div>
+                
+                <!-- Warning -->
+                <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin: 30px 0;">
+                    <p style="color: #856404; font-size: 14px; margin: 0;">
+                        ⚠️ {warning}
+                    </p>
+                </div>
+                
+                <p style="color: #555; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
+                    {regards}
+                </p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #e9ecef;">
+                <p style="color: #6c757d; font-size: 12px; margin: 0;">
+                    © 2024 Auraa Luxury. All rights reserved.
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return send_email(to_email, subject, html_content, recipient_name)
+

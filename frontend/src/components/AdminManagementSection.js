@@ -34,16 +34,24 @@ const AdminManagementSection = () => {
 
   const fetchAllUsers = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
+      console.log('🔍 Fetching users with token:', token ? 'Token exists' : 'No token');
+      
       const response = await axios.get(`${API}/admin/users/all`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      console.log('✅ API Response:', response.data);
+      console.log('📊 Admins count:', response.data.admins?.length || 0);
+      console.log('📊 Users count:', response.data.users?.length || 0);
       
       setAdmins(response.data.admins || []);
       setUsers(response.data.users || []);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('❌ Error fetching users:', error);
+      console.error('Error details:', error.response?.data);
       toast.error(isRTL ? 'فشل في تحميل المستخدمين' : 'Failed to load users');
       setLoading(false);
     }

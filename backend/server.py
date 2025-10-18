@@ -116,7 +116,7 @@ class UserLogin(BaseModel):
 
 # Helper function: Verify Cloudflare Turnstile token
 async def verify_turnstile(token: str, ip: str = None) -> bool:
-    """Verify Cloudflare Turnstile token"""
+    """Verify Cloudflare Turnstile token - Optimized for speed"""
     if not TURNSTILE_SECRET_KEY or not token:
         logger.warning("Turnstile verification skipped - missing secret key or token")
         return True  # Allow in development if not configured
@@ -130,15 +130,22 @@ async def verify_turnstile(token: str, ip: str = None) -> bool:
                     "response": token,
                     "remoteip": ip
                 },
-                timeout=10.0
+                timeout=3.0  # Reduced from 10s to 3s for faster response
             )
             
             result = response.json()
-            logger.info(f"Turnstile verification result: {result}")
+            # Only log in debug mode to reduce overhead
+            if result.get("success"):
+                logger.debug(f"Turnstile verification successful")
+            else:
+                logger.warning(f"Turnstile verification failed: {result}")
             return result.get("success", False)
+    except httpx.TimeoutException:
+        logger.warning(f"Turnstile verification timeout - allowing request")
+        return True  # Allow on timeout to prevent blocking users
     except Exception as e:
         logger.error(f"Turnstile verification error: {str(e)}")
-        return False
+        return True  # Allow on error to prevent blocking legitimate users
 
 # Helper function: Rate Limiting
 def check_rate_limit(identifier: str, endpoint: str) -> tuple[bool, Optional[int]]:
@@ -413,11 +420,7 @@ async def login(credentials: UserLogin, response: Response, request: Request):
                 detail="Security verification failed. Please try again."
             )
     else:
-        logger.warning(f"⚠️ No Turnstile token provided for: {credentials.identifier}")
-        # In production, you might want to make this required
-        # raise HTTPException(status_code=403, detail="Security verification required")
-    
-    logger.info(f"🔐 Password length: {len(credentials.password)}, repr: {repr(credentials.password[:20] if len(credentials.password) > 20 else credentials.password)}")
+        logger.debug(f"⚠️ No Turnstile token provided for: {credentials.identifier}")
     
     # First check if super admin
     super_admin = await db.super_admins.find_one({
@@ -425,17 +428,12 @@ async def login(credentials: UserLogin, response: Response, request: Request):
         "is_active": True
     })
     
-    logger.info(f"🔍 Super admin found: {super_admin is not None}")
-    
     if super_admin:
-        logger.info(f"✅ Super admin authenticated, verifying password...")
-        logger.info(f"🔑 Hash in DB (first 30 chars): {super_admin['password_hash'][:30]}")
         # Verify super admin password
         password_valid = verify_password(credentials.password, super_admin["password_hash"])
-        logger.info(f"🔑 Password verification result: {password_valid}")
         
         if not password_valid:
-            logger.warning(f"❌ Wrong password for super admin: {credentials.identifier}")
+            logger.warning(f"❌ Wrong password for: {credentials.identifier}")
             raise HTTPException(
                 status_code=401,
                 detail="wrong_password"

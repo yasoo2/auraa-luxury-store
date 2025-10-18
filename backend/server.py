@@ -314,7 +314,32 @@ async def root():
 
 # Auth routes
 @api_router.post("/auth/register")
-async def register(user_data: UserCreate, response: Response):
+async def register(user_data: UserCreate, response: Response, request: Request):
+    # Get client IP for rate limiting and Turnstile
+    client_ip = request.client.host if request.client else "unknown"
+    identifier = user_data.email or user_data.phone or "unknown"
+    
+    # Rate Limiting
+    is_allowed, seconds_until_reset = check_rate_limit(identifier, "register")
+    if not is_allowed:
+        logger.warning(f"🚫 Rate limit exceeded for registration: {identifier}")
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many registration attempts. Please try again in {seconds_until_reset} seconds."
+        )
+    
+    # Cloudflare Turnstile Verification
+    if user_data.turnstile_token:
+        turnstile_valid = await verify_turnstile(user_data.turnstile_token, client_ip)
+        if not turnstile_valid:
+            logger.warning(f"🚫 Turnstile verification failed for registration: {identifier}")
+            raise HTTPException(
+                status_code=403,
+                detail="Security verification failed. Please try again."
+            )
+    else:
+        logger.warning(f"⚠️ No Turnstile token provided for registration: {identifier}")
+    
     # Validate: At least email OR phone must be provided
     if not user_data.email and not user_data.phone:
         logger.warning("Registration attempt without email or phone")
@@ -350,6 +375,8 @@ async def register(user_data: UserCreate, response: Response):
     hashed_password = get_password_hash(user_data.password)
     user_dict = user_data.dict()
     del user_dict["password"]
+    if "turnstile_token" in user_dict:
+        del user_dict["turnstile_token"]  # Don't store token in DB
     user_obj = User(**user_dict)
     
     # Store user with hashed password

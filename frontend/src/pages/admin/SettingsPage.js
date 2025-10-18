@@ -254,18 +254,48 @@ const SettingsPage = () => {
           {isRTL ? 'شعار المتجر' : 'Store Logo'}
         </label>
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-          <div className="text-center">
-            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-            <div className="mt-4">
+          {settings.logo_url ? (
+            <div className="text-center">
+              <img 
+                src={settings.logo_url} 
+                alt="Store Logo" 
+                className="mx-auto h-32 w-auto object-contain mb-4"
+              />
               <label htmlFor="logo-upload" className="cursor-pointer">
-                <span className="mt-2 block text-sm font-medium text-gray-900">
-                  {isRTL ? 'اختر ملف الشعار' : 'Choose logo file'}
+                <span className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                  {isRTL ? 'تغيير الشعار' : 'Change Logo'}
                 </span>
-                <input id="logo-upload" name="logo-upload" type="file" className="sr-only" />
+                <input 
+                  id="logo-upload" 
+                  name="logo-upload" 
+                  type="file" 
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                  className="sr-only"
+                  onChange={handleLogoUpload}
+                />
               </label>
-              <p className="mt-1 text-sm text-gray-500">PNG, JPG, SVG up to 2MB</p>
             </div>
-          </div>
+          ) : (
+            <div className="text-center">
+              <Upload className="mx-auto h-12 w-12 text-gray-400" />
+              <div className="mt-4">
+                <label htmlFor="logo-upload" className="cursor-pointer">
+                  <span className="mt-2 block text-sm font-medium text-gray-900">
+                    {isRTL ? 'اختر ملف الشعار' : 'Choose logo file'}
+                  </span>
+                  <input 
+                    id="logo-upload" 
+                    name="logo-upload" 
+                    type="file" 
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                    className="sr-only"
+                    onChange={handleLogoUpload}
+                  />
+                </label>
+                <p className="mt-1 text-sm text-gray-500">PNG, JPG, SVG up to 2MB</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

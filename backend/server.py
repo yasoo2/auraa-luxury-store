@@ -22,6 +22,9 @@ import bcrypt
 from passlib.context import CryptContext
 from enum import Enum
 import random
+import httpx
+from collections import defaultdict
+import time
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -41,6 +44,32 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key-change-in-production')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Helper function: Get cookie domain based on environment
+def get_cookie_domain(request: Request) -> Optional[str]:
+    """
+    Dynamically determine cookie domain based on request host
+    Returns None for localhost/Vercel preview, proper domain for production
+    """
+    if not request or not request.headers.get("host"):
+        return None
+    
+    host = request.headers.get("host", "")
+    
+    # Localhost/development - no domain restriction
+    if "localhost" in host or "127.0.0.1" in host:
+        return None
+    
+    # Vercel preview URLs - no domain restriction
+    if "vercel.app" in host or "emergentagent.com" in host:
+        return None
+    
+    # Production domain
+    if "auraaluxury.com" in host:
+        return ".auraaluxury.com"
+    
+    # Default: no domain restriction (works everywhere)
+    return None
 
 # Enums
 class OrderStatus(str, Enum):
@@ -83,6 +112,69 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     identifier: str  # Can be email or phone
     password: str
+    turnstile_token: Optional[str] = None  # Cloudflare Turnstile token
+
+# Helper function: Verify Cloudflare Turnstile token
+async def verify_turnstile(token: str, ip: str = None) -> bool:
+    """Verify Cloudflare Turnstile token"""
+    if not TURNSTILE_SECRET_KEY or not token:
+        logger.warning("Turnstile verification skipped - missing secret key or token")
+        return True  # Allow in development if not configured
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                TURNSTILE_VERIFY_URL,
+                json={
+                    "secret": TURNSTILE_SECRET_KEY,
+                    "response": token,
+                    "remoteip": ip
+                },
+                timeout=10.0
+            )
+            
+            result = response.json()
+            logger.info(f"Turnstile verification result: {result}")
+            return result.get("success", False)
+    except Exception as e:
+        logger.error(f"Turnstile verification error: {str(e)}")
+        return False
+
+# Helper function: Rate Limiting
+def check_rate_limit(identifier: str, endpoint: str) -> tuple[bool, Optional[int]]:
+    """
+    Check if request should be rate limited
+    Returns: (is_allowed, seconds_until_reset)
+    """
+    key = f"{endpoint}:{identifier}"
+    current_time = time.time()
+    
+    if key in rate_limit_storage:
+        limit_data = rate_limit_storage[key]
+        
+        # Reset if window expired
+        if current_time > limit_data["reset_time"]:
+            rate_limit_storage[key] = {
+                "attempts": 1,
+                "reset_time": current_time + RATE_LIMIT_WINDOW
+            }
+            return True, None
+        
+        # Check if limit exceeded
+        if limit_data["attempts"] >= RATE_LIMIT_ATTEMPTS:
+            seconds_until_reset = int(limit_data["reset_time"] - current_time)
+            return False, seconds_until_reset
+        
+        # Increment attempts
+        limit_data["attempts"] += 1
+        return True, None
+    else:
+        # First attempt
+        rate_limit_storage[key] = {
+            "attempts": 1,
+            "reset_time": current_time + RATE_LIMIT_WINDOW
+        }
+        return True, None
 
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -255,6 +347,8 @@ async def register(user_data: UserCreate, response: Response):
     hashed_password = get_password_hash(user_data.password)
     user_dict = user_data.dict()
     del user_dict["password"]
+    if "turnstile_token" in user_dict:
+        del user_dict["turnstile_token"]  # Don't store token in DB
     user_obj = User(**user_dict)
     
     # Store user with hashed password
@@ -279,22 +373,50 @@ async def register(user_data: UserCreate, response: Response):
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
     
-    # Set cookie for production domain
+    # Set cookie with dynamic domain
+    cookie_domain = get_cookie_domain(request)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=".auraaluxury.com",
+        domain=cookie_domain,
         max_age=1800  # 30 minutes (same as token expiry)
     )
     
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
 
 @api_router.post("/auth/login")
-async def login(credentials: UserLogin, response: Response):
+async def login(credentials: UserLogin, response: Response, request: Request):
     logger.info(f"🔐 Login attempt for identifier: {credentials.identifier}")
+    
+    # Get client IP for rate limiting and Turnstile
+    client_ip = request.client.host if request.client else "unknown"
+    
+    # Rate Limiting
+    is_allowed, seconds_until_reset = check_rate_limit(credentials.identifier, "login")
+    if not is_allowed:
+        logger.warning(f"🚫 Rate limit exceeded for: {credentials.identifier}")
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many login attempts. Please try again in {seconds_until_reset} seconds."
+        )
+    
+    # Cloudflare Turnstile Verification
+    if credentials.turnstile_token:
+        turnstile_valid = await verify_turnstile(credentials.turnstile_token, client_ip)
+        if not turnstile_valid:
+            logger.warning(f"🚫 Turnstile verification failed for: {credentials.identifier}")
+            raise HTTPException(
+                status_code=403,
+                detail="Security verification failed. Please try again."
+            )
+    else:
+        logger.warning(f"⚠️ No Turnstile token provided for: {credentials.identifier}")
+        # In production, you might want to make this required
+        # raise HTTPException(status_code=403, detail="Security verification required")
+    
     logger.info(f"🔐 Password length: {len(credentials.password)}, repr: {repr(credentials.password[:20] if len(credentials.password) > 20 else credentials.password)}")
     
     # First check if super admin
@@ -363,14 +485,15 @@ async def login(credentials: UserLogin, response: Response):
         access_token = create_access_token(data={"sub": user["id"], "is_super_admin": True})
         user_obj = User(**{k: v for k, v in user.items() if k != "password"})
         
-        # Set cookie
+        # Set cookie with dynamic domain
+        cookie_domain = get_cookie_domain(request)
         response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,
             secure=True,
             samesite="none",
-            domain=".auraaluxury.com",
+            domain=cookie_domain,
             max_age=1800
         )
         
@@ -400,14 +523,15 @@ async def login(credentials: UserLogin, response: Response):
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     
-    # Set cookie for production domain
+    # Set cookie with dynamic domain
+    cookie_domain = get_cookie_domain(request)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=".auraaluxury.com",
+        domain=cookie_domain,
         max_age=1800  # 30 minutes (same as token expiry)
     )
     
@@ -428,7 +552,8 @@ async def get_oauth_url(provider: str, redirect_url: str):
 @api_router.post("/auth/oauth/session")
 async def process_oauth_session(
     session_data: dict,
-    response: Response
+    response: Response,
+    request: Request
 ):
     """
     Process OAuth session after user returns from OAuth provider
@@ -511,14 +636,15 @@ async def process_oauth_session(
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     
-    # Set cookie
+    # Set cookie with dynamic domain
+    cookie_domain = get_cookie_domain(request)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=".auraaluxury.com",
+        domain=cookie_domain,
         max_age=1800
     )
     
@@ -1296,6 +1422,94 @@ async def upsert_integration_settings(payload: IntegrationSettingsUpdate, curren
     await db.settings.update_one({"id": existing["id"]}, {"$set": updates})
     updated = await db.settings.find_one({"id": existing["id"]})
     return IntegrationSettings(**updated)
+
+# Store Settings Model
+class StoreSettings(BaseModel):
+    id: str = None
+    # Store Information
+    store_name: str = "Auraa Luxury"
+    store_name_ar: str = "Auraa Luxury"
+    store_description: str = "Premium accessories for discerning customers"
+    store_description_ar: str = "إكسسوارات فاخرة للعملاء المميزين"
+    # Contact Information
+    contact_email: str = "info@auraa.com"
+    contact_phone: str = "+905013715391"
+    whatsapp_number: str = "+905013715391"
+    # Address
+    address_line1: str = "123 Luxury Street"
+    address_line1_ar: str = "123 شارع الفخامة"
+    city: str = "Riyadh"
+    city_ar: str = "الرياض"
+    country: str = "Saudi Arabia"
+    country_ar: str = "المملكة العربية السعودية"
+    postal_code: str = "12345"
+    # Business Settings
+    currency_primary: str = "SAR"
+    currency_secondary: str = "USD"
+    tax_rate: float = 15
+    free_shipping_threshold: float = 200
+    # Notifications
+    notify_new_orders: bool = True
+    notify_low_stock: bool = True
+    notify_reviews: bool = True
+    low_stock_threshold: int = 10
+    # Social Media
+    facebook_url: str = ""
+    instagram_url: str = ""
+    twitter_url: str = ""
+    tiktok_url: str = ""
+    # Payment Methods
+    payment_cod: bool = False
+    payment_stripe: bool = False
+    payment_paypal: bool = False
+    # Shipping
+    shipping_local_price: float = 25
+    shipping_express_price: float = 50
+    shipping_free_threshold: float = 200
+    # Theme
+    primary_color: str = "#D97706"
+    secondary_color: str = "#FEF3C7"
+    logo_url: str = ""
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat() if v else None
+        }
+
+@api_router.get("/admin/settings")
+async def get_store_settings(current_user: User = Depends(get_admin_user)):
+    """Get store settings"""
+    try:
+        settings = await db.store_settings.find_one({"id": "default"})
+        if not settings:
+            # Return default settings
+            default_settings = StoreSettings(id="default")
+            return default_settings.dict()
+        return settings
+    except Exception as e:
+        logger.error(f"Error fetching store settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch settings: {str(e)}")
+
+@api_router.put("/admin/settings")
+async def update_store_settings(settings: dict, current_user: User = Depends(get_admin_user)):
+    """Update store settings"""
+    try:
+        settings["id"] = "default"
+        settings["updated_at"] = datetime.now(timezone.utc)
+        
+        # Upsert settings
+        await db.store_settings.update_one(
+            {"id": "default"},
+            {"$set": settings},
+            upsert=True
+        )
+        
+        updated = await db.store_settings.find_one({"id": "default"})
+        return updated
+    except Exception as e:
+        logger.error(f"Error updating store settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update settings: {str(e)}")
 
 # Initialize admin user and sample data
 @api_router.post("/init-data")

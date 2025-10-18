@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -151,6 +152,47 @@ const SettingsPage = () => {
     setSaved(false);
   };
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(isRTL ? 'حجم الملف يجب أن يكون أقل من 2 ميجابايت' : 'File size must be less than 2MB');
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(isRTL ? 'نوع الملف غير مدعوم. استخدم PNG, JPG أو WebP' : 'Unsupported file type. Use PNG, JPG or WebP');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      toast.loading(isRTL ? 'جاري رفع الشعار...' : 'Uploading logo...');
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/admin/upload-image`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      toast.dismiss();
+      setSettings(prev => ({ ...prev, logo_url: response.data.url }));
+      setSaved(false);
+      toast.success(isRTL ? 'تم رفع الشعار بنجاح' : 'Logo uploaded successfully');
+    } catch (error) {
+      toast.dismiss();
+      console.error('Error uploading logo:', error);
+      toast.error(isRTL ? 'فشل في رفع الشعار' : 'Failed to upload logo');
+    }
+  };
+
   const renderGeneralTab = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -212,18 +254,48 @@ const SettingsPage = () => {
           {isRTL ? 'شعار المتجر' : 'Store Logo'}
         </label>
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-          <div className="text-center">
-            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-            <div className="mt-4">
+          {settings.logo_url ? (
+            <div className="text-center">
+              <img 
+                src={settings.logo_url} 
+                alt="Store Logo" 
+                className="mx-auto h-32 w-auto object-contain mb-4"
+              />
               <label htmlFor="logo-upload" className="cursor-pointer">
-                <span className="mt-2 block text-sm font-medium text-gray-900">
-                  {isRTL ? 'اختر ملف الشعار' : 'Choose logo file'}
+                <span className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                  {isRTL ? 'تغيير الشعار' : 'Change Logo'}
                 </span>
-                <input id="logo-upload" name="logo-upload" type="file" className="sr-only" />
+                <input 
+                  id="logo-upload" 
+                  name="logo-upload" 
+                  type="file" 
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className="sr-only"
+                  onChange={handleLogoUpload}
+                />
               </label>
-              <p className="mt-1 text-sm text-gray-500">PNG, JPG, SVG up to 2MB</p>
             </div>
-          </div>
+          ) : (
+            <div className="text-center">
+              <Upload className="mx-auto h-12 w-12 text-gray-400" />
+              <div className="mt-4">
+                <label htmlFor="logo-upload" className="cursor-pointer">
+                  <span className="mt-2 block text-sm font-medium text-gray-900">
+                    {isRTL ? 'اختر ملف الشعار' : 'Choose logo file'}
+                  </span>
+                  <input 
+                    id="logo-upload" 
+                    name="logo-upload" 
+                    type="file" 
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    className="sr-only"
+                    onChange={handleLogoUpload}
+                  />
+                </label>
+                <p className="mt-1 text-sm text-gray-500">PNG, JPG, WebP up to 2MB</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

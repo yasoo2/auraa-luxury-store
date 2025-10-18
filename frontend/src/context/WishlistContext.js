@@ -22,13 +22,25 @@ export const WishlistProvider = ({ children }) => {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Load wishlist from localStorage on mount
+  // Load wishlist from localStorage on mount (only if user is logged in)
   useEffect(() => {
-    loadWishlistFromStorage();
+    const token = localStorage.getItem('token');
+    if (token) {
+      loadWishlistFromStorage();
+    } else {
+      // Clear wishlist if no token (user not logged in)
+      setWishlistItems([]);
+    }
   }, []);
 
   const loadWishlistFromStorage = () => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setWishlistItems([]);
+        return;
+      }
+      
       const stored = localStorage.getItem('wishlist');
       if (stored) {
         setWishlistItems(JSON.parse(stored));

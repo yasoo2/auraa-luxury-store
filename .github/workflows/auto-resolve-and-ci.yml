@@ -67,14 +67,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "🔨 Installing frontend dependencies..."
-          # Remove lock file if exists to avoid sync issues
-          if [ -f "package-lock.json" ]; then
-            echo "Removing package-lock.json to avoid sync issues..."
-            rm -f package-lock.json
-          fi
-          
-          # Fresh install with legacy peer deps
-          npm install --legacy-peer-deps --prefer-offline
+          npm ci --legacy-peer-deps --prefer-offline || npm install --legacy-peer-deps
           
           echo "🔨 Building frontend..."
           npm run build 2>&1 | tee build.log
@@ -83,7 +76,7 @@ jobs:
             echo "✅ Frontend build successful"
           else
             echo "⚠️ Frontend build may have issues"
-            cat build.log || true
+            cat build.log
           fi
 
       - name: Build backend

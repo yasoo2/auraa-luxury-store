@@ -47,12 +47,27 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, [token, BACKEND_URL]);
 
-  const login = async (emailOrCredentials, password) => {
+  const login = async (emailOrCredentials, password, turnstileToken = null) => {
     try {
       // Support both single object and separate email/password parameters
-      const credentials = typeof emailOrCredentials === 'string' 
-        ? { identifier: emailOrCredentials, password: password }
-        : { identifier: emailOrCredentials.email, password: emailOrCredentials.password };
+      let credentials;
+      if (typeof emailOrCredentials === 'string') {
+        credentials = { 
+          identifier: emailOrCredentials, 
+          password: password
+        };
+        if (turnstileToken) {
+          credentials.turnstile_token = turnstileToken;
+        }
+      } else {
+        credentials = { 
+          identifier: emailOrCredentials.email, 
+          password: emailOrCredentials.password 
+        };
+        if (emailOrCredentials.turnstile_token) {
+          credentials.turnstile_token = emailOrCredentials.turnstile_token;
+        }
+      }
 
       const response = await axios.post(`${BACKEND_URL}/api/auth/login`, credentials);
       const { access_token, user: userData } = response.data;

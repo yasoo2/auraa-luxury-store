@@ -49,13 +49,13 @@ const AdminManagement = () => {
       }
 
       const response = await axios.get(
-        `${BACKEND_URL}/api/admin/super-admin-list-all-admins`,
+        `${BACKEND_URL}/api/admin/users/all`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      setAdmins(response.data.admins);
+      setAdmins(response.data.admins || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching admins:', error);

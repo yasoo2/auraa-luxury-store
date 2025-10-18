@@ -100,7 +100,7 @@
 
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
-## user_problem_statement: "Implement comprehensive enhancements for Auraa Luxury: 1) Add dynamic shipping estimates to Cart page, 2) Implement SSE for live import progress tracking, 3) Create Admin Dashboard modules (CMS Pages Manager, Theme Customization, Media Library), and keep all existing functionality intact."
+## user_problem_statement: "Fix unresponsive logo upload button in Admin Dashboard Settings page (reported in Arabic: 'عند رفع ملف الشعار لا يستجيب' - When uploading the logo file, it doesn't respond)."
 
 ## backend:
   - task: "Production Login API Testing with Provided Credentials"

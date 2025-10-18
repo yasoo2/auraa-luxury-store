@@ -176,7 +176,7 @@ const Navbar = () => {
             {/* Wishlist */}
             <Link to={user ? '/wishlist' : '/auth'} className="relative p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200">
               <Heart className="h-5 w-5 sm:h-6 sm:w-6" />
-              {getWishlistCount() > 0 && (
+              {user && getWishlistCount() > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
                   {getWishlistCount()}
                 </span>

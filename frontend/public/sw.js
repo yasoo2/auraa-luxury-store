@@ -1,6 +1,6 @@
 // Service Worker for Auraa Luxury PWA
-const CACHE_NAME = 'auraa-luxury-v1.0.0';
-const DATA_CACHE_NAME = 'auraa-data-v1.0.0';
+const CACHE_NAME = 'auraa-luxury-v1.0.1';
+const DATA_CACHE_NAME = 'auraa-data-v1.0.1';
 
 // Files to cache for offline functionality
 const FILES_TO_CACHE = [

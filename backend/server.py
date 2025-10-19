@@ -56,7 +56,7 @@ if not allowed_origins:
         "http://localhost:8001",
     ]
 
-logger.info(f"✅ CORS configured with origins: {allowed_origins}")
+print(f"✅ CORS configured with {len(allowed_origins)} origins")
 
 # Custom CORS Handler for Vercel Preview URLs
 from starlette.middleware.base import BaseHTTPMiddleware

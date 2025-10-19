@@ -22,6 +22,16 @@ const AdminPage = () => {
   const { user } = useAuth();
   const isRTL = language === 'ar';
   const isSuperAdmin = user?.is_super_admin || false;
+
+  // Debug logging
+  useEffect(() => {
+    console.log('=== AdminPage Debug ===');
+    console.log('User:', user);
+    console.log('is_admin:', user?.is_admin);
+    console.log('is_super_admin:', user?.is_super_admin);
+    console.log('isSuperAdmin computed:', isSuperAdmin);
+    console.log('=======================');
+  }, [user, isSuperAdmin]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);

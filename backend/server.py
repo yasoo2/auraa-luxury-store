@@ -44,14 +44,17 @@ app = FastAPI(title="لورا لاكشري API", version="1.0.0")
 cors_origins_env = os.getenv('CORS_ORIGINS', '')
 allowed_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
 
-# Fallback to hardcoded origins if env variable is empty
+# Fallback to default patterns if env variable is empty
 if not allowed_origins:
+    # Get app name from environment for dynamic Emergent URLs
+    app_name = os.getenv('APP_NAME', 'app')
+    
     allowed_origins = [
         "https://auraaluxury.com",
         "https://www.auraaluxury.com",
         "https://api.auraaluxury.com",
-        "https://auraa-ecom-fix.preview.emergentagent.com",
-        "https://auraa-admin-1.emergent.host",
+        f"https://{app_name}.preview.emergentagent.com",
+        f"https://{app_name}.emergent.host",
         "http://localhost:3000",
         "http://localhost:8001",
     ]

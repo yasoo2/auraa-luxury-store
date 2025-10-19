@@ -36,6 +36,17 @@ db = client[os.environ['DB_NAME']]
 # Create the main app
 app = FastAPI(title="لورا لاكشري API", version="1.0.0")
 
+# CORS Configuration
+allowed_origins = [
+    "https://auraaluxury.com",
+    "https://www.auraaluxury.com",
+    "https://api.auraaluxury.com",
+    "https://auraa-ecom-fix.preview.emergentagent.com",
+    "https://auraa-admin-1.emergent.host",
+    "http://localhost:3000",
+    "http://localhost:8001",
+]
+
 # Custom CORS Handler for Vercel Preview URLs
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
@@ -43,17 +54,6 @@ from starlette.responses import Response as StarletteResponse
 class CustomCORSMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         origin = request.headers.get("origin")
-        
-        # Allowed origins patterns
-        allowed_origins = [
-            "https://auraaluxury.com",
-            "https://www.auraaluxury.com",
-            "https://api.auraaluxury.com",
-            "https://auraa-ecom-fix.preview.emergentagent.com",
-            "https://auraa-admin-1.emergent.host",
-            "http://localhost:3000",
-            "http://localhost:8001",
-        ]
         
         # Check if origin matches patterns
         is_allowed = False
@@ -73,27 +73,32 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
         
         # Handle preflight
         if request.method == "OPTIONS":
-            response = StarletteResponse()
-            if is_allowed:
+            response = StarletteResponse(status_code=200)
+            if is_allowed and origin:
                 response.headers["Access-Control-Allow-Origin"] = origin
                 response.headers["Access-Control-Allow-Credentials"] = "true"
-                response.headers["Access-Control-Allow-Methods"] = "*"
-                response.headers["Access-Control-Allow-Headers"] = "*"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, User-Agent, X-Requested-With"
                 response.headers["Access-Control-Expose-Headers"] = "*"
+                response.headers["Access-Control-Max-Age"] = "3600"
             return response
         
         # Process request
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as e:
+            logger.error(f"Error processing request: {e}")
+            response = StarletteResponse(status_code=500, content=str(e))
         
         # Add CORS headers to response
-        if is_allowed:
+        if is_allowed and origin:
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             response.headers["Access-Control-Expose-Headers"] = "*"
         
         return response
 
-# Apply custom CORS middleware
+# Apply custom CORS middleware FIRST
 app.add_middleware(CustomCORSMiddleware)
 
 api_router = APIRouter(prefix="/api")

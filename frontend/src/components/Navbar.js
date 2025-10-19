@@ -176,7 +176,7 @@ const Navbar = () => {
             {/* Wishlist */}
             <Link to={user ? '/wishlist' : '/auth'} className="relative p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200">
               <Heart className="h-5 w-5 sm:h-6 sm:w-6" />
-              {getWishlistCount() > 0 && (
+              {user && getWishlistCount() > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
                   {getWishlistCount()}
                 </span>
@@ -200,14 +200,6 @@ const Navbar = () => {
                 {user && user.is_admin && (
                   <Link to="/admin" className="px-2 py-1 text-xs sm:text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors whitespace-nowrap">
                     {isRTL ? 'إدارة' : 'Admin'}
-                  </Link>
-                )}
-                
-                {/* Super Admin Management Button */}
-                {user && user.is_super_admin && (
-                  <Link to="/admin-management" className="px-2 py-1 text-xs sm:text-sm bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full hover:from-red-600 hover:to-orange-600 transition-colors whitespace-nowrap flex items-center gap-1">
-                    <ShieldAlert className="h-3 w-3" />
-                    {isRTL ? 'إدارة المسؤولين' : 'Admin Mgmt'}
                   </Link>
                 )}
               </div>

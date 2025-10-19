@@ -42,34 +42,24 @@ const AdminManagement = () => {
   const fetchAdmins = async () => {
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
       
-      if (!password && !token) {
-        setShowPasswordModal(true);
+      if (!token) {
+        toast.error(isRTL ? 'يرجى تسجيل الدخول' : 'Please login');
         return;
       }
 
       const response = await axios.get(
-        `${BACKEND_URL}/api/super-admin/manage/list-all-admins`,
+        `${BACKEND_URL}/api/admin/users/all`,
         {
-          params: {
-            current_admin_identifier: identifier,
-            current_password: password || 'temp'
-          },
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      setAdmins(response.data.admins);
+      setAdmins(response.data.admins || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching admins:', error);
-      if (error.response?.status === 401) {
-        setShowPasswordModal(true);
-        toast.error(isRTL ? 'كلمة المرور غير صحيحة' : 'Incorrect password');
-      } else {
-        toast.error(isRTL ? 'فشل في تحميل المسؤولين' : 'Failed to load admins');
-      }
+      toast.error(isRTL ? 'فشل في تحميل المسؤولين' : 'Failed to load admins');
       setLoading(false);
     }
   };
@@ -77,15 +67,12 @@ const AdminManagement = () => {
   const fetchStatistics = async () => {
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
       
+      if (!token) return;
+
       const response = await axios.get(
-        `${BACKEND_URL}/api/super-admin/manage/statistics`,
+        `${BACKEND_URL}/api/admin/super-admin-statistics`,
         {
-          params: {
-            current_admin_identifier: identifier,
-            current_password: password || 'temp'
-          },
           headers: { Authorization: `Bearer ${token}` }
         }
       );
@@ -111,17 +98,15 @@ const AdminManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
 
       await axios.post(
-        `${BACKEND_URL}/api/super-admin/manage/change-role`,
+        `${BACKEND_URL}/api/admin/super-admin-change-role`,
         {
           user_id: userId,
           new_role: newRole,
           current_password: password
         },
         {
-          params: { current_admin_identifier: identifier },
           headers: { Authorization: `Bearer ${token}` }
         }
       );
@@ -143,17 +128,15 @@ const AdminManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
 
       await axios.post(
-        `${BACKEND_URL}/api/super-admin/manage/reset-password`,
+        `${BACKEND_URL}/api/admin/super-admin-reset-password`,
         {
           user_id: selectedAdmin.id,
           new_password: newPassword,
           current_password: password
         },
         {
-          params: { current_admin_identifier: identifier },
           headers: { Authorization: `Bearer ${token}` }
         }
       );
@@ -177,17 +160,15 @@ const AdminManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
 
       await axios.post(
-        `${BACKEND_URL}/api/super-admin/manage/toggle-status`,
+        `${BACKEND_URL}/api/admin/super-admin-toggle-status`,
         {
           user_id: userId,
           is_active: !currentStatus,
           current_password: password
         },
         {
-          params: { current_admin_identifier: identifier },
           headers: { Authorization: `Bearer ${token}` }
         }
       );
@@ -209,13 +190,11 @@ const AdminManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const identifier = user?.email || user?.phone;
 
       await axios.delete(
-        `${BACKEND_URL}/api/super-admin/manage/delete-admin/${userId}`,
+        `${BACKEND_URL}/api/admin/super-admin-delete/${userId}`,
         {
           params: {
-            current_admin_identifier: identifier,
             current_password: password
           },
           headers: { Authorization: `Bearer ${token}` }
@@ -287,6 +266,50 @@ const AdminManagement = () => {
             <Shield className="h-20 w-20 opacity-20" />
           </div>
         </div>
+
+        {/* Current User Profile Card */}
+        {user && (
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl shadow-2xl p-6 mb-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  {isRTL ? 'الحساب الحالي' : 'Current Account'}
+                </h3>
+                <p className="text-2xl font-bold">
+                  {user.first_name} {user.last_name}
+                </p>
+                <p className="text-purple-100 mt-1">
+                  {user.email || user.phone}
+                </p>
+                <div className="flex gap-2 mt-2">
+                  {user.is_super_admin && (
+                    <span className="px-3 py-1 bg-red-600 rounded-full text-sm font-semibold">
+                      {isRTL ? 'سوبر أدمن' : 'Super Admin'}
+                    </span>
+                  )}
+                  {user.is_admin && !user.is_super_admin && (
+                    <span className="px-3 py-1 bg-amber-600 rounded-full text-sm font-semibold">
+                      {isRTL ? 'مسؤول' : 'Admin'}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedAdmin(user);
+                    setShowResetPasswordModal(true);
+                  }}
+                  className="px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
+                >
+                  <Key className="h-4 w-4" />
+                  {isRTL ? 'تغيير كلمة المرور' : 'Change Password'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Statistics */}
         {statistics && (

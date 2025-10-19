@@ -37,10 +37,19 @@ const OAuthCallback = () => {
           { 
             session_id: sessionId,
             provider: provider
+          },
+          {
+            withCredentials: true // Send and receive cookies
           }
         );
         
+        console.log('✅ OAuth response:', response.data);
+        
         const { access_token, user, needs_phone } = response.data;
+        
+        if (!access_token || !user) {
+          throw new Error('Invalid OAuth response from server');
+        }
         
         // Store token and user
         localStorage.setItem('token', access_token);

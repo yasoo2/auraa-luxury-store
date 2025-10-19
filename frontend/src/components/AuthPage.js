@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -14,11 +14,14 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+  const TURNSTILE_SITE_KEY = process.env.REACT_APP_TURNSTILE_SITE_KEY;
   const [isLogin, setIsLogin] = useState(true);
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileRef = useRef(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -29,6 +32,37 @@ const AuthPage = () => {
   });
 
   const from = location.state?.from?.pathname || '/';
+
+  // Initialize Turnstile when component mounts or tab changes
+  useEffect(() => {
+    if (window.turnstile && turnstileRef.current && TURNSTILE_SITE_KEY) {
+      // Clear existing widget
+      if (turnstileRef.current.children.length > 0) {
+        turnstileRef.current.innerHTML = '';
+      }
+      
+      // Render new widget with optimized settings
+      window.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: 'light',
+        size: 'compact', // Smaller size for faster loading
+        language: language === 'ar' ? 'ar' : 'en',
+        callback: function(token) {
+          setTurnstileToken(token);
+        },
+        'error-callback': function() {
+          // Don't block user on Turnstile error
+          setTurnstileToken('fallback');
+          console.warn('Turnstile verification failed - proceeding anyway');
+        },
+        'timeout-callback': function() {
+          // Don't block user on timeout
+          setTurnstileToken('fallback');
+          console.warn('Turnstile timeout - proceeding anyway');
+        }
+      });
+    }
+  }, [isLogin, TURNSTILE_SITE_KEY, language]);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -42,25 +76,32 @@ const AuthPage = () => {
     setLoading(true);
     setError(''); // Clear previous errors
     
+    // Turnstile check - but don't strictly block
+    // If no token and widget failed to load, proceed anyway
+    if (!turnstileToken && window.turnstile) {
+      // Wait a moment for Turnstile to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // If still no token, use fallback
+      if (!turnstileToken) {
+        setTurnstileToken('fallback');
+      }
+    }
+    
     try {
       let result;
       if (isLogin) {
         // Use email or phone based on login method
         const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
-        result = await login(identifier, formData.password);
+        result = await login(identifier, formData.password, turnstileToken);
       } else {
         result = await register(formData);
       }
       
-      console.log('Login result:', result);
       if (result.success) {
-        console.log('Login successful, navigating to:', from);
-        // Small delay to ensure state update
-        setTimeout(() => {
-          navigate(from, { replace: true });
-        }, 100);
+        // Immediate navigation without delay
+        navigate(from, { replace: true });
       } else {
-        console.log('Login failed:', result.error);
         // Translate error message
         const errorKey = result.error || 'حدث خطأ';
         const translatedError = getAuthTranslation(errorKey, language) || errorKey;
@@ -377,6 +418,11 @@ const AuthPage = () => {
                   </Link>
                 </div>
               )}
+
+              {/* Cloudflare Turnstile */}
+              <div className="flex justify-center my-4">
+                <div ref={turnstileRef} className="cf-turnstile" data-theme="light"></div>
+              </div>
 
               <button 
                 type="submit" 

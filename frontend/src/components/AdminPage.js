@@ -9,15 +9,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { toast } from 'sonner';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { formatDate } from '../utils/dateUtils';
 import axios from 'axios';
+import AdminManagementSection from './AdminManagementSection';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const AdminPage = () => {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const isRTL = language === 'ar';
+  const isSuperAdmin = user?.is_super_admin || false;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -257,11 +261,18 @@ const AdminPage = () => {
         </div>
 
         <Tabs defaultValue="products" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-5 mb-8">
             <TabsTrigger value="products" data-testid="products-tab">المنتجات</TabsTrigger>
             <TabsTrigger value="orders">الطلبات</TabsTrigger>
             <TabsTrigger value="users">العملاء</TabsTrigger>
             <TabsTrigger value="integrations">التكاملات</TabsTrigger>
+            <TabsTrigger 
+              value="admin-management" 
+              className="bg-gradient-to-r from-red-500 to-orange-500 text-white data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-600 data-[state=active]:to-orange-600"
+            >
+              <ShieldCheck className="h-4 w-4 mr-2 inline" />
+              إدارة المسؤولين
+            </TabsTrigger>
           </TabsList>
 
           {/* Products Tab */}
@@ -525,6 +536,13 @@ const AdminPage = () => {
               </Card>
             </div>
           </TabsContent>
+
+          {/* Admin Management Tab - Super Admin Only */}
+          {isSuperAdmin && (
+            <TabsContent value="admin-management">
+              <AdminManagementSection />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

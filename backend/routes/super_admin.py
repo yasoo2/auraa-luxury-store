@@ -13,14 +13,10 @@ import os
 
 router = APIRouter(prefix="/super-admin", tags=["Super Admin"])
 
-# Database dependency
-def get_database() -> AsyncIOMotorDatabase:
-    """Get database instance"""
-    from motor.motor_asyncio import AsyncIOMotorClient
-    MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-    DB_NAME = os.environ.get('DB_NAME', 'test_database')
-    client = AsyncIOMotorClient(MONGO_URL)
-    return client[DB_NAME]
+# Import from main server
+import sys
+sys.path.append('/app/backend')
+from server import db, get_current_user, User
 
 # Models
 class SuperAdminCreate(BaseModel):
@@ -59,7 +55,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify password"""
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-async def verify_super_admin(identifier: str, password: str, db: AsyncIOMotorDatabase) -> dict:
+async def verify_super_admin(identifier: str, password: str, database=None) -> dict:
     """Verify super admin credentials"""
     admin = await db.super_admins.find_one({
         "identifier": identifier,
@@ -72,7 +68,6 @@ async def verify_super_admin(identifier: str, password: str, db: AsyncIOMotorDat
     return admin
 
 async def log_admin_action(
-    db: AsyncIOMotorDatabase,
     action: str,
     performed_by: str,
     details: dict
@@ -87,7 +82,7 @@ async def log_admin_action(
     })
 
 # Dependency to get current super admin
-async def get_current_super_admin(identifier: str, db: AsyncIOMotorDatabase):
+async def get_current_super_admin(identifier: str):
     """Get current super admin (must be called with verification)"""
     admin = await db.super_admins.find_one({
         "identifier": identifier,
@@ -102,8 +97,7 @@ async def get_current_super_admin(identifier: str, db: AsyncIOMotorDatabase):
 # Routes
 @router.get("/list", response_model=List[SuperAdminResponse])
 async def list_super_admins(
-    current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_admin_identifier: str
 ):
     """List all super admins (requires super admin access)"""
     # Verify caller is super admin
@@ -377,13 +371,12 @@ class AdminManagementModels:
 
 @router.get("/manage/list-all-admins")
 async def list_all_admins(
-    current_admin_identifier: str,
-    current_password: str,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_user: User = Depends(get_current_user)
 ):
-    """List all admins and super admins (Super Admin only)"""
-    # Verify super admin
-    await verify_super_admin(current_admin_identifier, current_password, db)
+    """List all admins and super admins (Super Admin only) - Uses JWT token"""
+    # Verify user is super admin
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
     
     # Get all users who are admins or super admins
     admins = await db.users.find({
@@ -423,11 +416,15 @@ async def list_all_admins(
 @router.post("/manage/change-role")
 async def change_user_role(
     request: AdminManagementModels.ChangeRoleRequest,
-    current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_user: User = Depends(get_current_user)
 ):
     """Change user role (Super Admin only)"""
-    # Verify super admin
+    # Verify user is super admin
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Verify super admin password
+    current_admin_identifier = current_user.email or current_user.phone
     current_admin = await verify_super_admin(
         current_admin_identifier,
         request.current_password,
@@ -506,7 +503,6 @@ async def change_user_role(
     
     # Log action
     await log_admin_action(
-        db,
         "role_changed",
         current_admin_identifier,
         {
@@ -526,11 +522,15 @@ async def change_user_role(
 @router.post("/manage/reset-password")
 async def reset_admin_password(
     request: AdminManagementModels.ResetPasswordRequest,
-    current_admin_identifier: str,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_user: User = Depends(get_current_user)
 ):
     """Reset admin password (Super Admin only)"""
-    # Verify super admin
+    # Verify user is super admin
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
+    
+    # Verify super admin password
+    current_admin_identifier = current_user.email or current_user.phone
     await verify_super_admin(current_admin_identifier, request.current_password, db)
     
     # Get target user
@@ -557,7 +557,6 @@ async def reset_admin_password(
     
     # Log action
     await log_admin_action(
-        db,
         "password_reset",
         current_admin_identifier,
         {
@@ -680,14 +679,12 @@ async def delete_admin(
 
 @router.get("/manage/statistics")
 async def get_admin_statistics(
-    current_admin_identifier: str,
-    current_password: str,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    current_user: User = Depends(get_current_user)
 ):
     """Get admin statistics (Super Admin only)"""
-    # Verify super admin
-    await verify_super_admin(current_admin_identifier, current_password, db)
-    
+    # Verify user is super admin
+    if not current_user.is_super_admin:
+        raise HTTPException(status_code=403, detail="Super admin access required")
     # Count statistics
     total_users = await db.users.count_documents({})
     total_admins = await db.users.count_documents({"is_admin": True})

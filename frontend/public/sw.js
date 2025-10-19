@@ -1,15 +1,13 @@
 // Service Worker for Auraa Luxury PWA
-const CACHE_NAME = 'auraa-luxury-v1.0.0';
-const DATA_CACHE_NAME = 'auraa-data-v1.0.0';
+const CACHE_NAME = 'auraa-luxury-v1.0.3';
+const DATA_CACHE_NAME = 'auraa-data-v1.0.3';
 
 // Files to cache for offline functionality
 const FILES_TO_CACHE = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
-  '/images/logo.png',
-  // Add more static assets as needed
+  '/offline.html'
+  // Static assets are cached dynamically during runtime
 ];
 
 // API endpoints to cache
@@ -56,25 +54,47 @@ self.addEventListener('activate', (event) => {
 // Fetch Event - Serve cached content when offline
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  
+  // ⚠️ IMPORTANT: Only cache GET requests
+  // Cache API doesn't support POST, PUT, DELETE, etc.
+  if (request.method !== 'GET') {
+    console.debug('[SW] Skipping non-GET request:', request.method, request.url);
+    return; // Let it pass through normally
+  }
+  
   const url = new URL(request.url);
   
-  // Handle API requests
+  // Handle API requests (but don't cache POST/PUT/DELETE)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // If the request is successful, clone and cache the response
-          if (response.status === 200) {
+          // Don't cache API responses for now (they change frequently)
+          // If you want to cache GET API requests, uncomment below:
+          /*
+          if (response && response.status === 200 && response.ok) {
             const responseClone = response.clone();
             caches.open(DATA_CACHE_NAME).then((cache) => {
               cache.put(request, responseClone);
+            }).catch((err) => {
+              console.debug('[SW] Failed to cache API response:', err);
             });
           }
+          */
           return response;
         })
-        .catch(() => {
-          // If network fails, try to get from cache
-          return caches.match(request);
+        .catch((error) => {
+          console.debug('[SW] API fetch failed:', error);
+          // If network fails, try to get from cache (GET requests only)
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || new Response(JSON.stringify({
+              error: 'Network unavailable',
+              offline: true
+            }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
         })
     );
     return;
@@ -90,8 +110,14 @@ self.addEventListener('fetch', (event) => {
         
         return fetch(request)
           .then((response) => {
-            // Don't cache non-successful responses
+            // Don't cache non-successful responses or chrome-extension requests
             if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+            
+            // Skip caching for chrome-extension and unsupported schemes
+            const requestUrl = new URL(request.url);
+            if (requestUrl.protocol === 'chrome-extension:' || requestUrl.protocol === 'about:') {
               return response;
             }
             
@@ -101,6 +127,10 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(request, responseToCache);
+              })
+              .catch((err) => {
+                // Silently fail cache operations for unsupported requests
+                console.debug('Cache put failed:', err);
               });
             
             return response;
@@ -144,20 +174,18 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: notificationData.body || 'You have a new notification from Auraa Luxury',
-    icon: '/images/icon-192x192.png',
-    badge: '/images/badge-72x72.png',
+    icon: notificationData.icon || '/favicon.svg',
+    badge: notificationData.badge || '/favicon.svg',
     image: notificationData.image,
     data: notificationData.data,
     actions: [
       {
         action: 'view',
-        title: notificationData.lang === 'ar' ? 'عرض' : 'View',
-        icon: '/images/action-view.png'
+        title: notificationData.lang === 'ar' ? 'عرض' : 'View'
       },
       {
         action: 'dismiss',
-        title: notificationData.lang === 'ar' ? 'إغلاق' : 'Dismiss',
-        icon: '/images/action-dismiss.png'
+        title: notificationData.lang === 'ar' ? 'إغلاق' : 'Dismiss'
       }
     ],
     tag: notificationData.tag || 'auraa-notification',
@@ -282,7 +310,7 @@ async function syncOrderData() {
           // Show success notification
           self.registration.showNotification('Order Placed Successfully', {
             body: 'Your order has been successfully placed!',
-            icon: '/images/icon-192x192.png',
+            icon: '/favicon.svg',
             tag: 'order-success'
           });
         }

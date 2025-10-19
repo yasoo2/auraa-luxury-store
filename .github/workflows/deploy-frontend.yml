@@ -10,6 +10,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -31,8 +36,8 @@ jobs:
         env:
           REACT_APP_BACKEND_URL: ${{ secrets.REACT_APP_BACKEND_URL || 'https://auraaluxury.preview.emergentagent.com' }}
 
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-args: '--prod --confirm'
@@ -43,6 +48,30 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+      - name: Create Deployment Summary
+        if: always()
+        run: |
+          echo "# 🚀 Frontend Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "## ✅ Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🌐 **Production URL:** ${{ steps.deploy.outputs.deployment_url }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ Deployment Failed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please check the logs above for error details." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Build Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Workflow:** ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+
       - name: Deployment Success Notification
         if: success()
         run: |
@@ -52,5 +81,6 @@ jobs:
       - name: Deployment Failure Notification
         if: failure()
         run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "❌ Frontend deployment failed!"
           echo "🔍 Check the logs above for details"

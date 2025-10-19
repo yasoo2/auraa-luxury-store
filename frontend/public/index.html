@@ -2,20 +2,18 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+        <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#D97706" />
 
         
         <!-- PWA Support -->
         <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-        <link rel="apple-touch-icon" href="%PUBLIC_URL%/images/icon-192x192.png" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Auraa Luxury" />
         
-        <!-- Preload critical resources -->
-        <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin />
+        <!-- Preconnect to external domains -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <!--
@@ -32,6 +30,9 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
         <title>Auraa Luxury | Premium Accessories Store</title>
+        
+        <!-- Cloudflare Turnstile -->
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
         
         <!-- Google Analytics 4 -->
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-C44D1325QM"></script>

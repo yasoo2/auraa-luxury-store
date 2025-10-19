@@ -1,4 +1,7 @@
-name: Deploy Backend to Render
+name: Deploy Backend to Render (DISABLED - Using Kubernetes)
+
+# This workflow is disabled as we deploy via Kubernetes, not Render
+# Keep for reference only
 
 on:
   push:
@@ -10,6 +13,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: false  # Disabled - using Kubernetes deployment
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4

@@ -15,7 +15,8 @@
       "dest": "frontend/build/$1"
     }
   ],
-  "buildCommand": "cd frontend && npm ci && npm run build",
+  "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/build",
+  "installCommand": "cd frontend && npm install --legacy-peer-deps",
   "framework": null
 }

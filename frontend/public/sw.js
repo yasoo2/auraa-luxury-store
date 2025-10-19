@@ -278,7 +278,7 @@ async function syncOrderData() {
           // Show success notification
           self.registration.showNotification('Order Placed Successfully', {
             body: 'Your order has been successfully placed!',
-            icon: '/favicon.ico',
+            icon: '/favicon.svg',
             tag: 'order-success'
           });
         }

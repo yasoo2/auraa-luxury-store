@@ -9,7 +9,7 @@
 ### 1. Environment Variables Updated
 **Location**: `/app/frontend/.env`
 ```env
-BEFORE: REACT_APP_BACKEND_URL=https://auraa-ecom-fix.preview.emergentagent.com
+BEFORE: REACT_APP_BACKEND_URL=https://luxury-ecom-4.preview.emergentagent.com
 AFTER:  REACT_APP_BACKEND_URL=https://api.auraaluxury.com
 ```
 

@@ -1,15 +1,13 @@
 // Service Worker for Auraa Luxury PWA
-const CACHE_NAME = 'auraa-luxury-v1.0.0';
-const DATA_CACHE_NAME = 'auraa-data-v1.0.0';
+const CACHE_NAME = 'auraa-luxury-v1.0.1';
+const DATA_CACHE_NAME = 'auraa-data-v1.0.1';
 
 // Files to cache for offline functionality
 const FILES_TO_CACHE = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
-  '/images/logo.png',
-  // Add more static assets as needed
+  '/offline.html'
+  // Static assets are cached dynamically during runtime
 ];
 
 // API endpoints to cache
@@ -144,20 +142,18 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: notificationData.body || 'You have a new notification from Auraa Luxury',
-    icon: '/images/icon-192x192.png',
-    badge: '/images/badge-72x72.png',
+    icon: notificationData.icon || '/favicon.svg',
+    badge: notificationData.badge || '/favicon.svg',
     image: notificationData.image,
     data: notificationData.data,
     actions: [
       {
         action: 'view',
-        title: notificationData.lang === 'ar' ? 'عرض' : 'View',
-        icon: '/images/action-view.png'
+        title: notificationData.lang === 'ar' ? 'عرض' : 'View'
       },
       {
         action: 'dismiss',
-        title: notificationData.lang === 'ar' ? 'إغلاق' : 'Dismiss',
-        icon: '/images/action-dismiss.png'
+        title: notificationData.lang === 'ar' ? 'إغلاق' : 'Dismiss'
       }
     ],
     tag: notificationData.tag || 'auraa-notification',
@@ -282,7 +278,7 @@ async function syncOrderData() {
           // Show success notification
           self.registration.showNotification('Order Placed Successfully', {
             body: 'Your order has been successfully placed!',
-            icon: '/images/icon-192x192.png',
+            icon: '/favicon.svg',
             tag: 'order-success'
           });
         }

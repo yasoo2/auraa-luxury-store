@@ -24,7 +24,7 @@ app.add_middleware(
         "https://auraaluxury.com",
         "https://www.auraaluxury.com",      # ✅ Added
         "https://api.auraaluxury.com",
-        "https://auraa-admin-1.preview.emergentagent.com",
+        "https://auraa-ecom-fix.preview.emergentagent.com",
         "http://localhost:3000",
         "http://localhost:8001",
         "*"

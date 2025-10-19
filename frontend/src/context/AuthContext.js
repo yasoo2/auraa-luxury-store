@@ -89,8 +89,13 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, credentials);
+      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, credentials, {
+        withCredentials: true // Send and receive cookies
+      });
+      
       const { access_token, user: userData } = response.data;
+      
+      console.log('✅ Login successful:', userData);
       
       // Store token and update state immediately
       localStorage.setItem('token', access_token);
@@ -99,7 +104,7 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('❌ Login failed:', error);
       return {
         success: false,
         error: error.response?.data?.detail || 'فشل تسجيل الدخول'

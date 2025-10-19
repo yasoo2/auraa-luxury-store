@@ -114,6 +114,7 @@ function App() {
                 </main>
 
                 <Footer />
+                <CookieConsent />
                 <Toaster />
               </div>
             </Router>

@@ -114,10 +114,13 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, userData);
+      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, userData, {
+        withCredentials: true // Send and receive cookies
+      });
+      
       const { access_token, user: newUser } = response.data;
       
-      console.log('Registration successful, user data:', newUser);
+      console.log('✅ Registration successful:', newUser);
       
       setToken(access_token);
       setUser(newUser);
@@ -125,7 +128,7 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
-      console.error('Registration failed:', error);
+      console.error('❌ Registration failed:', error);
       return {
         success: false,
         error: error.response?.data?.detail || 'فشل في إنشاء الحساب'

@@ -8,6 +8,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import asyncio
+
+# ===== CORS FIX 2025-10-19 18:15 UTC =====
+# Enhanced CORS middleware with proper error handling
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any

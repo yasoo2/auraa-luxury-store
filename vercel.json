@@ -15,7 +15,8 @@
       "dest": "frontend/build/$1"
     }
   ],
-  "buildCommand": "cd frontend && npm ci && npm run build",
+  "buildCommand": "cd frontend && yarn install && yarn build",
   "outputDirectory": "frontend/build",
+  "installCommand": "cd frontend && yarn install --frozen-lockfile",
   "framework": null
 }

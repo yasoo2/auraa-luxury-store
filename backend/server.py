@@ -45,14 +45,17 @@ app = FastAPI(title="لورا لاكشري API", version="1.0.0")
 cors_origins_env = os.getenv('CORS_ORIGINS', '')
 allowed_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
 
-# Fallback to hardcoded origins if env variable is empty
+# Fallback to default patterns if env variable is empty
 if not allowed_origins:
+    # Get app name from environment for dynamic Emergent URLs
+    app_name = os.getenv('APP_NAME', 'app')
+    
     allowed_origins = [
         "https://auraaluxury.com",
         "https://www.auraaluxury.com",
         "https://api.auraaluxury.com",
-        "https://auraa-ecom-fix.preview.emergentagent.com",
-        "https://auraa-admin-1.emergent.host",
+        f"https://{app_name}.preview.emergentagent.com",
+        f"https://{app_name}.emergent.host",
         "http://localhost:3000",
         "http://localhost:8001",
     ]
@@ -117,8 +120,17 @@ api_router = APIRouter(prefix="/api")
 
 # Security
 security = HTTPBearer()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key-change-in-production')
+# Password hashing is now done directly with bcrypt (see verify_password and get_password_hash functions)
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'default-jwt-secret-change-in-production')
+
+# Cloudflare Turnstile Configuration
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY')
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+# Rate Limiting Configuration
+rate_limit_storage = defaultdict(lambda: {"attempts": 0, "reset_time": time.time() + 900})  # 15 minutes
+RATE_LIMIT_ATTEMPTS = 5
+RATE_LIMIT_WINDOW = 900  # 15 minutes in seconds
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

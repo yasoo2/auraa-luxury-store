@@ -24,6 +24,7 @@ export const CartProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (!token) {
         setCartCount(0);
+        setCartItems([]);
         return;
       }
 
@@ -35,6 +36,7 @@ export const CartProvider = ({ children }) => {
       setCartCount(count);
       setCartItems(items);
     } catch (error) {
+      console.error('Error fetching cart:', error);
       setCartCount(0);
       setCartItems([]);
     }

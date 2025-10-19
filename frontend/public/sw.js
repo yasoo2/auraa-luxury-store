@@ -62,17 +62,28 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           // If the request is successful, clone and cache the response
-          if (response.status === 200) {
+          if (response && response.status === 200 && response.ok) {
             const responseClone = response.clone();
             caches.open(DATA_CACHE_NAME).then((cache) => {
               cache.put(request, responseClone);
+            }).catch((err) => {
+              console.debug('[SW] Failed to cache API response:', err);
             });
           }
           return response;
         })
-        .catch(() => {
+        .catch((error) => {
+          console.debug('[SW] API fetch failed:', error);
           // If network fails, try to get from cache
-          return caches.match(request);
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || new Response(JSON.stringify({
+              error: 'Network unavailable',
+              offline: true
+            }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
         })
     );
     return;

@@ -120,7 +120,7 @@ api_router = APIRouter(prefix="/api")
 # Security
 security = HTTPBearer()
 # Password hashing is now done directly with bcrypt (see verify_password and get_password_hash functions)
-SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'auraa-luxury-secret-key-2024')
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'default-jwt-secret-change-in-production')
 
 # Cloudflare Turnstile Configuration
 TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY')

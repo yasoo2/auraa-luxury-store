@@ -351,7 +351,6 @@ const AuthPage = () => {
                 </div>
               )}
 
-<<<<<<< HEAD
               {/* Register: Both Email and Phone required */}
               {!isLogin && (
                 <>
@@ -394,44 +393,6 @@ const AuthPage = () => {
                     {language === 'ar' ? 'يجب إدخال البريد أو رقم الهاتف على الأقل' : 'At least email or phone is required'}
                   </p>
                 </>
-=======
-              {/* Register: Email OR Phone based on loginMethod */}
-              {!isLogin && loginMethod === 'email' && (
-                <div className="relative animate-slide-in-left">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder={getAuthTranslation('email', language)}
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
-                    data-testid="email-input"
-                  />
-                </div>
-              )}
-
-              {!isLogin && loginMethod === 'phone' && (
-                <div className="animate-slide-in-left">
-                  <PhoneInput
-                    country={'sa'}
-                    value={formData.phone}
-                    onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
-                    inputProps={{
-                      name: 'phone',
-                      required: false,
-                      className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
-                    }}
-                    containerClass="phone-input-container"
-                    buttonClass="phone-input-button"
-                    dropdownClass="phone-input-dropdown"
-                    searchClass="phone-input-search"
-                    enableSearch={true}
-                    searchPlaceholder={language === 'ar' ? "ابحث عن بلد..." : "Search country..."}
-                    inputClass="phone-input-field"
-                  />
-                </div>
->>>>>>> 86c7cfc15e07ad7b7e8980bf21d6de3f93a0f421
               )}
 
               <div className="relative animate-slide-in-right">

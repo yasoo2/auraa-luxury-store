@@ -8,9 +8,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import asyncio
-
-# ===== CORS FIX 2025-10-19 18:15 UTC =====
-# Enhanced CORS middleware with proper error handling
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
@@ -22,11 +19,8 @@ import io
 from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
+from passlib.context import CryptContext
 from enum import Enum
-import random
-import httpx
-from collections import defaultdict
-import time
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -133,32 +127,6 @@ RATE_LIMIT_WINDOW = 900  # 15 minutes in seconds
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# Helper function: Get cookie domain based on environment
-def get_cookie_domain(request: Request) -> Optional[str]:
-    """
-    Dynamically determine cookie domain based on request host
-    Returns None for localhost/Vercel preview, proper domain for production
-    """
-    if not request or not request.headers.get("host"):
-        return None
-    
-    host = request.headers.get("host", "")
-    
-    # Localhost/development - no domain restriction
-    if "localhost" in host or "127.0.0.1" in host:
-        return None
-    
-    # Vercel preview URLs - no domain restriction
-    if "vercel.app" in host or "emergentagent.com" in host:
-        return None
-    
-    # Production domain
-    if "auraaluxury.com" in host:
-        return ".auraaluxury.com"
-    
-    # Default: no domain restriction (works everywhere)
-    return None
-
 # Enums
 class OrderStatus(str, Enum):
     pending = "pending"
@@ -183,92 +151,23 @@ class User(BaseModel):
     first_name: str
     last_name: str
     phone: str
+    country: Optional[str] = 'SA'  # ISO country code
     address: Optional[Dict[str, Any]] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_admin: bool = False
     is_super_admin: bool = False
 
 class UserCreate(BaseModel):
-    email: Optional[EmailStr] = None
+    email: EmailStr
     password: str
     first_name: str
     last_name: str
-    phone: Optional[str] = None
-    turnstile_token: Optional[str] = None  # Cloudflare Turnstile token
+    phone: str
+    country: Optional[str] = 'SA'  # ISO country code
 
 class UserLogin(BaseModel):
     identifier: str  # Can be email or phone
     password: str
-    turnstile_token: Optional[str] = None  # Cloudflare Turnstile token
-
-# Helper function: Verify Cloudflare Turnstile token
-async def verify_turnstile(token: str, ip: str = None) -> bool:
-    """Verify Cloudflare Turnstile token - Optimized for speed"""
-    if not TURNSTILE_SECRET_KEY or not token:
-        logger.warning("Turnstile verification skipped - missing secret key or token")
-        return True  # Allow in development if not configured
-    
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                TURNSTILE_VERIFY_URL,
-                json={
-                    "secret": TURNSTILE_SECRET_KEY,
-                    "response": token,
-                    "remoteip": ip
-                },
-                timeout=3.0  # Reduced from 10s to 3s for faster response
-            )
-            
-            result = response.json()
-            # Only log in debug mode to reduce overhead
-            if result.get("success"):
-                logger.debug(f"Turnstile verification successful")
-            else:
-                logger.warning(f"Turnstile verification failed: {result}")
-            return result.get("success", False)
-    except httpx.TimeoutException:
-        logger.warning(f"Turnstile verification timeout - allowing request")
-        return True  # Allow on timeout to prevent blocking users
-    except Exception as e:
-        logger.error(f"Turnstile verification error: {str(e)}")
-        return True  # Allow on error to prevent blocking legitimate users
-
-# Helper function: Rate Limiting
-def check_rate_limit(identifier: str, endpoint: str) -> tuple[bool, Optional[int]]:
-    """
-    Check if request should be rate limited
-    Returns: (is_allowed, seconds_until_reset)
-    """
-    key = f"{endpoint}:{identifier}"
-    current_time = time.time()
-    
-    if key in rate_limit_storage:
-        limit_data = rate_limit_storage[key]
-        
-        # Reset if window expired
-        if current_time > limit_data["reset_time"]:
-            rate_limit_storage[key] = {
-                "attempts": 1,
-                "reset_time": current_time + RATE_LIMIT_WINDOW
-            }
-            return True, None
-        
-        # Check if limit exceeded
-        if limit_data["attempts"] >= RATE_LIMIT_ATTEMPTS:
-            seconds_until_reset = int(limit_data["reset_time"] - current_time)
-            return False, seconds_until_reset
-        
-        # Increment attempts
-        limit_data["attempts"] += 1
-        return True, None
-    else:
-        # First attempt
-        rate_limit_storage[key] = {
-            "attempts": 1,
-            "reset_time": current_time + RATE_LIMIT_WINDOW
-        }
-        return True, None
 
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -352,28 +251,6 @@ class IntegrationSettings(BaseModel):
     amazon_region: Optional[str] = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-# Verification Code Models
-class VerificationCode(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: str
-    contact: str  # email or phone
-    code: str  # 6-digit code
-    action: str  # 'delete_user', 'change_password', 'change_role'
-    target_user_id: Optional[str] = None  # for admin actions
-    expires_at: datetime
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    used: bool = False
-
-class SendVerificationRequest(BaseModel):
-    action: str  # 'delete_user', 'change_password', 'change_role'
-    target_user_id: str
-    contact_method: str  # 'email' or 'phone'
-
-class VerifyCodeRequest(BaseModel):
-    code: str
-    action: str
-    target_user_id: str
-
 # Helper functions
 def verify_password(plain_password, hashed_password):
     """Verify password using bcrypt directly"""
@@ -425,86 +302,22 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 async def root():
     return {"message": "Welcome to لورا لاكشري API"}
 
-@api_router.get("/cors-test")
-async def cors_test(request: Request):
-    """Test endpoint to verify CORS headers are being sent"""
-    return {
-        "message": "CORS test successful",
-        "origin": request.headers.get("origin", "No origin header"),
-        "cors_enabled": True,
-        "allowed_origins": [
-            "https://auraaluxury.com",
-            "https://www.auraaluxury.com",
-            "https://api.auraaluxury.com"
-        ]
-    }
-
 # Auth routes
 @api_router.post("/auth/register")
-async def register(user_data: UserCreate, response: Response, request: Request):
-    # Get client IP for rate limiting and Turnstile
-    client_ip = request.client.host if request.client else "unknown"
-    identifier = user_data.email or user_data.phone or "unknown"
-    
-    # Rate Limiting
-    is_allowed, seconds_until_reset = check_rate_limit(identifier, "register")
-    if not is_allowed:
-        logger.warning(f"🚫 Rate limit exceeded for registration: {identifier}")
-        raise HTTPException(
-            status_code=429,
-            detail=f"Too many registration attempts. Please try again in {seconds_until_reset} seconds."
-        )
-    
-    # Cloudflare Turnstile Verification (Optional in development)
-    if user_data.turnstile_token:
-        turnstile_valid = await verify_turnstile(user_data.turnstile_token, client_ip)
-        if not turnstile_valid:
-            logger.warning(f"⚠️  Turnstile verification failed for registration: {identifier} - Allowing anyway")
-            # Don't block in development/testing environments
-            # raise HTTPException(
-            #     status_code=403,
-            #     detail="Security verification failed. Please try again."
-            # )
-    else:
-        logger.warning(f"⚠️ No Turnstile token provided for registration: {identifier}")
-    
-    # Validate: At least email OR phone must be provided
-    if not user_data.email and not user_data.phone:
-        logger.warning("Registration attempt without email or phone")
-        raise HTTPException(
-            status_code=400, 
-            detail="email_or_phone_required"  # Frontend will translate
-        )
-    
+async def register(user_data: UserCreate, response: Response):
     # Log incoming data for debugging
-    logger.info(f"Registration attempt - Email: {user_data.email}, Phone: {user_data.phone}")
+    logger.info(f"Registration attempt for email: {user_data.email}")
     
-    # Check if email exists (if provided)
-    if user_data.email:
-        existing_user_email = await db.users.find_one({"email": user_data.email})
-        if existing_user_email:
-            logger.warning(f"Email already registered: {user_data.email}")
-            raise HTTPException(
-                status_code=400, 
-                detail="email_already_registered"  # Frontend will translate
-            )
-    
-    # Check if phone exists (if provided)
-    if user_data.phone:
-        existing_user_phone = await db.users.find_one({"phone": user_data.phone})
-        if existing_user_phone:
-            logger.warning(f"Phone already registered: {user_data.phone}")
-            raise HTTPException(
-                status_code=400, 
-                detail="phone_already_registered"  # Frontend will translate
-            )
+    # Check if user exists
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        logger.warning(f"Email already registered: {user_data.email}")
+        raise HTTPException(status_code=400, detail="هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام بريد آخر")
     
     # Create user
     hashed_password = get_password_hash(user_data.password)
     user_dict = user_data.dict()
     del user_dict["password"]
-    if "turnstile_token" in user_dict:
-        del user_dict["turnstile_token"]  # Don't store token in DB
     user_obj = User(**user_dict)
     
     # Store user with hashed password
@@ -512,68 +325,39 @@ async def register(user_data: UserCreate, response: Response, request: Request):
     user_doc["password"] = hashed_password
     await db.users.insert_one(user_doc)
     
-    # Send welcome email (only if email is provided)
-    if user_obj.email:
-        try:
-            email_sent = send_welcome_email(
-                to_email=user_obj.email,
-                customer_name=f"{user_obj.first_name} {user_obj.last_name}"
-            )
-            if email_sent:
-                logger.info(f"Welcome email sent to {user_obj.email}")
-            else:
-                logger.warning(f"Failed to send welcome email to {user_obj.email}")
-        except Exception as e:
-            logger.error(f"Error sending welcome email: {e}")
-            # Don't fail registration if email fails
-    else:
-        logger.info(f"User registered with phone only: {user_obj.phone}")
+    # Send welcome email
+    try:
+        email_sent = send_welcome_email(
+            user_email=user_obj.email,
+            user_name=f"{user_obj.first_name} {user_obj.last_name}"
+        )
+        if email_sent:
+            logger.info(f"Welcome email sent to {user_obj.email}")
+        else:
+            logger.warning(f"Failed to send welcome email to {user_obj.email}")
+    except Exception as e:
+        logger.error(f"Error sending welcome email: {e}")
+        # Don't fail registration if email fails
     
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
     
-    # Set cookie with dynamic domain
-    cookie_domain = get_cookie_domain(request)
+    # Set cookie (domain will be auto-detected based on request origin)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=cookie_domain,
         max_age=1800  # 30 minutes (same as token expiry)
     )
     
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
 
 @api_router.post("/auth/login")
-async def login(credentials: UserLogin, response: Response, request: Request):
+async def login(credentials: UserLogin, response: Response):
     logger.info(f"🔐 Login attempt for identifier: {credentials.identifier}")
-    
-    # Get client IP for rate limiting and Turnstile
-    client_ip = request.client.host if request.client else "unknown"
-    
-    # Rate Limiting
-    is_allowed, seconds_until_reset = check_rate_limit(credentials.identifier, "login")
-    if not is_allowed:
-        logger.warning(f"🚫 Rate limit exceeded for: {credentials.identifier}")
-        raise HTTPException(
-            status_code=429,
-            detail=f"Too many login attempts. Please try again in {seconds_until_reset} seconds."
-        )
-    
-    # Cloudflare Turnstile Verification (Optional in development)
-    if credentials.turnstile_token:
-        turnstile_valid = await verify_turnstile(credentials.turnstile_token, client_ip)
-        if not turnstile_valid:
-            logger.warning(f"⚠️  Turnstile verification failed for: {credentials.identifier} - Allowing anyway")
-            # Don't block in development/testing environments
-            # raise HTTPException(
-            #     status_code=403,
-            #     detail="Security verification failed. Please try again."
-            # )
-    else:
-        logger.debug(f"⚠️ No Turnstile token provided for: {credentials.identifier}")
+    logger.info(f"🔐 Password length: {len(credentials.password)}, repr: {repr(credentials.password[:20] if len(credentials.password) > 20 else credentials.password)}")
     
     # First check if super admin
     super_admin = await db.super_admins.find_one({
@@ -581,12 +365,17 @@ async def login(credentials: UserLogin, response: Response, request: Request):
         "is_active": True
     })
     
+    logger.info(f"🔍 Super admin found: {super_admin is not None}")
+    
     if super_admin:
+        logger.info(f"✅ Super admin authenticated, verifying password...")
+        logger.info(f"🔑 Hash in DB (first 30 chars): {super_admin['password_hash'][:30]}")
         # Verify super admin password
         password_valid = verify_password(credentials.password, super_admin["password_hash"])
+        logger.info(f"🔑 Password verification result: {password_valid}")
         
         if not password_valid:
-            logger.warning(f"❌ Wrong password for: {credentials.identifier}")
+            logger.warning(f"❌ Wrong password for super admin: {credentials.identifier}")
             raise HTTPException(
                 status_code=401,
                 detail="wrong_password"
@@ -636,15 +425,13 @@ async def login(credentials: UserLogin, response: Response, request: Request):
         access_token = create_access_token(data={"sub": user["id"], "is_super_admin": True})
         user_obj = User(**{k: v for k, v in user.items() if k != "password"})
         
-        # Set cookie with dynamic domain
-        cookie_domain = get_cookie_domain(request)
+        # Set cookie (domain will be auto-detected based on request origin)
         response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,
             secure=True,
             samesite="none",
-            domain=cookie_domain,
             max_age=1800
         )
         
@@ -674,15 +461,13 @@ async def login(credentials: UserLogin, response: Response, request: Request):
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     
-    # Set cookie with dynamic domain
-    cookie_domain = get_cookie_domain(request)
+    # Set cookie (domain will be auto-detected based on request origin)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=cookie_domain,
         max_age=1800  # 30 minutes (same as token expiry)
     )
     
@@ -703,8 +488,7 @@ async def get_oauth_url(provider: str, redirect_url: str):
 @api_router.post("/auth/oauth/session")
 async def process_oauth_session(
     session_data: dict,
-    response: Response,
-    request: Request
+    response: Response
 ):
     """
     Process OAuth session after user returns from OAuth provider
@@ -787,15 +571,13 @@ async def process_oauth_session(
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     
-    # Set cookie with dynamic domain
-    cookie_domain = get_cookie_domain(request)
+    # Set cookie (domain will be auto-detected based on request origin)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=cookie_domain,
         max_age=1800
     )
     
@@ -1355,14 +1137,11 @@ async def create_order(
     
     # Send order confirmation email
     try:
-        email_sent = send_order_confirmation(
-            to_email=current_user.email,
-            customer_name=f"{current_user.first_name} {current_user.last_name}",
-            order_number=order.order_number,
-            order_total=order.total_amount,
-            currency=order.currency,
-            items=cart["items"],
-            shipping_address=order_data.shipping_address
+        email_sent = send_order_confirmation_email(
+            user_email=current_user.email,
+            user_name=f"{current_user.first_name} {current_user.last_name}",
+            order_id=order.order_number,
+            total_amount=order.total_amount
         )
         if email_sent:
             logger.info(f"Order confirmation email sent for {order.order_number}")
@@ -1576,94 +1355,6 @@ async def upsert_integration_settings(payload: IntegrationSettingsUpdate, curren
     await db.settings.update_one({"id": existing["id"]}, {"$set": updates})
     updated = await db.settings.find_one({"id": existing["id"]})
     return IntegrationSettings(**updated)
-
-# Store Settings Model
-class StoreSettings(BaseModel):
-    id: str = None
-    # Store Information
-    store_name: str = "Auraa Luxury"
-    store_name_ar: str = "Auraa Luxury"
-    store_description: str = "Premium accessories for discerning customers"
-    store_description_ar: str = "إكسسوارات فاخرة للعملاء المميزين"
-    # Contact Information
-    contact_email: str = "info@auraa.com"
-    contact_phone: str = "+905013715391"
-    whatsapp_number: str = "+905013715391"
-    # Address
-    address_line1: str = "123 Luxury Street"
-    address_line1_ar: str = "123 شارع الفخامة"
-    city: str = "Riyadh"
-    city_ar: str = "الرياض"
-    country: str = "Saudi Arabia"
-    country_ar: str = "المملكة العربية السعودية"
-    postal_code: str = "12345"
-    # Business Settings
-    currency_primary: str = "SAR"
-    currency_secondary: str = "USD"
-    tax_rate: float = 15
-    free_shipping_threshold: float = 200
-    # Notifications
-    notify_new_orders: bool = True
-    notify_low_stock: bool = True
-    notify_reviews: bool = True
-    low_stock_threshold: int = 10
-    # Social Media
-    facebook_url: str = ""
-    instagram_url: str = ""
-    twitter_url: str = ""
-    tiktok_url: str = ""
-    # Payment Methods
-    payment_cod: bool = False
-    payment_stripe: bool = False
-    payment_paypal: bool = False
-    # Shipping
-    shipping_local_price: float = 25
-    shipping_express_price: float = 50
-    shipping_free_threshold: float = 200
-    # Theme
-    primary_color: str = "#D97706"
-    secondary_color: str = "#FEF3C7"
-    logo_url: str = ""
-    updated_at: Optional[datetime] = None
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None
-        }
-
-@api_router.get("/admin/settings")
-async def get_store_settings(current_user: User = Depends(get_admin_user)):
-    """Get store settings"""
-    try:
-        settings = await db.store_settings.find_one({"id": "default"})
-        if not settings:
-            # Return default settings
-            default_settings = StoreSettings(id="default")
-            return default_settings.dict()
-        return settings
-    except Exception as e:
-        logger.error(f"Error fetching store settings: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch settings: {str(e)}")
-
-@api_router.put("/admin/settings")
-async def update_store_settings(settings: dict, current_user: User = Depends(get_admin_user)):
-    """Update store settings"""
-    try:
-        settings["id"] = "default"
-        settings["updated_at"] = datetime.now(timezone.utc)
-        
-        # Upsert settings
-        await db.store_settings.update_one(
-            {"id": "default"},
-            {"$set": settings},
-            upsert=True
-        )
-        
-        updated = await db.store_settings.find_one({"id": "default"})
-        return updated
-    except Exception as e:
-        logger.error(f"Error updating store settings: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to update settings: {str(e)}")
 
 # Initialize admin user and sample data
 @api_router.post("/init-data")
@@ -1889,7 +1580,40 @@ async def setup_deployment():
         logger.error(f"Error in deployment setup: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Deployment setup error: {str(e)}")
 
-# CORS middleware moved to top of file (after app creation) for proper loading in production
+# CORS Configuration - Allow specific origins for security
+allowed_origins = [
+    "https://auraa-luxury-store.vercel.app",
+    "https://www.auraaluxury.com",
+    "https://auraaluxury.com",
+    "http://localhost:3000",  # For local development
+    "http://localhost:3001",
+]
+
+# Add custom CORS_ORIGINS from environment if provided
+if os.environ.get('CORS_ORIGINS'):
+    custom_origins = os.environ.get('CORS_ORIGINS').split(',')
+    allowed_origins.extend([origin.strip() for origin in custom_origins if origin.strip()])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+# Add Rate Limiting Middleware for security
+try:
+    from middleware.rate_limiter import RateLimitMiddleware
+    app.add_middleware(
+        RateLimitMiddleware,
+        max_requests=5,  # 5 login attempts
+        window_seconds=300  # per 5 minutes
+    )
+    logger.info("✅ Rate limiting enabled for authentication endpoints")
+except Exception as e:
+    logger.warning(f"⚠️ Rate limiting not enabled: {e}")
 
 # Configure logging
 logging.basicConfig(
@@ -1904,7 +1628,7 @@ from services.scheduler_service import get_scheduler_service
 from services.product_sync_service import get_product_sync_service
 from services.aliexpress_service import get_aliexpress_service
 from services.google_analytics import track_purchase as ga4_track_purchase
-from services.email_service import send_order_confirmation, send_welcome_email, send_verification_code
+from services.email_service import send_order_confirmation_email, send_welcome_email
 
 # Auto-Update Services Initialization
 currency_service = None
@@ -2391,6 +2115,7 @@ aliexpress_customs_calc = None
 aliexpress_scheduler = None
 aliexpress_bulk_import = None
 aliexpress_sync_service = None  # New unified sync service
+real_aliexpress_service = None  # Real product service with scraping
 category_mapper = None
 geoip_service = None
 
@@ -2398,7 +2123,7 @@ geoip_service = None
 async def init_aliexpress_services():
     """Initialize AliExpress services on startup."""
     global aliexpress_auth, aliexpress_product_sync, aliexpress_customs_calc, aliexpress_scheduler
-    global aliexpress_bulk_import, aliexpress_sync_service, category_mapper, geoip_service
+    global aliexpress_bulk_import, aliexpress_sync_service, real_aliexpress_service, category_mapper, geoip_service
     
     try:
         # Initialize GeoIP service (always available)
@@ -2457,7 +2182,13 @@ async def init_aliexpress_services():
             
             logger.info("✅ AliExpress services initialized successfully")
         else:
-            logger.warning("⚠️ AliExpress credentials not found - services disabled")
+            logger.warning("⚠️ AliExpress credentials not found - using web scraping mode")
+        
+        # Always initialize Real AliExpress Service (uses web scraping)
+        from services.aliexpress.real_product_service import get_real_aliexpress_service
+        profit_margin = float(os.getenv('PROFIT_MARGIN', '50.0'))
+        real_aliexpress_service = await get_real_aliexpress_service(db, profit_margin)
+        logger.info("✅ Real AliExpress Service initialized (web scraping mode)")
     
     except Exception as e:
         logger.error(f"❌ Failed to initialize AliExpress services: {e}")
@@ -4242,567 +3973,229 @@ async def generate_sitemap():
         logger.error(f"Error generating sitemap: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate sitemap")
 
+# ======================================
+# Real AliExpress Service Endpoints (Web Scraping)
+# ======================================
+
+@api_router.post("/aliexpress/real/search")
+async def search_aliexpress_products(
+    keywords: str,
+    country: Optional[str] = "SA",
+    limit: int = 20,
+    auto_import: bool = False,
+    category: str = "imported"
+):
+    """
+    Search for products on AliExpress using web scraping.
+    
+    Args:
+        keywords: Search keywords
+        country: Target country for pricing (SA, AE, etc.)
+        limit: Maximum number of results
+        auto_import: Automatically import products to database
+        category: Store category for imported products
+    
+    Returns:
+        Search results with complete pricing
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.search_and_import_products(
+            keywords=keywords,
+            country_code=country,
+            limit=limit,
+            auto_import=auto_import,
+            category=category
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error searching AliExpress: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/real/product/{product_id}")
+async def get_real_aliexpress_product(
+    product_id: str,
+    country: Optional[str] = "SA"
+):
+    """
+    Get detailed product information from AliExpress with pricing.
+    
+    Args:
+        product_id: AliExpress product ID
+        country: Target country for pricing
+    
+    Returns:
+        Complete product information with pricing
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        product = await real_aliexpress_service.get_product_with_pricing(
+            product_id=product_id,
+            country_code=country
+        )
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        return product
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/real/import/{product_id}")
+async def import_real_aliexpress_product(
+    product_id: str,
+    country: Optional[str] = "SA",
+    category: str = "imported",
+    custom_name: Optional[str] = None,
+    custom_description: Optional[str] = None,
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Import a product from AliExpress to the store.
+    
+    Args:
+        product_id: AliExpress product ID
+        country: Target country for default pricing
+        category: Store category
+        custom_name: Custom product name (optional)
+        custom_description: Custom description (optional)
+    
+    Returns:
+        Import result
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.import_product(
+            product_id=product_id,
+            country_code=country,
+            category=category,
+            custom_name=custom_name,
+            custom_description=custom_description
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error importing product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/real/bulk-import")
+async def bulk_import_real_products(
+    keywords: str,
+    count: int = 50,
+    country: Optional[str] = "SA",
+    category: str = "imported",
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Bulk import products from AliExpress.
+    
+    Args:
+        keywords: Search keywords
+        count: Number of products to import
+        country: Target country
+        category: Store category
+    
+    Returns:
+        Import statistics
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.bulk_import_products(
+            keywords=keywords,
+            count=count,
+            country_code=country,
+            category=category
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error in bulk import: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/aliexpress/real/sync-pricing/{product_id}")
+async def sync_real_product_pricing(
+    product_id: str,
+    countries: Optional[List[str]] = None,
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Sync pricing for a product across multiple countries.
+    
+    Args:
+        product_id: Store product ID
+        countries: List of country codes (optional)
+    
+    Returns:
+        Sync results
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.sync_product_pricing(
+            product_id=product_id,
+            countries=countries
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error syncing pricing: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/aliexpress/real/availability/{product_id}")
+async def check_real_product_availability(
+    product_id: str,
+    country: str
+):
+    """
+    Check product availability for a specific country.
+    
+    Args:
+        product_id: Store product ID
+        country: Country code
+    
+    Returns:
+        Availability information with pricing
+    """
+    if not real_aliexpress_service:
+        raise HTTPException(status_code=503, detail="AliExpress service not available")
+    
+    try:
+        result = await real_aliexpress_service.get_product_availability(
+            product_id=product_id,
+            country_code=country
+        )
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Error checking availability: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount static files
-app.mount("/static", StaticFiles(directory="/app/backend/static"), name="static")
-
-# Super admin management endpoints
-import bcrypt
-
-class ChangeRoleRequest(BaseModel):
-    user_id: str
-    new_role: str  # 'super_admin', 'admin', 'user'
-    current_password: str
-
-class ResetPasswordRequest(BaseModel):
-    user_id: str
-    new_password: str
-    current_password: str
-
-def verify_password_bcrypt(plain_password: str, hashed_password: str) -> bool:
-    """Verify password using bcrypt"""
-    try:
-        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
-    except:
-        return False
-
-async def verify_super_admin_password(identifier: str, password: str) -> dict:
-    """Verify super admin credentials"""
-    admin = await db.super_admins.find_one({
-        "identifier": identifier,
-        "is_active": True
-    })
-    
-    if not admin or not verify_password_bcrypt(password, admin["password_hash"]):
-        raise HTTPException(status_code=401, detail="invalid_super_admin_credentials")
-    
-    return admin
-
-async def log_admin_action(action: str, performed_by: str, details: dict):
-    """Log admin actions"""
-    await db.admin_audit_logs.insert_one({
-        "id": str(uuid.uuid4()),
-        "action": action,
-        "performed_by": performed_by,
-        "details": details,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    })
-
-@api_router.get("/admin/super-admin-list-all-admins")
-async def list_all_admins(current_user: User = Depends(get_current_user)):
-    """List all admins and super admins (Super Admin only)"""
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Get all users who are admins or super admins
-    admins = await db.users.find({
-        "$or": [
-            {"is_admin": True},
-            {"is_super_admin": True}
-        ]
-    }).to_list(length=1000)
-    
-    result = []
-    for admin in admins:
-        result.append({
-            "id": admin["id"],
-            "email": admin.get("email"),
-            "phone": admin.get("phone"),
-            "first_name": admin.get("first_name", ""),
-            "last_name": admin.get("last_name", ""),
-            "is_admin": admin.get("is_admin", False),
-            "is_super_admin": admin.get("is_super_admin", False),
-            "is_active": admin.get("is_active", True),
-            "created_at": admin.get("created_at", ""),
-            "last_login": admin.get("last_login")
-        })
-    
-    return {
-        "admins": result,
-        "total": len(result),
-        "super_admin_count": len([r for r in result if r["is_super_admin"]]),
-        "admin_count": len([r for r in result if r["is_admin"] and not r["is_super_admin"]])
-    }
-
-@api_router.get("/admin/super-admin-statistics")
-async def get_admin_statistics(current_user: User = Depends(get_current_user)):
-    """Get admin statistics (Super Admin only)"""
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Count statistics
-    total_users = await db.users.count_documents({})
-    total_admins = await db.users.count_documents({"is_admin": True})
-    total_super_admins = await db.users.count_documents({"is_super_admin": True})
-    active_admins = await db.users.count_documents({"is_admin": True, "is_active": True})
-    
-    # Recent actions (only if the collection exists)
-    recent_actions = []
-    try:
-        recent_actions_cursor = db.admin_audit_logs.find().sort("timestamp", -1).limit(10)
-        recent_actions = await recent_actions_cursor.to_list(length=10)
-        # Convert ObjectId to string if present
-        for action in recent_actions:
-            if "_id" in action:
-                action.pop("_id")
-    except Exception:
-        # If collection doesn't exist, just return empty list
-        recent_actions = []
-    
-    return {
-        "total_users": total_users,
-        "total_admins": total_admins,
-        "total_super_admins": total_super_admins,
-        "active_admins": active_admins,
-        "inactive_admins": total_admins - active_admins,
-        "recent_actions": recent_actions
-    }
-
-@api_router.post("/admin/super-admin-change-role")
-async def change_user_role(
-    request: ChangeRoleRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """Change user role (Super Admin only)"""
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Verify super admin password
-    current_admin_identifier = current_user.email or current_user.phone
-    await verify_super_admin_password(current_admin_identifier, request.current_password)
-    
-    # Get target user
-    target_user = await db.users.find_one({"id": request.user_id})
-    if not target_user:
-        raise HTTPException(status_code=404, detail="user_not_found")
-    
-    # Prevent super admin from removing their own super admin rights
-    target_identifier = target_user.get("email") or target_user.get("phone")
-    if target_identifier == current_admin_identifier and request.new_role != "super_admin":
-        raise HTTPException(status_code=400, detail="cannot_remove_own_super_admin")
-    
-    # Update role based on new_role
-    updates = {}
-    
-    if request.new_role == "super_admin":
-        updates["is_admin"] = True
-        updates["is_super_admin"] = True
-        
-        # Add to super_admins collection if not exists
-        existing_super_admin = await db.super_admins.find_one({
-            "identifier": target_identifier,
-            "is_active": True
-        })
-        
-        if not existing_super_admin:
-            temp_password = "change_me_" + str(uuid.uuid4())[:8]
-            await db.super_admins.insert_one({
-                "id": str(uuid.uuid4()),
-                "identifier": target_identifier,
-                "type": "email" if target_user.get("email") else "phone",
-                "password_hash": get_password_hash(temp_password),
-                "role": "super_admin",
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "created_by": current_admin_identifier,
-                "is_active": True,
-                "last_login": None
-            })
-    
-    elif request.new_role == "admin":
-        updates["is_admin"] = True
-        updates["is_super_admin"] = False
-        
-        # Remove from super_admins collection
-        await db.super_admins.update_many(
-            {"identifier": target_identifier},
-            {"$set": {"is_active": False}}
-        )
-    
-    elif request.new_role == "user":
-        updates["is_admin"] = False
-        updates["is_super_admin"] = False
-        
-        # Remove from super_admins collection
-        await db.super_admins.update_many(
-            {"identifier": target_identifier},
-            {"$set": {"is_active": False}}
-        )
-    
-    else:
-        raise HTTPException(status_code=400, detail="invalid_role")
-    
-    # Update user
-    await db.users.update_one(
-        {"id": request.user_id},
-        {"$set": updates}
-    )
-    
-    # Log action
-    await log_admin_action(
-        "role_changed",
-        current_admin_identifier,
-        {
-            "target_user": target_identifier,
-            "new_role": request.new_role,
-            "old_is_admin": target_user.get("is_admin"),
-            "old_is_super_admin": target_user.get("is_super_admin", False)
-        }
-    )
-    
-    return {
-        "message": "role_changed_successfully",
-        "user_id": request.user_id,
-        "new_role": request.new_role
-    }
-
-@api_router.post("/admin/super-admin-reset-password")
-async def reset_admin_password(
-    request: ResetPasswordRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """Reset admin password (Super Admin only)"""
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Verify super admin password
-    current_admin_identifier = current_user.email or current_user.phone
-    await verify_super_admin_password(current_admin_identifier, request.current_password)
-    
-    # Get target user
-    target_user = await db.users.find_one({"id": request.user_id})
-    if not target_user:
-        raise HTTPException(status_code=404, detail="user_not_found")
-    
-    # Hash new password
-    new_hashed_password = get_password_hash(request.new_password)
-    
-    # Update password
-    await db.users.update_one(
-        {"id": request.user_id},
-        {"$set": {"password": new_hashed_password}}
-    )
-    
-    # Also update in super_admins if applicable
-    target_identifier = target_user.get("email") or target_user.get("phone")
-    await db.super_admins.update_many(
-        {"identifier": target_identifier, "is_active": True},
-        {"$set": {"password_hash": new_hashed_password}}
-    )
-    
-    # Log action
-    await log_admin_action(
-        "password_reset",
-        current_admin_identifier,
-        {
-            "target_user": target_identifier,
-            "reset_by": current_admin_identifier
-        }
-    )
-    
-    return {
-        "message": "password_reset_successfully",
-        "user_id": request.user_id
-    }
-
-
-class ToggleStatusRequest(BaseModel):
-    user_id: str
-    is_active: bool
-    current_password: str
-
-@api_router.post("/admin/super-admin-toggle-status")
-async def toggle_admin_status(
-    request: ToggleStatusRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """Enable/Disable admin account (Super Admin only)"""
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Verify super admin password
-    current_admin_identifier = current_user.email or current_user.phone
-    await verify_super_admin_password(current_admin_identifier, request.current_password)
-    
-    # Get target user
-    target_user = await db.users.find_one({"id": request.user_id})
-    if not target_user:
-        raise HTTPException(status_code=404, detail="user_not_found")
-    
-    # Prevent super admin from disabling themselves
-    target_identifier = target_user.get("email") or target_user.get("phone")
-    if target_identifier == current_admin_identifier:
-        raise HTTPException(status_code=400, detail="cannot_disable_self")
-    
-    # Update status
-    await db.users.update_one(
-        {"id": request.user_id},
-        {"$set": {"is_active": request.is_active}}
-    )
-    
-    # Also update in super_admins if applicable
-    await db.super_admins.update_many(
-        {"identifier": target_identifier},
-        {"$set": {"is_active": request.is_active}}
-    )
-    
-    # Log action
-    await log_admin_action(
-        "status_changed",
-        current_admin_identifier,
-        {
-            "target_user": target_identifier,
-            "new_status": "active" if request.is_active else "inactive"
-        }
-    )
-    
-    return {
-        "message": "status_updated_successfully",
-        "user_id": request.user_id,
-        "is_active": request.is_active
-    }
-
-@api_router.delete("/admin/super-admin-delete/{user_id}")
-async def delete_admin(
-    user_id: str,
-    current_password: str,
-    current_user: User = Depends(get_current_user)
-):
-    """Delete admin account (Super Admin only, DANGEROUS!)"""
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Verify super admin password
-    current_admin_identifier = current_user.email or current_user.phone
-    await verify_super_admin_password(current_admin_identifier, current_password)
-    
-    # Get target user
-    target_user = await db.users.find_one({"id": user_id})
-    if not target_user:
-        raise HTTPException(status_code=404, detail="user_not_found")
-    
-    # Prevent super admin from deleting themselves
-    target_identifier = target_user.get("email") or target_user.get("phone")
-    if target_identifier == current_admin_identifier:
-        raise HTTPException(status_code=400, detail="cannot_delete_self")
-    
-    # Check if this is the last super admin
-    if target_user.get("is_super_admin"):
-        super_admin_count = await db.super_admins.count_documents({"is_active": True})
-        if super_admin_count <= 1:
-            raise HTTPException(status_code=400, detail="cannot_delete_last_super_admin")
-    
-    # Log action before deletion
-    await log_admin_action(
-        "admin_deleted",
-        current_admin_identifier,
-        {
-            "target_user": target_identifier,
-            "was_super_admin": target_user.get("is_super_admin", False),
-            "was_admin": target_user.get("is_admin", False)
-        }
-    )
-    
-    # Delete from users
-    await db.users.delete_one({"id": user_id})
-    
-    # Delete from super_admins
-    await db.super_admins.delete_many({"identifier": target_identifier})
-    
-    return {
-        "message": "admin_deleted_successfully",
-        "user_id": user_id
-    }
-
-
-# ============================================
-# Verification Code System for Admin Actions
-# ============================================
-
-def generate_verification_code() -> str:
-    """Generate 6-digit verification code"""
-    return ''.join([str(random.randint(0, 9)) for _ in range(6)])
-
-@api_router.post("/admin/send-verification-code")
-async def send_verification_code_endpoint(
-    request: SendVerificationRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Send verification code to Super Admin for sensitive actions
-    Super Admin only
-    """
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Validate action
-    valid_actions = ['delete_user', 'change_password', 'change_role']
-    if request.action not in valid_actions:
-        raise HTTPException(status_code=400, detail="Invalid action")
-    
-    # Validate contact method
-    if request.contact_method not in ['email', 'phone']:
-        raise HTTPException(status_code=400, detail="Invalid contact method")
-    
-    # Get target user
-    target_user = await db.users.find_one({"id": request.target_user_id})
-    if not target_user:
-        raise HTTPException(status_code=404, detail="Target user not found")
-    
-    # Generate code
-    code = generate_verification_code()
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-    
-    # Get contact info
-    if request.contact_method == 'email':
-        contact = current_user.email
-        if not contact:
-            raise HTTPException(status_code=400, detail="Super admin email not found")
-    else:  # phone
-        contact = current_user.phone
-        if not contact:
-            raise HTTPException(status_code=400, detail="Super admin phone not found")
-    
-    # Store verification code
-    verification_doc = {
-        "id": str(uuid.uuid4()),
-        "user_id": current_user.id,
-        "contact": contact,
-        "code": code,
-        "action": request.action,
-        "target_user_id": request.target_user_id,
-        "expires_at": expires_at.isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "used": False
-    }
-    
-    await db.verification_codes.insert_one(verification_doc)
-    
-    # Send code
-    if request.contact_method == 'email':
-        # Send email
-        recipient_name = f"{current_user.first_name} {current_user.last_name}"
-        success = send_verification_code(
-            to_email=contact,
-            recipient_name=recipient_name,
-            code=code,
-            action=request.action,
-            language='ar'  # Default to Arabic
-        )
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to send verification email")
-    else:
-        # SMS not implemented yet
-        # For now, just return the code in response (temporary)
-        return {
-            "message": "verification_code_generated",
-            "contact": contact,
-            "method": "phone",
-            "code": code,  # Temporary: remove in production
-            "note": "SMS service not implemented yet. Code shown for testing."
-        }
-    
-    return {
-        "message": "verification_code_sent",
-        "contact": contact,
-        "method": request.contact_method,
-        "expires_in_minutes": 10
-    }
-
-@api_router.post("/admin/verify-code")
-async def verify_code_endpoint(
-    request: VerifyCodeRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Verify code and return token for action execution
-    Super Admin only
-    """
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Find verification code
-    verification = await db.verification_codes.find_one({
-        "user_id": current_user.id,
-        "code": request.code,
-        "action": request.action,
-        "target_user_id": request.target_user_id,
-        "used": False
-    })
-    
-    if not verification:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
-    
-    # Check expiry
-    expires_at = datetime.fromisoformat(verification["expires_at"])
-    if datetime.now(timezone.utc) > expires_at:
-        raise HTTPException(status_code=400, detail="Verification code expired")
-    
-    # Mark as used
-    await db.verification_codes.update_one(
-        {"id": verification["id"]},
-        {"$set": {"used": True}}
-    )
-    
-    # Generate action token (valid for 5 minutes)
-    action_token = jwt.encode(
-        {
-            "user_id": current_user.id,
-            "action": request.action,
-            "target_user_id": request.target_user_id,
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=5)
-        },
-        SECRET_KEY,
-        algorithm=ALGORITHM
-    )
-    
-    return {
-        "message": "code_verified",
-        "action_token": action_token,
-        "expires_in_minutes": 5
-    }
-
-@api_router.get("/admin/users/all")
-async def get_all_users(
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get all users (admins + regular users)
-    Super Admin only
-    """
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Get all users
-    users = await db.users.find({}).to_list(length=10000)
-    
-    result = []
-    for user in users:
-        result.append({
-            "id": user["id"],
-            "email": user.get("email"),
-            "phone": user.get("phone"),
-            "first_name": user.get("first_name", ""),
-            "last_name": user.get("last_name", ""),
-            "is_admin": user.get("is_admin", False),
-            "is_super_admin": user.get("is_super_admin", False),
-            "is_active": user.get("is_active", True),
-            "created_at": user.get("created_at", ""),
-            "last_login": user.get("last_login")
-        })
-    
-    # Separate admins and users
-    admins = [u for u in result if u["is_admin"] or u["is_super_admin"]]
-    regular_users = [u for u in result if not u["is_admin"] and not u["is_super_admin"]]
-    
-    return {
-        "admins": admins,
-        "users": regular_users,
-        "total_admins": len(admins),
-        "total_users": len(regular_users),
-        "total": len(result)
-    }
-
-
+import os
+static_dir = "/app/backend/static"
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+else:
+    logger.warning(f"Static directory {static_dir} does not exist, skipping mount")
 
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

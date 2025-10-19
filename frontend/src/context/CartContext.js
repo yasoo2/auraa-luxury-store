@@ -88,9 +88,20 @@ export const CartProvider = ({ children }) => {
     }
   };
 
+  // Clear cart (on logout)
+  const clearCart = () => {
+    setCartCount(0);
+    setCartItems([]);
+  };
+
   // Initialize cart count on component mount
   useEffect(() => {
-    fetchCartCount();
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchCartCount();
+    } else {
+      clearCart();
+    }
   }, []);
 
   const value = {
@@ -98,7 +109,8 @@ export const CartProvider = ({ children }) => {
     cartItems,
     addToCart,
     removeFromCart,
-    fetchCartCount
+    fetchCartCount,
+    clearCart
   };
 
   return (

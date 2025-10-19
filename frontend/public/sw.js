@@ -142,20 +142,18 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: notificationData.body || 'You have a new notification from Auraa Luxury',
-    icon: '/images/icon-192x192.png',
-    badge: '/images/badge-72x72.png',
+    icon: notificationData.icon || '/favicon.ico',
+    badge: notificationData.badge || '/favicon.ico',
     image: notificationData.image,
     data: notificationData.data,
     actions: [
       {
         action: 'view',
-        title: notificationData.lang === 'ar' ? 'عرض' : 'View',
-        icon: '/images/action-view.png'
+        title: notificationData.lang === 'ar' ? 'عرض' : 'View'
       },
       {
         action: 'dismiss',
-        title: notificationData.lang === 'ar' ? 'إغلاق' : 'Dismiss',
-        icon: '/images/action-dismiss.png'
+        title: notificationData.lang === 'ar' ? 'إغلاق' : 'Dismiss'
       }
     ],
     tag: notificationData.tag || 'auraa-notification',

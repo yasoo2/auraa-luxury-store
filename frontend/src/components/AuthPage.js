@@ -386,7 +386,6 @@ const AuthPage = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
-                    required
                     data-testid="email-input"
                   />
                 </div>
@@ -400,7 +399,7 @@ const AuthPage = () => {
                     onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
                     inputProps={{
                       name: 'phone',
-                      required: true,
+                      required: false,
                       className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
                     }}
                     containerClass="phone-input-container"

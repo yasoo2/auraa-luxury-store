@@ -36,7 +36,8 @@ import {
   Download,
   FileText,
   Image,
-  Palette
+  Palette,
+  Shield
 } from 'lucide-react';
 
 const AdminDashboard = () => {

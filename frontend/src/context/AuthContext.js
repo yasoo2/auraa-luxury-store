@@ -30,22 +30,42 @@ export const AuthProvider = ({ children }) => {
   // Check if user is logged in on app start
   useEffect(() => {
     const checkAuthStatus = async () => {
-      if (token) {
-        try {
-          const response = await axios.get(`${BACKEND_URL}/api/auth/me`);
-          console.log('Token validation response:', response.data);
-          console.log('User is_admin from /me endpoint:', response.data.is_admin);
-          setUser(response.data);
-        } catch (error) {
-          console.error('Token validation failed:', error);
-          logout();
+      // Try to get token from localStorage first
+      const storedToken = localStorage.getItem('token');
+      
+      try {
+        // Call /auth/me with credentials to check both cookie and token
+        const response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
+          withCredentials: true, // Send cookies
+          headers: storedToken ? { 'Authorization': `Bearer ${storedToken}` } : {}
+        });
+        
+        console.log('✅ User authenticated:', response.data);
+        console.log('User is_admin:', response.data.is_admin);
+        console.log('User is_super_admin:', response.data.is_super_admin);
+        
+        setUser(response.data);
+        
+        // If we got a valid response but don't have token in localStorage,
+        // it means we're authenticated via cookie only
+        if (!storedToken && response.data) {
+          console.log('✅ Authenticated via cookie');
         }
+      } catch (error) {
+        console.error('❌ Auth check failed:', error.response?.status, error.response?.data);
+        // Clear invalid token
+        if (storedToken) {
+          localStorage.removeItem('token');
+          setToken(null);
+        }
+        setUser(null);
       }
+      
       setLoading(false);
     };
 
     checkAuthStatus();
-  }, [token, BACKEND_URL]);
+  }, [BACKEND_URL]);
 
   const login = async (emailOrCredentials, password, turnstileToken = null) => {
     try {
@@ -69,8 +89,13 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, credentials);
+      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, credentials, {
+        withCredentials: true // Send and receive cookies
+      });
+      
       const { access_token, user: userData } = response.data;
+      
+      console.log('✅ Login successful:', userData);
       
       // Store token and update state immediately
       localStorage.setItem('token', access_token);
@@ -79,7 +104,7 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('❌ Login failed:', error);
       return {
         success: false,
         error: error.response?.data?.detail || 'فشل تسجيل الدخول'
@@ -89,10 +114,13 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, userData);
+      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, userData, {
+        withCredentials: true // Send and receive cookies
+      });
+      
       const { access_token, user: newUser } = response.data;
       
-      console.log('Registration successful, user data:', newUser);
+      console.log('✅ Registration successful:', newUser);
       
       setToken(access_token);
       setUser(newUser);
@@ -100,7 +128,7 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
-      console.error('Registration failed:', error);
+      console.error('❌ Registration failed:', error);
       return {
         success: false,
         error: error.response?.data?.detail || 'فشل في إنشاء الحساب'

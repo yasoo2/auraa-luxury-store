@@ -37,25 +37,65 @@ db = client[os.environ['DB_NAME']]
 # Create the main app
 app = FastAPI(title="لورا لاكشري API", version="1.0.0")
 
-# ⚠️ CRITICAL: CORS MUST be configured FIRST before any other middleware
-# This ensures it works in production deployments (Render, Emergent, etc.)
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=[
-        "https://auraaluxury.com",
-        "https://www.auraaluxury.com",
-        "https://api.auraaluxury.com",
-        "https://auraa-admin-1.preview.emergentagent.com",
-        "https://auraa-admin-1.emergent.host",  # Emergent Production
-        "http://localhost:3000",
-        "http://localhost:8001",
-        "*"  # Fallback for development
-    ],
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
+# Custom CORS Handler for Vercel Preview URLs
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as StarletteResponse
+
+class CustomCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        origin = request.headers.get("origin")
+        
+        # Allowed origins patterns
+        allowed_origins = [
+            "https://auraaluxury.com",
+            "https://www.auraaluxury.com",
+            "https://api.auraaluxury.com",
+            "https://auraa-admin-1.preview.emergentagent.com",
+            "https://auraa-admin-1.emergent.host",
+            "http://localhost:3000",
+            "http://localhost:8001",
+        ]
+        
+        # Check if origin matches patterns
+        is_allowed = False
+        if origin:
+            # Exact match
+            if origin in allowed_origins:
+                is_allowed = True
+            # Vercel preview URLs
+            elif ".vercel.app" in origin:
+                is_allowed = True
+            # Development localhost with any port
+            elif origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+                is_allowed = True
+            # Emergent preview URLs
+            elif ".emergentagent.com" in origin or ".emergent.host" in origin:
+                is_allowed = True
+        
+        # Handle preflight
+        if request.method == "OPTIONS":
+            response = StarletteResponse()
+            if is_allowed:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "*"
+                response.headers["Access-Control-Allow-Headers"] = "*"
+                response.headers["Access-Control-Expose-Headers"] = "*"
+            return response
+        
+        # Process request
+        response = await call_next(request)
+        
+        # Add CORS headers to response
+        if is_allowed:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Expose-Headers"] = "*"
+        
+        return response
+
+# Apply custom CORS middleware
+app.add_middleware(CustomCORSMiddleware)
 
 api_router = APIRouter(prefix="/api")
 

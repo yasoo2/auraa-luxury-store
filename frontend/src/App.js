@@ -32,6 +32,7 @@ import AdminSetup from './pages/AdminSetup';
 // Legal and Info Pages
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import CookiesPolicy from './pages/CookiesPolicy';
 import ReturnPolicy from './pages/ReturnPolicy';
 import ContactUs from './pages/ContactUs';
 import AboutUs from './pages/AboutUs';

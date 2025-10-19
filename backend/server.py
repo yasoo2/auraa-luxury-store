@@ -8,9 +8,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import asyncio
-
-# ===== CORS FIX 2025-10-19 18:15 UTC =====
-# Enhanced CORS middleware with proper error handling
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
@@ -24,10 +21,6 @@ import jwt
 import bcrypt
 from passlib.context import CryptContext
 from enum import Enum
-import random
-import httpx
-from collections import defaultdict
-import time
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -39,83 +32,6 @@ db = client[os.environ['DB_NAME']]
 
 # Create the main app
 app = FastAPI(title="لورا لاكشري API", version="1.0.0")
-
-# CORS Configuration - Load from environment variable
-# This allows easy updates without code changes
-cors_origins_env = os.getenv('CORS_ORIGINS', '')
-allowed_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
-
-# Fallback to default patterns if env variable is empty
-if not allowed_origins:
-    # Get app name from environment for dynamic Emergent URLs
-    app_name = os.getenv('APP_NAME', 'app')
-    
-    allowed_origins = [
-        "https://auraaluxury.com",
-        "https://www.auraaluxury.com",
-        "https://api.auraaluxury.com",
-        f"https://{app_name}.preview.emergentagent.com",
-        f"https://{app_name}.emergent.host",
-        "http://localhost:3000",
-        "http://localhost:8001",
-    ]
-
-print(f"✅ CORS configured with {len(allowed_origins)} origins")
-
-# Custom CORS Handler for Vercel Preview URLs
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response as StarletteResponse
-
-class CustomCORSMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        origin = request.headers.get("origin")
-        
-        # Check if origin matches patterns
-        is_allowed = False
-        if origin:
-            # Exact match
-            if origin in allowed_origins:
-                is_allowed = True
-            # Vercel preview URLs
-            elif ".vercel.app" in origin:
-                is_allowed = True
-            # Development localhost with any port
-            elif origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
-                is_allowed = True
-            # Emergent preview URLs
-            elif ".emergentagent.com" in origin or ".emergent.host" in origin:
-                is_allowed = True
-        
-        # Handle preflight
-        if request.method == "OPTIONS":
-            response = StarletteResponse(status_code=200)
-            if is_allowed and origin:
-                response.headers["Access-Control-Allow-Origin"] = origin
-                response.headers["Access-Control-Allow-Credentials"] = "true"
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, User-Agent, X-Requested-With"
-                response.headers["Access-Control-Expose-Headers"] = "*"
-                response.headers["Access-Control-Max-Age"] = "3600"
-            return response
-        
-        # Process request
-        try:
-            response = await call_next(request)
-        except Exception as e:
-            logger.error(f"Error processing request: {e}")
-            response = StarletteResponse(status_code=500, content=str(e))
-        
-        # Add CORS headers to response
-        if is_allowed and origin:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Expose-Headers"] = "*"
-        
-        return response
-
-# Apply custom CORS middleware FIRST
-app.add_middleware(CustomCORSMiddleware)
-
 api_router = APIRouter(prefix="/api")
 
 # Security
@@ -133,32 +49,6 @@ RATE_LIMIT_ATTEMPTS = 5
 RATE_LIMIT_WINDOW = 900  # 15 minutes in seconds
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-# Helper function: Get cookie domain based on environment
-def get_cookie_domain(request: Request) -> Optional[str]:
-    """
-    Dynamically determine cookie domain based on request host
-    Returns None for localhost/Vercel preview, proper domain for production
-    """
-    if not request or not request.headers.get("host"):
-        return None
-    
-    host = request.headers.get("host", "")
-    
-    # Localhost/development - no domain restriction
-    if "localhost" in host or "127.0.0.1" in host:
-        return None
-    
-    # Vercel preview URLs - no domain restriction
-    if "vercel.app" in host or "emergentagent.com" in host:
-        return None
-    
-    # Production domain
-    if "auraaluxury.com" in host:
-        return ".auraaluxury.com"
-    
-    # Default: no domain restriction (works everywhere)
-    return None
 
 # Enums
 class OrderStatus(str, Enum):
@@ -201,76 +91,6 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     identifier: str  # Can be email or phone
     password: str
-    turnstile_token: Optional[str] = None  # Cloudflare Turnstile token
-
-# Helper function: Verify Cloudflare Turnstile token
-async def verify_turnstile(token: str, ip: str = None) -> bool:
-    """Verify Cloudflare Turnstile token - Optimized for speed"""
-    if not TURNSTILE_SECRET_KEY or not token:
-        logger.warning("Turnstile verification skipped - missing secret key or token")
-        return True  # Allow in development if not configured
-    
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                TURNSTILE_VERIFY_URL,
-                json={
-                    "secret": TURNSTILE_SECRET_KEY,
-                    "response": token,
-                    "remoteip": ip
-                },
-                timeout=3.0  # Reduced from 10s to 3s for faster response
-            )
-            
-            result = response.json()
-            # Only log in debug mode to reduce overhead
-            if result.get("success"):
-                logger.debug(f"Turnstile verification successful")
-            else:
-                logger.warning(f"Turnstile verification failed: {result}")
-            return result.get("success", False)
-    except httpx.TimeoutException:
-        logger.warning(f"Turnstile verification timeout - allowing request")
-        return True  # Allow on timeout to prevent blocking users
-    except Exception as e:
-        logger.error(f"Turnstile verification error: {str(e)}")
-        return True  # Allow on error to prevent blocking legitimate users
-
-# Helper function: Rate Limiting
-def check_rate_limit(identifier: str, endpoint: str) -> tuple[bool, Optional[int]]:
-    """
-    Check if request should be rate limited
-    Returns: (is_allowed, seconds_until_reset)
-    """
-    key = f"{endpoint}:{identifier}"
-    current_time = time.time()
-    
-    if key in rate_limit_storage:
-        limit_data = rate_limit_storage[key]
-        
-        # Reset if window expired
-        if current_time > limit_data["reset_time"]:
-            rate_limit_storage[key] = {
-                "attempts": 1,
-                "reset_time": current_time + RATE_LIMIT_WINDOW
-            }
-            return True, None
-        
-        # Check if limit exceeded
-        if limit_data["attempts"] >= RATE_LIMIT_ATTEMPTS:
-            seconds_until_reset = int(limit_data["reset_time"] - current_time)
-            return False, seconds_until_reset
-        
-        # Increment attempts
-        limit_data["attempts"] += 1
-        return True, None
-    else:
-        # First attempt
-        rate_limit_storage[key] = {
-            "attempts": 1,
-            "reset_time": current_time + RATE_LIMIT_WINDOW
-        }
-        return True, None
 
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -354,28 +174,6 @@ class IntegrationSettings(BaseModel):
     amazon_region: Optional[str] = None
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-# Verification Code Models
-class VerificationCode(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: str
-    contact: str  # email or phone
-    code: str  # 6-digit code
-    action: str  # 'delete_user', 'change_password', 'change_role'
-    target_user_id: Optional[str] = None  # for admin actions
-    expires_at: datetime
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    used: bool = False
-
-class SendVerificationRequest(BaseModel):
-    action: str  # 'delete_user', 'change_password', 'change_role'
-    target_user_id: str
-    contact_method: str  # 'email' or 'phone'
-
-class VerifyCodeRequest(BaseModel):
-    code: str
-    action: str
-    target_user_id: str
-
 # Helper functions
 def verify_password(plain_password, hashed_password):
     """Verify password using bcrypt directly"""
@@ -427,20 +225,6 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
 async def root():
     return {"message": "Welcome to لورا لاكشري API"}
 
-@api_router.get("/cors-test")
-async def cors_test(request: Request):
-    """Test endpoint to verify CORS headers are being sent"""
-    return {
-        "message": "CORS test successful",
-        "origin": request.headers.get("origin", "No origin header"),
-        "cors_enabled": True,
-        "allowed_origins": [
-            "https://auraaluxury.com",
-            "https://www.auraaluxury.com",
-            "https://api.auraaluxury.com"
-        ]
-    }
-
 # Auth routes
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate, response: Response):
@@ -457,8 +241,6 @@ async def register(user_data: UserCreate, response: Response):
     hashed_password = get_password_hash(user_data.password)
     user_dict = user_data.dict()
     del user_dict["password"]
-    if "turnstile_token" in user_dict:
-        del user_dict["turnstile_token"]  # Don't store token in DB
     user_obj = User(**user_dict)
     
     # Store user with hashed password
@@ -483,48 +265,22 @@ async def register(user_data: UserCreate, response: Response):
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
     
-    # Set cookie with dynamic domain
-    cookie_domain = get_cookie_domain(request)
+    # Set cookie (domain will be auto-detected based on request origin)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=cookie_domain,
         max_age=1800  # 30 minutes (same as token expiry)
     )
     
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
 
 @api_router.post("/auth/login")
-async def login(credentials: UserLogin, response: Response, request: Request):
+async def login(credentials: UserLogin, response: Response):
     logger.info(f"🔐 Login attempt for identifier: {credentials.identifier}")
-    
-    # Get client IP for rate limiting and Turnstile
-    client_ip = request.client.host if request.client else "unknown"
-    
-    # Rate Limiting
-    is_allowed, seconds_until_reset = check_rate_limit(credentials.identifier, "login")
-    if not is_allowed:
-        logger.warning(f"🚫 Rate limit exceeded for: {credentials.identifier}")
-        raise HTTPException(
-            status_code=429,
-            detail=f"Too many login attempts. Please try again in {seconds_until_reset} seconds."
-        )
-    
-    # Cloudflare Turnstile Verification (Optional in development)
-    if credentials.turnstile_token:
-        turnstile_valid = await verify_turnstile(credentials.turnstile_token, client_ip)
-        if not turnstile_valid:
-            logger.warning(f"⚠️  Turnstile verification failed for: {credentials.identifier} - Allowing anyway")
-            # Don't block in development/testing environments
-            # raise HTTPException(
-            #     status_code=403,
-            #     detail="Security verification failed. Please try again."
-            # )
-    else:
-        logger.debug(f"⚠️ No Turnstile token provided for: {credentials.identifier}")
+    logger.info(f"🔐 Password length: {len(credentials.password)}, repr: {repr(credentials.password[:20] if len(credentials.password) > 20 else credentials.password)}")
     
     # First check if super admin
     super_admin = await db.super_admins.find_one({
@@ -532,12 +288,17 @@ async def login(credentials: UserLogin, response: Response, request: Request):
         "is_active": True
     })
     
+    logger.info(f"🔍 Super admin found: {super_admin is not None}")
+    
     if super_admin:
+        logger.info(f"✅ Super admin authenticated, verifying password...")
+        logger.info(f"🔑 Hash in DB (first 30 chars): {super_admin['password_hash'][:30]}")
         # Verify super admin password
         password_valid = verify_password(credentials.password, super_admin["password_hash"])
+        logger.info(f"🔑 Password verification result: {password_valid}")
         
         if not password_valid:
-            logger.warning(f"❌ Wrong password for: {credentials.identifier}")
+            logger.warning(f"❌ Wrong password for super admin: {credentials.identifier}")
             raise HTTPException(
                 status_code=401,
                 detail="wrong_password"
@@ -587,15 +348,13 @@ async def login(credentials: UserLogin, response: Response, request: Request):
         access_token = create_access_token(data={"sub": user["id"], "is_super_admin": True})
         user_obj = User(**{k: v for k, v in user.items() if k != "password"})
         
-        # Set cookie with dynamic domain
-        cookie_domain = get_cookie_domain(request)
+        # Set cookie (domain will be auto-detected based on request origin)
         response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,
             secure=True,
             samesite="none",
-            domain=cookie_domain,
             max_age=1800
         )
         
@@ -625,15 +384,13 @@ async def login(credentials: UserLogin, response: Response, request: Request):
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     
-    # Set cookie with dynamic domain
-    cookie_domain = get_cookie_domain(request)
+    # Set cookie (domain will be auto-detected based on request origin)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=cookie_domain,
         max_age=1800  # 30 minutes (same as token expiry)
     )
     
@@ -654,8 +411,7 @@ async def get_oauth_url(provider: str, redirect_url: str):
 @api_router.post("/auth/oauth/session")
 async def process_oauth_session(
     session_data: dict,
-    response: Response,
-    request: Request
+    response: Response
 ):
     """
     Process OAuth session after user returns from OAuth provider
@@ -738,15 +494,13 @@ async def process_oauth_session(
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     
-    # Set cookie with dynamic domain
-    cookie_domain = get_cookie_domain(request)
+    # Set cookie (domain will be auto-detected based on request origin)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=cookie_domain,
         max_age=1800
     )
     
@@ -1525,94 +1279,6 @@ async def upsert_integration_settings(payload: IntegrationSettingsUpdate, curren
     updated = await db.settings.find_one({"id": existing["id"]})
     return IntegrationSettings(**updated)
 
-# Store Settings Model
-class StoreSettings(BaseModel):
-    id: str = None
-    # Store Information
-    store_name: str = "Auraa Luxury"
-    store_name_ar: str = "Auraa Luxury"
-    store_description: str = "Premium accessories for discerning customers"
-    store_description_ar: str = "إكسسوارات فاخرة للعملاء المميزين"
-    # Contact Information
-    contact_email: str = "info@auraa.com"
-    contact_phone: str = "+905013715391"
-    whatsapp_number: str = "+905013715391"
-    # Address
-    address_line1: str = "123 Luxury Street"
-    address_line1_ar: str = "123 شارع الفخامة"
-    city: str = "Riyadh"
-    city_ar: str = "الرياض"
-    country: str = "Saudi Arabia"
-    country_ar: str = "المملكة العربية السعودية"
-    postal_code: str = "12345"
-    # Business Settings
-    currency_primary: str = "SAR"
-    currency_secondary: str = "USD"
-    tax_rate: float = 15
-    free_shipping_threshold: float = 200
-    # Notifications
-    notify_new_orders: bool = True
-    notify_low_stock: bool = True
-    notify_reviews: bool = True
-    low_stock_threshold: int = 10
-    # Social Media
-    facebook_url: str = ""
-    instagram_url: str = ""
-    twitter_url: str = ""
-    tiktok_url: str = ""
-    # Payment Methods
-    payment_cod: bool = False
-    payment_stripe: bool = False
-    payment_paypal: bool = False
-    # Shipping
-    shipping_local_price: float = 25
-    shipping_express_price: float = 50
-    shipping_free_threshold: float = 200
-    # Theme
-    primary_color: str = "#D97706"
-    secondary_color: str = "#FEF3C7"
-    logo_url: str = ""
-    updated_at: Optional[datetime] = None
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None
-        }
-
-@api_router.get("/admin/settings")
-async def get_store_settings(current_user: User = Depends(get_admin_user)):
-    """Get store settings"""
-    try:
-        settings = await db.store_settings.find_one({"id": "default"})
-        if not settings:
-            # Return default settings
-            default_settings = StoreSettings(id="default")
-            return default_settings.dict()
-        return settings
-    except Exception as e:
-        logger.error(f"Error fetching store settings: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch settings: {str(e)}")
-
-@api_router.put("/admin/settings")
-async def update_store_settings(settings: dict, current_user: User = Depends(get_admin_user)):
-    """Update store settings"""
-    try:
-        settings["id"] = "default"
-        settings["updated_at"] = datetime.now(timezone.utc)
-        
-        # Upsert settings
-        await db.store_settings.update_one(
-            {"id": "default"},
-            {"$set": settings},
-            upsert=True
-        )
-        
-        updated = await db.store_settings.find_one({"id": "default"})
-        return updated
-    except Exception as e:
-        logger.error(f"Error updating store settings: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to update settings: {str(e)}")
-
 # Initialize admin user and sample data
 @api_router.post("/init-data")
 async def initialize_sample_data():
@@ -1837,7 +1503,40 @@ async def setup_deployment():
         logger.error(f"Error in deployment setup: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Deployment setup error: {str(e)}")
 
-# CORS middleware moved to top of file (after app creation) for proper loading in production
+# CORS Configuration - Allow specific origins for security
+allowed_origins = [
+    "https://auraa-luxury-store.vercel.app",
+    "https://www.auraaluxury.com",
+    "https://auraaluxury.com",
+    "http://localhost:3000",  # For local development
+    "http://localhost:3001",
+]
+
+# Add custom CORS_ORIGINS from environment if provided
+if os.environ.get('CORS_ORIGINS'):
+    custom_origins = os.environ.get('CORS_ORIGINS').split(',')
+    allowed_origins.extend([origin.strip() for origin in custom_origins if origin.strip()])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+# Add Rate Limiting Middleware for security
+try:
+    from middleware.rate_limiter import RateLimitMiddleware
+    app.add_middleware(
+        RateLimitMiddleware,
+        max_requests=5,  # 5 login attempts
+        window_seconds=300  # per 5 minutes
+    )
+    logger.info("✅ Rate limiting enabled for authentication endpoints")
+except Exception as e:
+    logger.warning(f"⚠️ Rate limiting not enabled: {e}")
 
 # Configure logging
 logging.basicConfig(
@@ -4420,197 +4119,6 @@ if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 else:
     logger.warning(f"Static directory {static_dir} does not exist, skipping mount")
-
-# ============================================
-# Verification Code System for Admin Actions
-# ============================================
-
-def generate_verification_code() -> str:
-    """Generate 6-digit verification code"""
-    return ''.join([str(random.randint(0, 9)) for _ in range(6)])
-
-@api_router.post("/admin/send-verification-code")
-async def send_verification_code_endpoint(
-    request: SendVerificationRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Send verification code to Super Admin for sensitive actions
-    Super Admin only
-    """
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Validate action
-    valid_actions = ['delete_user', 'change_password', 'change_role']
-    if request.action not in valid_actions:
-        raise HTTPException(status_code=400, detail="Invalid action")
-    
-    # Validate contact method
-    if request.contact_method not in ['email', 'phone']:
-        raise HTTPException(status_code=400, detail="Invalid contact method")
-    
-    # Get target user
-    target_user = await db.users.find_one({"id": request.target_user_id})
-    if not target_user:
-        raise HTTPException(status_code=404, detail="Target user not found")
-    
-    # Generate code
-    code = generate_verification_code()
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-    
-    # Get contact info
-    if request.contact_method == 'email':
-        contact = current_user.email
-        if not contact:
-            raise HTTPException(status_code=400, detail="Super admin email not found")
-    else:  # phone
-        contact = current_user.phone
-        if not contact:
-            raise HTTPException(status_code=400, detail="Super admin phone not found")
-    
-    # Store verification code
-    verification_doc = {
-        "id": str(uuid.uuid4()),
-        "user_id": current_user.id,
-        "contact": contact,
-        "code": code,
-        "action": request.action,
-        "target_user_id": request.target_user_id,
-        "expires_at": expires_at.isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "used": False
-    }
-    
-    await db.verification_codes.insert_one(verification_doc)
-    
-    # Send code
-    if request.contact_method == 'email':
-        # Send email
-        recipient_name = f"{current_user.first_name} {current_user.last_name}"
-        success = send_verification_code(
-            to_email=contact,
-            recipient_name=recipient_name,
-            code=code,
-            action=request.action,
-            language='ar'  # Default to Arabic
-        )
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to send verification email")
-    else:
-        # SMS not implemented yet
-        # For now, just return the code in response (temporary)
-        return {
-            "message": "verification_code_generated",
-            "contact": contact,
-            "method": "phone",
-            "code": code,  # Temporary: remove in production
-            "note": "SMS service not implemented yet. Code shown for testing."
-        }
-    
-    return {
-        "message": "verification_code_sent",
-        "contact": contact,
-        "method": request.contact_method,
-        "expires_in_minutes": 10
-    }
-
-@api_router.post("/admin/verify-code")
-async def verify_code_endpoint(
-    request: VerifyCodeRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Verify code and return token for action execution
-    Super Admin only
-    """
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Find verification code
-    verification = await db.verification_codes.find_one({
-        "user_id": current_user.id,
-        "code": request.code,
-        "action": request.action,
-        "target_user_id": request.target_user_id,
-        "used": False
-    })
-    
-    if not verification:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
-    
-    # Check expiry
-    expires_at = datetime.fromisoformat(verification["expires_at"])
-    if datetime.now(timezone.utc) > expires_at:
-        raise HTTPException(status_code=400, detail="Verification code expired")
-    
-    # Mark as used
-    await db.verification_codes.update_one(
-        {"id": verification["id"]},
-        {"$set": {"used": True}}
-    )
-    
-    # Generate action token (valid for 5 minutes)
-    action_token = jwt.encode(
-        {
-            "user_id": current_user.id,
-            "action": request.action,
-            "target_user_id": request.target_user_id,
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=5)
-        },
-        SECRET_KEY,
-        algorithm=ALGORITHM
-    )
-    
-    return {
-        "message": "code_verified",
-        "action_token": action_token,
-        "expires_in_minutes": 5
-    }
-
-@api_router.get("/admin/users/all")
-async def get_all_users(
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get all users (admins + regular users)
-    Super Admin only
-    """
-    if not current_user.is_super_admin:
-        raise HTTPException(status_code=403, detail="Super admin access required")
-    
-    # Get all users
-    users = await db.users.find({}).to_list(length=10000)
-    
-    result = []
-    for user in users:
-        result.append({
-            "id": user["id"],
-            "email": user.get("email"),
-            "phone": user.get("phone"),
-            "first_name": user.get("first_name", ""),
-            "last_name": user.get("last_name", ""),
-            "is_admin": user.get("is_admin", False),
-            "is_super_admin": user.get("is_super_admin", False),
-            "is_active": user.get("is_active", True),
-            "created_at": user.get("created_at", ""),
-            "last_login": user.get("last_login")
-        })
-    
-    # Separate admins and users
-    admins = [u for u in result if u["is_admin"] or u["is_super_admin"]]
-    regular_users = [u for u in result if not u["is_admin"] and not u["is_super_admin"]]
-    
-    return {
-        "admins": admins,
-        "users": regular_users,
-        "total_admins": len(admins),
-        "total_users": len(regular_users),
-        "total": len(result)
-    }
-
-
 
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

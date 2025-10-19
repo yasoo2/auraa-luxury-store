@@ -95,6 +95,12 @@ const AuthPage = () => {
         const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
         result = await login(identifier, formData.password, turnstileToken);
       } else {
+        // Validate that at least email or phone is provided
+        if (!formData.email && !formData.phone) {
+          setError(language === 'ar' ? 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل' : 'At least email or phone is required');
+          setLoading(false);
+          return;
+        }
         result = await register(formData);
       }
       
@@ -355,11 +361,10 @@ const AuthPage = () => {
                     <input
                       type="email"
                       name="email"
-                      placeholder={getAuthTranslation('email', language)}
+                      placeholder={language === 'ar' ? 'البريد الإلكتروني (اختياري)' : 'Email (optional)'}
                       value={formData.email}
                       onChange={handleInputChange}
                       className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
-                      required
                       data-testid="email-input"
                     />
                   </div>
@@ -371,7 +376,8 @@ const AuthPage = () => {
                       onChange={(phone, country) => setFormData({ ...formData, phone: '+' + phone, country: country.countryCode.toUpperCase() })}
                       inputProps={{
                         name: 'phone',
-                        required: true,
+                        required: false,
+                        placeholder: language === 'ar' ? 'رقم الهاتف (اختياري)' : 'Phone (optional)',
                         className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
                       }}
                       containerClass="phone-input-container"
@@ -383,6 +389,11 @@ const AuthPage = () => {
                       inputClass="phone-input-field"
                     />
                   </div>
+                  
+                  {/* Info message */}
+                  <p className="text-xs text-amber-300/70 text-center -mt-2">
+                    {language === 'ar' ? 'يجب إدخال البريد أو رقم الهاتف على الأقل' : 'At least email or phone is required'}
+                  </p>
                 </>
               )}
 

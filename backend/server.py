@@ -220,13 +220,34 @@ async def root():
 @api_router.post("/auth/register")
 async def register(user_data: UserCreate, response: Response):
     # Log incoming data for debugging
-    logger.info(f"Registration attempt for email: {user_data.email}")
+    logger.info(f"Registration attempt for email: {user_data.email}, phone: {user_data.phone}")
     
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": user_data.email})
-    if existing_user:
-        logger.warning(f"Email already registered: {user_data.email}")
-        raise HTTPException(status_code=400, detail="هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام بريد آخر")
+    # Validate required fields - at least one of email or phone is required
+    if not user_data.email and not user_data.phone:
+        raise HTTPException(
+            status_code=400, 
+            detail="يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل"
+        )
+    
+    # Check if email already exists (only if email is provided)
+    if user_data.email:
+        existing_email = await db.users.find_one({"email": user_data.email})
+        if existing_email:
+            logger.warning(f"Email already registered: {user_data.email}")
+            raise HTTPException(
+                status_code=400, 
+                detail="هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام بريد آخر"
+            )
+    
+    # Check if phone already exists (only if phone is provided)
+    if user_data.phone:
+        existing_phone = await db.users.find_one({"phone": user_data.phone})
+        if existing_phone:
+            logger.warning(f"Phone already registered: {user_data.phone}")
+            raise HTTPException(
+                status_code=400, 
+                detail="رقم الهاتف هذا مسجل مسبقاً. يرجى تسجيل الدخول أو استخدام رقم آخر"
+            )
     
     # Create user
     hashed_password = get_password_hash(user_data.password)
@@ -4101,6 +4122,128 @@ async def check_real_product_availability(
     
     except Exception as e:
         logger.error(f"Error checking availability: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================
+# SUPER ADMIN ROUTES - User Management
+# ============================================
+
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+
+class ToggleAdminRequest(BaseModel):
+    is_admin: bool
+
+@api_router.get("/admin/users")
+async def get_all_users(current_user: dict = Depends(get_current_user)):
+    """
+    Get all users (Super Admin only)
+    """
+    # Check if user is super admin
+    if not current_user.get('is_super_admin'):
+        raise HTTPException(status_code=403, detail="صلاحيات السوبر أدمن مطلوبة")
+    
+    try:
+        users = await db.users.find({}).to_list(length=None)
+        # Remove passwords from response
+        for user in users:
+            if 'password' in user:
+                del user['password']
+        return users
+    except Exception as e:
+        logger.error(f"Error fetching users: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/users/{user_id}")
+async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Delete a user (Super Admin only)
+    """
+    # Check if user is super admin
+    if not current_user.get('is_super_admin'):
+        raise HTTPException(status_code=403, detail="صلاحيات السوبر أدمن مطلوبة")
+    
+    # Prevent deleting self
+    if user_id == current_user.get('id'):
+        raise HTTPException(status_code=400, detail="لا يمكن حذف حسابك الخاص")
+    
+    try:
+        result = await db.users.delete_one({"id": user_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        
+        logger.info(f"User {user_id} deleted by super admin {current_user.get('id')}")
+        return {"message": "تم حذف المستخدم بنجاح"}
+    except Exception as e:
+        logger.error(f"Error deleting user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.patch("/admin/users/{user_id}/change-password")
+async def change_user_password(
+    user_id: str,
+    request: ChangePasswordRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Change user password (Super Admin only)
+    """
+    # Check if user is super admin
+    if not current_user.get('is_super_admin'):
+        raise HTTPException(status_code=403, detail="صلاحيات السوبر أدمن مطلوبة")
+    
+    # Validate password length
+    if len(request.new_password) < 6:
+        raise HTTPException(status_code=400, detail="كلمة المرور يجب أن تكون 6 أحرف على الأقل")
+    
+    try:
+        # Hash new password
+        hashed_password = get_password_hash(request.new_password)
+        
+        result = await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"password": hashed_password}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        
+        logger.info(f"Password changed for user {user_id} by super admin {current_user.get('id')}")
+        return {"message": "تم تغيير كلمة المرور بنجاح"}
+    except Exception as e:
+        logger.error(f"Error changing password: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.patch("/admin/users/{user_id}/toggle-admin")
+async def toggle_user_admin(
+    user_id: str,
+    request: ToggleAdminRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Toggle user admin status (Super Admin only)
+    """
+    # Check if user is super admin
+    if not current_user.get('is_super_admin'):
+        raise HTTPException(status_code=403, detail="صلاحيات السوبر أدمن مطلوبة")
+    
+    # Prevent changing self
+    if user_id == current_user.get('id'):
+        raise HTTPException(status_code=400, detail="لا يمكن تغيير صلاحياتك الخاصة")
+    
+    try:
+        result = await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"is_admin": request.is_admin}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+        
+        status = "مدير" if request.is_admin else "مستخدم"
+        logger.info(f"User {user_id} admin status changed to {request.is_admin} by super admin {current_user.get('id')}")
+        return {"message": f"تم تحديث الصلاحيات إلى {status}"}
+    except Exception as e:
+        logger.error(f"Error toggling admin status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Mount static files

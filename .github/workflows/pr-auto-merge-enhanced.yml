@@ -130,7 +130,7 @@ jobs:
           # Check build success
           if [ ! -d "build" ] && [ ! -d "dist" ]; then
             echo "❌ Frontend build failed"
-            cat build.log || true
+            cat build.log
             echo "build_status=failed" >> $GITHUB_OUTPUT
             exit 1
           fi

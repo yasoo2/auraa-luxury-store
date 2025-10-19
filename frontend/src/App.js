@@ -12,6 +12,7 @@ import { CartProvider } from './context/CartContext';
 
 // Components
 import Navbar from './components/Navbar';
+import CookieConsent from './components/CookieConsent';
 import HomePage from './components/HomePage';
 import ProductsPage from './components/ProductsPage';
 import ProductDetailPage from './components/ProductDetailPage';
@@ -32,6 +33,7 @@ import AdminSetup from './pages/AdminSetup';
 // Legal and Info Pages
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import CookiesPolicy from './pages/CookiesPolicy';
 import ReturnPolicy from './pages/ReturnPolicy';
 import ContactUs from './pages/ContactUs';
 import AboutUs from './pages/AboutUs';
@@ -89,6 +91,7 @@ function App() {
                     {/* Legal and Info Pages */}
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                     <Route path="/terms-of-service" element={<TermsOfService />} />
+                    <Route path="/cookies-policy" element={<CookiesPolicy />} />
                     <Route path="/return-policy" element={<ReturnPolicy />} />
                     <Route path="/contact" element={<ContactUs />} />
                     <Route path="/about" element={<AboutUs />} />
@@ -111,6 +114,7 @@ function App() {
                 </main>
 
                 <Footer />
+                <CookieConsent />
                 <Toaster />
               </div>
             </Router>

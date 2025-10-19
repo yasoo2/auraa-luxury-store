@@ -39,16 +39,24 @@ db = client[os.environ['DB_NAME']]
 # Create the main app
 app = FastAPI(title="لورا لاكشري API", version="1.0.0")
 
-# CORS Configuration
-allowed_origins = [
-    "https://auraaluxury.com",
-    "https://www.auraaluxury.com",
-    "https://api.auraaluxury.com",
-    "https://auraa-ecom-fix.preview.emergentagent.com",
-    "https://auraa-admin-1.emergent.host",
-    "http://localhost:3000",
-    "http://localhost:8001",
-]
+# CORS Configuration - Load from environment variable
+# This allows easy updates without code changes
+cors_origins_env = os.getenv('CORS_ORIGINS', '')
+allowed_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
+
+# Fallback to hardcoded origins if env variable is empty
+if not allowed_origins:
+    allowed_origins = [
+        "https://auraaluxury.com",
+        "https://www.auraaluxury.com",
+        "https://api.auraaluxury.com",
+        "https://auraa-ecom-fix.preview.emergentagent.com",
+        "https://auraa-admin-1.emergent.host",
+        "http://localhost:3000",
+        "http://localhost:8001",
+    ]
+
+logger.info(f"✅ CORS configured with origins: {allowed_origins}")
 
 # Custom CORS Handler for Vercel Preview URLs
 from starlette.middleware.base import BaseHTTPMiddleware

@@ -41,7 +41,7 @@
 ### الخطوة 1: تحديث CORS_ORIGINS في Render
 قيمة جديدة:
 ```
-https://auraaluxury.com,https://www.auraaluxury.com,https://api.auraaluxury.com,https://auraa-ecom-fix.preview.emergentagent.com
+https://auraaluxury.com,https://www.auraaluxury.com,https://api.auraaluxury.com,https://luxury-ecom-4.preview.emergentagent.com
 ```
 
 ### الخطوة 2: إضافة Render.yaml (اختياري)

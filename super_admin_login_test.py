@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class SuperAdminLoginTester:
-    def __init__(self, base_url="https://auraa-ecom-fix.preview.emergentagent.com"):
+    def __init__(self, base_url="https://luxury-ecom-4.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
@@ -248,7 +248,7 @@ class SuperAdminLoginTester:
 def main():
     """Main test execution"""
     # Use the backend URL from frontend/.env as specified in the review
-    backend_url = "https://auraa-ecom-fix.preview.emergentagent.com"
+    backend_url = "https://luxury-ecom-4.preview.emergentagent.com"
     
     print("🚀 Starting Super Admin Login Testing...")
     print(f"Backend URL: {backend_url}")

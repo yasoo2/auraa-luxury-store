@@ -65,6 +65,8 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
+    clearWishlist();
+    clearCart();
     navigate('/');
   };
 

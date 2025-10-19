@@ -95,7 +95,6 @@ const AuthPage = () => {
         const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
         result = await login(identifier, formData.password, turnstileToken);
       } else {
-<<<<<<< HEAD
         // Validate that at least email or phone is provided
         if (!formData.email && !formData.phone) {
           setError(language === 'ar' ? 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل' : 'At least email or phone is required');
@@ -103,41 +102,6 @@ const AuthPage = () => {
           return;
         }
         result = await register(formData);
-=======
-        // Registration: Validate based on selected method
-        if (loginMethod === 'email' && !formData.email) {
-          const errorMsg = language === 'ar' 
-            ? 'يجب إدخال البريد الإلكتروني'
-            : 'Email is required';
-          setError(errorMsg);
-          setLoading(false);
-          return;
-        }
-        
-        if (loginMethod === 'phone' && !formData.phone) {
-          const errorMsg = language === 'ar' 
-            ? 'يجب إدخال رقم الهاتف'
-            : 'Phone number is required';
-          setError(errorMsg);
-          setLoading(false);
-          return;
-        }
-        
-        // Set the identifier based on login method
-        const registrationData = {
-          ...formData,
-          turnstile_token: turnstileToken
-        };
-        
-        // Clear the unused field
-        if (loginMethod === 'email') {
-          registrationData.phone = null;
-        } else {
-          registrationData.email = null;
-        }
-        
-        result = await register(registrationData);
->>>>>>> 86c7cfc15e07ad7b7e8980bf21d6de3f93a0f421
       }
       
       if (result.success) {

@@ -174,6 +174,7 @@ export const formatDateRange = (startDate, endDate, language = 'en') => {
   return language === 'ar' ? `من ${start} إلى ${end}` : `${start} - ${end}`;
 };
 
+// eslint-disable-next-line import/no-anonymous-default-export
 export default {
   formatDate,
   getRelativeTime,

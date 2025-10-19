@@ -256,14 +256,13 @@ async def register(user_data: UserCreate, response: Response):
     # Create access token
     access_token = create_access_token(data={"sub": user_obj.id})
     
-    # Set cookie for production domain
+    # Set cookie (domain will be auto-detected based on request origin)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=".auraaluxury.com",
         max_age=1800  # 30 minutes (same as token expiry)
     )
     
@@ -340,14 +339,13 @@ async def login(credentials: UserLogin, response: Response):
         access_token = create_access_token(data={"sub": user["id"], "is_super_admin": True})
         user_obj = User(**{k: v for k, v in user.items() if k != "password"})
         
-        # Set cookie
+        # Set cookie (domain will be auto-detected based on request origin)
         response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,
             secure=True,
             samesite="none",
-            domain=".auraaluxury.com",
             max_age=1800
         )
         
@@ -377,14 +375,13 @@ async def login(credentials: UserLogin, response: Response):
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     
-    # Set cookie for production domain
+    # Set cookie (domain will be auto-detected based on request origin)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=".auraaluxury.com",
         max_age=1800  # 30 minutes (same as token expiry)
     )
     
@@ -488,14 +485,13 @@ async def process_oauth_session(
     access_token = create_access_token(data={"sub": user["id"]})
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     
-    # Set cookie
+    # Set cookie (domain will be auto-detected based on request origin)
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
         samesite="none",
-        domain=".auraaluxury.com",
         max_age=1800
     )
     
@@ -1498,13 +1494,40 @@ async def setup_deployment():
         logger.error(f"Error in deployment setup: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Deployment setup error: {str(e)}")
 
+# CORS Configuration - Allow specific origins for security
+allowed_origins = [
+    "https://auraa-luxury-store.vercel.app",
+    "https://www.auraaluxury.com",
+    "https://auraaluxury.com",
+    "http://localhost:3000",  # For local development
+    "http://localhost:3001",
+]
+
+# Add custom CORS_ORIGINS from environment if provided
+if os.environ.get('CORS_ORIGINS'):
+    custom_origins = os.environ.get('CORS_ORIGINS').split(',')
+    allowed_origins.extend([origin.strip() for origin in custom_origins if origin.strip()])
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Add Rate Limiting Middleware for security
+try:
+    from middleware.rate_limiter import RateLimitMiddleware
+    app.add_middleware(
+        RateLimitMiddleware,
+        max_requests=5,  # 5 login attempts
+        window_seconds=300  # per 5 minutes
+    )
+    logger.info("✅ Rate limiting enabled for authentication endpoints")
+except Exception as e:
+    logger.warning(f"⚠️ Rate limiting not enabled: {e}")
 
 # Configure logging
 logging.basicConfig(

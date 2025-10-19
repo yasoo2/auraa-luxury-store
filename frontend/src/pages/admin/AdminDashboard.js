@@ -19,6 +19,7 @@ import CMSPagesManager from './CMSPagesManager';
 import MediaLibrary from './MediaLibrary';
 import ThemeCustomization from './ThemeCustomization';
 import AdminManagement from './AdminManagement';
+import UsersManagementPage from './UsersManagementPage';
 import {
   Package,
   ShoppingCart,
@@ -138,12 +139,13 @@ const AdminDashboard = () => {
       path: '/admin/media',
       icon: Image
     },
-    // Super Admin Only
+    // Super Admin Only - User Management
     ...(user?.is_super_admin ? [{
-      name: isRTL ? '🛡️ إدارة المسؤولين' : '🛡️ Admin Management',
-      path: '/admin/admin-management',
+      name: isRTL ? '🔴 إدارة المستخدمين' : '🔴 User Management',
+      path: '/admin/users-management',
       icon: Shield,
-      superAdminOnly: true
+      superAdminOnly: true,
+      isRed: true  // Special styling for super admin
     }] : []),
     {
       name: isRTL ? 'الإعدادات' : 'Settings',
@@ -196,17 +198,27 @@ const AdminDashboard = () => {
           <nav className="p-4 space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;
+              const isRedButton = item.isRed;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gradient-to-r hover:from-amber-50 hover:to-yellow-50 hover:text-amber-700 transition-all group"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all group ${
+                    isRedButton
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl'
+                      : 'hover:bg-gradient-to-r hover:from-amber-50 hover:to-yellow-50 hover:text-amber-700'
+                  }`}
                 >
                   <Icon
                     size={20}
                     className="group-hover:scale-110 transition-transform"
                   />
                   <span className="font-medium">{item.name}</span>
+                  {isRedButton && (
+                    <span className="ml-auto text-xs bg-white/20 px-2 py-1 rounded-full">
+                      {isRTL ? 'سوبر أدمن' : 'Super Admin'}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -232,7 +244,10 @@ const AdminDashboard = () => {
             <Route path="/theme" element={<ThemeCustomization />} />
             <Route path="/media" element={<MediaLibrary />} />
             {user?.is_super_admin && (
-              <Route path="/admin-management" element={<AdminManagement />} />
+              <>
+                <Route path="/admin-management" element={<AdminManagement />} />
+                <Route path="/users-management" element={<UsersManagementPage />} />
+              </>
             )}
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>

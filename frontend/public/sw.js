@@ -88,8 +88,14 @@ self.addEventListener('fetch', (event) => {
         
         return fetch(request)
           .then((response) => {
-            // Don't cache non-successful responses
+            // Don't cache non-successful responses or chrome-extension requests
             if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+            
+            // Skip caching for chrome-extension and unsupported schemes
+            const requestUrl = new URL(request.url);
+            if (requestUrl.protocol === 'chrome-extension:' || requestUrl.protocol === 'about:') {
               return response;
             }
             
@@ -99,6 +105,10 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(request, responseToCache);
+              })
+              .catch((err) => {
+                // Silently fail cache operations for unsupported requests
+                console.debug('Cache put failed:', err);
               });
             
             return response;

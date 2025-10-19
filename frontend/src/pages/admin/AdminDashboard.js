@@ -18,6 +18,7 @@ import ContentProtectionPage from './ContentProtectionPage';
 import CMSPagesManager from './CMSPagesManager';
 import MediaLibrary from './MediaLibrary';
 import ThemeCustomization from './ThemeCustomization';
+import AdminManagement from './AdminManagement';
 import {
   Package,
   ShoppingCart,

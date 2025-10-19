@@ -1,0 +1,102 @@
+name: Auto Deploy Full Stack
+
+on:
+  push:
+    branches: [ '*' ]
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend-changed: ${{ steps.changes.outputs.frontend }}
+      backend-changed: ${{ steps.changes.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            backend:
+              - 'backend/**'
+
+  deploy-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend-changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Build project
+        working-directory: ./frontend
+        run: yarn build
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-args: '--prod'
+          working-directory: ./frontend
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  deploy-backend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend-changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "🚀 Triggering Render deployment..."
+            curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+            echo "✅ Deploy hook triggered successfully"
+          else
+            echo "⚠️  RENDER_DEPLOY_HOOK not set - manual deployment required"
+          fi
+
+  notify-completion:
+    needs: [detect-changes, deploy-frontend, deploy-backend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "🎯 Deployment Summary:"
+          echo "Frontend Changed: ${{ needs.detect-changes.outputs.frontend-changed }}"
+          echo "Backend Changed: ${{ needs.detect-changes.outputs.backend-changed }}"
+          
+          if [ "${{ needs.deploy-frontend.result }}" = "success" ]; then
+            echo "✅ Frontend deployment: SUCCESS"
+          elif [ "${{ needs.detect-changes.outputs.frontend-changed }}" = "true" ]; then
+            echo "❌ Frontend deployment: FAILED"
+          else
+            echo "⏭️  Frontend deployment: SKIPPED (no changes)"
+          fi
+          
+          if [ "${{ needs.deploy-backend.result }}" = "success" ]; then
+            echo "✅ Backend deployment: SUCCESS"
+          elif [ "${{ needs.detect-changes.outputs.backend-changed }}" = "true" ]; then
+            echo "❌ Backend deployment: FAILED"
+          else
+            echo "⏭️  Backend deployment: SKIPPED (no changes)"
+          fi

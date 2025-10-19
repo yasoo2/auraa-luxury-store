@@ -1,6 +1,6 @@
 // Service Worker for Auraa Luxury PWA
-const CACHE_NAME = 'auraa-luxury-v1.0.1';
-const DATA_CACHE_NAME = 'auraa-data-v1.0.1';
+const CACHE_NAME = 'auraa-luxury-v1.0.2';
+const DATA_CACHE_NAME = 'auraa-data-v1.0.2';
 
 // Files to cache for offline functionality
 const FILES_TO_CACHE = [
@@ -62,17 +62,28 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           // If the request is successful, clone and cache the response
-          if (response.status === 200) {
+          if (response && response.status === 200 && response.ok) {
             const responseClone = response.clone();
             caches.open(DATA_CACHE_NAME).then((cache) => {
               cache.put(request, responseClone);
+            }).catch((err) => {
+              console.debug('[SW] Failed to cache API response:', err);
             });
           }
           return response;
         })
-        .catch(() => {
+        .catch((error) => {
+          console.debug('[SW] API fetch failed:', error);
           // If network fails, try to get from cache
-          return caches.match(request);
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || new Response(JSON.stringify({
+              error: 'Network unavailable',
+              offline: true
+            }), {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          });
         })
     );
     return;
@@ -88,8 +99,14 @@ self.addEventListener('fetch', (event) => {
         
         return fetch(request)
           .then((response) => {
-            // Don't cache non-successful responses
+            // Don't cache non-successful responses or chrome-extension requests
             if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+            
+            // Skip caching for chrome-extension and unsupported schemes
+            const requestUrl = new URL(request.url);
+            if (requestUrl.protocol === 'chrome-extension:' || requestUrl.protocol === 'about:') {
               return response;
             }
             
@@ -99,6 +116,10 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME)
               .then((cache) => {
                 cache.put(request, responseToCache);
+              })
+              .catch((err) => {
+                // Silently fail cache operations for unsupported requests
+                console.debug('Cache put failed:', err);
               });
             
             return response;

@@ -54,14 +54,24 @@ self.addEventListener('activate', (event) => {
 // Fetch Event - Serve cached content when offline
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  
+  // ⚠️ IMPORTANT: Only cache GET requests
+  // Cache API doesn't support POST, PUT, DELETE, etc.
+  if (request.method !== 'GET') {
+    console.debug('[SW] Skipping non-GET request:', request.method, request.url);
+    return; // Let it pass through normally
+  }
+  
   const url = new URL(request.url);
   
-  // Handle API requests
+  // Handle API requests (but don't cache POST/PUT/DELETE)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // If the request is successful, clone and cache the response
+          // Don't cache API responses for now (they change frequently)
+          // If you want to cache GET API requests, uncomment below:
+          /*
           if (response && response.status === 200 && response.ok) {
             const responseClone = response.clone();
             caches.open(DATA_CACHE_NAME).then((cache) => {
@@ -70,11 +80,12 @@ self.addEventListener('fetch', (event) => {
               console.debug('[SW] Failed to cache API response:', err);
             });
           }
+          */
           return response;
         })
         .catch((error) => {
           console.debug('[SW] API fetch failed:', error);
-          // If network fails, try to get from cache
+          // If network fails, try to get from cache (GET requests only)
           return caches.match(request).then((cachedResponse) => {
             return cachedResponse || new Response(JSON.stringify({
               error: 'Network unavailable',

@@ -142,8 +142,8 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: notificationData.body || 'You have a new notification from Auraa Luxury',
-    icon: notificationData.icon || '/favicon.ico',
-    badge: notificationData.badge || '/favicon.ico',
+    icon: notificationData.icon || '/favicon.svg',
+    badge: notificationData.badge || '/favicon.svg',
     image: notificationData.image,
     data: notificationData.data,
     actions: [

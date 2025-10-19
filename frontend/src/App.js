@@ -91,6 +91,7 @@ function App() {
                     {/* Legal and Info Pages */}
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                     <Route path="/terms-of-service" element={<TermsOfService />} />
+                    <Route path="/cookies-policy" element={<CookiesPolicy />} />
                     <Route path="/return-policy" element={<ReturnPolicy />} />
                     <Route path="/contact" element={<ContactUs />} />
                     <Route path="/about" element={<AboutUs />} />

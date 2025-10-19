@@ -32,12 +32,98 @@ db = client[os.environ['DB_NAME']]
 
 # Create the main app
 app = FastAPI(title="لورا لاكشري API", version="1.0.0")
+
+# CORS Configuration - Load from environment variable
+# This allows easy updates without code changes
+cors_origins_env = os.getenv('CORS_ORIGINS', '')
+allowed_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
+
+# Fallback to default patterns if env variable is empty
+if not allowed_origins:
+    # Get app name from environment for dynamic Emergent URLs
+    app_name = os.getenv('APP_NAME', 'app')
+    
+    allowed_origins = [
+        "https://auraaluxury.com",
+        "https://www.auraaluxury.com",
+        "https://api.auraaluxury.com",
+        f"https://luxury-ecom-4.preview.emergentagent.com",
+        f"https://{app_name}.emergent.host",
+        "http://localhost:3000",
+        "http://localhost:8001",
+    ]
+
+print(f"✅ CORS configured with {len(allowed_origins)} origins")
+
+# Custom CORS Handler for Vercel Preview URLs
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as StarletteResponse
+
+class CustomCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        origin = request.headers.get("origin")
+        
+        # Check if origin matches patterns
+        is_allowed = False
+        if origin:
+            # Exact match
+            if origin in allowed_origins:
+                is_allowed = True
+            # Vercel preview URLs
+            elif ".vercel.app" in origin:
+                is_allowed = True
+            # Development localhost with any port
+            elif origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+                is_allowed = True
+            # Emergent preview URLs
+            elif ".emergentagent.com" in origin or ".emergent.host" in origin:
+                is_allowed = True
+        
+        # Handle preflight
+        if request.method == "OPTIONS":
+            response = StarletteResponse(status_code=200)
+            if is_allowed and origin:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, User-Agent, X-Requested-With"
+                response.headers["Access-Control-Expose-Headers"] = "*"
+                response.headers["Access-Control-Max-Age"] = "3600"
+            return response
+        
+        # Process request
+        try:
+            response = await call_next(request)
+        except Exception as e:
+            logger.error(f"Error processing request: {e}")
+            response = StarletteResponse(status_code=500, content=str(e))
+        
+        # Add CORS headers to response
+        if is_allowed and origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Expose-Headers"] = "*"
+        
+        return response
+
+# Apply custom CORS middleware FIRST
+app.add_middleware(CustomCORSMiddleware)
+
 api_router = APIRouter(prefix="/api")
 
 # Security
 security = HTTPBearer()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key-change-in-production')
+# Password hashing is now done directly with bcrypt (see verify_password and get_password_hash functions)
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'default-jwt-secret-change-in-production')
+
+# Cloudflare Turnstile Configuration
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY')
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+# Rate Limiting Configuration
+rate_limit_storage = defaultdict(lambda: {"attempts": 0, "reset_time": time.time() + 900})  # 15 minutes
+RATE_LIMIT_ATTEMPTS = 5
+RATE_LIMIT_WINDOW = 900  # 15 minutes in seconds
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

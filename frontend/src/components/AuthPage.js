@@ -95,6 +95,7 @@ const AuthPage = () => {
         const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
         result = await login(identifier, formData.password, turnstileToken);
       } else {
+<<<<<<< HEAD
         // Validate that at least email or phone is provided
         if (!formData.email && !formData.phone) {
           setError(language === 'ar' ? 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل' : 'At least email or phone is required');
@@ -102,6 +103,41 @@ const AuthPage = () => {
           return;
         }
         result = await register(formData);
+=======
+        // Registration: Validate based on selected method
+        if (loginMethod === 'email' && !formData.email) {
+          const errorMsg = language === 'ar' 
+            ? 'يجب إدخال البريد الإلكتروني'
+            : 'Email is required';
+          setError(errorMsg);
+          setLoading(false);
+          return;
+        }
+        
+        if (loginMethod === 'phone' && !formData.phone) {
+          const errorMsg = language === 'ar' 
+            ? 'يجب إدخال رقم الهاتف'
+            : 'Phone number is required';
+          setError(errorMsg);
+          setLoading(false);
+          return;
+        }
+        
+        // Set the identifier based on login method
+        const registrationData = {
+          ...formData,
+          turnstile_token: turnstileToken
+        };
+        
+        // Clear the unused field
+        if (loginMethod === 'email') {
+          registrationData.phone = null;
+        } else {
+          registrationData.email = null;
+        }
+        
+        result = await register(registrationData);
+>>>>>>> 86c7cfc15e07ad7b7e8980bf21d6de3f93a0f421
       }
       
       if (result.success) {
@@ -251,35 +287,33 @@ const AuthPage = () => {
               </div>
             )}
 
-            {/* Login Method Toggle (only for login) */}
-            {isLogin && (
-              <div className="flex space-x-2 bg-white/10 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setLoginMethod('email')}
-                  className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
-                    loginMethod === 'email'
-                      ? 'bg-amber-500 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  <Mail className="inline h-4 w-4 mr-2" />
-                  {getAuthTranslation('email', language)}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLoginMethod('phone')}
-                  className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
-                    loginMethod === 'phone'
-                      ? 'bg-amber-500 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  <Phone className="inline h-4 w-4 mr-2" />
-                  {getAuthTranslation('phone', language)}
-                </button>
-              </div>
-            )}
+            {/* Login/Register Method Toggle */}
+            <div className="flex space-x-2 bg-white/10 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setLoginMethod('email')}
+                className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
+                  loginMethod === 'email'
+                    ? 'bg-amber-500 text-white shadow-lg'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                <Mail className="inline h-4 w-4 mr-2" />
+                {getAuthTranslation('email', language)}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginMethod('phone')}
+                className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
+                  loginMethod === 'phone'
+                    ? 'bg-amber-500 text-white shadow-lg'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                <Phone className="inline h-4 w-4 mr-2" />
+                {getAuthTranslation('phone', language)}
+              </button>
+            </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -353,6 +387,7 @@ const AuthPage = () => {
                 </div>
               )}
 
+<<<<<<< HEAD
               {/* Register: Both Email and Phone required */}
               {!isLogin && (
                 <>
@@ -395,6 +430,44 @@ const AuthPage = () => {
                     {language === 'ar' ? 'يجب إدخال البريد أو رقم الهاتف على الأقل' : 'At least email or phone is required'}
                   </p>
                 </>
+=======
+              {/* Register: Email OR Phone based on loginMethod */}
+              {!isLogin && loginMethod === 'email' && (
+                <div className="relative animate-slide-in-left">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder={getAuthTranslation('email', language)}
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
+                    data-testid="email-input"
+                  />
+                </div>
+              )}
+
+              {!isLogin && loginMethod === 'phone' && (
+                <div className="animate-slide-in-left">
+                  <PhoneInput
+                    country={'sa'}
+                    value={formData.phone}
+                    onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
+                    inputProps={{
+                      name: 'phone',
+                      required: false,
+                      className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
+                    }}
+                    containerClass="phone-input-container"
+                    buttonClass="phone-input-button"
+                    dropdownClass="phone-input-dropdown"
+                    searchClass="phone-input-search"
+                    enableSearch={true}
+                    searchPlaceholder={language === 'ar' ? "ابحث عن بلد..." : "Search country..."}
+                    inputClass="phone-input-field"
+                  />
+                </div>
+>>>>>>> 86c7cfc15e07ad7b7e8980bf21d6de3f93a0f421
               )}
 
               <div className="relative animate-slide-in-right">

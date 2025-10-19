@@ -18,6 +18,7 @@ import ContentProtectionPage from './ContentProtectionPage';
 import CMSPagesManager from './CMSPagesManager';
 import MediaLibrary from './MediaLibrary';
 import ThemeCustomization from './ThemeCustomization';
+import AdminManagement from './AdminManagement';
 import {
   Package,
   ShoppingCart,
@@ -36,7 +37,8 @@ import {
   Download,
   FileText,
   Image,
-  Palette
+  Palette,
+  Shield
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -136,6 +138,13 @@ const AdminDashboard = () => {
       path: '/admin/media',
       icon: Image
     },
+    // Super Admin Only
+    ...(user?.is_super_admin ? [{
+      name: isRTL ? '🛡️ إدارة المسؤولين' : '🛡️ Admin Management',
+      path: '/admin/admin-management',
+      icon: Shield,
+      superAdminOnly: true
+    }] : []),
     {
       name: isRTL ? 'الإعدادات' : 'Settings',
       path: '/admin/settings',
@@ -222,6 +231,9 @@ const AdminDashboard = () => {
             <Route path="/cms-pages" element={<CMSPagesManager />} />
             <Route path="/theme" element={<ThemeCustomization />} />
             <Route path="/media" element={<MediaLibrary />} />
+            {user?.is_super_admin && (
+              <Route path="/admin-management" element={<AdminManagement />} />
+            )}
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>

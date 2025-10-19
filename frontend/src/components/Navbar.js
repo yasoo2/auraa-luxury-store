@@ -20,8 +20,8 @@ const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { language } = useLanguage();
   const isRTL = language === 'ar' || language === 'he';
-  const { getWishlistCount } = useWishlist();
-  const { cartCount } = useCart();
+  const { getWishlistCount, clearWishlist } = useWishlist();
+  const { cartCount, clearCart } = useCart();
 
   // Debug user state with re-render tracking
   console.log('Navbar - Current user:', user);
@@ -65,6 +65,8 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
+    clearWishlist();
+    clearCart();
     navigate('/');
   };
 

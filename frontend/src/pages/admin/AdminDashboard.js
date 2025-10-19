@@ -231,6 +231,9 @@ const AdminDashboard = () => {
             <Route path="/cms-pages" element={<CMSPagesManager />} />
             <Route path="/theme" element={<ThemeCustomization />} />
             <Route path="/media" element={<MediaLibrary />} />
+            {user?.is_super_admin && (
+              <Route path="/admin-management" element={<AdminManagement />} />
+            )}
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>

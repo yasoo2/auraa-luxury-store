@@ -5,11 +5,9 @@ const DATA_CACHE_NAME = 'auraa-data-v1.0.0';
 // Files to cache for offline functionality
 const FILES_TO_CACHE = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
-  '/images/logo.png',
-  // Add more static assets as needed
+  '/offline.html'
+  // Static assets are cached dynamically during runtime
 ];
 
 // API endpoints to cache

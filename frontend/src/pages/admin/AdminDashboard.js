@@ -137,6 +137,13 @@ const AdminDashboard = () => {
       path: '/admin/media',
       icon: Image
     },
+    // Super Admin Only
+    ...(user?.is_super_admin ? [{
+      name: isRTL ? '🛡️ إدارة المسؤولين' : '🛡️ Admin Management',
+      path: '/admin/admin-management',
+      icon: Shield,
+      superAdminOnly: true
+    }] : []),
     {
       name: isRTL ? 'الإعدادات' : 'Settings',
       path: '/admin/settings',

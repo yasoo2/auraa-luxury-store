@@ -278,7 +278,7 @@ async function syncOrderData() {
           // Show success notification
           self.registration.showNotification('Order Placed Successfully', {
             body: 'Your order has been successfully placed!',
-            icon: '/images/icon-192x192.png',
+            icon: '/favicon.ico',
             tag: 'order-success'
           });
         }

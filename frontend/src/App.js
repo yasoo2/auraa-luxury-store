@@ -12,6 +12,7 @@ import { CartProvider } from './context/CartContext';
 
 // Components
 import Navbar from './components/Navbar';
+import CookieConsent from './components/CookieConsent';
 import HomePage from './components/HomePage';
 import ProductsPage from './components/ProductsPage';
 import ProductDetailPage from './components/ProductDetailPage';

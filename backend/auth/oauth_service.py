@@ -22,8 +22,13 @@ class OAuthService:
         if provider not in ['google', 'facebook']:
             raise ValueError(f"Unsupported provider: {provider}")
         
-        # Emergent Auth URL (works for both Google and Facebook)
-        oauth_url = f"{self.emergent_auth_url}/?redirect={quote(redirect_url)}"
+        # Emergent Auth URL with provider specification
+        if provider == 'facebook':
+            # Facebook OAuth through Emergent Auth
+            oauth_url = f"{self.emergent_auth_url}/?provider=facebook&redirect={quote(redirect_url)}"
+        else:
+            # Google OAuth through Emergent Auth (default)
+            oauth_url = f"{self.emergent_auth_url}/?provider=google&redirect={quote(redirect_url)}"
         
         return oauth_url
     

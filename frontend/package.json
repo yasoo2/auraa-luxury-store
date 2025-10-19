@@ -59,6 +59,9 @@
   "devDependencies": {
     "tailwindcss": "^3.4.1"
   },
+  "resolutions": {
+    "ajv": "^8.12.0"
+  },
   "scripts": {
     "start": "craco start",
     "build": "craco build",

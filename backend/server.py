@@ -36,8 +36,17 @@ api_router = APIRouter(prefix="/api")
 
 # Security
 security = HTTPBearer()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key-change-in-production')
+# Password hashing is now done directly with bcrypt (see verify_password and get_password_hash functions)
+SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'default-jwt-secret-change-in-production')
+
+# Cloudflare Turnstile Configuration
+TURNSTILE_SECRET_KEY = os.environ.get('TURNSTILE_SECRET_KEY')
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+# Rate Limiting Configuration
+rate_limit_storage = defaultdict(lambda: {"attempts": 0, "reset_time": time.time() + 900})  # 15 minutes
+RATE_LIMIT_ATTEMPTS = 5
+RATE_LIMIT_WINDOW = 900  # 15 minutes in seconds
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

@@ -84,8 +84,10 @@ async def import_products_from_cj(
                 
                 logger.info(f"Fetching page {page}/{total_pages} ({current_page_size} products)")
                 
-                # Search products from CJ
-                products = cj.search_products(query, page=page, page_size=current_page_size)
+                # Search products from CJ (run in thread to avoid blocking)
+                products = await asyncio.to_thread(
+                    cj.search_products, query, page=page, page_size=current_page_size
+                )
                 
                 if not products:
                     logger.warning(f"No products found on page {page}")
@@ -98,8 +100,10 @@ async def import_products_from_cj(
                         if not product_id:
                             continue
                         
-                        # Sync product to store format
-                        store_product = cj.sync_product_to_store(product_id, country_code)
+                        # Sync product to store format (run in thread to avoid blocking)
+                        store_product = await asyncio.to_thread(
+                            cj.sync_product_to_store, product_id, country_code
+                        )
                         
                         if store_product:
                             # Save to database

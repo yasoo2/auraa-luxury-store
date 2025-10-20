@@ -7,7 +7,7 @@ import axios from 'axios';
 
 const OAuthCallback = () => {
   const navigate = useNavigate();
-  const { setUser, setToken } = useAuth();
+  const auth = useAuth();
   const { language } = useLanguage();
   const [status, setStatus] = useState('processing');
   const [error, setError] = useState('');
@@ -53,8 +53,12 @@ const OAuthCallback = () => {
         
         // Store token and user
         localStorage.setItem('token', access_token);
-        setToken(access_token);
-        setUser(user);
+        if (auth && typeof auth.setToken === 'function') {
+          auth.setToken(access_token);
+        }
+        if (auth && typeof auth.setUser === 'function') {
+          auth.setUser(user);
+        }
         
         // Clean up
         sessionStorage.removeItem('oauth_provider');
@@ -81,7 +85,7 @@ const OAuthCallback = () => {
     };
 
     processOAuthCallback();
-  }, [navigate, setUser, setToken, language, BACKEND_URL]);
+  }, [navigate, auth, language, BACKEND_URL]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center p-4">

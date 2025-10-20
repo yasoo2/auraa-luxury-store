@@ -1,7 +1,7 @@
 // Service Worker for Auraa Luxury PWA
 // IMPORTANT: Auto-generated version based on deployment time
 const APP_VERSION = '1.0.9';
-const BUILD_TIMESTAMP = Date.now(); // Auto-generated on each build
+const BUILD_TIMESTAMP = 1760994260476; // Auto-generated on each build
 const CACHE_NAME = `auraa-luxury-v${APP_VERSION}-${BUILD_TIMESTAMP}`;
 const DATA_CACHE_NAME = `auraa-data-v${APP_VERSION}-${BUILD_TIMESTAMP}`;
 

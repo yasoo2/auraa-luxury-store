@@ -213,20 +213,43 @@ const AdminManagement = () => {
     }
   };
 
-  // Filter admins
-  const filteredAdmins = admins.filter(admin => {
-    const matchesSearch = 
-      admin.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      admin.phone?.includes(searchTerm) ||
-      `${admin.first_name} ${admin.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = 
-      filterRole === 'all' ||
-      (filterRole === 'super_admin' && admin.is_super_admin) ||
-      (filterRole === 'admin' && admin.is_admin && !admin.is_super_admin);
-    
-    return matchesSearch && matchesFilter;
-  });
+  // Filter and sort admins
+  const filteredAdmins = admins
+    .filter(admin => {
+      const matchesSearch = 
+        admin.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        admin.phone?.includes(searchTerm) ||
+        `${admin.first_name} ${admin.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesFilter = 
+        filterRole === 'all' ||
+        (filterRole === 'super_admin' && admin.is_super_admin) ||
+        (filterRole === 'admin' && admin.is_admin && !admin.is_super_admin);
+      
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy === 'date') {
+        // Sort by creation date
+        const dateA = new Date(a.created_at || 0);
+        const dateB = new Date(b.created_at || 0);
+        comparison = dateB - dateA; // Newest first by default
+      } else if (sortBy === 'activity') {
+        // Sort by last login (if available) or creation date
+        const activityA = new Date(a.last_login || a.created_at || 0);
+        const activityB = new Date(b.last_login || b.created_at || 0);
+        comparison = activityB - activityA; // Most recent activity first
+      } else if (sortBy === 'name') {
+        // Sort by name
+        const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
+        const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
+        comparison = nameA.localeCompare(nameB);
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
   if (!isSuperAdmin) {
     return (

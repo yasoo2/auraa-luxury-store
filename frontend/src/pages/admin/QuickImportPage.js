@@ -134,15 +134,34 @@ const QuickImportPage = () => {
     setImporting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_URL}/api/admin/import-fast`, {
-        count: importCount,
-        query: importQuery,
-        provider: supplierType
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      
+      let response;
+      
+      // Use different endpoints based on supplier type
+      if (supplierType === 'cj') {
+        // CJ Dropshipping bulk import
+        response = await axios.post(`${API_URL}/api/cj/products/bulk-import`, {
+          keyword: importQuery,
+          max_products: importCount
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } else {
+        // AliExpress or other suppliers
+        response = await axios.post(`${API_URL}/api/admin/import-fast`, {
+          count: importCount,
+          query: importQuery,
+          provider: supplierType
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
       });
         // start polling progress
         if (pollInterval) clearInterval(pollInterval);

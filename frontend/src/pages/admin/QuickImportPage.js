@@ -29,7 +29,7 @@ const QuickImportPage = () => {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [supplierType, setSupplierType] = useState('cj'); // Default to CJ Dropshipping
   const [importCount, setImportCount] = useState(500); // Default 500 products
-  const [importQuery, setImportQuery] = useState('women accessories beauty jewelry'); // Default query for women accessories
+  const [importQuery, setImportQuery] = useState('luxury jewelry watches accessories'); // Default query for luxury items
   const [filters, setFilters] = useState({
     category: '',
     pushed: false,

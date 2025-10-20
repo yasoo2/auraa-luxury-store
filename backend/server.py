@@ -4395,9 +4395,11 @@ try:
     from routes.cj_routes import router as cj_router
     from routes.cj_import_routes import router as cj_import_router
     from routes.test_cj_routes import router as test_cj_router
+    from routes.admin_products_routes import router as admin_products_router
     app.include_router(cj_router)
     app.include_router(cj_import_router)
     app.include_router(test_cj_router, prefix="/api/test")
+    app.include_router(admin_products_router, prefix="/api/admin/products")
     logger.info("✅ CJ Dropshipping routes loaded successfully")
 except Exception as e:
     logger.error(f"❌ Failed to load CJ Dropshipping routes: {str(e)}")

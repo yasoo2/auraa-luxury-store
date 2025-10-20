@@ -73,7 +73,7 @@
   },
   "scripts": {
     "start": "craco start",
-    "prebuild": "node -e \"const fs=require('fs');const t=Date.now();const c=fs.readFileSync('public/sw.js','utf8').replace(/BUILD_TIMESTAMP = \\d+/,'BUILD_TIMESTAMP = '+t);fs.writeFileSync('public/sw.js',c)\"",
+    "prebuild": "node -e \"const fs=require('fs');const t=Date.now();let c=fs.readFileSync('public/sw.js','utf8');c=c.replace(/const BUILD_TIMESTAMP = Date\\.now\\(\\);/,'const BUILD_TIMESTAMP = '+t+';');fs.writeFileSync('public/sw.js',c);console.log('✅ Cache timestamp updated:',t)\"",
     "build": "craco build",
     "postbuild": "echo '✅ Build complete with cache-busting enabled'",
     "test": "craco test",

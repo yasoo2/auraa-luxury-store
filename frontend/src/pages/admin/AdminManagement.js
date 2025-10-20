@@ -410,6 +410,38 @@ const AdminManagement = () => {
                 <option value="super_admin">{isRTL ? 'سوبر أدمن' : 'Super Admins'}</option>
                 <option value="admin">{isRTL ? 'مسؤولين' : 'Admins'}</option>
               </select>
+              </div>
+              
+              {/* Sort Controls */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                  <Activity className="h-5 w-5 text-purple-500" />
+                  <span className="text-sm font-semibold text-purple-700">
+                    {isRTL ? 'ترتيب المستخدمين' : 'Sort Users'}
+                  </span>
+                </div>
+                
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gradient-to-r from-purple-50 to-pink-50 font-medium text-purple-700"
+                >
+                  <option value="date">{isRTL ? 'تاريخ الإنشاء' : 'Creation Date'}</option>
+                  <option value="activity">{isRTL ? 'آخر نشاط' : 'Last Activity'}</option>
+                  <option value="name">{isRTL ? 'الاسم' : 'Name'}</option>
+                </select>
+                
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+                  title={sortOrder === 'asc' ? (isRTL ? 'تصاعدي' : 'Ascending') : (isRTL ? 'تنازلي' : 'Descending')}
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                  <span className="text-sm font-medium">
+                    {sortOrder === 'asc' ? (isRTL ? 'تصاعدي' : 'A→Z') : (isRTL ? 'تنازلي' : 'Z→A')}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

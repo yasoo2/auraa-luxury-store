@@ -4222,12 +4222,12 @@ class ToggleAdminRequest(BaseModel):
     is_admin: bool
 
 @api_router.get("/admin/users")
-async def get_all_users(current_user: dict = Depends(get_current_user)):
+async def get_all_users(current_user: User = Depends(get_current_user)):
     """
     Get all users (Super Admin only)
     """
     # Check if user is super admin
-    if not current_user.get('is_super_admin'):
+    if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="صلاحيات السوبر أدمن مطلوبة")
     
     try:
@@ -4242,16 +4242,16 @@ async def get_all_users(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.delete("/admin/users/{user_id}")
-async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
     """
     Delete a user (Super Admin only)
     """
     # Check if user is super admin
-    if not current_user.get('is_super_admin'):
+    if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="صلاحيات السوبر أدمن مطلوبة")
     
     # Prevent deleting self
-    if user_id == current_user.get('id'):
+    if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="لا يمكن حذف حسابك الخاص")
     
     try:
@@ -4259,7 +4259,7 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_use
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
         
-        logger.info(f"User {user_id} deleted by super admin {current_user.get('id')}")
+        logger.info(f"User {user_id} deleted by super admin {current_user.id}")
         return {"message": "تم حذف المستخدم بنجاح"}
     except Exception as e:
         logger.error(f"Error deleting user: {e}")
@@ -4269,13 +4269,13 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_use
 async def change_user_password(
     user_id: str,
     request: ChangePasswordRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Change user password (Super Admin only)
     """
     # Check if user is super admin
-    if not current_user.get('is_super_admin'):
+    if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="صلاحيات السوبر أدمن مطلوبة")
     
     # Validate password length
@@ -4294,7 +4294,7 @@ async def change_user_password(
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
         
-        logger.info(f"Password changed for user {user_id} by super admin {current_user.get('id')}")
+        logger.info(f"Password changed for user {user_id} by super admin {current_user.id}")
         return {"message": "تم تغيير كلمة المرور بنجاح"}
     except Exception as e:
         logger.error(f"Error changing password: {e}")
@@ -4304,17 +4304,17 @@ async def change_user_password(
 async def toggle_user_admin(
     user_id: str,
     request: ToggleAdminRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Toggle user admin status (Super Admin only)
     """
     # Check if user is super admin
-    if not current_user.get('is_super_admin'):
+    if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="صلاحيات السوبر أدمن مطلوبة")
     
     # Prevent changing self
-    if user_id == current_user.get('id'):
+    if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="لا يمكن تغيير صلاحياتك الخاصة")
     
     try:
@@ -4327,7 +4327,7 @@ async def toggle_user_admin(
             raise HTTPException(status_code=404, detail="المستخدم غير موجود")
         
         status = "مدير" if request.is_admin else "مستخدم"
-        logger.info(f"User {user_id} admin status changed to {request.is_admin} by super admin {current_user.get('id')}")
+        logger.info(f"User {user_id} admin status changed to {request.is_admin} by super admin {current_user.id}")
         return {"message": f"تم تحديث الصلاحيات إلى {status}"}
     except Exception as e:
         logger.error(f"Error toggling admin status: {e}")

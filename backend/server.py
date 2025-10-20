@@ -4232,10 +4232,14 @@ async def get_all_users(current_user: User = Depends(get_current_user)):
     
     try:
         users = await db.users.find({}).to_list(length=None)
-        # Remove passwords from response
+        # Remove passwords and convert ObjectId to string
         for user in users:
             if 'password' in user:
                 del user['password']
+            if 'password_hash' in user:
+                del user['password_hash']
+            if '_id' in user:
+                user['_id'] = str(user['_id'])
         return users
     except Exception as e:
         logger.error(f"Error fetching users: {e}")

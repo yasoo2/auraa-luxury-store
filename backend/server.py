@@ -11,6 +11,7 @@ import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
+from collections import defaultdict
 import uuid
 import shutil
 import aiofiles

@@ -28,6 +28,8 @@ const AdminManagement = () => {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [newPassword, setNewPassword] = useState('');
+  const [sortBy, setSortBy] = useState('date'); // 'date', 'activity', 'name'
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc', 'desc'
 
   // Check if user is super admin
   const isSuperAdmin = user?.is_super_admin || false;

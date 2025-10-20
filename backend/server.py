@@ -4345,5 +4345,13 @@ if os.path.exists(static_dir):
 else:
     logger.warning(f"Static directory {static_dir} does not exist, skipping mount")
 
+# Include CJ Dropshipping routes
+try:
+    from routes.cj_routes import router as cj_router
+    app.include_router(cj_router)
+    logger.info("✅ CJ Dropshipping routes loaded successfully")
+except Exception as e:
+    logger.error(f"❌ Failed to load CJ Dropshipping routes: {str(e)}")
+
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

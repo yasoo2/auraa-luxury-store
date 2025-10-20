@@ -2,8 +2,9 @@
   "name": "auraa-luxury-monorepo",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "npm@10.8.2",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "build": "cd frontend && npm install --legacy-peer-deps && npm run build",
     "start": "cd frontend && npm start"
   }
 }

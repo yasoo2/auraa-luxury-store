@@ -326,7 +326,7 @@ const AdminManagement = () => {
                     setSelectedAdmin(user);
                     setShowResetPasswordModal(true);
                   }}
-                  className="px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   <Key className="h-4 w-4" />
                   {isRTL ? 'تغيير كلمة المرور' : 'Change Password'}

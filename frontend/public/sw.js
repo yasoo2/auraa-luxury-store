@@ -1,6 +1,10 @@
 // Service Worker for Auraa Luxury PWA
-const CACHE_NAME = 'auraa-luxury-v1.0.3';
-const DATA_CACHE_NAME = 'auraa-data-v1.0.3';
+// IMPORTANT: Increment version on every deployment to force update
+const CACHE_NAME = 'auraa-luxury-v1.0.9';
+const DATA_CACHE_NAME = 'auraa-data-v1.0.9';
+
+// AGGRESSIVE UPDATE STRATEGY
+// This ensures users always get the latest version without hard refresh
 
 // Files to cache for offline functionality
 const FILES_TO_CACHE = [
@@ -10,16 +14,9 @@ const FILES_TO_CACHE = [
   // Static assets are cached dynamically during runtime
 ];
 
-// API endpoints to cache
-const API_ENDPOINTS = [
-  '/api/categories',
-  '/api/products',
-  '/api/featured-products'
-];
-
-// Install Event - Cache static files
+// Install Event - Force immediate activation
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install');
+  console.log('[ServiceWorker] Install v1.0.9');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -28,27 +25,41 @@ self.addEventListener('install', (event) => {
         return cache.addAll(FILES_TO_CACHE);
       })
       .then(() => {
-        self.skipWaiting();
+        // FORCE immediate activation (skip waiting)
+        return self.skipWaiting();
       })
   );
 });
 
-// Activate Event - Clean up old caches
+// Activate Event - Take control immediately and clean old caches
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate');
+  console.log('[ServiceWorker] Activate v1.0.9');
   
   event.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(keyList.map((key) => {
         if (key !== CACHE_NAME && key !== DATA_CACHE_NAME) {
-          console.log('[ServiceWorker] Removing old cache', key);
+          console.log('[ServiceWorker] Removing old cache:', key);
           return caches.delete(key);
         }
       }));
+    }).then(() => {
+      // FORCE take control of all clients immediately
+      return self.clients.claim();
+    }).then(() => {
+      // Notify all clients to reload
+      return self.clients.matchAll({ includeUncontrolled: true, type: 'window' })
+        .then((clients) => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'SW_UPDATED',
+              version: '1.0.9',
+              message: 'New version available!'
+            });
+          });
+        });
     })
   );
-  
-  self.clients.claim();
 });
 
 // Fetch Event - Serve cached content when offline

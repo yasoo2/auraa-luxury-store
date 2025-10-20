@@ -62,7 +62,9 @@
   },
   "scripts": {
     "start": "craco start",
+    "prebuild": "node -e \"const fs=require('fs');const t=Date.now();const c=fs.readFileSync('public/sw.js','utf8').replace(/BUILD_TIMESTAMP = \\d+/,'BUILD_TIMESTAMP = '+t);fs.writeFileSync('public/sw.js',c)\"",
     "build": "craco build",
+    "postbuild": "echo '✅ Build complete with cache-busting enabled'",
     "test": "craco test",
     "eject": "react-scripts eject"
   },

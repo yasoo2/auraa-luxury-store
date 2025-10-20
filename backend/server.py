@@ -2819,6 +2819,244 @@ async def get_import_logs(limit: int = 10):
         logger.error(f"Error fetching import logs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============================================================================
+# CJ DROPSHIPPING API ENDPOINTS
+# ============================================================================
+
+from services.cj_dropshipping import CJDropshippingService
+
+cj_service = CJDropshippingService()
+
+@api_router.post("/cj/authenticate")
+async def cj_authenticate():
+    """Test CJ Dropshipping authentication"""
+    try:
+        success = await cj_service.authenticate()
+        if success:
+            return {
+                "success": True,
+                "message": "✅ CJ Dropshipping authentication successful",
+                "token_expires_in_days": 15
+            }
+        else:
+            raise HTTPException(status_code=401, detail="Authentication failed")
+    except Exception as e:
+        logger.error(f"CJ authentication error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/cj/categories")
+async def get_cj_categories():
+    """Get product categories from CJ Dropshipping"""
+    try:
+        categories = await cj_service.get_categories()
+        return {
+            "success": True,
+            "categories": categories,
+            "total": len(categories)
+        }
+    except Exception as e:
+        logger.error(f"Error getting CJ categories: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/cj/products/search")
+async def search_cj_products(
+    keyword: Optional[str] = None,
+    category_id: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20
+):
+    """
+    Search products in CJ Dropshipping catalog
+    
+    Query Parameters:
+        keyword: Search term
+        category_id: Filter by category
+        page: Page number (default 1)
+        page_size: Results per page (default 20, max 20)
+    """
+    try:
+        result = await cj_service.search_products(
+            keyword=keyword,
+            category_id=category_id,
+            page=page,
+            page_size=min(page_size, 20)
+        )
+        
+        return {
+            "success": True,
+            **result
+        }
+    except Exception as e:
+        logger.error(f"Error searching CJ products: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/cj/products/{product_id}")
+async def get_cj_product_details(product_id: str):
+    """Get detailed information about a CJ product"""
+    try:
+        product = await cj_service.get_product_details(product_id)
+        
+        if product:
+            return {
+                "success": True,
+                "product": product
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Product not found")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting CJ product details: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/cj/products/import")
+async def import_cj_product(product_id: str):
+    """
+    Import a single product from CJ Dropshipping to store
+    
+    Body:
+        product_id: CJ product ID to import
+    """
+    try:
+        # Get product details
+        product = await cj_service.get_product_details(product_id)
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found in CJ catalog")
+        
+        # Transform and save to database
+        # (This is a simplified version - you may want to add more transformation logic)
+        product_data = {
+            "id": str(uuid.uuid4()),
+            "source": "cj_dropshipping",
+            "external_id": product.get('pid'),
+            "name": product.get('productNameEn'),
+            "description": product.get('description', ''),
+            "price": float(product.get('sellPrice', 0)),
+            "original_price": float(product.get('originalPrice', 0)),
+            "images": [img.get('url') for img in product.get('productImage', [])],
+            "sku": product.get('productSku'),
+            "variants": product.get('variants', []),
+            "stock": product.get('sellQuantity', 0),
+            "category": product.get('categoryName', ''),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "imported_from_cj": True
+        }
+        
+        # Save to products collection
+        result = await db.products.insert_one(product_data)
+        product_data['_id'] = str(result.inserted_id)
+        
+        logger.info(f"✅ Imported CJ product: {product_data['name']}")
+        
+        return {
+            "success": True,
+            "message": "Product imported successfully",
+            "product": product_data
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error importing CJ product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/cj/products/bulk-import")
+async def bulk_import_cj_products(
+    keyword: Optional[str] = None,
+    category_id: Optional[str] = None,
+    max_products: int = 500
+):
+    """
+    Bulk import products from CJ Dropshipping
+    
+    Body:
+        keyword: Search keyword
+        category_id: Category to import from
+        max_products: Maximum number of products to import (default 500)
+    """
+    try:
+        # Limit to 500 as per requirement
+        max_products = min(max_products, 500)
+        
+        logger.info(f"Starting CJ bulk import: keyword={keyword}, category={category_id}, max={max_products}")
+        
+        # Search and retrieve products
+        products = await cj_service.bulk_search_products(
+            keyword=keyword,
+            category_id=category_id,
+            max_products=max_products
+        )
+        
+        imported_count = 0
+        failed_count = 0
+        imported_products = []
+        
+        # Import each product
+        for product in products:
+            try:
+                product_id = product.get('pid')
+                if not product_id:
+                    continue
+                
+                # Check if already imported
+                existing = await db.products.find_one({
+                    "source": "cj_dropshipping",
+                    "external_id": product_id
+                })
+                
+                if existing:
+                    logger.debug(f"Product {product_id} already imported, skipping")
+                    continue
+                
+                # Transform and save
+                product_data = {
+                    "id": str(uuid.uuid4()),
+                    "source": "cj_dropshipping",
+                    "external_id": product_id,
+                    "name": product.get('productNameEn', ''),
+                    "description": product.get('productName', ''),
+                    "price": float(product.get('sellPrice', 0)),
+                    "original_price": float(product.get('originalPrice', 0)),
+                    "images": [product.get('productImage')] if product.get('productImage') else [],
+                    "sku": product.get('productSku', ''),
+                    "stock": product.get('sellQuantity', 0),
+                    "category": product.get('categoryName', ''),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "imported_from_cj": True
+                }
+                
+                result = await db.products.insert_one(product_data)
+                product_data['_id'] = str(result.inserted_id)
+                
+                imported_products.append(product_data)
+                imported_count += 1
+                
+                # Small delay to avoid overwhelming the database
+                await asyncio.sleep(0.05)
+                
+            except Exception as e:
+                logger.error(f"Failed to import product {product.get('pid')}: {e}")
+                failed_count += 1
+        
+        logger.info(f"✅ CJ Bulk import complete: {imported_count} imported, {failed_count} failed")
+        
+        return {
+            "success": True,
+            "message": f"Bulk import completed",
+            "total_found": len(products),
+            "imported": imported_count,
+            "failed": failed_count,
+            "products": imported_products[:10]  # Return first 10 as sample
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in CJ bulk import: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # GeoIP and Country-specific Pricing
 @api_router.get("/geo/detect")
 async def detect_user_country(request: Request):

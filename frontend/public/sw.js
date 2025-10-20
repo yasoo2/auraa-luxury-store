@@ -1,6 +1,10 @@
 // Service Worker for Auraa Luxury PWA
-const CACHE_NAME = 'auraa-luxury-v1.0.3';
-const DATA_CACHE_NAME = 'auraa-data-v1.0.3';
+// IMPORTANT: Increment version on every deployment to force update
+const CACHE_NAME = 'auraa-luxury-v1.0.9';
+const DATA_CACHE_NAME = 'auraa-data-v1.0.9';
+
+// AGGRESSIVE UPDATE STRATEGY
+// This ensures users always get the latest version without hard refresh
 
 // Files to cache for offline functionality
 const FILES_TO_CACHE = [
@@ -10,16 +14,9 @@ const FILES_TO_CACHE = [
   // Static assets are cached dynamically during runtime
 ];
 
-// API endpoints to cache
-const API_ENDPOINTS = [
-  '/api/categories',
-  '/api/products',
-  '/api/featured-products'
-];
-
-// Install Event - Cache static files
+// Install Event - Force immediate activation
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install');
+  console.log('[ServiceWorker] Install v1.0.9');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -28,115 +25,133 @@ self.addEventListener('install', (event) => {
         return cache.addAll(FILES_TO_CACHE);
       })
       .then(() => {
-        self.skipWaiting();
+        // FORCE immediate activation (skip waiting)
+        return self.skipWaiting();
       })
   );
 });
 
-// Activate Event - Clean up old caches
+// Activate Event - Take control immediately and clean old caches
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate');
+  console.log('[ServiceWorker] Activate v1.0.9');
   
   event.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(keyList.map((key) => {
         if (key !== CACHE_NAME && key !== DATA_CACHE_NAME) {
-          console.log('[ServiceWorker] Removing old cache', key);
+          console.log('[ServiceWorker] Removing old cache:', key);
           return caches.delete(key);
         }
       }));
+    }).then(() => {
+      // FORCE take control of all clients immediately
+      return self.clients.claim();
+    }).then(() => {
+      // Notify all clients to reload
+      return self.clients.matchAll({ includeUncontrolled: true, type: 'window' })
+        .then((clients) => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'SW_UPDATED',
+              version: '1.0.9',
+              message: 'New version available!'
+            });
+          });
+        });
     })
   );
-  
-  self.clients.claim();
 });
 
-// Fetch Event - Serve cached content when offline
+// Fetch Event - NETWORK FIRST strategy for dynamic content
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   
-  // ⚠️ IMPORTANT: Only cache GET requests
-  // Cache API doesn't support POST, PUT, DELETE, etc.
+  // Only handle GET requests
   if (request.method !== 'GET') {
-    console.debug('[SW] Skipping non-GET request:', request.method, request.url);
-    return; // Let it pass through normally
+    return; // Let non-GET requests pass through
   }
   
   const url = new URL(request.url);
   
-  // Handle API requests (but don't cache POST/PUT/DELETE)
-  if (url.pathname.startsWith('/api/')) {
+  // CRITICAL: For API and dynamic routes, ALWAYS fetch from network first
+  // This prevents showing stale admin UI or data
+  if (url.pathname.startsWith('/api/') || 
+      url.pathname.includes('/admin') ||
+      url.pathname.includes('/auth') ||
+      url.pathname.includes('.json') ||
+      url.pathname.includes('.js') ||
+      url.pathname.includes('.css')) {
+    
+    // NETWORK FIRST - Always try network, fallback to cache only if offline
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Don't cache API responses for now (they change frequently)
-          // If you want to cache GET API requests, uncomment below:
-          /*
-          if (response && response.status === 200 && response.ok) {
-            const responseClone = response.clone();
-            caches.open(DATA_CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            }).catch((err) => {
-              console.debug('[SW] Failed to cache API response:', err);
-            });
+          // Clone and cache successful responses
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME)
+              .then(cache => cache.put(request, responseToCache))
+              .catch(err => console.debug('[SW] Cache put failed:', err));
           }
-          */
           return response;
         })
-        .catch((error) => {
-          console.debug('[SW] API fetch failed:', error);
-          // If network fails, try to get from cache (GET requests only)
-          return caches.match(request).then((cachedResponse) => {
-            return cachedResponse || new Response(JSON.stringify({
-              error: 'Network unavailable',
-              offline: true
-            }), {
-              status: 503,
-              headers: { 'Content-Type': 'application/json' }
-            });
+        .catch(() => {
+          // Only use cache if network fails (offline)
+          return caches.match(request).then(cachedResponse => {
+            if (cachedResponse) {
+              console.log('[SW] Serving from cache (offline):', url.pathname);
+              return cachedResponse;
+            }
+            // Return offline page for navigation
+            if (request.destination === 'document') {
+              return caches.match('/offline.html');
+            }
+            return new Response('Network error', { status: 503 });
           });
         })
     );
     return;
   }
   
-  // Handle all other requests
+  // For other static assets, use cache first (faster)
   event.respondWith(
     caches.match(request)
       .then((cachedResponse) => {
         if (cachedResponse) {
+          // Serve from cache but update in background
+          fetch(request)
+            .then(response => {
+              if (response && response.status === 200) {
+                caches.open(CACHE_NAME)
+                  .then(cache => cache.put(request, response))
+                  .catch(err => console.debug('[SW] Background update failed:', err));
+              }
+            })
+            .catch(() => {/* Ignore background update failures */});
+          
           return cachedResponse;
         }
         
+        // Not in cache, fetch from network
         return fetch(request)
           .then((response) => {
-            // Don't cache non-successful responses or chrome-extension requests
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
             
-            // Skip caching for chrome-extension and unsupported schemes
             const requestUrl = new URL(request.url);
             if (requestUrl.protocol === 'chrome-extension:' || requestUrl.protocol === 'about:') {
               return response;
             }
             
-            // Clone the response
             const responseToCache = response.clone();
-            
             caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(request, responseToCache);
-              })
-              .catch((err) => {
-                // Silently fail cache operations for unsupported requests
-                console.debug('Cache put failed:', err);
-              });
+              .then((cache) => cache.put(request, responseToCache))
+              .catch((err) => console.debug('Cache put failed:', err));
             
             return response;
           })
           .catch(() => {
-            // Return offline page for navigation requests
             if (request.destination === 'document') {
               return caches.match('/offline.html');
             }

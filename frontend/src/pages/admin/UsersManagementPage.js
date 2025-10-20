@@ -18,6 +18,8 @@ const UsersManagementPage = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   // Check if user is super admin
   useEffect(() => {
@@ -31,11 +33,18 @@ const UsersManagementPage = () => {
     fetchUsers();
   }, []);
 
+  // Refetch when sort changes
+  useEffect(() => {
+    if (users.length > 0) {
+      fetchUsers();
+    }
+  }, [sortBy, sortOrder]);
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${BACKEND_URL}/api/admin/users`, {
+      const response = await axios.get(`${BACKEND_URL}/api/admin/users?sort_by=${sortBy}&sort_order=${sortOrder}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(response.data);
@@ -139,9 +148,10 @@ const UsersManagementPage = () => {
           </p>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6">
-          <div className="relative">
+        {/* Search Bar and Sort Options */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search */}
+          <div className="relative md:col-span-2">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
@@ -150,6 +160,20 @@ const UsersManagementPage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 transition-all"
             />
+          </div>
+
+          {/* Sort By */}
+          <div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-all"
+            >
+              <option value="created_at">{language === 'ar' ? 'تاريخ التسجيل' : 'Registration Date'}</option>
+              <option value="last_activity">{language === 'ar' ? 'آخر نشاط' : 'Last Activity'}</option>
+              <option value="total_orders">{language === 'ar' ? 'عدد الطلبات' : 'Total Orders'}</option>
+              <option value="total_activity_time">{language === 'ar' ? 'وقت النشاط' : 'Activity Time'}</option>
+            </select>
           </div>
         </div>
 
@@ -167,6 +191,12 @@ const UsersManagementPage = () => {
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-amber-400">
                     {language === 'ar' ? 'رقم الهاتف' : 'Phone'}
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-amber-400">
+                    {language === 'ar' ? 'عدد الطلبات' : 'Orders'}
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-amber-400">
+                    {language === 'ar' ? 'آخر نشاط' : 'Last Activity'}
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-amber-400">
                     {language === 'ar' ? 'الصلاحيات' : 'Role'}
@@ -187,6 +217,14 @@ const UsersManagementPage = () => {
                     </td>
                     <td className="px-6 py-4 text-gray-300">
                       {u.phone || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-gray-300">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-500/20 text-blue-400 text-sm font-medium">
+                        {u.total_orders || 0}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-gray-300 text-sm">
+                      {u.last_activity ? new Date(u.last_activity).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : (language === 'ar' ? 'لم ينشط بعد' : 'No activity')}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${

@@ -162,6 +162,9 @@ class User(BaseModel):
     country: Optional[str] = 'SA'  # ISO country code
     address: Optional[Dict[str, Any]] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_activity: Optional[datetime] = None  # آخر نشاط للمستخدم
+    total_orders: int = 0  # عدد الطلبات الكلي
+    total_activity_time: int = 0  # إجمالي وقت النشاط بالدقائق
     is_admin: bool = False
     is_super_admin: bool = False
 
@@ -4232,24 +4235,56 @@ class ToggleAdminRequest(BaseModel):
     is_admin: bool
 
 @api_router.get("/admin/users")
-async def get_all_users(current_user: User = Depends(get_current_user)):
+async def get_all_users(
+    sort_by: Optional[str] = "created_at",  # created_at, last_activity, total_orders, total_activity_time
+    sort_order: Optional[str] = "desc",  # asc or desc
+    current_user: User = Depends(get_current_user)
+):
     """
-    Get all users (Super Admin only)
+    Get all users with sorting (Super Admin only)
+    
+    Sort options:
+    - created_at: تاريخ التسجيل
+    - last_activity: آخر نشاط
+    - total_orders: عدد الطلبات
+    - total_activity_time: وقت النشاط
     """
     # Check if user is super admin
     if not current_user.is_super_admin:
         raise HTTPException(status_code=403, detail="صلاحيات السوبر أدمن مطلوبة")
     
     try:
-        users = await db.users.find({}).to_list(length=None)
-        # Remove passwords and convert ObjectId to string
+        # Determine sort direction
+        sort_direction = -1 if sort_order == "desc" else 1
+        
+        # Fetch users with sorting
+        users = await db.users.find({}).sort(sort_by, sort_direction).to_list(length=None)
+        
+        # Calculate statistics for each user
         for user in users:
+            user_id = user.get('id')
+            
+            # Count total orders for this user
+            if user_id:
+                order_count = await db.orders.count_documents({"user_id": user_id})
+                user['total_orders'] = order_count
+            
+            # Set default values if not present
+            if 'last_activity' not in user:
+                user['last_activity'] = user.get('created_at')
+            if 'total_activity_time' not in user:
+                user['total_activity_time'] = 0
+            
+            # Remove passwords and convert ObjectId to string
             if 'password' in user:
                 del user['password']
             if 'password_hash' in user:
                 del user['password_hash']
+            if 'hashed_password' in user:
+                del user['hashed_password']
             if '_id' in user:
                 user['_id'] = str(user['_id'])
+        
         return users
     except Exception as e:
         logger.error(f"Error fetching users: {e}")

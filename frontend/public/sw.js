@@ -1,10 +1,12 @@
 // Service Worker for Auraa Luxury PWA
-// IMPORTANT: Increment version on every deployment to force update
-const CACHE_NAME = 'auraa-luxury-v1.0.9';
-const DATA_CACHE_NAME = 'auraa-data-v1.0.9';
+// IMPORTANT: Auto-generated version based on deployment time
+const APP_VERSION = '1.0.9';
+const BUILD_TIMESTAMP = Date.now(); // Auto-generated on each build
+const CACHE_NAME = `auraa-luxury-v${APP_VERSION}-${BUILD_TIMESTAMP}`;
+const DATA_CACHE_NAME = `auraa-data-v${APP_VERSION}-${BUILD_TIMESTAMP}`;
 
-// AGGRESSIVE UPDATE STRATEGY
-// This ensures users always get the latest version without hard refresh
+// AGGRESSIVE CACHE INVALIDATION
+// This ensures users ALWAYS get the latest version
 
 // Files to cache for offline functionality
 const FILES_TO_CACHE = [
@@ -16,7 +18,7 @@ const FILES_TO_CACHE = [
 
 // Install Event - Force immediate activation
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install v1.0.9');
+  console.log(`[ServiceWorker] Install v${APP_VERSION} (${BUILD_TIMESTAMP})`);
   
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -31,13 +33,14 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate Event - Take control immediately and clean old caches
+// Activate Event - Take control immediately and clean ALL old caches
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate v1.0.9');
+  console.log(`[ServiceWorker] Activate v${APP_VERSION} (${BUILD_TIMESTAMP})`);
   
   event.waitUntil(
     caches.keys().then((keyList) => {
       return Promise.all(keyList.map((key) => {
+        // Delete ALL caches except current ones
         if (key !== CACHE_NAME && key !== DATA_CACHE_NAME) {
           console.log('[ServiceWorker] Removing old cache:', key);
           return caches.delete(key);
@@ -47,14 +50,15 @@ self.addEventListener('activate', (event) => {
       // FORCE take control of all clients immediately
       return self.clients.claim();
     }).then(() => {
-      // Notify all clients to reload
+      // Notify all clients to reload for new version
       return self.clients.matchAll({ includeUncontrolled: true, type: 'window' })
         .then((clients) => {
           clients.forEach(client => {
             client.postMessage({
               type: 'SW_UPDATED',
-              version: '1.0.9',
-              message: 'New version available!'
+              version: APP_VERSION,
+              timestamp: BUILD_TIMESTAMP,
+              message: 'New version available - reloading...'
             });
           });
         });

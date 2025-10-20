@@ -27,9 +27,9 @@ const QuickImportPage = () => {
   const [importProgress, setImportProgress] = useState(null);
   const [externalProducts, setExternalProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const [supplierType, setSupplierType] = useState('aliexpress'); // New supplier selection
+  const [supplierType, setSupplierType] = useState('cj'); // Default to CJ Dropshipping
   const [importCount, setImportCount] = useState(500); // Default 500 products
-  const [importQuery, setImportQuery] = useState('jewelry accessories'); // Default query
+  const [importQuery, setImportQuery] = useState('women accessories beauty jewelry'); // Default query for women accessories
   const [filters, setFilters] = useState({
     category: '',
     pushed: false,
@@ -240,6 +240,7 @@ const QuickImportPage = () => {
               onChange={(e) => setSupplierType(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
+              <option value="cj">{isRTL ? 'سي جي دروب شوبينج' : 'CJ Dropshipping'}</option>
               <option value="aliexpress">{isRTL ? 'علي إكسبرس' : 'AliExpress'}</option>
               <option value="amazon">{isRTL ? 'أمازون' : 'Amazon'}</option>
               <option value="custom">{isRTL ? 'مورد مخصص' : 'Custom Supplier'}</option>

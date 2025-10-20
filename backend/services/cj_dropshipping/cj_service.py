@@ -51,7 +51,7 @@ class CJDropshippingService:
             
             payload = {
                 "email": self.email,
-                "key": self.api_key
+                "password": self.api_key
             }
             
             logger.info(f"Authenticating with CJ Dropshipping for email: {self.email}")

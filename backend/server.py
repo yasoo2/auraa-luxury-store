@@ -1333,7 +1333,17 @@ async def get_categories():
         {"id": "bracelets", "name": "أساور", "name_en": "Bracelets", "icon": "⭕"},
         {"id": "rings", "name": "خواتم", "name_en": "Rings", "icon": "💍"},
         {"id": "watches", "name": "ساعات", "name_en": "Watches", "icon": "⌚"},
-        {"id": "sets", "name": "أطقم", "name_en": "Sets", "icon": "✨"}
+        {"id": "sets", "name": "أطقم", "name_en": "Sets", "icon": "✨"},
+        {"id": "bags", "name": "حقائب", "name_en": "Bags", "icon": "👜"},
+        {"id": "makeup", "name": "مكياج", "name_en": "Makeup", "icon": "💄"},
+        {"id": "perfumes", "name": "عطور", "name_en": "Perfumes", "icon": "🌸"},
+        {"id": "sunglasses", "name": "نظارات شمسية", "name_en": "Sunglasses", "icon": "🕶️"},
+        {"id": "hair_accessories", "name": "إكسسوارات شعر", "name_en": "Hair Accessories", "icon": "🎀"},
+        {"id": "scarves", "name": "أوشحة", "name_en": "Scarves", "icon": "🧣"},
+        {"id": "belts", "name": "أحزمة", "name_en": "Belts", "icon": "👔"},
+        {"id": "anklets", "name": "خلاخيل", "name_en": "Anklets", "icon": "🦶"},
+        {"id": "body_jewelry", "name": "مجوهرات الجسم", "name_en": "Body Jewelry", "icon": "✨"},
+        {"id": "other", "name": "أخرى", "name_en": "Other", "icon": "🎁"}
     ]
 
 # Admin: Integration settings routes (no external calls yet)

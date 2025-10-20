@@ -6,8 +6,10 @@ Handles all interactions with CJ Dropshipping API
 import requests
 import logging
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
+import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +31,85 @@ class CJDropshippingService:
         self.refresh_token = None
         self.token_expiry = None
         
-        # Get initial access token
+        # Token cache file path
+        self.token_cache_file = Path("/tmp/cj_token_cache.json")
+        
+        # Load cached token or get new one
+        self._load_or_refresh_token()
+    
+    def _load_or_refresh_token(self):
+        """Load token from cache or get new one if expired"""
+        # Try to load from cache first
+        if self._load_token_from_cache():
+            logger.info("✅ Loaded CJ API token from cache")
+            return
+        
+        # If no valid cache, get new token
+        logger.info("🔄 Getting new CJ API access token...")
         self._get_access_token()
+    
+    def _load_token_from_cache(self) -> bool:
+        """
+        Load access token from cache file
+        
+        Returns:
+            True if valid token loaded, False otherwise
+        """
+        try:
+            if not self.token_cache_file.exists():
+                return False
+            
+            with open(self.token_cache_file, 'r') as f:
+                cache_data = json.load(f)
+            
+            # Check if token is still valid
+            expiry_str = cache_data.get('expiry')
+            if not expiry_str:
+                return False
+            
+            # Parse expiry date and make it timezone-aware if needed
+            expiry_date = datetime.fromisoformat(expiry_str)
+            if expiry_date.tzinfo is None:
+                expiry_date = expiry_date.replace(tzinfo=timezone.utc)
+            
+            # Get current time as timezone-aware
+            now = datetime.now(timezone.utc)
+            
+            # Check if token expires in more than 1 day (safety margin)
+            if expiry_date > now + timedelta(days=1):
+                self.access_token = cache_data.get('access_token')
+                self.refresh_token = cache_data.get('refresh_token')
+                self.token_expiry = expiry_str
+                logger.info(f"✅ Token valid until {expiry_str}")
+                return True
+            else:
+                logger.info("⚠️ Cached token expired or expiring soon")
+                return False
+                
+        except Exception as e:
+            logger.warning(f"Failed to load token from cache: {str(e)}")
+            return False
+    
+    def _save_token_to_cache(self):
+        """Save access token to cache file"""
+        try:
+            cache_data = {
+                'access_token': self.access_token,
+                'refresh_token': self.refresh_token,
+                'expiry': self.token_expiry,
+                'saved_at': datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Ensure directory exists
+            self.token_cache_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(self.token_cache_file, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+            
+            logger.info(f"💾 Token saved to cache (valid until {self.token_expiry})")
+            
+        except Exception as e:
+            logger.error(f"Failed to save token to cache: {str(e)}")
     
     def _get_access_token(self):
         """Get access token from CJ API"""
@@ -50,7 +129,11 @@ class CJDropshippingService:
                 self.access_token = token_data.get('accessToken')
                 self.refresh_token = token_data.get('refreshToken')
                 self.token_expiry = token_data.get('accessTokenExpiryDate')
-                logger.info("✅ CJ API access token obtained successfully")
+                
+                # Save to cache
+                self._save_token_to_cache()
+                
+                logger.info(f"✅ CJ API access token obtained successfully (valid until {self.token_expiry})")
                 return True
             else:
                 logger.error(f"Failed to get CJ access token: {result.get('message', 'Unknown error')}")
@@ -288,6 +371,55 @@ class CJDropshippingService:
         result = self._make_request("POST", endpoint, data)
         return result.get('variants', []) if result else []
     
+    def auto_categorize(self, product_name: str, cj_category: str = "") -> str:
+        """
+        Automatically categorize product based on name and CJ category
+        
+        Args:
+            product_name: Product name
+            cj_category: CJ category name (optional)
+            
+        Returns:
+            Category slug
+        """
+        product_name_lower = product_name.lower()
+        
+        # Category keywords mapping
+        category_keywords = {
+            'earrings': ['earring', 'ear ring', 'stud', 'hoop', 'drop earring', 'dangle'],
+            'necklaces': ['necklace', 'pendant', 'chain', 'choker', 'collar'],
+            'bracelets': ['bracelet', 'bangle', 'wristband', 'cuff', 'armband'],
+            'rings': ['ring', 'band', 'engagement', 'wedding ring'],
+            'watches': ['watch', 'timepiece', 'wristwatch', 'clock'],
+            'bags': ['bag', 'handbag', 'purse', 'clutch', 'tote', 'backpack', 'shoulder bag'],
+            'makeup': ['makeup', 'cosmetic', 'lipstick', 'eyeshadow', 'foundation', 'mascara', 'blush'],
+            'perfumes': ['perfume', 'fragrance', 'cologne', 'scent', 'eau de'],
+            'sunglasses': ['sunglasses', 'sunglass', 'shades', 'eyewear'],
+            'hair_accessories': ['hair clip', 'hair band', 'headband', 'hair tie', 'scrunchie', 'hair pin'],
+            'scarves': ['scarf', 'shawl', 'wrap', 'hijab', 'pashmina'],
+            'belts': ['belt', 'waistband', 'girdle'],
+            'anklets': ['anklet', 'ankle bracelet', 'foot jewelry'],
+            'body_jewelry': ['body jewelry', 'belly', 'nose ring', 'body chain'],
+            'sets': ['set', 'collection', 'kit', 'combo', 'bundle', 'pack']
+        }
+        
+        # Check product name for keywords
+        for category, keywords in category_keywords.items():
+            for keyword in keywords:
+                if keyword in product_name_lower:
+                    return category
+        
+        # Check CJ category if provided
+        if cj_category:
+            cj_category_lower = cj_category.lower()
+            for category, keywords in category_keywords.items():
+                for keyword in keywords:
+                    if keyword in cj_category_lower:
+                        return category
+        
+        # Default to 'other' if no match found
+        return 'other'
+    
     def sync_product_to_store(self, cj_product_id: str, country_code: str = "SA") -> Optional[Dict]:
         """
         Sync product from CJ to store with calculated prices
@@ -318,10 +450,15 @@ class CJDropshippingService:
         product_price = float(product.get('sellPrice', 0))
         pricing = self.calculate_final_price(product_price, shipping_cost)
         
+        # Auto-categorize product
+        product_name = product.get('productNameEn', '')
+        cj_category = product.get('categoryName', '')
+        auto_category = self.auto_categorize(product_name, cj_category)
+        
         # Prepare product data for store
         store_product = {
             "cj_product_id": cj_product_id,
-            "name": product.get('productNameEn', ''),
+            "name": product_name,
             "description": product.get('description', ''),
             "images": product.get('productImage', []),
             "price": pricing['final_price'],
@@ -332,7 +469,8 @@ class CJDropshippingService:
             "currency": "SAR",
             "stock": product.get('sellQuantity', 0),
             "variants": self.get_product_variants(cj_product_id),
-            "category": product.get('categoryName', ''),
+            "category": auto_category,
+            "cj_category": cj_category,
             "weight": product.get('packWeight', 0),
             "dimensions": {
                 "length": product.get('packLength', 0),
@@ -340,7 +478,7 @@ class CJDropshippingService:
                 "height": product.get('packHeight', 0)
             },
             "source": "cj_dropshipping",
-            "synced_at": datetime.utcnow().isoformat()
+            "synced_at": datetime.now(timezone.utc).isoformat()
         }
         
         return store_product

@@ -5033,5 +5033,112 @@ async def check_readiness():
             "error": str(e)
         }
 
+# ============================================================================
+# STAGING AREA ENDPOINTS - For Quick Import Page
+# ============================================================================
+
+@api_router.get("/products/staging")
+async def get_staging_products(job_id: Optional[str] = None):
+    """
+    Get products from staging area (imported but not yet published)
+    """
+    try:
+        query = {"staging": True}
+        if job_id:
+            query["import_job_id"] = job_id
+        
+        products = await db.products.find(query).sort("created_at", -1).to_list(length=1000)
+        
+        # Convert ObjectId to string if present
+        for product in products:
+            if "_id" in product:
+                del product["_id"]
+        
+        return products
+    except Exception as e:
+        logger.error(f"Error fetching staging products: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.put("/products/staging/{product_id}")
+async def update_staging_product(product_id: str, updates: Dict[str, Any]):
+    """
+    Update a product in staging area
+    """
+    try:
+        result = await db.products.update_one(
+            {"id": product_id, "staging": True},
+            {"$set": {
+                **updates,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Product not found in staging")
+        
+        return {"success": True, "message": "Product updated"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating staging product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.delete("/products/staging/{product_id}")
+async def delete_staging_product(product_id: str):
+    """
+    Delete a product from staging area
+    """
+    try:
+        result = await db.products.delete_one({"id": product_id, "staging": True})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Product not found in staging")
+        
+        return {"success": True, "message": "Product deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting staging product: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/products/publish-staging")
+async def publish_staging_products(data: Dict[str, Any]):
+    """
+    Publish staging products to live store
+    Moves products from staging=True to staging=False (live)
+    """
+    try:
+        product_ids = data.get("product_ids", [])
+        
+        if not product_ids:
+            raise HTTPException(status_code=400, detail="No product IDs provided")
+        
+        # Update all products: set staging=False to make them live
+        result = await db.products.update_many(
+            {"id": {"$in": product_ids}, "staging": True},
+            {"$set": {
+                "staging": False,
+                "published_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        logger.info(f"✅ Published {result.modified_count} products to live store")
+        
+        return {
+            "success": True,
+            "published": result.modified_count,
+            "message": f"Successfully published {result.modified_count} products"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error publishing staging products: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

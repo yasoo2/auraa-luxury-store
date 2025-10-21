@@ -94,7 +94,7 @@ const AuthPage = () => {
       if (isLogin) {
         // Use email or phone based on login method
         const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
-        result = await login(identifier, formData.password, turnstileToken);
+        result = await login(identifier, formData.password, turnstileToken, rememberMe);
       } else {
         // Validate that at least email or phone is provided
         if (!formData.email && !formData.phone) {
@@ -102,7 +102,9 @@ const AuthPage = () => {
           setLoading(false);
           return;
         }
-        result = await register(formData);
+        // Add remember_me to registration data
+        const registrationData = { ...formData, remember_me: rememberMe };
+        result = await register(registrationData, turnstileToken);
       }
       
       if (result.success) {

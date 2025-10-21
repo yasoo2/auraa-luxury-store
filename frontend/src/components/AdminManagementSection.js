@@ -35,11 +35,10 @@ const AdminManagementSection = () => {
   const fetchAllUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      console.log('🔍 Fetching users with token:', token ? 'Token exists' : 'No token');
+      console.log('🔍 Fetching users with cookies authentication');
       
       const response = await axios.get(`${API}/admin/users/all`, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true  // Use cookies instead of localStorage
       });
       
       console.log('✅ API Response:', response.data);

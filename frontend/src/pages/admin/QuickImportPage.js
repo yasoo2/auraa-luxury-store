@@ -184,7 +184,7 @@ export default function QuickImportPage() {
       toast.info(`🚀 ${language === 'ar' ? 'بدء الاستيراد' : 'Starting import'} (${button.source} - ${button.count})...`);
 
       const response = await axios.post(
-        `${API_BASE}/api/imports/start`,
+        '/api/imports/start',
         {
           source: button.source,
           count: button.count,
@@ -192,7 +192,6 @@ export default function QuickImportPage() {
           keyword: button.keyword
         },
         { 
-          withCredentials: false,
           timeout: 10000
         }
       );

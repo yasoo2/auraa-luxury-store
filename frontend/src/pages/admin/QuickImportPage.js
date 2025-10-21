@@ -76,14 +76,12 @@ export default function QuickImportPage() {
 
   const checkBackendHealth = async () => {
     try {
-      const healthRes = await axios.get(`${API_BASE}/api/health`, { 
-        timeout: 5000,
-        withCredentials: false 
+      const healthRes = await axios.get('/api/health', { 
+        timeout: 5000
       });
       
-      const readinessRes = await axios.get(`${API_BASE}/api/readiness`, { 
-        timeout: 5000,
-        withCredentials: false 
+      const readinessRes = await axios.get('/api/readiness', { 
+        timeout: 5000
       });
       
       const isHealthy = healthRes.data?.status === 'ok';

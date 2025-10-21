@@ -95,7 +95,7 @@ If login works ✅ → Backend connectivity confirmed
 
 ---
 
-## 🔒 Step 3: Disable Vercel Auto-Deployment
+## 🔒 Step 4: Disable Vercel Auto-Deployment
 
 **To prevent conflicts between Vercel and Cloudflare Pages:**
 

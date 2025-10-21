@@ -882,7 +882,7 @@
 
 ## test_plan:
   current_focus:
-    - "Fix Unresponsive Logo Upload Button in Admin Settings"
+    - "CJ Dropshipping Import System with Automatic Pricing"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

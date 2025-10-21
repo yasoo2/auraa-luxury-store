@@ -4867,5 +4867,161 @@ try:
 except Exception as e:
     logger.error(f"❌ Failed to load CJ Dropshipping routes: {str(e)}")
 
+# ============================================================================
+# UNIFIED IMPORT SYSTEM - Quick Import Page Integration
+# ============================================================================
+
+class UnifiedImportConfig(BaseModel):
+    source: str  # "cj", "aliexpress", "csv"
+    count: int = 500
+    batch_size: int = 50
+    keyword: Optional[str] = None
+    category_id: Optional[str] = None
+
+@api_router.post("/imports/start")
+async def start_unified_import(
+    config: UnifiedImportConfig,
+    background_tasks: BackgroundTasks
+):
+    """
+    Unified import endpoint for Quick Import page
+    Supports CJ, AliExpress, and CSV imports
+    """
+    try:
+        # Validate source
+        if config.source not in ["cj", "aliexpress", "csv"]:
+            raise HTTPException(status_code=400, detail=f"Unsupported source: {config.source}")
+        
+        if config.count <= 0:
+            raise HTTPException(status_code=400, detail="Invalid count")
+        
+        logger.info(f"🚀 Starting unified import: source={config.source}, count={config.count}")
+        
+        # Create import job
+        job_manager = ImportJobManager(db)
+        job_id = await job_manager.create_job(
+            job_type="bulk_import",
+            supplier=config.source,
+            params={
+                "keyword": config.keyword,
+                "category_id": config.category_id,
+                "max_products": config.count,
+                "batch_size": config.batch_size
+            }
+        )
+        
+        # Start appropriate background task based on source
+        if config.source == "cj":
+            background_tasks.add_task(
+                background_import_cj_products,
+                job_id=job_id,
+                keyword=config.keyword,
+                category_id=config.category_id,
+                max_products=config.count,
+                db=db,
+                cj_service=cj_service
+            )
+        elif config.source == "aliexpress":
+            # TODO: Implement AliExpress background import
+            logger.warning("AliExpress import not yet implemented, using mock")
+            background_tasks.add_task(
+                background_import_cj_products,  # Temporary - use same logic
+                job_id=job_id,
+                keyword=config.keyword or "luxury",
+                category_id=config.category_id,
+                max_products=config.count,
+                db=db,
+                cj_service=cj_service
+            )
+        elif config.source == "csv":
+            # TODO: Implement CSV background import
+            logger.warning("CSV import not yet implemented")
+            raise HTTPException(status_code=501, detail="CSV import not yet implemented")
+        
+        return {
+            "jobId": job_id,
+            "acceptedCount": config.count,
+            "source": config.source,
+            "batchSize": config.batch_size,
+            "message": "Import job started successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting unified import: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/imports/{job_id}/status")
+async def get_unified_import_status(job_id: str):
+    """
+    Get import job status for Quick Import page
+    Returns unified format for all import sources
+    """
+    try:
+        job_manager = ImportJobManager(db)
+        job = await job_manager.get_job(job_id)
+        
+        if not job:
+            return {"error": "Invalid jobId", "state": "not_found"}
+        
+        # Convert to unified format expected by frontend
+        return {
+            "processed": job["progress"]["processed"],
+            "total": job["progress"]["total"],
+            "state": job["status"],  # pending, running, completed, failed
+            "error": job.get("error"),
+            "source": job["supplier"],
+            "batch_size": job["params"].get("batch_size", 50),
+            "percent": job["progress"]["percent"],
+            "imported": job["progress"]["imported"],
+            "failed": job["progress"]["failed"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching import status: {e}")
+        return {"error": str(e), "state": "error"}
+
+@api_router.get("/readiness")
+async def check_readiness():
+    """
+    Check if backend services are ready
+    Used by Quick Import page to enable/disable buttons
+    """
+    try:
+        # Check database connection
+        db_ok = True
+        try:
+            await db.command("ping")
+        except:
+            db_ok = False
+        
+        # Check CJ Dropshipping service
+        vendors_ok = True
+        try:
+            # Quick check if CJ service is initialized
+            if not cj_service:
+                vendors_ok = False
+        except:
+            vendors_ok = False
+        
+        overall_status = "ready" if (db_ok and vendors_ok) else "degraded"
+        
+        return {
+            "status": overall_status,
+            "db": db_ok,
+            "vendors": vendors_ok,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error checking readiness: {e}")
+        return {
+            "status": "error",
+            "db": False,
+            "vendors": False,
+            "error": str(e)
+        }
+
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

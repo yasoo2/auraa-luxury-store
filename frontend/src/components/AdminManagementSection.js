@@ -161,13 +161,12 @@ const AdminManagementSection = () => {
 
   const handleResetPassword = async (userId, token) => {
     try {
-      const authToken = localStorage.getItem('token');
       const response = await axios.post(
         `${API}/admin/super-admin-reset-password`,
         { user_id: userId },
         {
+          withCredentials: true,  // Use cookies instead of localStorage
           headers: { 
-            Authorization: `Bearer ${authToken}`,
             'X-Action-Token': token
           }
         }

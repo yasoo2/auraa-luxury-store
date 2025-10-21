@@ -231,11 +231,9 @@ const QuickImportPage = () => {
 
       if (response.data.success) {
         const taskId = response.data.task_id || response.data.job_id;
-        alert(isRTL ? `تم بدء استيراد ${importCount} منتج بنجاح!` : `Successfully started importing ${importCount} products!`);
-        if (taskId) {
-          setImportProgress({ job_id: taskId, status: 'pending', percent: 0 });
-        }
-        await loadExternalProducts();
+        alert(isRTL 
+          ? `تم بدء استيراد ${importCount} منتج في الخلفية! يمكنك إغلاق المتصفح والاستيراد سيستمر.` 
+          : `Started importing ${importCount} products in background! You can close your browser and import will continue.`);
       } else {
         alert(isRTL ? 'فشل في بدء الاستيراد' : 'Failed to start import');
       }

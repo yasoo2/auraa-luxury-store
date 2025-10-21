@@ -22,6 +22,8 @@ class AuraaLuxuryAPITester:
         self.admin_token = None
         self.super_admin_token = None
         self.test_product_id = None
+        self.cj_job_id = None
+        self.sample_cj_product = None
         
     def log_test(self, test_name: str, success: bool, details: str = ""):
         """Log test results"""

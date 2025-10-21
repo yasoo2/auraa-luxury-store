@@ -123,6 +123,8 @@ export const AuthProvider = ({ children }) => {
       
       console.log('✅ Registration successful:', newUser);
       
+      // Store token permanently in localStorage (session never expires unless manual logout)
+      // Token is valid for 1 year - effectively permanent session
       setToken(access_token);
       setUser(newUser);
       localStorage.setItem('token', access_token);

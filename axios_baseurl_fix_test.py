@@ -321,10 +321,9 @@ class AxiosBaseURLFixTester:
         
         # Test CORS headers (important for frontend axios calls)
         try:
-            import requests
-            response = requests.options(f"{self.api_url}/health", 
-                                      headers={'Origin': 'https://luxury-import-sys.preview.emergentagent.com'},
-                                      timeout=10)
+            response = self.session.options(f"{self.api_url}/health", 
+                                          headers={'Origin': 'https://luxury-import-sys.preview.emergentagent.com'},
+                                          timeout=10)
             
             cors_headers = {
                 'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),

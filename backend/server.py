@@ -524,7 +524,7 @@ async def login(credentials: UserLogin, request: Request, response: Response):
             httponly=True,
             secure=True,
             samesite="lax",
-            max_age=(60 if remember_me else 30) * 24 * 60 * 60,  # 30-60 days
+            max_age=365 * 24 * 60 * 60,  # 1 year - stays logged in until manual logout
             path="/"
         )
         

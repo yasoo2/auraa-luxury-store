@@ -216,7 +216,7 @@ async def background_import_cj_products(
                     original_currency="USD"  # CJ prices are usually in USD
                 )
                 
-                # Create product document
+                # Create product document (in STAGING area for editing before publish)
                 product_data = {
                     "id": str(uuid.uuid4()),
                     "source": "cj_dropshipping",
@@ -240,7 +240,8 @@ async def background_import_cj_products(
                     "updated_at": datetime.now(timezone.utc).isoformat(),
                     "imported_from_cj": True,
                     "import_job_id": job_id,
-                    "pricing_auto_calculated": True
+                    "pricing_auto_calculated": True,
+                    "staging": True  # Mark as staging - not yet published to live store
                 }
                 
                 await db.products.insert_one(product_data)

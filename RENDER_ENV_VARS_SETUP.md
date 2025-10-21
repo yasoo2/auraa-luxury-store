@@ -28,7 +28,7 @@ CORS_ORIGINS
 
 **Variable Value:**
 ```
-https://auraaluxury.com,https://www.auraaluxury.com,https://api.auraaluxury.com,https://luxury-ecom-4.preview.emergentagent.com
+https://auraaluxury.com,https://www.auraaluxury.com,https://api.auraaluxury.com,https://cors-fix-15.preview.emergentagent.com
 ```
 
 **Format Rules:**

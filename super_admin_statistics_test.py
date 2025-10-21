@@ -12,7 +12,7 @@ from datetime import datetime
 class SuperAdminStatisticsTest:
     def __init__(self):
         # Use the backend URL from frontend/.env
-        self.base_url = "https://luxury-ecom-4.preview.emergentagent.com"
+        self.base_url = "https://cors-fix-15.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.super_admin_token = None
         self.tests_run = 0

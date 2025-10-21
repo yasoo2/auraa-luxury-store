@@ -105,7 +105,7 @@ curl -X POST https://api.auraaluxury.com/api/auth/login \
 ### Check 1: Render Environment Variables
 تأكد من أن `CORS_ORIGINS` موجود في Render:
 ```
-CORS_ORIGINS=https://auraaluxury.com,https://www.auraaluxury.com,https://api.auraaluxury.com,https://luxury-ecom-4.preview.emergentagent.com
+CORS_ORIGINS=https://auraaluxury.com,https://www.auraaluxury.com,https://api.auraaluxury.com,https://cors-fix-15.preview.emergentagent.com
 ```
 
 ### Check 2: Render Service Status

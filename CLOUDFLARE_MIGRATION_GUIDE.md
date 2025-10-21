@@ -150,7 +150,7 @@ https://dashboard.render.com
 
 ابحث عن `CORS_ORIGINS` وعدّلها إلى:
 ```
-https://auraaluxury.com,https://www.auraaluxury.com,https://auraa-luxury-store.pages.dev,https://luxury-ecom-4.preview.emergentagent.com
+https://auraaluxury.com,https://www.auraaluxury.com,https://auraa-luxury-store.pages.dev,https://cors-fix-15.preview.emergentagent.com
 ```
 
 #### **5.4 أعد تشغيل Backend:**

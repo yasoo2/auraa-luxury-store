@@ -63,7 +63,7 @@ https://dashboard.render.com > تحقق من deploy logs
 
 ### 4. في الإنتاج:
 ```
-https://auraaluxury.preview.emergentagent.com 
+https://cors-fix-15.preview.emergentagent.com 
 - تحقق من التحديثات الجديدة
 - افتح Developer Tools > Sources لرؤية التاريخ الجديد
 ```

@@ -74,7 +74,7 @@ After push to main, verify:
 - [ ] API endpoints respond correctly
 
 ### ✅ Production Verification:
-- [ ] Visit: https://auraaluxury.preview.emergentagent.com
+- [ ] Visit: https://cors-fix-15.preview.emergentagent.com
 - [ ] View page source → check updated meta description
 - [ ] Admin panel accessible and functional
 - [ ] Backend API responding (check network tab)
@@ -96,7 +96,7 @@ After execution, check these URLs:
 
 - **Frontend (Vercel):** Check Vercel dashboard for production URL
 - **Backend (Render):** Check Render dashboard for service URL  
-- **Production Site:** https://auraaluxury.preview.emergentagent.com
+- **Production Site:** https://cors-fix-15.preview.emergentagent.com
 
 ---
 **Note:** This test validates the complete CI/CD pipeline setup for automatic deployment on every push to main branch.

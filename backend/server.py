@@ -317,9 +317,18 @@ async def root():
 
 # Auth routes
 @api_router.post("/auth/register")
-async def register(user_data: UserCreate, response: Response):
+async def register(user_data: UserCreate, request: Request, response: Response):
     # Log incoming data for debugging
     logger.info(f"Registration attempt for email: {user_data.email}, phone: {user_data.phone}")
+    
+    # Get device info for tracking
+    device_info = {
+        "user_agent": request.headers.get("user-agent", ""),
+        "ip": request.client.host if request.client else "",
+        "device_id": request.headers.get("x-device-id", "")
+    }
+    
+    remember_me = getattr(user_data, 'remember_me', False)
     
     # Validate required fields - at least one of email or phone is required
     if not user_data.email and not user_data.phone:
@@ -373,20 +382,38 @@ async def register(user_data: UserCreate, response: Response):
         logger.error(f"Error sending welcome email: {e}")
         # Don't fail registration if email fails
     
-    # Create access token
+    # Create tokens
     access_token = create_access_token(data={"sub": user_obj.id})
+    refresh_token = await refresh_token_manager.create_refresh_token(
+        user_id=user_obj.id,
+        device_info=device_info,
+        remember_me=remember_me
+    )
     
-    # Set cookie (domain will be auto-detected based on request origin)
+    # Set HttpOnly cookies
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
-        samesite="none",
-        max_age=1800  # 30 minutes (same as token expiry)
+        samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/"
     )
     
-    return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=(60 if remember_me else 30) * 24 * 60 * 60,
+        path="/"
+    )
+    
+    logger.info(f"✅ User registered: {user_obj.id}")
+    
+    return {"success": True, "user": user_obj, "message": "Registered successfully"}
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin, request: Request, response: Response):

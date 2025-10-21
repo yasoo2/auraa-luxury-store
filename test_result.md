@@ -716,6 +716,7 @@
 
 ## test_plan:
   current_focus:
+    - "Axios BaseURL Fix Verification Testing"
     - "AliExpress API Integration - Product Sync, Shipping, Customs"
     - "Complete Responsive Design for All Devices"
     - "Full Image Optimization"

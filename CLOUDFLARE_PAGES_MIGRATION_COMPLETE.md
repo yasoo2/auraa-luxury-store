@@ -9,7 +9,46 @@
 
 ---
 
-## 🔧 Step 1: Update CORS on Render Dashboard
+## 🔧 Step 1: Update Cloudflare Pages Build Settings
+
+**CRITICAL: Correct build configuration for successful deployment**
+
+### Instructions:
+1. Go to [Cloudflare Pages Dashboard](https://dash.cloudflare.com/)
+2. Select your project: **auraa-luxury-store**
+3. Go to **Settings** → **Builds & deployments**
+4. Update **Build configuration**:
+
+```
+Framework preset: None
+Root directory (Path): frontend
+Build command: npm run build
+Build output directory: build
+```
+
+5. Go to **Settings** → **Environment variables**
+6. Add/Update these variables for **Production**:
+
+```
+REACT_APP_BACKEND_URL = https://api.auraaluxury.com
+REACT_APP_TURNSTILE_SITE_KEY = 0x4AAAAAAB7WqGcKe5TVz7qSs1Fnb0BkAEMow
+NODE_VERSION = 18
+NPM_FLAGS = --legacy-peer-deps
+```
+
+7. Click **Save**
+8. Go to **Deployments** tab
+9. Click **Retry deployment** or **Create deployment**
+
+### Why These Settings:
+- **Root directory: frontend** - Eliminates need for `cd frontend` in build command
+- **NPM_FLAGS = --legacy-peer-deps** - Resolves React 18 dependency conflicts
+- **NODE_VERSION = 18** - Stable and tested version
+- **REACT_APP_BACKEND_URL** - Points to your Render backend API
+
+---
+
+## 🔧 Step 2: Update CORS on Render Dashboard
 
 **CRITICAL: You must update the CORS_ORIGINS on your Render backend**
 

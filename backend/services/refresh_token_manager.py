@@ -34,7 +34,7 @@ class RefreshTokenManager:
         user_id: str,
         device_info: Dict[str, Any],
         remember_me: bool = False,
-        ttl_days: int = 30
+        ttl_days: int = 3650
     ) -> str:
         """
         Create a new refresh token
@@ -42,8 +42,8 @@ class RefreshTokenManager:
         Args:
             user_id: User's ID
             device_info: Device metadata (user_agent, ip, etc.)
-            remember_me: If True, extend TTL
-            ttl_days: Token validity in days
+            remember_me: Ignored - all tokens are long-lived now
+            ttl_days: Token validity in days (default 10 years)
             
         Returns:
             token: Plain token (to be set in cookie)
@@ -51,9 +51,8 @@ class RefreshTokenManager:
         token = self.generate_token()
         token_hash = self.hash_token(token)
         
-        # Extend TTL if remember me is enabled
-        if remember_me:
-            ttl_days = 60  # 2 months
+        # All tokens are now long-lived (10 years) - stays logged in until manual logout
+        ttl_days = 3650
         
         expires_at = datetime.now(timezone.utc) + timedelta(days=ttl_days)
         

@@ -3271,6 +3271,10 @@ async def get_supported_countries():
         
         return {
             "countries": configs
+        }
+    except Exception as e:
+        logger.error(f"Error fetching countries: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================

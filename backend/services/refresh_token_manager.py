@@ -134,12 +134,12 @@ class RefreshTokenManager:
         # Revoke old token
         await self.revoke_token(old_token)
         
-        # Create new token with same settings
+        # Create new token with same settings (always 10 years TTL)
         new_token = await self.create_refresh_token(
             user_id=old_token_doc["user_id"],
             device_info=device_info,
-            remember_me=old_token_doc.get("remember_me", False),
-            ttl_days=30 if not old_token_doc.get("remember_me") else 60
+            remember_me=False,
+            ttl_days=3650  # 10 years - stays logged in until manual logout
         )
         
         logger.info(f"✅ Rotated refresh token for user {old_token_doc['user_id']}")

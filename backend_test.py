@@ -2038,13 +2038,18 @@ class AuraaLuxuryAPITester:
         print(f"🔗 Testing API at: {self.api_url}")
         print("=" * 60)
         
+        # CJ DROPSHIPPING IMPORT SYSTEM TESTS (PRIORITY - Review Request)
+        print("\n🎯 CJ DROPSHIPPING IMPORT SYSTEM TESTS (REVIEW REQUEST)")
+        self.test_cj_dropshipping_import_system()
+        
         # Basic API tests
         self.test_root_endpoint()
         self.test_initialize_sample_data()
         
         # Authentication tests (need to be early for tokens)
         self.test_user_registration()
-        self.test_admin_login()
+        if not self.admin_token:  # Only test if not already done in CJ tests
+            self.test_admin_login()
         self.test_user_profile()
         
         # SUPER ADMIN MANAGEMENT TESTS (Priority for this review)

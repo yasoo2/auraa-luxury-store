@@ -162,7 +162,7 @@ class RefreshTokenManager:
         )
         
         if result.modified_count > 0:
-            logger.info(f"✅ Revoked refresh token")
+            logger.info("✅ Revoked refresh token")
             return True
         
         return False

@@ -194,20 +194,35 @@ class AuraaLuxuryAPITester:
         success, data, status = self.make_request('POST', '/auth/login', admin_credentials)
         
         if success and data.get('success'):
-            # The API uses cookie-based authentication, but we need to extract token from response
-            # Check if user is admin
             user_data = data.get('user', {})
             is_admin = user_data.get('is_admin', False)
             
             if is_admin:
-                # For testing purposes, we'll create a token manually or use the login response
-                # Since this is cookie-based auth, we'll simulate having a token
-                self.admin_token = "admin_token_placeholder"  # This will be replaced by actual cookie handling
+                # The backend uses cookie-based auth, but let's try to get access_token if available
+                access_token = data.get('access_token')
+                if access_token:
+                    self.admin_token = access_token
+                else:
+                    # For cookie-based auth, we'll need to handle this differently
+                    # For now, let's create a dummy token and test admin endpoints
+                    self.admin_token = "cookie_based_auth"
+                
                 self.log_test("Admin Login with admin@auraa.com", True, f"Admin logged in successfully, is_admin: {is_admin}")
                 
-                # Test token validation for admin routes - skip for now due to cookie auth
-                # We'll test admin endpoints directly
+                # Test admin endpoint access
+                original_token = self.token
+                self.token = self.admin_token
                 
+                # Try to access an admin endpoint to verify authentication works
+                success_test, data_test, status_test = self.make_request('GET', '/admin/integrations')
+                if success_test:
+                    self.log_test("Admin Token Validation", True, "Admin can access protected endpoints")
+                else:
+                    # Cookie auth might not work with our token-based testing
+                    self.log_test("Admin Token Validation", False, f"Admin endpoint access failed: {status_test}")
+                
+                # Restore original token
+                self.token = original_token
             else:
                 self.log_test("Admin Login with admin@auraa.com", False, f"User is not admin, is_admin: {is_admin}")
         else:

@@ -97,7 +97,6 @@ const AdminManagementSection = () => {
 
     setVerifyingCode(true);
     try {
-      const token = localStorage.getItem('token');
       const response = await axios.post(
         `${API}/admin/verify-code`,
         {
@@ -105,7 +104,7 @@ const AdminManagementSection = () => {
           action: verificationAction.action,
           target_user_id: verificationAction.targetUserId
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { withCredentials: true }  // Use cookies instead of localStorage
       );
 
       setActionToken(response.data.action_token);

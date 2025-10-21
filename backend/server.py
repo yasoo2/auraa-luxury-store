@@ -1112,7 +1112,7 @@ async def get_products(
     limit: int = 20,
     language: Optional[str] = Query(None, description="Preferred language (ar|en|tr|...)")
 ):
-    query = {}
+    query = {"staging": {"$ne": True}}  # Exclude staging products - only show published/live products
     
     if category:
         query["category"] = category

@@ -185,7 +185,6 @@ const AdminManagementSection = () => {
 
   const handleChangeRole = async (userId, newRole, token) => {
     try {
-      const authToken = localStorage.getItem('token');
       await axios.post(
         `${API}/admin/super-admin-change-role`,
         { 
@@ -194,8 +193,8 @@ const AdminManagementSection = () => {
           is_super_admin: newRole === 'super_admin'
         },
         {
+          withCredentials: true,  // Use cookies instead of localStorage
           headers: { 
-            Authorization: `Bearer ${authToken}`,
             'X-Action-Token': token
           }
         }

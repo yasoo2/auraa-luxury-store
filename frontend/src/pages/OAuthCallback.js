@@ -51,7 +51,8 @@ const OAuthCallback = () => {
           throw new Error('Invalid OAuth response from server');
         }
         
-        // Store token and user
+        // Store token permanently in localStorage (session never expires unless manual logout)
+        // Token is valid for 1 year - effectively permanent session
         localStorage.setItem('token', access_token);
         if (auth && typeof auth.setToken === 'function') {
           auth.setToken(access_token);

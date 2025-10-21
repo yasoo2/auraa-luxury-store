@@ -155,7 +155,7 @@ Test these critical flows on your Cloudflare Pages URL:
 
 ---
 
-## 🎯 Step 5: DNS and Domain Setup (Optional)
+## 🎯 Step 6: DNS and Domain Setup (Optional)
 
 If you want your custom domain (auraaluxury.com) to point to Cloudflare Pages:
 

@@ -116,7 +116,7 @@ If login works ✅ → Backend connectivity confirmed
 
 ---
 
-## ✅ Step 4: Verify Full Functionality
+## ✅ Step 5: Verify Full Functionality
 
 Test these critical flows on your Cloudflare Pages URL:
 

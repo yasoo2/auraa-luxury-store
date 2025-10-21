@@ -187,7 +187,7 @@ class AuraaLuxuryAPITester:
         
         # Test admin login with specific credentials
         admin_credentials = {
-            "email": "admin@auraa.com",
+            "identifier": "admin@auraa.com",
             "password": "admin123"
         }
         

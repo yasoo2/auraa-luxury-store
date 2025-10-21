@@ -388,9 +388,17 @@ async def register(user_data: UserCreate, response: Response):
     return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
 
 @api_router.post("/auth/login")
-async def login(credentials: UserLogin, response: Response):
+async def login(credentials: UserLogin, request: Request, response: Response):
     logger.info(f"🔐 Login attempt for identifier: {credentials.identifier}")
-    logger.info(f"🔐 Password length: {len(credentials.password)}, repr: {repr(credentials.password[:20] if len(credentials.password) > 20 else credentials.password)}")
+    
+    # Get device info for tracking
+    device_info = {
+        "user_agent": request.headers.get("user-agent", ""),
+        "ip": request.client.host if request.client else "",
+        "device_id": request.headers.get("x-device-id", "")
+    }
+    
+    remember_me = getattr(credentials, 'remember_me', False)
     
     # First check if super admin
     super_admin = await db.super_admins.find_one({
@@ -398,14 +406,10 @@ async def login(credentials: UserLogin, response: Response):
         "is_active": True
     })
     
-    logger.info(f"🔍 Super admin found: {super_admin is not None}")
-    
     if super_admin:
         logger.info(f"✅ Super admin authenticated, verifying password...")
-        logger.info(f"🔑 Hash in DB (first 30 chars): {super_admin['password_hash'][:30]}")
         # Verify super admin password
         password_valid = verify_password(credentials.password, super_admin["password_hash"])
-        logger.info(f"🔑 Password verification result: {password_valid}")
         
         if not password_valid:
             logger.warning(f"❌ Wrong password for super admin: {credentials.identifier}")
@@ -454,21 +458,40 @@ async def login(credentials: UserLogin, response: Response):
             )
             user["is_super_admin"] = True
         
-        # Create access token
+        # Create tokens
         access_token = create_access_token(data={"sub": user["id"], "is_super_admin": True})
+        refresh_token = await refresh_token_manager.create_refresh_token(
+            user_id=user["id"],
+            device_info=device_info,
+            remember_me=remember_me
+        )
+        
         user_obj = User(**{k: v for k, v in user.items() if k != "password"})
         
-        # Set cookie (domain will be auto-detected based on request origin)
+        # Set HttpOnly cookies
         response.set_cookie(
             key="access_token",
             value=access_token,
             httponly=True,
             secure=True,
-            samesite="none",
-            max_age=1800
+            samesite="lax",  # Changed from none to lax for better compatibility
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 15 minutes
+            path="/"
         )
         
-        return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=(60 if remember_me else 30) * 24 * 60 * 60,  # 30-60 days
+            path="/"
+        )
+        
+        logger.info(f"✅ Super admin logged in: {user['id']}")
+        
+        return {"success": True, "user": user_obj, "message": "Logged in successfully"}
     
     # Regular user login
     user = await db.users.find_one({
@@ -482,29 +505,49 @@ async def login(credentials: UserLogin, response: Response):
     if not user:
         raise HTTPException(
             status_code=404, 
-            detail="account_not_found"  # Frontend will translate
+            detail="account_not_found"
         )
     
     if not verify_password(credentials.password, user["password"]):
         raise HTTPException(
             status_code=401, 
-            detail="wrong_password"  # Frontend will translate
+            detail="wrong_password"
         )
     
+    # Create tokens
     access_token = create_access_token(data={"sub": user["id"]})
+    refresh_token = await refresh_token_manager.create_refresh_token(
+        user_id=user["id"],
+        device_info=device_info,
+        remember_me=remember_me
+    )
+    
     user_obj = User(**{k: v for k, v in user.items() if k != "password"})
     
-    # Set cookie (domain will be auto-detected based on request origin)
+    # Set HttpOnly cookies
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
         secure=True,
-        samesite="none",
-        max_age=1800  # 30 minutes (same as token expiry)
+        samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 15 minutes
+        path="/"
     )
     
-    return {"access_token": access_token, "token_type": "bearer", "user": user_obj}
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=(60 if remember_me else 30) * 24 * 60 * 60,  # 30-60 days
+        path="/"
+    )
+    
+    logger.info(f"✅ User logged in: {user['id']} (remember_me={remember_me})")
+    
+    return {"success": True, "user": user_obj, "message": "Logged in successfully"}
 
 # OAuth Endpoints
 @api_router.get("/auth/oauth/{provider}/url")

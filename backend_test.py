@@ -1763,6 +1763,275 @@ class AuraaLuxuryAPITester:
         # Restore token
         self.token = original_token
 
+    def test_cj_dropshipping_import_system(self):
+        """
+        Test CJ Dropshipping import system with automatic pricing
+        Based on review request requirements
+        """
+        print("\n🚀 CJ DROPSHIPPING IMPORT SYSTEM TESTING")
+        
+        # 1. Backend Health Check
+        self.test_health_endpoints()
+        
+        # 2. Admin Authentication
+        if not self.admin_token:
+            self.test_admin_authentication_flow()
+        
+        if not self.admin_token:
+            self.log_test("CJ Import System", False, "Admin authentication required but failed")
+            return
+        
+        # 3. Test Quick Import - Small Batch (10 products)
+        self.test_cj_quick_import()
+        
+        # 4. Monitor Import Progress
+        # This will be done within the quick import test
+        
+        # 5. Verify Imported Products
+        self.test_cj_imported_products_verification()
+        
+        # 6. Test Pricing Calculation
+        self.test_cj_pricing_calculation()
+        
+        # 7. Test Import Status Persistence
+        self.test_cj_import_status_persistence()
+    
+    def test_health_endpoints(self):
+        """Test health and readiness endpoints"""
+        # Test /api/health
+        success, data, status = self.make_request('GET', '/health')
+        
+        if success and data.get('status') == 'ok':
+            self.log_test("Health Endpoint", True, f"Status: {data.get('status')}, Service: {data.get('service')}")
+        else:
+            self.log_test("Health Endpoint", False, f"Status: {status}, Response: {data}")
+        
+        # Test /api/readiness
+        success, data, status = self.make_request('GET', '/readiness')
+        
+        if success and data.get('status') in ['ready', 'degraded']:
+            self.log_test("Readiness Endpoint", True, 
+                        f"Status: {data.get('status')}, DB: {data.get('db')}, Vendors: {data.get('vendors')}")
+        else:
+            self.log_test("Readiness Endpoint", False, f"Status: {status}, Response: {data}")
+    
+    def test_cj_quick_import(self):
+        """Test CJ Quick Import with 10 products"""
+        if not self.admin_token:
+            self.log_test("CJ Quick Import", False, "No admin token available")
+            return
+        
+        # Use admin token
+        original_token = self.token
+        self.token = self.admin_token
+        
+        # Start import job
+        import_config = {
+            "source": "cj",
+            "count": 10,
+            "batch_size": 10,
+            "keyword": "jewelry"
+        }
+        
+        success, data, status = self.make_request('POST', '/imports/start', import_config)
+        
+        if success and data.get('jobId'):
+            job_id = data['jobId']
+            self.log_test("CJ Import Start", True, 
+                        f"Job started: {job_id}, Source: {data.get('source')}, Count: {data.get('acceptedCount')}")
+            
+            # Store job_id for other tests
+            self.cj_job_id = job_id
+            
+            # Monitor progress for 30 seconds
+            import time
+            max_wait = 30
+            wait_time = 0
+            
+            while wait_time < max_wait:
+                time.sleep(2)
+                wait_time += 2
+                
+                success_status, status_data, status_code = self.make_request('GET', f'/imports/{job_id}/status')
+                
+                if success_status:
+                    state = status_data.get('state')
+                    processed = status_data.get('processed', 0)
+                    total = status_data.get('total', 0)
+                    imported = status_data.get('imported', 0)
+                    failed = status_data.get('failed', 0)
+                    percent = status_data.get('percent', 0)
+                    
+                    print(f"   Progress: {state} - {processed}/{total} ({percent}%) - Imported: {imported}, Failed: {failed}")
+                    
+                    if state == 'completed':
+                        self.log_test("CJ Import Progress Monitoring", True, 
+                                    f"Import completed: {imported} imported, {failed} failed")
+                        break
+                    elif state == 'failed':
+                        self.log_test("CJ Import Progress Monitoring", False, 
+                                    f"Import failed: {status_data.get('error')}")
+                        break
+                else:
+                    self.log_test("CJ Import Progress Monitoring", False, 
+                                f"Status check failed: {status_code}")
+                    break
+            else:
+                # Timeout reached
+                self.log_test("CJ Import Progress Monitoring", False, 
+                            f"Import timeout after {max_wait} seconds")
+        else:
+            self.log_test("CJ Import Start", False, f"Status: {status}, Response: {data}")
+        
+        # Restore token
+        self.token = original_token
+    
+    def test_cj_imported_products_verification(self):
+        """Verify imported products have correct structure and pricing"""
+        # Get products with CJ source
+        success, data, status = self.make_request('GET', '/products?limit=10')
+        
+        if success and isinstance(data, list):
+            cj_products = [p for p in data if p.get('source') == 'cj_dropshipping' or p.get('imported_from_cj')]
+            
+            if cj_products:
+                self.log_test("CJ Products Found", True, f"Found {len(cj_products)} CJ products")
+                
+                # Verify product structure
+                sample_product = cj_products[0]
+                required_fields = [
+                    'id', 'name', 'price', 'source', 'imported_from_cj',
+                    'supplier_price', 'price_breakdown'
+                ]
+                
+                missing_fields = [field for field in required_fields if field not in sample_product]
+                
+                if not missing_fields:
+                    self.log_test("CJ Product Structure", True, "All required fields present")
+                    
+                    # Verify pricing structure
+                    price_breakdown = sample_product.get('price_breakdown', {})
+                    pricing_fields = [
+                        'base_cost_sar', 'supplier_shipping_sar', 'local_shipping_sar',
+                        'profit_amount_sar', 'tax_amount_sar', 'profit_percentage', 'tax_rate'
+                    ]
+                    
+                    missing_pricing = [field for field in pricing_fields if field not in price_breakdown]
+                    
+                    if not missing_pricing:
+                        self.log_test("CJ Pricing Breakdown", True, 
+                                    f"Complete pricing data: Profit: {price_breakdown.get('profit_percentage')}%, "
+                                    f"Tax: {price_breakdown.get('tax_rate')}%")
+                        
+                        # Store sample product for pricing verification
+                        self.sample_cj_product = sample_product
+                    else:
+                        self.log_test("CJ Pricing Breakdown", False, f"Missing pricing fields: {missing_pricing}")
+                else:
+                    self.log_test("CJ Product Structure", False, f"Missing fields: {missing_fields}")
+            else:
+                self.log_test("CJ Products Found", False, "No CJ products found in database")
+        else:
+            self.log_test("CJ Products Found", False, f"Failed to get products: {status}")
+    
+    def test_cj_pricing_calculation(self):
+        """Test CJ pricing calculation formula"""
+        if not hasattr(self, 'sample_cj_product'):
+            self.log_test("CJ Pricing Calculation", False, "No sample CJ product available")
+            return
+        
+        product = self.sample_cj_product
+        price_breakdown = product.get('price_breakdown', {})
+        
+        # Get values
+        final_price = product.get('price', 0)
+        supplier_price = product.get('supplier_price', 0)
+        base_cost_sar = price_breakdown.get('base_cost_sar', 0)
+        supplier_shipping_sar = price_breakdown.get('supplier_shipping_sar', 0)
+        local_shipping_sar = price_breakdown.get('local_shipping_sar', 0)
+        profit_amount_sar = price_breakdown.get('profit_amount_sar', 0)
+        tax_amount_sar = price_breakdown.get('tax_amount_sar', 0)
+        profit_percentage = price_breakdown.get('profit_percentage', 0)
+        tax_rate = price_breakdown.get('tax_rate', 0)
+        
+        # Verify pricing formula
+        # Expected: cost * 3.75 (cost) * 3 (profit) * 1.15 (tax) approximately
+        total_cost = base_cost_sar + supplier_shipping_sar + local_shipping_sar
+        price_with_profit = total_cost + profit_amount_sar
+        calculated_final = price_with_profit + tax_amount_sar
+        
+        # Allow 5% tolerance for rounding
+        price_diff = abs(final_price - calculated_final)
+        tolerance = final_price * 0.05
+        
+        if price_diff <= tolerance:
+            self.log_test("CJ Pricing Formula Verification", True, 
+                        f"Price calculation correct: Final={final_price}, Calculated={calculated_final:.2f}")
+        else:
+            self.log_test("CJ Pricing Formula Verification", False, 
+                        f"Price mismatch: Final={final_price}, Calculated={calculated_final:.2f}, Diff={price_diff:.2f}")
+        
+        # Verify profit percentage (should be around 200%)
+        if 180 <= profit_percentage <= 220:  # Allow some variance
+            self.log_test("CJ Profit Percentage", True, f"Profit percentage: {profit_percentage}%")
+        else:
+            self.log_test("CJ Profit Percentage", False, f"Unexpected profit percentage: {profit_percentage}%")
+        
+        # Verify tax rate (should be 15% for Saudi Arabia)
+        if tax_rate == 15:
+            self.log_test("CJ Tax Rate", True, f"Tax rate: {tax_rate}%")
+        else:
+            self.log_test("CJ Tax Rate", False, f"Unexpected tax rate: {tax_rate}%")
+        
+        # Log sample pricing data
+        print(f"   Sample Product Pricing:")
+        print(f"   - Supplier Price: ${supplier_price}")
+        print(f"   - Base Cost SAR: {base_cost_sar}")
+        print(f"   - Supplier Shipping SAR: {supplier_shipping_sar}")
+        print(f"   - Local Shipping SAR: {local_shipping_sar}")
+        print(f"   - Profit Amount SAR: {profit_amount_sar}")
+        print(f"   - Tax Amount SAR: {tax_amount_sar}")
+        print(f"   - Final Price SAR: {final_price}")
+    
+    def test_cj_import_status_persistence(self):
+        """Test import status persistence in database"""
+        if not hasattr(self, 'cj_job_id'):
+            self.log_test("CJ Import Status Persistence", False, "No job ID available")
+            return
+        
+        job_id = self.cj_job_id
+        
+        # Check status immediately
+        success1, data1, status1 = self.make_request('GET', f'/imports/{job_id}/status')
+        
+        if success1:
+            initial_state = data1.get('state')
+            initial_processed = data1.get('processed', 0)
+            
+            # Wait 5 seconds
+            import time
+            time.sleep(5)
+            
+            # Check status again
+            success2, data2, status2 = self.make_request('GET', f'/imports/{job_id}/status')
+            
+            if success2:
+                final_state = data2.get('state')
+                final_processed = data2.get('processed', 0)
+                
+                # Status should persist and potentially progress
+                if final_processed >= initial_processed:
+                    self.log_test("CJ Import Status Persistence", True, 
+                                f"Status persisted: {initial_state}→{final_state}, "
+                                f"Progress: {initial_processed}→{final_processed}")
+                else:
+                    self.log_test("CJ Import Status Persistence", False, 
+                                f"Progress went backwards: {initial_processed}→{final_processed}")
+            else:
+                self.log_test("CJ Import Status Persistence", False, f"Second status check failed: {status2}")
+        else:
+            self.log_test("CJ Import Status Persistence", False, f"Initial status check failed: {status1}")
+
     def run_all_tests(self):
         """Run all tests in sequence"""
         print("🚀 Starting Auraa Luxury API Tests...")

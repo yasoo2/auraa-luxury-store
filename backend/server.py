@@ -133,7 +133,8 @@ rate_limit_storage = defaultdict(lambda: {"attempts": 0, "reset_time": time.time
 RATE_LIMIT_ATTEMPTS = 5
 RATE_LIMIT_WINDOW = 900  # 15 minutes in seconds
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 525600  # 365 days (1 year) - Never expire unless manual logout
+ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Short-lived access token
+REFRESH_TOKEN_EXPIRE_DAYS = 30  # Long-lived refresh token (can be extended to 60 with "remember me")
 
 # Enums
 class OrderStatus(str, Enum):

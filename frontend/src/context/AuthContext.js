@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
@@ -11,160 +11,205 @@ export const useAuth = () => {
   return context;
 };
 
+// Configure axios for cookie-based auth
+axios.defaults.withCredentials = true;
+
+// Setup axios interceptor for automatic token refresh
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
+
+axios.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If 401 and not already retried, try to refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // Already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            return axios(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+
+      try {
+        // Try to refresh token
+        await axios.post(`${BACKEND_URL}/api/auth/refresh`, {}, {
+          withCredentials: true
+        });
+        
+        processQueue(null, null);
+        isRefreshing = false;
+        
+        // Retry original request
+        return axios(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        
+        // Refresh failed, redirect to login
+        window.location.href = '/';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-  // Set axios default headers if token exists
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  }, [token]);
-
-  // Check if user is logged in on app start
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      // Try to get token from localStorage first
-      const storedToken = localStorage.getItem('token');
+  // Check auth status on mount (using cookie)
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
+        withCredentials: true
+      });
       
-      try {
-        // Call /auth/me with credentials to check both cookie and token
-        const response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
-          withCredentials: true, // Send cookies
-          headers: storedToken ? { 'Authorization': `Bearer ${storedToken}` } : {}
-        });
-        
-        console.log('✅ User authenticated:', response.data);
-        console.log('User is_admin:', response.data.is_admin);
-        console.log('User is_super_admin:', response.data.is_super_admin);
-        
-        setUser(response.data);
-        
-        // If we got a valid response but don't have token in localStorage,
-        // it means we're authenticated via cookie only
-        if (!storedToken && response.data) {
-          console.log('✅ Authenticated via cookie');
-        }
-      } catch (error) {
-        console.error('❌ Auth check failed:', error.response?.status, error.response?.data);
-        // Clear invalid token
-        if (storedToken) {
-          localStorage.removeItem('token');
-          setToken(null);
-        }
-        setUser(null);
-      }
-      
+      console.log('✅ User authenticated:', response.data);
+      setUser(response.data);
+    } catch (error) {
+      console.log('❌ Not authenticated');
+      setUser(null);
+    } finally {
       setLoading(false);
-    };
-
-    checkAuthStatus();
+    }
   }, [BACKEND_URL]);
 
-  const login = async (emailOrCredentials, password, turnstileToken = null) => {
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
+
+  const login = async (identifier, password, turnstileToken, rememberMe = false) => {
     try {
-      // Support both single object and separate email/password parameters
-      let credentials;
-      if (typeof emailOrCredentials === 'string') {
-        credentials = { 
-          identifier: emailOrCredentials, 
-          password: password
-        };
-        if (turnstileToken) {
-          credentials.turnstile_token = turnstileToken;
-        }
-      } else {
-        credentials = { 
-          identifier: emailOrCredentials.email, 
-          password: emailOrCredentials.password 
-        };
-        if (emailOrCredentials.turnstile_token) {
-          credentials.turnstile_token = emailOrCredentials.turnstile_token;
-        }
+      console.log(`🔐 Logging in as: ${identifier}`);
+      
+      const credentials = {
+        identifier,
+        password,
+        remember_me: rememberMe
+      };
+
+      if (turnstileToken) {
+        credentials.turnstile_token = turnstileToken;
       }
 
-      const response = await axios.post(`${BACKEND_URL}/api/auth/login`, credentials, {
-        withCredentials: true // Send and receive cookies
-      });
+      const response = await axios.post(
+        `${BACKEND_URL}/api/auth/login`,
+        credentials,
+        { withCredentials: true }
+      );
+
+      console.log('✅ Login successful:', response.data);
       
-      const { access_token, user: userData } = response.data;
-      
-      console.log('✅ Login successful:', userData);
-      
-      // Store token permanently in localStorage (session never expires unless manual logout)
-      // Token is valid for 1 year - effectively permanent session
-      localStorage.setItem('token', access_token);
-      setToken(access_token);
+      const userData = response.data.user;
       setUser(userData);
-      
-      return { success: true };
+
+      return { success: true, user: userData };
     } catch (error) {
-      console.error('❌ Login failed:', error);
-      return {
-        success: false,
-        error: error.response?.data?.detail || 'فشل تسجيل الدخول'
-      };
+      console.error('Login error:', error);
+      
+      if (error.response?.status === 401) {
+        return { success: false, error: 'wrong_password' };
+      } else if (error.response?.status === 404) {
+        return { success: false, error: 'account_not_found' };
+      } else {
+        return { success: false, error: 'login_failed' };
+      }
     }
   };
 
-  const register = async (userData) => {
+  const register = async (userData, turnstileToken) => {
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/auth/register`, userData, {
-        withCredentials: true // Send and receive cookies
-      });
-      
-      const { access_token, user: newUser } = response.data;
-      
-      console.log('✅ Registration successful:', newUser);
-      
-      // Store token permanently in localStorage (session never expires unless manual logout)
-      // Token is valid for 1 year - effectively permanent session
-      setToken(access_token);
-      setUser(newUser);
-      localStorage.setItem('token', access_token);
-      
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Registration failed:', error);
-      return {
-        success: false,
-        error: error.response?.data?.detail || 'فشل في إنشاء الحساب'
+      console.log('📝 Registering new user:', userData.email || userData.phone);
+
+      const registrationData = {
+        ...userData,
+        remember_me: userData.remember_me || false
       };
+
+      if (turnstileToken) {
+        registrationData.turnstile_token = turnstileToken;
+      }
+
+      const response = await axios.post(
+        `${BACKEND_URL}/api/auth/register`,
+        registrationData,
+        { withCredentials: true }
+      );
+
+      console.log('✅ Registration successful:', response.data);
+      
+      const newUser = response.data.user;
+      setUser(newUser);
+
+      return { success: true, user: newUser };
+    } catch (error) {
+      console.error('❌ Registration error:', error);
+      
+      if (error.response?.data?.detail) {
+        return { success: false, error: error.response.data.detail };
+      }
+      
+      return { success: false, error: 'registration_failed' };
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('wishlist'); // Clear wishlist on logout
-    delete axios.defaults.headers.common['Authorization'];
+  const logout = async () => {
+    try {
+      await axios.post(
+        `${BACKEND_URL}/api/auth/logout`,
+        {},
+        { withCredentials: true }
+      );
+      
+      console.log('✅ Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+    }
   };
 
   const value = {
     user,
-    token,
     setUser,
-    setToken,
+    loading,
     login,
     register,
     logout,
-    loading,
     isAuthenticated: !!user,
-    isAdmin: user?.is_admin || false
+    isAdmin: user?.is_admin || false,
+    isSuperAdmin: user?.is_super_admin || false,
+    checkAuthStatus
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-export default AuthContext;

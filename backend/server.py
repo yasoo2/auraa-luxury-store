@@ -3073,6 +3073,72 @@ async def get_supported_countries():
         
         return {
             "countries": configs
+
+
+# ============================================================================
+# IMPORT JOBS MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@api_router.get("/admin/import-jobs/{job_id}")
+async def get_import_job(job_id: str):
+    """
+    Get import job status and progress
+    
+    Returns real-time status of background import job.
+    Poll this endpoint to track import progress.
+    """
+    try:
+        job_manager = ImportJobManager(db)
+        job = await job_manager.get_job(job_id)
+        
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        return {
+            "success": True,
+            "job_id": job["job_id"],
+            "status": job["status"],
+            "percent": job["progress"]["percent"],
+            "processed_items": job["progress"]["processed"],
+            "total_items": job["progress"]["total"],
+            "imported": job["progress"]["imported"],
+            "failed": job["progress"]["failed"],
+            "created_at": job["created_at"],
+            "started_at": job.get("started_at"),
+            "completed_at": job.get("completed_at"),
+            "result": job.get("result"),
+            "error": job.get("error")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching job {job_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/import-jobs")
+async def list_import_jobs(
+    status: Optional[str] = None,
+    limit: int = 50
+):
+    """
+    List all import jobs
+    
+    Query params:
+        status: Filter by status (pending, running, completed, failed)
+        limit: Max results (default 50)
+    """
+    try:
+        job_manager = ImportJobManager(db)
+        jobs = await job_manager.list_jobs(status=status, limit=limit)
+        
+        return {
+            "success": True,
+            "total": len(jobs),
+            "jobs": jobs
+        }
+    except Exception as e:
+        logger.error(f"Error listing jobs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
         }
     
     except Exception as e:

@@ -431,6 +431,20 @@ const AuthPage = () => {
                 </div>
               )}
 
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center mt-4 animate-fade-in-up">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-amber-500 bg-white/10 border-amber-300 rounded focus:ring-amber-500 focus:ring-2"
+                />
+                <label htmlFor="rememberMe" className="ml-2 text-sm text-white/80">
+                  {language === 'ar' ? 'تذكرني لمدة شهرين' : 'Remember me for 2 months'}
+                </label>
+              </div>
+
               {/* Cloudflare Turnstile */}
               <div className="flex justify-center my-4">
                 <div ref={turnstileRef} className="cf-turnstile" data-theme="light"></div>

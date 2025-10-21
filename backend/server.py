@@ -2824,6 +2824,7 @@ async def get_import_logs(limit: int = 10):
 # ============================================================================
 
 from services.cj_dropshipping import CJDropshippingService
+from services.background_import import ImportJobManager, background_import_cj_products
 
 cj_service = CJDropshippingService()
 

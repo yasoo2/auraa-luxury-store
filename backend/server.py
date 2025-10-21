@@ -2826,8 +2826,10 @@ async def get_import_logs(limit: int = 10):
 
 from services.cj_dropshipping import CJDropshippingService
 from services.background_import import ImportJobManager, background_import_cj_products
+from services.refresh_token_manager import RefreshTokenManager
 
 cj_service = CJDropshippingService()
+refresh_token_manager = RefreshTokenManager(db)
 
 @api_router.post("/cj/authenticate")
 async def cj_authenticate():

@@ -3337,11 +3337,6 @@ async def list_import_jobs(
     except Exception as e:
         logger.error(f"Error listing jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-        }
-    
-    except Exception as e:
-        logger.error(f"Error fetching countries: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 # Enhanced AliExpress Endpoints for Tracking and Protection
 @api_router.get("/admin/aliexpress/sync/comprehensive-status")

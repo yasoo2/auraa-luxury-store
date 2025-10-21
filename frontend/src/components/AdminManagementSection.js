@@ -144,10 +144,9 @@ const AdminManagementSection = () => {
 
   const handleDeleteUser = async (userId, token) => {
     try {
-      const authToken = localStorage.getItem('token');
       await axios.delete(`${API}/admin/super-admin-delete/${userId}`, {
+        withCredentials: true,  // Use cookies instead of localStorage
         headers: { 
-          Authorization: `Bearer ${authToken}`,
           'X-Action-Token': token
         }
       });

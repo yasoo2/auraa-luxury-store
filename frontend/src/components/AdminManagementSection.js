@@ -59,7 +59,6 @@ const AdminManagementSection = () => {
   const requestVerificationCode = async (action, targetUserId, contactMethod = 'email') => {
     setSendingCode(true);
     try {
-      const token = localStorage.getItem('token');
       const response = await axios.post(
         `${API}/admin/send-verification-code`,
         {
@@ -67,7 +66,7 @@ const AdminManagementSection = () => {
           target_user_id: targetUserId,
           contact_method: contactMethod
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { withCredentials: true }  // Use cookies instead of localStorage
       );
 
       toast.success(

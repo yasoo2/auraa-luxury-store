@@ -21,6 +21,7 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);  // Add remember me state
   const turnstileRef = useRef(null);
   const [formData, setFormData] = useState({
     email: '',

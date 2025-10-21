@@ -99,13 +99,28 @@ class AxiosBaseURLFixTester:
             "password": "admin123"
         }
         
-        success, data, status = self.make_request('POST', '/auth/login', admin_credentials)
+        # Make login request and capture response details
+        url = f"{self.api_url}/auth/login"
+        response = self.session.post(url, json=admin_credentials, timeout=10)
+        
+        try:
+            data = response.json()
+        except:
+            data = {"raw_response": response.text}
+        
+        success = response.status_code < 400
+        status = response.status_code
         
         if success and data.get('success'):
             # Check if access_token is in response or if login uses cookies
             access_token = data.get('access_token')
             user_data = data.get('user', {})
             is_admin = user_data.get('is_admin', False)
+            
+            # Check cookies for access_token
+            cookies = dict(response.cookies)
+            if 'access_token' in cookies:
+                access_token = cookies['access_token']
             
             if is_admin:
                 if access_token:
@@ -115,7 +130,7 @@ class AxiosBaseURLFixTester:
                 else:
                     # Login might use cookies instead of returning token
                     self.log_test("Admin Login (admin@auraa.com)", True, 
-                                f"Login successful (cookie-based), is_admin: {is_admin}")
+                                f"Login successful (cookie-based), is_admin: {is_admin}, cookies: {list(cookies.keys())}")
                 
                 # Test GET /api/auth/me with the token - should return admin user data
                 success_me, data_me, status_me = self.make_request('GET', '/auth/me')
@@ -124,8 +139,19 @@ class AxiosBaseURLFixTester:
                     self.log_test("Admin Token Validation (/auth/me)", True, 
                                 f"Token validated, user: {data_me.get('email')}, is_admin: {data_me.get('is_admin')}")
                 else:
-                    self.log_test("Admin Token Validation (/auth/me)", False, 
-                                f"Status: {status_me}, Response: {data_me}")
+                    # If cookie auth failed, try to get token from response and use Bearer auth
+                    if not access_token and 'access_token' in data:
+                        self.admin_token = data['access_token']
+                        success_me, data_me, status_me = self.make_request('GET', '/auth/me')
+                        if success_me and data_me.get('is_admin'):
+                            self.log_test("Admin Token Validation (/auth/me)", True, 
+                                        f"Token validated with Bearer auth, user: {data_me.get('email')}")
+                        else:
+                            self.log_test("Admin Token Validation (/auth/me)", False, 
+                                        f"Status: {status_me}, Response: {data_me}")
+                    else:
+                        self.log_test("Admin Token Validation (/auth/me)", False, 
+                                    f"Status: {status_me}, Response: {data_me}")
             else:
                 self.log_test("Admin Login (admin@auraa.com)", False, 
                             f"User is not admin, is_admin: {is_admin}")

@@ -11,74 +11,8 @@ export const useAuth = () => {
   return context;
 };
 
-// Configure axios for cookie-based auth
-axios.defaults.withCredentials = true;
-
-// Setup axios interceptor for automatic token refresh
-let isRefreshing = false;
-let failedQueue = [];
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  
-  failedQueue = [];
-};
-
-axios.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // If 401 and not already retried, try to refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // Already refreshing, queue this request
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then(() => {
-            return axios(originalRequest);
-          })
-          .catch((err) => {
-            return Promise.reject(err);
-          });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
-      try {
-        // Try to refresh token
-        await axios.post(`${BACKEND_URL}/api/auth/refresh`, {}, {
-          withCredentials: true
-        });
-        
-        processQueue(null, null);
-        isRefreshing = false;
-        
-        // Retry original request
-        return axios(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        isRefreshing = false;
-        
-        // Refresh failed, redirect to login
-        window.location.href = '/';
-        return Promise.reject(refreshError);
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
+// Note: axios is already configured globally in /config/axios.js
+// All requests will automatically include credentials (cookies)
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

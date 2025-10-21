@@ -2966,96 +2966,67 @@ async def import_cj_product(product_id: str):
 
 @api_router.post("/cj/products/bulk-import")
 async def bulk_import_cj_products(
+    background_tasks: BackgroundTasks,
     keyword: Optional[str] = None,
     category_id: Optional[str] = None,
     max_products: int = 500
 ):
     """
-    Bulk import products from CJ Dropshipping
+    Bulk import products from CJ Dropshipping (Background Task)
+    
+    This endpoint starts a background import job that continues even if browser is closed.
+    Use /api/admin/import-jobs/{job_id} to check progress.
     
     Body:
         keyword: Search keyword
         category_id: Category to import from
         max_products: Maximum number of products to import (default 500)
+        
+    Returns:
+        job_id: Use this to track import progress
     """
     try:
         # Limit to 500 as per requirement
         max_products = min(max_products, 500)
         
-        logger.info(f"Starting CJ bulk import: keyword={keyword}, category={category_id}, max={max_products}")
+        logger.info(f"🚀 Starting background CJ import: keyword={keyword}, category={category_id}, max={max_products}")
         
-        # Search and retrieve products
-        products = await cj_service.bulk_search_products(
-            keyword=keyword,
-            category_id=category_id,
-            max_products=max_products
+        # Create import job
+        job_manager = ImportJobManager(db)
+        job_id = await job_manager.create_job(
+            job_type="bulk_import",
+            supplier="cj_dropshipping",
+            params={
+                "keyword": keyword,
+                "category_id": category_id,
+                "max_products": max_products
+            }
         )
         
-        imported_count = 0
-        failed_count = 0
-        imported_products = []
+        # Start background task
+        background_tasks.add_task(
+            background_import_cj_products,
+            job_id=job_id,
+            keyword=keyword,
+            category_id=category_id,
+            max_products=max_products,
+            db=db,
+            cj_service=cj_service
+        )
         
-        # Import each product
-        for product in products:
-            try:
-                product_id = product.get('pid')
-                if not product_id:
-                    continue
-                
-                # Check if already imported
-                existing = await db.products.find_one({
-                    "source": "cj_dropshipping",
-                    "external_id": product_id
-                })
-                
-                if existing:
-                    logger.debug(f"Product {product_id} already imported, skipping")
-                    continue
-                
-                # Transform and save
-                product_data = {
-                    "id": str(uuid.uuid4()),
-                    "source": "cj_dropshipping",
-                    "external_id": product_id,
-                    "name": product.get('productNameEn', ''),
-                    "description": product.get('productName', ''),
-                    "price": float(product.get('sellPrice', 0)),
-                    "original_price": float(product.get('originalPrice', 0)),
-                    "images": [product.get('productImage')] if product.get('productImage') else [],
-                    "sku": product.get('productSku', ''),
-                    "stock": product.get('sellQuantity', 0),
-                    "category": product.get('categoryName', ''),
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                    "imported_from_cj": True
-                }
-                
-                result = await db.products.insert_one(product_data)
-                product_data['_id'] = str(result.inserted_id)
-                
-                imported_products.append(product_data)
-                imported_count += 1
-                
-                # Small delay to avoid overwhelming the database
-                await asyncio.sleep(0.05)
-                
-            except Exception as e:
-                logger.error(f"Failed to import product {product.get('pid')}: {e}")
-                failed_count += 1
-        
-        logger.info(f"✅ CJ Bulk import complete: {imported_count} imported, {failed_count} failed")
+        logger.info(f"✅ Background CJ import job created: {job_id}")
         
         return {
             "success": True,
-            "message": f"Bulk import completed",
-            "total_found": len(products),
-            "imported": imported_count,
-            "failed": failed_count,
-            "products": imported_products[:10]  # Return first 10 as sample
+            "message": "Import job started in background",
+            "job_id": job_id,
+            "task_id": job_id,  # For compatibility
+            "status": "pending",
+            "note": "Import will continue even if you close your browser. Use /api/admin/import-jobs/{job_id} to check progress."
         }
         
     except Exception as e:
-        logger.error(f"Error in CJ bulk import: {e}")
+        logger.error(f"Error starting CJ bulk import: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # GeoIP and Country-specific Pricing

@@ -119,6 +119,17 @@ app.add_middleware(CustomCORSMiddleware)
 
 api_router = APIRouter(prefix="/api")
 
+# Health Check Endpoint
+@api_router.get("/health")
+async def health_check():
+    """Simple health check endpoint"""
+    return {
+        "status": "ok",
+        "service": "fastapi",
+        "version": "v1",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
 # Security
 security = HTTPBearer()
 # Password hashing is now done directly with bcrypt (see verify_password and get_password_hash functions)

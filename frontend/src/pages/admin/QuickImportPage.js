@@ -163,11 +163,11 @@ const QuickImportPage = () => {
         });
       }
       
-      // start polling progress only if task_id is available (for async operations)
+      // start polling progress for async operations (works for both CJ and AliExpress now)
       const taskId = response.data.task_id || response.data.job_id;
       
       if (taskId) {
-        // Only poll if we have a task ID (AliExpress or async operations)
+        // Start polling for job progress
         if (pollInterval) clearInterval(pollInterval);
         
         const newPollInterval = setInterval(async () => {
@@ -176,36 +176,55 @@ const QuickImportPage = () => {
             const res = await axios.get(`${API_URL}/api/admin/import-jobs/${taskId}`, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
-            const progress = res.data;
+            
+            const job = res.data;
+            
             setImportProgress({ 
-              job_id: progress.job_id, 
-              status: progress.status, 
-              percent: progress.percent, 
-              processed: progress.processed_items, 
-              total: progress.total_items 
+              job_id: job.job_id, 
+              status: job.status, 
+              percent: job.percent, 
+              processed: job.processed_items, 
+              total: job.total_items,
+              imported: job.imported,
+              failed: job.failed
             });
-            if (progress.status === 'completed' || progress.status === 'failed') {
+            
+            // Stop polling when job is complete or failed
+            if (job.status === 'completed' || job.status === 'failed') {
               clearInterval(newPollInterval);
               setPollInterval(null);
+              
+              // Refresh products list
+              await loadExternalProducts();
+              
+              if (job.status === 'completed') {
+                alert(isRTL 
+                  ? `تم الاستيراد بنجاح! ${job.imported} منتج` 
+                  : `Import completed! ${job.imported} products imported`);
+              } else {
+                alert(isRTL 
+                  ? `فشل الاستيراد: ${job.error || 'خطأ غير معروف'}` 
+                  : `Import failed: ${job.error || 'Unknown error'}`);
+              }
             }
           } catch (e) {
             console.error('Polling error:', e);
-            // stop polling on error
-            clearInterval(newPollInterval);
-            setPollInterval(null);
+            // Stop polling on error after 3 attempts
+            if (!e.response || e.response.status === 404) {
+              clearInterval(newPollInterval);
+              setPollInterval(null);
+            }
           }
-        }, 2000);
+        }, 3000); // Poll every 3 seconds
         setPollInterval(newPollInterval);
-      } else if (supplierType === 'cj') {
-        // CJ import is synchronous, show immediate result
-        const imported = response.data.imported || 0;
-        const total = response.data.total_found || importCount;
+        
+        // Initial progress state
         setImportProgress({ 
-          job_id: 'cj-import-' + Date.now(), 
-          status: 'completed', 
-          percent: 100, 
-          processed: imported, 
-          total: total 
+          job_id: taskId, 
+          status: 'pending', 
+          percent: 0,
+          processed: 0,
+          total: importCount
         });
       }
 

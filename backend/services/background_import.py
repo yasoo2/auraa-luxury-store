@@ -191,14 +191,16 @@ async def background_import_cj_products(
                     failed_count += 1
                     continue
                 
-                # Check if already exists
+                # Check if already exists IN STAGING for this job (allow re-import to live store)
                 existing = await db.products.find_one({
                     "source": "cj_dropshipping",
-                    "external_id": product_id
+                    "external_id": product_id,
+                    "staging": True,  # Only check staging area
+                    "import_job_id": job_id  # Only check current job
                 })
                 
                 if existing:
-                    logger.debug(f"Product {product_id} already exists, skipping")
+                    logger.debug(f"Product {product_id} already exists in current staging job, skipping")
                     failed_count += 1
                     continue
                 

@@ -72,7 +72,7 @@ https://auraaluxury.com,https://www.auraaluxury.com,https://*.pages.dev,https://
 
 ---
 
-## 🧪 Step 2: Test Backend Connectivity
+## 🧪 Step 3: Test Backend Connectivity
 
 After updating CORS on Render, test the backend:
 

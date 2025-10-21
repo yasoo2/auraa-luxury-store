@@ -180,6 +180,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     identifier: str  # Can be email or phone
     password: str
+    remember_me: Optional[bool] = False  # For extended refresh token TTL
 
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

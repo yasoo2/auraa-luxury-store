@@ -11,6 +11,7 @@ const axiosInstance = axios.create({
 
 // Also set defaults for the default axios instance
 axios.defaults.withCredentials = true;
+axios.defaults.baseURL = BACKEND_URL;
 
 // Setup axios interceptor for automatic token refresh
 let isRefreshing = false;

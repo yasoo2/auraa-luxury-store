@@ -55,7 +55,7 @@ if not allowed_origins:
         "https://auraaluxury.com",
         "https://www.auraaluxury.com",
         "https://api.auraaluxury.com",
-        f"https://cors-fix-15.preview.emergentagent.com",
+        f"https://luxury-import-sys.preview.emergentagent.com",
         f"https://{app_name}.emergent.host",
         "http://localhost:3000",
         "http://localhost:8001",

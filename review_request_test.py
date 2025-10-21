@@ -17,7 +17,7 @@ from typing import Dict, Any, Optional
 class ReviewRequestTester:
     def __init__(self):
         # Use environment variable from frontend/.env
-        self.base_url = "https://cors-fix-15.preview.emergentagent.com"
+        self.base_url = "https://luxury-import-sys.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.super_admin_token = None
         self.tests_run = 0
@@ -216,7 +216,7 @@ class ReviewRequestTester:
         print("\n🔗 TESTING OAUTH GOOGLE URL ENDPOINT")
         
         # Test with redirect URL parameter
-        redirect_url = "https://cors-fix-15.preview.emergentagent.com/auth/callback"
+        redirect_url = "https://luxury-import-sys.preview.emergentagent.com/auth/callback"
         params = {"redirect_url": redirect_url}
         
         success, data, status = self.make_request('GET', '/auth/oauth/google/url', params=params)

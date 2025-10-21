@@ -24,7 +24,7 @@ app.add_middleware(
         "https://auraaluxury.com",
         "https://www.auraaluxury.com",      # ✅ Added
         "https://api.auraaluxury.com",
-        "https://cors-fix-15.preview.emergentagent.com",
+        "https://luxury-import-sys.preview.emergentagent.com",
         "http://localhost:3000",
         "http://localhost:8001",
         "*"

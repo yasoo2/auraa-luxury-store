@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class ComprehensiveNewFeaturesAPITester:
-    def __init__(self, base_url="https://cors-fix-15.preview.emergentagent.com"):
+    def __init__(self, base_url="https://luxury-import-sys.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.admin_token = None

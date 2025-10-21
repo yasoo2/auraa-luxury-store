@@ -1,194 +1,192 @@
 <analysis>
-The AI engineer's trajectory chronicles a journey from initial debugging to significant feature enhancements and persistent CI/CD troubleshooting for the Auraa Luxury e-commerce platform. It began with fixing login issues and hardcoded Arabic text, followed by implementing flexible user registration and a comprehensive Super Admin management page. A key feature was Gregorian to Hijri date conversion, later reverted to Gregorian-only based on user feedback. The most recurring challenge involved CI/CD pipeline failures related to Vercel deployment secrets (, , ),  synchronization, and  dependency conflicts. Concurrently, the engineer addressed an AliExpress scheduler error, a pre-login wishlist counter bug, and is currently debugging an unresponsive logo upload functionality. The approach has been iterative, involving frequent code inspections, edits, service restarts, and detailed communication with the user for clarifications and confirmations, adapting to evolving requirements and technical hurdles.
+The AI engineer's trajectory involved extensive full-stack development, focusing on critical fixes and feature enhancements for the Auraa Luxury e-commerce platform. Initial efforts concentrated on resolving Cloudflare Pages build failures, stemming from ESLint dependency conflicts and  issues. This led to the creation of  and removal of , followed by persistent GitHub push errors (500, 403) that were eventually resolved by switching to a Classic GitHub Personal Access Token. Concurrently, the engineer addressed a  error on the  endpoint, revealing a flaw in the CJ Dropshipping API integration that expected  for a synchronous operation. This prompted the implementation of a robust asynchronous background import system with progress tracking. A user request for persistent sessions led to setting a long JWT expiry and  token storage, which was quickly rolled back due to security concerns. The engineer then meticulously re-implemented a secure authentication system using refresh tokens,  cookies, and an Axios interceptor for automated token refreshing on  errors. The most recent task involves a comprehensive overhaul of the Quick Import page, integrating new backend endpoints for health checks and background imports with real-time progress tracking, and refactoring frontend Axios configurations to resolve persistent  errors. The current state is debugging persistent  errors related to Axios base URL.
 </analysis>
 
 <product_requirements>
-Auraa Luxury is a high-end e-commerce platform with a luxurious, responsive UI, supporting multi-language (Arabic, English, Turkish, Hindi, Hebrew, Spanish, French, Russian, German) and multi-currency, including RTL/LTR. It requires a robust Admin Suite for product/order/user CRUD, analytics, and third-party integrations (e.g., AliExpress dropshipping, GA4, Gmail SMTP). The platform should feature automated CI/CD, a Wishlist, Admin Dashboard (CMS/Media/Theme Customization), legal pages, Customer Order Tracking, and multi-method authentication (Email/Phone/Google/Facebook/Twitter, password reset, delete account, Super Admin management).
+Auraa Luxury is a high-end, multi-language e-commerce platform with a responsive UI, multi-currency support, and a robust Admin Suite for product, order, user management, analytics, and third-party integrations (AliExpress, CJ Dropshipping, GA4, Gmail SMTP). Key features include automated CI/CD, Wishlist, Admin Dashboard, legal pages, Customer Order Tracking, and multi-method authentication (email/phone, Google OAuth).
 
-Recent user requests and completed implementations:
-1.  **Flexible Registration:** Users can register using either email or phone number, or both optionally.
-2.  **Super Admin Management Page:** A dedicated admin page for Super Admins to view, manage (change roles, reset passwords, activate/deactivate, delete), and gather statistics on Admin and User accounts. This section should be visible only to Super Admins and prevent the deletion of the last Super Admin. Specific default Super Admin emails (, ) were provided. Deletion and password reset actions require an email/phone confirmation code.
-3.  **Date Localization (Reverted):** Initially, automatic conversion of Gregorian dates to Hijri dates when Arabic was selected was implemented and tested. However, the user explicitly requested *all* dates to be Gregorian, removing the Hijri conversion entirely.
-4.  **CI/CD Fixes & Enhancements:**
-    *   Resolve Vercel deployment failures due to missing GitHub secrets (, , ) and incorrect Vercel CLI usage.
-    *   Fix  failure (Resource not accessible by integration) due to GitHub Workflow permissions.
-    *   Improve workflow summaries to include deployment status, production URL, and commit ID.
-    *   Resolve Unknown command: "error"
+**Implemented features during this trajectory:**
+1.  **Cloudflare Pages Migration:** Frontend migration from Vercel to Cloudflare Pages for performance and cost-efficiency, involving npm <command>
 
-To see a list of supported npm commands, run:
-  npm helps during frontend build caused by  sync issues and  dependency conflicts.
-    *   Address  errors by disabling the irrelevant  workflow.
-5.  **Wishlist Counter Fix:** Correct a bug where the wishlist counter showed 1 even before user login. The counter should only be visible when logged in, and the wishlist should be cleared on logout.
-6.  **Unresponsive Logo Upload:** Investigate and fix an issue where the logo upload button on the settings page is unresponsive.
+Usage:
+
+npm install        install all the dependencies in your project
+npm install <foo>  add the <foo> dependency to your project
+npm test           run this project's tests
+npm run <foo>      run the script named <foo>
+npm <command> -h   quick help on <command>
+npm -l             display usage info for all commands
+npm help <term>    search for help on <term>
+npm help npm       more involved overview
+
+All commands:
+
+    access, adduser, audit, bugs, cache, ci, completion,
+    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
+    edit, exec, explain, explore, find-dupes, fund, get, help,
+    help-search, hook, init, install, install-ci-test,
+    install-test, link, ll, login, logout, ls, org, outdated,
+    owner, pack, ping, pkg, prefix, profile, prune, publish,
+    query, rebuild, repo, restart, root, run-script, sbom,
+    search, set, shrinkwrap, star, stars, start, stop, team,
+    test, token, uninstall, unpublish, unstar, update, version,
+    view, whoami
+
+Specify configs in the ini-formatted file:
+    /root/.npmrc
+or on the command line via: npm <command> --key=value
+
+More configuration info: npm help config
+Configuration fields: npm help 7 config
+
+npm@10.8.2 /usr/lib/node_modules/npm enforcement,  removal, and  configuration.
+2.  **Cache Prevention System:** Implementation of a robust cache prevention system.
+3.  **CJ Dropshipping Integration:** Initial integration of CJ Dropshipping (search, details, import 1, bulk import 500).
+4.  **Background Import System:** A system for background product imports (e.g., from CJ Dropshipping) with job tracking, allowing imports to continue even if the user closes the browser.
+5.  **Secure Authentication System:** Re-implementation of authentication using refresh tokens, HttpOnly/Secure cookies, and client-side handling of token refreshing.
+6.  **Quick Import Page Overhaul:** Integration of  and  checks for the backend, binding all import buttons to a unified  endpoint, and real-time progress tracking via .
 </product_requirements>
 
 <key_technical_concepts>
--   **Full-Stack Development:** React (frontend) with Context API, FastAPI (backend).
--   **Database:** MongoDB with  for async operations; UUIDs used for IDs.
--   **Authentication:** JWT, bcrypt, Emergent Authentication (OAuth), Phone number validation, Email/Phone optional login.
--   **Internationalization (i18n):** React Context for language management, translation keys.
--   **Deployment & CI/CD:** GitHub Actions, Vercel, Kubernetes Ingress, backend                          RUNNING   pid 37, uptime 0:00:01
-code-server                      RUNNING   pid 39, uptime 0:00:01
-frontend                         STOPPED   Oct 18 02:49 AM
-mongodb                          RUNNING   pid 41, uptime 0:00:01
-supervisor> .
--   **Package Management:** yarn install v1.22.22
-[1/4] Resolving packages...
-success Already up-to-date.
-Done in 0.14s. (frontend), 
-Usage:   
-  pip <command> [options]
+-   **Full-Stack Development:** React (Context API, Hooks, ), FastAPI (BackgroundTasks, Pydantic, Middleware).
+-   **Authentication:** JWT, Refresh Tokens, HttpOnly/Secure/SameSite Cookies, Axios Interceptors, Google OAuth.
+-   **Deployment:** Cloudflare Pages, Render, GitHub Actions, npm <command>
 
-Commands:
-  install                     Install packages.
-  lock                        Generate a lock file.
-  download                    Download packages.
-  uninstall                   Uninstall packages.
-  freeze                      Output installed packages in requirements format.
-  inspect                     Inspect the python environment.
-  list                        List installed packages.
-  show                        Show information about installed packages.
-  check                       Verify installed packages have compatible dependencies.
-  config                      Manage local and global configuration.
-  search                      Search PyPI for packages.
-  cache                       Inspect and manage pip's wheel cache.
-  index                       Inspect information available from package indexes.
-  wheel                       Build wheels from your requirements.
-  hash                        Compute hashes of package archives.
-  completion                  A helper command used for command completion.
-  debug                       Show information useful for debugging.
-  help                        Show help for commands.
+Usage:
 
-General Options:
-  -h, --help                  Show help.
-  --debug                     Let unhandled exceptions propagate outside the
-                              main subroutine, instead of logging them to
-                              stderr.
-  --isolated                  Run pip in an isolated mode, ignoring
-                              environment variables and user configuration.
-  --require-virtualenv        Allow pip to only run in a virtual environment;
-                              exit with an error otherwise.
-  --python <python>           Run pip with the specified Python interpreter.
-  -v, --verbose               Give more output. Option is additive, and can be
-                              used up to 3 times.
-  -V, --version               Show version and exit.
-  -q, --quiet                 Give less output. Option is additive, and can be
-                              used up to 3 times (corresponding to WARNING,
-                              ERROR, and CRITICAL logging levels).
-  --log <path>                Path to a verbose appending log.
-  --no-input                  Disable prompting for input.
-  --keyring-provider <keyring_provider>
-                              Enable the credential lookup via the keyring
-                              library if user input is allowed. Specify which
-                              mechanism to use [auto, disabled, import,
-                              subprocess]. (default: auto)
-  --proxy <proxy>             Specify a proxy in the form
-                              scheme://[user:passwd@]proxy.server:port.
-  --retries <retries>         Maximum attempts to establish a new HTTP
-                              connection. (default: 5)
-  --timeout <sec>             Set the socket timeout (default 15 seconds).
-  --exists-action <action>    Default action when a path already exists:
-                              (s)witch, (i)gnore, (w)ipe, (b)ackup, (a)bort.
-  --trusted-host <hostname>   Mark this host or host:port pair as trusted,
-                              even though it does not have valid or any HTTPS.
-  --cert <path>               Path to PEM-encoded CA certificate bundle. If
-                              provided, overrides the default. See 'SSL
-                              Certificate Verification' in pip documentation
-                              for more information.
-  --client-cert <path>        Path to SSL client certificate, a single file
-                              containing the private key and the certificate
-                              in PEM format.
-  --cache-dir <dir>           Store the cache data in <dir>.
-  --no-cache-dir              Disable the cache.
-  --disable-pip-version-check
-                              Don't periodically check PyPI to determine
-                              whether a new version of pip is available for
-                              download. Implied with --no-index.
-  --no-color                  Suppress colored output.
-  --use-feature <feature>     Enable new functionality, that may be backward
-                              incompatible.
-  --use-deprecated <feature>  Enable deprecated functionality, that will be
-                              removed in the future.
-  --resume-retries <resume_retries>
-                              Maximum attempts to resume or restart an
-                              incomplete download. (default: 5) (backend).
+npm install        install all the dependencies in your project
+npm install <foo>  add the <foo> dependency to your project
+npm test           run this project's tests
+npm run <foo>      run the script named <foo>
+npm <command> -h   quick help on <command>
+npm -l             display usage info for all commands
+npm help <term>    search for help on <term>
+npm help npm       more involved overview
+
+All commands:
+
+    access, adduser, audit, bugs, cache, ci, completion,
+    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
+    edit, exec, explain, explore, find-dupes, fund, get, help,
+    help-search, hook, init, install, install-ci-test,
+    install-test, link, ll, login, logout, ls, org, outdated,
+    owner, pack, ping, pkg, prefix, profile, prune, publish,
+    query, rebuild, repo, restart, root, run-script, sbom,
+    search, set, shrinkwrap, star, stars, start, stop, team,
+    test, token, uninstall, unpublish, unstar, update, version,
+    view, whoami
+
+Specify configs in the ini-formatted file:
+    /root/.npmrc
+or on the command line via: npm <command> --key=value
+
+More configuration info: npm help config
+Configuration fields: npm help 7 config
+
+npm@10.8.2 /usr/lib/node_modules/npm, backend                          RUNNING   pid 41, uptime 0:00:02
+code-server                      RUNNING   pid 42, uptime 0:00:02
+frontend                         STOPPED   Oct 21 04:41 PM
+mongodb                          RUNNING   pid 45, uptime 0:00:02
+supervisor> , .
+-   **API Integration:** CJ Dropshipping.
+-   **Concurrency/Asynchronous Processing:** FastAPI BackgroundTasks for long-running imports.
+-   **Code Quality:** ESLint (disabled during build due to CI environment).
 </key_technical_concepts>
 
 <code_architecture>
-The application utilizes a React frontend and a FastAPI backend, configured via  files.
+The application is structured as a monorepo with a React frontend and a FastAPI backend.
 
 
+-   ** (NEW)**: Enforces npm <command>
 
--   ****:
-    -   **Importance**: Main FastAPI application and API router.
-    -   **Changes**:  routes were moved here from  to fix routing issues. Login/register endpoints updated for optional email/phone. Fixed Statistics API endpoint logic. Added new Pydantic models (, ) and API endpoints (, ) for the new verification system.
--   ****:
-    -   **Importance**: Schedules AliExpress product synchronization tasks.
-    -   **Changes**: Fixed errors related to non-existent methods () and incorrect parameter () usage in method calls.
--   ****:
-    -   **Importance**: Handles sending emails.
-    -   **Changes**: Added  function to send OTPs.
--   ****:
-    -   **Importance**: Manages frontend dependencies.
-    -   **Changes**:  was added, then removed.  were added to address  dependency conflicts, later resolved by 
-up to date, audited 1 package in 506ms
+Usage:
 
-found 0 vulnerabilities after  cleanup.
+npm install        install all the dependencies in your project
+npm install <foo>  add the <foo> dependency to your project
+npm test           run this project's tests
+npm run <foo>      run the script named <foo>
+npm <command> -h   quick help on <command>
+npm -l             display usage info for all commands
+npm help <term>    search for help on <term>
+npm help npm       more involved overview
+
+All commands:
+
+    access, adduser, audit, bugs, cache, ci, completion,
+    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
+    edit, exec, explain, explore, find-dupes, fund, get, help,
+    help-search, hook, init, install, install-ci-test,
+    install-test, link, ll, login, logout, ls, org, outdated,
+    owner, pack, ping, pkg, prefix, profile, prune, publish,
+    query, rebuild, repo, restart, root, run-script, sbom,
+    search, set, shrinkwrap, star, stars, start, stop, team,
+    test, token, uninstall, unpublish, unstar, update, version,
+    view, whoami
+
+Specify configs in the ini-formatted file:
+    /root/.npmrc
+or on the command line via: npm <command> --key=value
+
+More configuration info: npm help config
+Configuration fields: npm help 7 config
+
+npm@10.8.2 /usr/lib/node_modules/npm usage.
+-   ****: Updated with  for Cloudflare domains.
 -   ****:
-    -   **Importance**: Application navigation bar.
-    -   **Changes**: Conditional link to  for Super Admins. Improved responsiveness of the Manage Admins button. Modified wishlist counter to display only when a user is logged in.
--   ****:
-    -   **Importance**: Main Admin Dashboard entry point.
-    -   **Changes**: Imported . Added a new conditional tab for Admin Management (only for Super Admins) and integrated the new  component.
+    -   **Important:** Central backend file, defines FastAPI app, routes, and middleware.
+    -   **Changes:**
+        -   Modified CORS configuration to allow credentials from Cloudflare Pages domains.
+        -   Updated  to integrate with the new background import system.
+        -   Added  (POST) to initiate background import jobs.
+        -   Added  (GET) to track import progress.
+        -   Added  and  endpoints for backend health checks.
+        -   Login/Register endpoints modified to use HttpOnly cookies for JWT and refresh tokens.
+        -    set to 15 (or 30 max) and refresh tokens handle long sessions.
 -   ** (NEW)**:
-    -   **Importance**: Dedicated component for Super Admin management functionalities (tables for admins/users, role changes, password resets, deletion).
-    -   **Changes**: New file created to encapsulate the Super Admin UI, integrating with the new backend verification system.
--   ****:
-    -   **Importance**: Manages user authentication state.
-    -   **Changes**: Updated  function to explicitly call  from .
--   ****:
-    -   **Importance**: Manages user wishlist.
-    -   **Changes**:  modified to only load wishlist items if a user token exists (i.e., user is logged in).
+    -   **Important:** Contains the logic for running product import tasks asynchronously in the background.
+    -   **Changes:** Implements  to simulate batch imports and update .
 -   ** (NEW)**:
-    -   **Importance**: Temporary page for testing date conversion.
-    -   **Changes**: Created to demonstrate Hijri conversion, then updated to verify removal of Hijri conversion and consistent Gregorian display.
+    -   **Important:** Manages the creation, storage, and rotation of refresh tokens for secure authentication.
+    -   **Changes:** Provides functions for generating, storing (hashed in DB), and revoking refresh tokens.
+-   ** (NEW in frontend folder)**: Specifically for frontend to enforce npm usage.
+-   ** (NEW)**: Stores production environment variables like  and .
+-   ** (NEW)**:
+    -   **Important:** Centralized Axios instance with default configurations including  and  for consistent API calls.
+    -   **Changes:** Configures Axios for secure, credentialed requests and handles  errors by attempting token refresh.
+-   ** (REWRITTEN)**:
+    -   **Important:** Manages user authentication state.
+    -   **Changes:** Replaced  usage with HttpOnly cookies, integrated with the new Axios interceptor, and handles automatic token refreshing.
 -   ****:
-    -   **Importance**: Utility functions for date formatting.
-    -   **Changes**: Initially implemented  for Hijri conversion. Later, all Hijri conversion logic and references to  were removed as per user request, ensuring all dates are Gregorian.
+    -   **Important:** Handles user login and registration UI.
+    -   **Changes:** Added a Remember me checkbox to control refresh token TTL and updated  to pass this preference.
+-   ** (REWRITTEN)**:
+    -   **Important:** Admin interface for bulk product imports.
+    -   **Changes:** Completely rewritten to check backend health/readiness, bind all import buttons to a unified  endpoint, implement real-time progress polling, and display  notifications.
 -   ****:
-    -   **Importance**: Main routing configuration.
-    -   **Changes**: Added route for .
--   **GitHub Actions Workflows ()**:
-    -   **Importance**: Automate CI/CD for frontend (Vercel) and backend (Render - now disabled) and pull request auto-merging.
-    -   **Changes**:  was updated to use direct Vercel CLI commands, improve logging (deployment URL, summary), and handle 
-up to date, audited 1 package in 512ms
-
-found 0 vulnerabilities more robustly to fix  issues and  dependency conflicts.  and  were updated to address Resource not accessible errors, likely by instructing user on GitHub Workflow permissions.  was disabled to resolve  errors as Render is not used.
--   **Documentation ( and other root-level  files)**:
-    -   **Importance**: Provide guidelines and troubleshooting steps for CI/CD setup.
-    -   **Changes**: Multiple new markdown files were created to guide the user through setting up Vercel secrets, adding them to GitHub, testing deployments, and troubleshooting common CI/CD issues.
+    -   **Important:** Entry point for the React application.
+    -   **Changes:** Imports and initializes the central  configuration.
 </code_architecture>
 
 <pending_tasks>
 -   Integrate Payoneer payment gateway.
 -   Implement multi-channel notifications (SMS/WhatsApp).
 -   Complete full translation for remaining languages (emails).
--   Develop remaining Admin Dashboard modules (store settings).
--   Implement AI features, product comparison, PWA, Live Chat, Anti-Screenshot.
+-   Develop remaining Admin Dashboard modules (store settings, content management).
+-   Implement AI features, product comparison, PWA (further enhancements), Live Chat, Anti-Screenshot.
 -   Obtain AliExpress API keys.
--   Complete Cloudflare DNS/GSC.
--   Real-world email/GA4 testing.
+-   Perform real-world email/GA4 testing.
 -   Enhance email templates (branding).
--   Resolve  secret (This was identified as a non-issue as Render backend deployment was disabled).
--   **Ongoing**: Full Multi-method authentication (OAuth, account linking, phone verification, delete account - basic registration flow for email/phone done, but OAuth account linking not fully detailed).
--   **Immediate**: Fix the unresponsive logo upload functionality.
--   **User Action Required**: Activate GitHub Workflow permissions (Read and Write) for  to fix Resource not accessible by integration errors.
+-   Ongoing: Full Multi-method authentication (OAuth account linking, delete account).
+-   Manual action required by user: Complete Cloudflare Pages frontend migration and update backend CORS (this was partially done by the agent, but manual steps are still required from user).
+-   Address  and other ESLint warnings.
 </pending_tasks>
 
 <current_work>
-Immediately before this summary request, the AI engineer was addressing a user-reported bug: عند رفع ملف الشعار لا يستجيب (When uploading the logo file, it doesn't respond). The user provided a screenshot which the AI engineer analyzed, confirming that the logo upload button in the settings page (presumably within the Admin Dashboard) is indeed unresponsive. The current step is to investigate the cause of this unresponsiveness by examining the relevant frontend code responsible for the logo upload functionality. This involves identifying the specific component handling the upload, checking its event listeners, API calls, and any associated state management. The engineer is at the very beginning of diagnosing this issue.
+Immediately before this summary request, the AI engineer was addressing persistent authentication issues ( errors) reported by the user, specifically on admin endpoints like , even after implementing the secure authentication system with refresh tokens and HttpOnly cookies. The problem description also indicated a  message, suggesting connectivity or configuration issues.
+
+The AI engineer's most recent action (Chat Message 527) was to diagnose that  might be causing CORS-related problems in the frontend's Axios configuration, and planned to fix it. This indicates that despite the comprehensive secure authentication implementation (backend and frontend), and the Quick Import page overhaul, some fundamental API communication or authentication handshake is still failing between the frontend and backend, particularly for credentialed requests. The backend health and readiness checks were passing at one point, but the latest user report shows health check failures, which needs immediate attention.
 </current_work>
 
 <optional_next_step>
-Investigate the frontend code responsible for the logo upload functionality to diagnose why the button is unresponsive.
+Fix the  configuration in  to resolve persistent  errors and  messages.
 </optional_next_step>

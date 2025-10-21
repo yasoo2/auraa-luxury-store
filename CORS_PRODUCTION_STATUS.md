@@ -14,7 +14,7 @@
 
 ### 2. الاختبار المحلي ✅
 ```bash
-curl -X POST https://cors-fix-15.preview.emergentagent.com/api/auth/login \
+curl -X POST https://luxury-import-sys.preview.emergentagent.com/api/auth/login \
   -H "Origin: https://www.auraaluxury.com" \
   -H "Content-Type: application/json"
 

@@ -73,7 +73,7 @@ class AuraaLuxuryAPITester:
     def test_root_endpoint(self):
         """Test API root endpoint"""
         success, data, status = self.make_request('GET', '/')
-        expected_message = "Welcome to Auraa Luxury API"
+        expected_message = "Welcome to لورا لاكشري API"
         
         if success and data.get('message') == expected_message:
             self.log_test("API Root Endpoint", True, f"Status: {status}")

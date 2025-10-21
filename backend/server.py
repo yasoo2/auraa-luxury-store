@@ -145,7 +145,7 @@ RATE_LIMIT_ATTEMPTS = 5
 RATE_LIMIT_WINDOW = 900  # 15 minutes in seconds
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Short-lived access token
-REFRESH_TOKEN_EXPIRE_DAYS = 365  # Long-lived refresh token (1 year - effectively permanent until user logs out)
+REFRESH_TOKEN_EXPIRE_DAYS = 3650  # 10 years - effectively permanent until user logs out
 
 # Enums
 class OrderStatus(str, Enum):

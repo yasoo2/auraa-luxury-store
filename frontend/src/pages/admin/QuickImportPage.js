@@ -108,9 +108,7 @@ export default function QuickImportPage() {
 
     pollIntervalRef.current = setInterval(async () => {
       try {
-        const response = await axios.get(`${API_BASE}/api/imports/${jobId}/status`, {
-          withCredentials: false
-        });
+        const response = await axios.get(`/api/imports/${jobId}/status`);
         
         const status = response.data;
         

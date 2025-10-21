@@ -18,6 +18,7 @@ class AxiosBaseURLFixTester:
         self.tests_run = 0
         self.tests_passed = 0
         self.failed_tests = []
+        self.session = requests.Session()  # Use session to maintain cookies
         
     def log_test(self, test_name: str, success: bool, details: str = ""):
         """Log test results"""

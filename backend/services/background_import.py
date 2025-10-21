@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
+from .pricing_service import pricing_service
 
 logger = logging.getLogger(__name__)
 

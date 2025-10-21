@@ -5,49 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 const API_BASE = process.env.REACT_APP_BACKEND_URL || '';
 
-// جميع الأزرار المطلوبة في صفحة الاستيراد السريع
-const IMPORT_BUTTONS = [
-  // CJ Dropshipping Buttons - كلها حمراء
-  { 
-    label: '🔴 استيراد 50 منتج (CJ)', 
-    labelEn: '🔴 Import 50 (CJ)',
-    source: 'cj', 
-    count: 50,
-    color: 'from-red-500 to-red-700',
-    keyword: 'luxury jewelry'
-  },
-  { 
-    label: '🔴 استيراد 100 منتج (CJ)', 
-    labelEn: '🔴 Import 100 (CJ)',
-    source: 'cj', 
-    count: 100,
-    color: 'from-red-500 to-red-700',
-    keyword: 'luxury watches'
-  },
-  { 
-    label: '🔴 استيراد 200 منتج (CJ)', 
-    labelEn: '🔴 Import 200 (CJ)',
-    source: 'cj', 
-    count: 200,
-    color: 'from-red-500 to-red-700',
-    keyword: 'luxury accessories'
-  },
-  { 
-    label: '🔴 استيراد 500 منتج (CJ)', 
-    labelEn: '🔴 Import 500 (CJ)',
-    source: 'cj', 
-    count: 500,
-    color: 'from-red-500 to-red-700',
-    keyword: 'luxury'
-  },
-  // AliExpress Buttons (if needed)
-  { 
-    label: '🔴 استيراد 50 منتج (AliExpress)', 
-    labelEn: '🔴 Import 50 (AliExpress)',
-    source: 'aliexpress', 
-    count: 50,
-    color: 'from-red-500 to-red-700',
-    keyword: 'jewelry'
+// تم إزالة الأزرار القديمة - سيتم استخدام مربع إدخال + زر واحد
   },
 ];
 

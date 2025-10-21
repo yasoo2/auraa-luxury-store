@@ -163,12 +163,13 @@ const QuickImportPage = () => {
         });
       }
       
-      // start polling progress only if task_id is available
+      // start polling progress only if task_id is available (for async operations)
       const taskId = response.data.task_id || response.data.job_id;
       
-      if (taskId && pollInterval) clearInterval(pollInterval);
-      
       if (taskId) {
+        // Only poll if we have a task ID (AliExpress or async operations)
+        if (pollInterval) clearInterval(pollInterval);
+        
         const newPollInterval = setInterval(async () => {
           try {
             const token = localStorage.getItem('token');
@@ -195,6 +196,17 @@ const QuickImportPage = () => {
           }
         }, 2000);
         setPollInterval(newPollInterval);
+      } else if (supplierType === 'cj') {
+        // CJ import is synchronous, show immediate result
+        const imported = response.data.imported || 0;
+        const total = response.data.total_found || importCount;
+        setImportProgress({ 
+          job_id: 'cj-import-' + Date.now(), 
+          status: 'completed', 
+          percent: 100, 
+          processed: imported, 
+          total: total 
+        });
       }
 
 

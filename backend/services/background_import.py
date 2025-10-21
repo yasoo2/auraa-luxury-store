@@ -202,23 +202,45 @@ async def background_import_cj_products(
                     failed_count += 1
                     continue
                 
+                # Calculate pricing with automatic markup (200% profit + taxes + shipping)
+                base_cost = float(product.get('sellPrice', 0))
+                shipping_cost = float(product.get('shippingPrice', 0))
+                weight = float(product.get('weight', 0.5))
+                
+                # Calculate final price for Saudi Arabia (default)
+                pricing = pricing_service.calculate_final_price(
+                    base_cost=base_cost,
+                    shipping_cost=shipping_cost,
+                    country_code="SA",  # Default country
+                    weight_kg=weight,
+                    original_currency="USD"  # CJ prices are usually in USD
+                )
+                
                 # Create product document
                 product_data = {
                     "id": str(uuid.uuid4()),
                     "source": "cj_dropshipping",
                     "external_id": product_id,
                     "name": product.get('productNameEn', ''),
+                    "name_ar": product.get('productName', ''),
                     "description": product.get('productName', ''),
-                    "price": float(product.get('sellPrice', 0)),
-                    "original_price": float(product.get('originalPrice', 0)),
+                    "description_ar": product.get('productName', ''),
+                    "price": pricing['final_price_sar'],  # Auto-calculated price with profit + tax + shipping
+                    "original_price": pricing['breakdown']['base_cost_sar'],  # Original cost for reference
+                    "supplier_price": base_cost,  # CJ price
+                    "supplier_shipping": shipping_cost,
+                    "price_breakdown": pricing['breakdown'],  # Full pricing details
                     "images": [product.get('productImage')] if product.get('productImage') else [],
                     "sku": product.get('productSku', ''),
                     "stock": product.get('sellQuantity', 0),
+                    "in_stock": True,
                     "category": product.get('categoryName', ''),
+                    "weight_kg": weight,
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "updated_at": datetime.now(timezone.utc).isoformat(),
                     "imported_from_cj": True,
-                    "import_job_id": job_id
+                    "import_job_id": job_id,
+                    "pricing_auto_calculated": True
                 }
                 
                 await db.products.insert_one(product_data)

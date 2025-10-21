@@ -665,6 +665,119 @@ async def process_oauth_session(
         "needs_phone": not user.get("phone")  # Indicate if phone is needed
     }
 
+# Refresh Token Endpoint
+@api_router.post("/auth/refresh")
+async def refresh_access_token(request: Request, response: Response):
+    """
+    Refresh access token using refresh token from cookie
+    Implements token rotation for security
+    """
+    # Get refresh token from cookie
+    refresh_token = request.cookies.get("refresh_token")
+    
+    if not refresh_token:
+        raise HTTPException(
+            status_code=401,
+            detail="No refresh token provided"
+        )
+    
+    # Get device info
+    device_info = {
+        "user_agent": request.headers.get("user-agent", ""),
+        "ip": request.client.host if request.client else "",
+        "device_id": request.headers.get("x-device-id", "")
+    }
+    
+    # Rotate refresh token (validate old, create new)
+    new_refresh_token = await refresh_token_manager.rotate_token(
+        old_token=refresh_token,
+        device_info=device_info
+    )
+    
+    if not new_refresh_token:
+        # Token invalid/expired
+        response.delete_cookie(key="access_token", path="/")
+        response.delete_cookie(key="refresh_token", path="/")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired refresh token"
+        )
+    
+    # Get user from old token
+    old_token_doc = await refresh_token_manager.validate_token(refresh_token)
+    if not old_token_doc:
+        # This shouldn't happen as rotate_token already validated, but double check
+        raise HTTPException(status_code=401, detail="Token validation failed")
+    
+    user_id = old_token_doc["user_id"]
+    
+    # Get user data
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Create new access token
+    is_super_admin = user.get("is_super_admin", False)
+    access_token = create_access_token(
+        data={"sub": user_id, "is_super_admin": is_super_admin}
+    )
+    
+    # Set new cookies
+    remember_me = old_token_doc.get("remember_me", False)
+    
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/"
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=(60 if remember_me else 30) * 24 * 60 * 60,
+        path="/"
+    )
+    
+    logger.info(f"✅ Tokens refreshed for user: {user_id}")
+    
+    user_obj = User(**{k: v for k, v in user.items() if k != "password"})
+    
+    return {
+        "success": True,
+        "user": user_obj,
+        "message": "Tokens refreshed successfully"
+    }
+
+# Logout Endpoint
+@api_router.post("/auth/logout")
+async def logout(request: Request, response: Response):
+    """
+    Logout user and revoke refresh token
+    Clears all auth cookies
+    """
+    # Get refresh token from cookie
+    refresh_token = request.cookies.get("refresh_token")
+    
+    if refresh_token:
+        # Revoke refresh token
+        await refresh_token_manager.revoke_token(refresh_token)
+        logger.info("✅ Refresh token revoked")
+    
+    # Clear cookies
+    response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="refresh_token", path="/")
+    
+    logger.info("✅ User logged out successfully")
+    
+    return {"success": True, "message": "Logged out successfully"}
+
 # Delete Account Endpoint
 @api_router.delete("/auth/delete-account")
 async def delete_account(current_user: dict = Depends(get_current_user)):

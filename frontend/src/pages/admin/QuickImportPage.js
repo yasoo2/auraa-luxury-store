@@ -22,10 +22,10 @@ const QuickImportPage = () => {
 
   const checkBackendHealth = async () => {
     try {
-      const healthResponse = await axios.get('/api/health', { timeout: 5000 });
-      const readyResponse = await axios.get('/api/readiness', { timeout: 5000 });
+      const healthResponse = await apiGet('/api/health');
+      const readyResponse = await apiGet('/api/readiness');
       
-      if (healthResponse.data?.status === 'ok' && readyResponse.data?.status === 'ready') {
+      if (healthResponse?.status === 'ok' && readyResponse?.status === 'ready') {
         setBackendReady(true);
         toast.success('✅ الخلفية جاهزة!', { autoClose: 2000 });
       } else {

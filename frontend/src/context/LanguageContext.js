@@ -97,7 +97,7 @@ export const LanguageProvider = ({ children }) => {
     fetchExchangeRates();
     const interval = setInterval(fetchExchangeRates, 3600000); // refresh hourly
     return () => clearInterval(interval);
-  }, [BACKEND_URL]);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('language', language);

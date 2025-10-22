@@ -149,7 +149,7 @@ async def background_import_cj_products(
 ):
     """
     Background task to import CJ products
-    Runs independently and updates job status in database
+    Uses new rate-limited import service with retry mechanism
     """
     job_manager = ImportJobManager(db)
     
@@ -157,19 +157,21 @@ async def background_import_cj_products(
         # Update status to running
         await job_manager.update_job_status(job_id, "running")
         
-        logger.info(f"🚀 Starting background CJ import job: {job_id}")
+        logger.info(f"🚀 Starting background CJ import job: {job_id} (Rate Limited)")
         
-        # Search products
-        products = await cj_service.bulk_search_products(
-            keyword=keyword,
-            category_id=category_id,
-            max_products=max_products
+        # Use new rate-limited bulk import
+        import_results = await bulk_import_products(
+            total_count=max_products,
+            keyword=keyword or "luxury jewelry"
         )
         
+        products = import_results.get("products", [])
         total = len(products)
         imported_count = 0
         failed_count = 0
         imported_products = []
+        
+        logger.info(f"📦 Fetched {total} products from CJ (requested {max_products})")
         
         # Update progress - products found
         await job_manager.update_job_status(
@@ -180,7 +182,8 @@ async def background_import_cj_products(
                 "processed": 0,
                 "imported": 0,
                 "failed": 0,
-                "percent": 0
+                "percent": 0,
+                "batches_info": import_results.get("batches", [])
             }
         )
         

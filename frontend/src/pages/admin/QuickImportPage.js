@@ -112,7 +112,7 @@ const QuickImportPage = () => {
     if (!editingProduct) return;
 
     try {
-      await axios.put(`/api/products/staging/${editingProduct.id}`, editingProduct);
+      await apiPut(`/api/products/staging/${editingProduct.id}`, editingProduct);
       
       // Update in staging list
       setStagingProducts(prev => 

@@ -31,17 +31,12 @@ const OrderTracking = () => {
   const loadUserOrders = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/orders/my-orders`, {
+      const data = await apiGet('/api/orders/my-orders', {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${token}`
         }
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserOrders(data.orders || []);
-      }
+      setUserOrders(data.orders || []);
     } catch (error) {
       console.error('Error loading user orders:', error);
     }

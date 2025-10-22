@@ -5140,5 +5140,15 @@ async def publish_staging_products(data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================================================
+# CJ ADMIN ROUTES - Rate Limited & Protected
+# ============================================================================
+try:
+    from routes.cj_admin import router as cj_admin_router
+    app.include_router(cj_admin_router)
+    logger.info("✅ CJ Admin routes loaded with rate limiting")
+except Exception as e:
+    logger.error(f"⚠️ Failed to load CJ Admin routes: {e}")
+
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

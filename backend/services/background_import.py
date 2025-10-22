@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
 from .pricing_service import pricing_service
+from .import_service import bulk_import_products
 
 logger = logging.getLogger(__name__)
 

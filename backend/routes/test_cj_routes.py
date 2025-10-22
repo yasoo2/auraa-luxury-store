@@ -6,7 +6,7 @@ from typing import Dict
 import asyncio
 import logging
 
-from services.cj_dropshipping import CJDropshipping
+from services.cj_dropshipping import CJDropshippingService, get_cj_service
 from middleware.auth import verify_super_admin
 
 router = APIRouter()

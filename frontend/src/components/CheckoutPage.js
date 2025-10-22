@@ -108,8 +108,14 @@ const CheckoutPage = () => {
       setShippingEstimate({ loading: false, cost, days, error: null });
     } catch (e) {
       console.error('estimateShipping error', e);
-      setShippingEstimate({ loading: false, cost: 0, days: null, error: 'server' });
-      toast.error(isRTL ? 'تعذر حساب الشحن' : 'Failed to estimate shipping');
+      // Check if error is 400 (unavailable)
+      if (e.message && e.message.includes('400')) {
+        setShippingEstimate({ loading: false, cost: 0, days: null, error: 'unavailable' });
+        toast.error(isRTL ? 'الشحن غير متاح لبلدك' : 'Shipping is not available for your country');
+      } else {
+        setShippingEstimate({ loading: false, cost: 0, days: null, error: 'server' });
+        toast.error(isRTL ? 'تعذر حساب الشحن' : 'Failed to estimate shipping');
+      }
     }
   };
 

@@ -220,10 +220,8 @@ const AdminDashboard = () => {
             <Route path="/products" element={<EnhancedProductsPage />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/users" element={<UsersPage />} />
-            <Route path="/aliexpress" element={<AliExpressPage />} />
             <Route path="/quick-import" element={<QuickImportPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
-            <Route path="/aliexpress-tracking" element={<AliExpressTrackingPage />} />
             <Route path="/content-protection" element={<ContentProtectionPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />

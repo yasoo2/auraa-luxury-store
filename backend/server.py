@@ -239,6 +239,55 @@ async def generate_sitemap():
 # Import Service Endpoints
 # ======================================
 
+@api_router.post("/imports/start")
+async def start_import_job(
+    background_tasks: BackgroundTasks,
+    source: str = "cj",
+    count: int = 50,
+    batch_size: int = 20,
+    keyword: str = "luxury jewelry accessories"
+):
+    """
+    Start a new import job from CJ Dropshipping
+    Returns job_id for tracking progress
+    """
+    try:
+        if count < 1 or count > 1000:
+            raise HTTPException(status_code=400, detail="Count must be between 1 and 1000")
+        
+        if source != "cj":
+            raise HTTPException(status_code=400, detail="Only 'cj' source is supported")
+        
+        job_manager = ImportJobManager(db)
+        job_id = await job_manager.create_job(
+            source=source,
+            total=count,
+            keyword=keyword
+        )
+        
+        logger.info(f"🚀 Starting CJ import job {job_id}: {count} products with keyword '{keyword}'")
+        
+        # Start background import
+        background_tasks.add_task(
+            background_import_cj_products,
+            job_id=job_id,
+            total_count=count,
+            keyword=keyword,
+            db=db
+        )
+        
+        return {
+            "success": True,
+            "jobId": job_id,
+            "message": f"Import job started for {count} products"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to start import job: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/imports/{job_id}/status")
 async def get_unified_import_status(job_id: str):
     """

@@ -34,7 +34,7 @@ if not allowed_origins:
         "https://auraaluxury.com",
         "https://www.auraaluxury.com",
         "https://api.auraaluxury.com",
-        "https://luxury-import-sys.preview.emergentagent.com",  # ❌ Hardcoded
+        "https://cjdrop-import.preview.emergentagent.com",  # ❌ Hardcoded
         "https://auraa-admin-1.emergent.host",                # ❌ Hardcoded
         "http://localhost:3000",
         "http://localhost:8001",
@@ -51,7 +51,7 @@ if not allowed_origins:
         "https://auraaluxury.com",
         "https://www.auraaluxury.com",
         "https://api.auraaluxury.com",
-        f"https://luxury-import-sys.preview.emergentagent.com",  # ✅ Dynamic
+        f"https://cjdrop-import.preview.emergentagent.com",  # ✅ Dynamic
         f"https://{app_name}.emergent.host",              # ✅ Dynamic
         "http://localhost:3000",
         "http://localhost:8001",

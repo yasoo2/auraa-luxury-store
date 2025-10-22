@@ -9,7 +9,7 @@
 ### 1. Environment Variables Updated
 **Location**: `/app/frontend/.env`
 ```env
-BEFORE: REACT_APP_BACKEND_URL=https://luxury-import-sys.preview.emergentagent.com
+BEFORE: REACT_APP_BACKEND_URL=https://cjdrop-import.preview.emergentagent.com
 AFTER:  REACT_APP_BACKEND_URL=https://api.auraaluxury.com
 ```
 

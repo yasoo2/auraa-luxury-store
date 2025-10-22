@@ -10,7 +10,7 @@ allow_origins=[
     "https://auraaluxury.com",
     "https://www.auraaluxury.com",              # ✅ Production
     "https://api.auraaluxury.com",              # ✅ API domain
-    "https://luxury-import-sys.preview.emergentagent.com",  # ✅ Preview
+    "https://cjdrop-import.preview.emergentagent.com",  # ✅ Preview
     "https://auraa-admin-1.emergent.host",      # ✅ Emergent Production
     "http://localhost:3000",                    # ✅ Dev
     "http://localhost:8001",                    # ✅ Dev

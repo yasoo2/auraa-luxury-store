@@ -95,7 +95,7 @@ allowed_origins = [
     "https://auraaluxury.com",
     "https://www.auraaluxury.com",  ✅
     "https://api.auraaluxury.com",
-    "https://luxury-import-sys.preview.emergentagent.com",
+    "https://cjdrop-import.preview.emergentagent.com",
     "https://auraa-admin-1.emergent.host",
     "http://localhost:3000",
     "http://localhost:8001",

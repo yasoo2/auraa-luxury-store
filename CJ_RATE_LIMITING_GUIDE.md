@@ -96,7 +96,7 @@ CJ_MAX_CONCURRENCY=1    # طلب واحد في كل مرة
 
 **من المتصفح أو Postman:**
 ```
-GET https://luxury-import-sys.preview.emergentagent.com/admin/cj/ping
+GET https://cjdrop-import.preview.emergentagent.com/admin/cj/ping
 ```
 
 **الاستجابة المتوقعة:**
@@ -113,7 +113,7 @@ GET https://luxury-import-sys.preview.emergentagent.com/admin/cj/ping
 ### 2. اختبار التوثيق
 
 ```
-GET https://luxury-import-sys.preview.emergentagent.com/admin/cj/test-auth
+GET https://cjdrop-import.preview.emergentagent.com/admin/cj/test-auth
 ```
 
 **الاستجابة المتوقعة:**
@@ -131,7 +131,7 @@ GET https://luxury-import-sys.preview.emergentagent.com/admin/cj/test-auth
 
 **من Postman:**
 ```
-POST https://luxury-import-sys.preview.emergentagent.com/admin/cj/import/bulk
+POST https://cjdrop-import.preview.emergentagent.com/admin/cj/import/bulk
 
 Body (JSON):
 {

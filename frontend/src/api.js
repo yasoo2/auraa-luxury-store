@@ -2,8 +2,10 @@
  * Centralized API Helper for Auraa Luxury
  * 
  * Uses environment variables for configuration:
- * - REACT_APP_API_URL: Backend API base URL
- * - REACT_APP_X_API_KEY: Optional API key for authentication
+ * - REACT_APP_API_URL or REACT_APP_BACKEND_URL: Backend API base URL
+ * 
+ * Authentication is handled via JWT tokens in HttpOnly cookies.
+ * All requests automatically include credentials for cookie-based auth.
  */
 
 const API_URL = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || '';

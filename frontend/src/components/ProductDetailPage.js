@@ -84,11 +84,8 @@ const ProductDetailPage = () => {
 
   const detectCountry = async () => {
     try {
-      const res = await fetch(`${API}/geo/detect`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.country_code) setDetectedCountry(data.country_code);
-      }
+      const data = await apiGet('/api/geo/detect');
+      if (data?.country_code) setDetectedCountry(data.country_code);
     } catch (e) { /* silent */ }
   };
 

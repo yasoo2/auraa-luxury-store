@@ -10,6 +10,7 @@ import jwt
 import bcrypt
 import os
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 

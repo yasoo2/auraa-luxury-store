@@ -46,9 +46,9 @@ const CartPage = () => {
 
   const detectCountry = async () => {
     try {
-      const response = await axios.get(`${API}/geo/detect`);
-      if (response.data && response.data.country_code) {
-        setCountryCode(response.data.country_code);
+      const data = await apiGet('/api/geo/detect');
+      if (data && data.country_code) {
+        setCountryCode(data.country_code);
       }
     } catch (error) {
       console.error('Error detecting country:', error);

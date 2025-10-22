@@ -484,6 +484,16 @@ async def publish_staging_products(data: Dict[str, Any]):
 
 
 # ============================================================================
+# AUTHENTICATION ROUTES
+# ============================================================================
+try:
+    from routes.auth import router as auth_router
+    api_router.include_router(auth_router)
+    logger.info("✅ Auth routes loaded")
+except Exception as e:
+    logger.error(f"⚠️ Failed to load Auth routes: {e}")
+
+# ============================================================================
 # CJ ADMIN ROUTES - Rate Limited & Protected
 # ============================================================================
 try:

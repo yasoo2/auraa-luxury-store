@@ -112,5 +112,4 @@ export default {
   put: apiPut,
   delete: apiDelete,
   getUrl: getApiUrl,
-  hasApiKey,
 };

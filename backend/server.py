@@ -26,6 +26,14 @@ from enum import Enum
 # Import services
 from services.background_import import ImportJobManager, background_import_cj_products
 
+# Initialize CJ service (for readiness check)
+try:
+    from services.cj_dropshipping import CJDropshippingService
+    cj_service = CJDropshippingService()
+except Exception as e:
+    logger.warning(f"CJ service initialization failed: {e}")
+    cj_service = None
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 

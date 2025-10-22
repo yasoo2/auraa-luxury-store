@@ -271,9 +271,13 @@ async def start_import_job(
         
         job_manager = ImportJobManager(db)
         job_id = await job_manager.create_job(
-            source=source,
-            total=count,
-            keyword=keyword
+            job_type="bulk_import",
+            supplier=source,
+            params={
+                "max_products": count,
+                "batch_size": batch_size,
+                "keyword": keyword
+            }
         )
         
         logger.info(f"🚀 Starting CJ import job {job_id}: {count} products with keyword '{keyword}'")

@@ -90,3 +90,5 @@ yarl==1.22.0
 httpx
 aiolimiter==1.2.1
 tenacity==9.1.2
+playwright==1.48.0
+python-http-client==3.3.7

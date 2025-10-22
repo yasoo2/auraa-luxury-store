@@ -104,13 +104,6 @@ export function getApiUrl() {
   return API_URL;
 }
 
-/**
- * Check if API key is configured
- */
-export function hasApiKey() {
-  return !!API_KEY;
-}
-
 // Export default
 export default {
   fetch: apiFetch,

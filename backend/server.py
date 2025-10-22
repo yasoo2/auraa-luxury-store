@@ -23,6 +23,9 @@ import bcrypt
 from passlib.context import CryptContext
 from enum import Enum
 
+# Import services
+from services.background_import import ImportJobManager, background_import_cj_products
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 

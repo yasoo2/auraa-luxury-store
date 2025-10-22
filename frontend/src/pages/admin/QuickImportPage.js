@@ -130,7 +130,7 @@ const QuickImportPage = () => {
     if (!window.confirm('هل تريد حذف هذا المنتج؟')) return;
 
     try {
-      await axios.delete(`/api/products/staging/${productId}`);
+      await apiDelete(`/api/products/staging/${productId}`);
       setStagingProducts(prev => prev.filter(p => p.id !== productId));
       toast.success('✅ تم حذف المنتج');
     } catch (error) {

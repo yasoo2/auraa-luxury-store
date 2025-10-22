@@ -1,0 +1,28 @@
+name: Deploy on Merge (Render + Cloudflare)
+
+on:
+  push:
+    branches: [ main ]   # غيّرها لو فرعك الأساسي اسمه غير main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1) نشر الباك-إند على Render
+      - name: Deploy Backend to Render
+        run: curl -sSf -X POST "$RENDER_DEPLOY_HOOK_URL_BACKEND"
+        env:
+          RENDER_DEPLOY_HOOK_URL_BACKEND: ${{ secrets.RENDER_DEPLOY_HOOK_URL_BACKEND }}
+
+      # 2) تفريغ الكاش من Cloudflare
+      - name: Purge Cloudflare Cache
+        run: |
+          curl -sSf -X POST "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/purge_cache" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}

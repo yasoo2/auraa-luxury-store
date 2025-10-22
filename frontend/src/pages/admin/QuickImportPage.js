@@ -57,14 +57,14 @@ const QuickImportPage = () => {
 
     try {
       // Start import job
-      const response = await axios.post('/api/imports/start', {
+      const response = await apiPost('/api/imports/start', {
         source: 'cj',
         count: productCount,
         batch_size: 20,
         keyword: 'luxury jewelry accessories'
       });
 
-      const jobId = response.data.jobId;
+      const jobId = response.jobId;
       
       // Poll for progress and get products in real-time
       pollImportProgress(jobId);

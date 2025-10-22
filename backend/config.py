@@ -40,6 +40,7 @@ class Settings(BaseSettings):
         case_sensitive = True
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "allow"  # Allow extra fields from .env
     
     def get_cors_origins_list(self) -> List[str]:
         """Parse CORS_ORIGINS string into list"""

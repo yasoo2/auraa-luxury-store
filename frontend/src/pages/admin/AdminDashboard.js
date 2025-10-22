@@ -83,24 +83,14 @@ const AdminDashboard = () => {
       icon: Users
     },
     {
-      name: isRTL ? 'علي إكسبريس' : 'AliExpress',
-      path: '/admin/aliexpress',
-      icon: ExternalLink
-    },
-    {
-      name: isRTL ? '🚀 استيراد سريع' : '🚀 Quick Import',
+      name: isRTL ? '🚀 استيراد سريع CJ' : '🚀 CJ Quick Import',
       path: '/admin/quick-import',
       icon: Download
     },
     {
-      name: isRTL ? 'الاستيراد المجمع' : 'Bulk Import',
+      name: isRTL ? 'الاستيراد المجمع CJ' : 'CJ Bulk Import',
       path: '/admin/bulk-import',
       icon: Upload
-    },
-    {
-      name: isRTL ? '📦 تتبع الطلبات' : '📦 Order Tracking',
-      path: '/admin/aliexpress-tracking',
-      icon: Package
     },
     {
       name: isRTL ? '🛡️ حماية المحتوى' : '🛡️ Content Protection',

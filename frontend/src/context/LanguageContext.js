@@ -79,18 +79,15 @@ export const LanguageProvider = ({ children }) => {
   });
 
   const [exchangeRates, setExchangeRates] = useState({ USD: 1 });
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
   // Fetch exchange rates from backend API (server-based as requested)
   useEffect(() => {
     const fetchExchangeRates = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/auto-update/currency-rates`);
-        if (res.ok) {
-          const data = await res.json();
-          const rates = data?.rates || {};
-          setExchangeRates({ USD: 1, ...rates });
-        }
+        const { apiGet } = await import('../api');
+        const data = await apiGet('/api/auto-update/currency-rates');
+        const rates = data?.rates || {};
+        setExchangeRates({ USD: 1, ...rates });
       } catch (error) {
         console.error('Failed to fetch currency rates from server:', error);
         // keep previous rates; backend job will refresh later

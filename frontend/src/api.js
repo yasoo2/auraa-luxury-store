@@ -7,7 +7,6 @@
  */
 
 const API_URL = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || '';
-const API_KEY = process.env.REACT_APP_X_API_KEY;
 
 /**
  * Make API requests with consistent configuration
@@ -24,7 +23,6 @@ export async function apiFetch(path, options = {}) {
   // Build headers
   const headers = {
     'Content-Type': 'application/json',
-    ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
     ...options.headers,
   };
 

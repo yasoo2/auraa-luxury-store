@@ -59,12 +59,9 @@ const CheckoutPage = () => {
 
   const detectCountry = async () => {
     try {
-      const res = await fetch(`${API}/geo/detect`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.country_code) {
-          setFormData((prev) => ({ ...prev, country: data.country_code }));
-        }
+      const data = await apiGet('/api/geo/detect');
+      if (data?.country_code) {
+        setFormData((prev) => ({ ...prev, country: data.country_code }));
       }
     } catch (e) {
       // silent

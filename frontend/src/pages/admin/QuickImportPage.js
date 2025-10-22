@@ -152,15 +152,15 @@ const QuickImportPage = () => {
     toast.info('🚀 جاري نشر المنتجات...');
 
     try {
-      const response = await axios.post('/api/products/publish-staging', {
+      const response = await apiPost('/api/products/publish-staging', {
         product_ids: stagingProducts.map(p => p.id)
       });
 
-      toast.success(`✅ تم نشر ${response.data.published} منتج إلى المتجر!`);
+      toast.success(`✅ تم نشر ${response.published} منتج إلى المتجر!`);
       setStagingProducts([]);
       setImportCounter(0);
     } catch (error) {
-      toast.error(`❌ فشل النشر: ${error.response?.data?.detail || error.message}`);
+      toast.error(`❌ فشل النشر: ${error.message || 'حدث خطأ'}`);
     } finally {
       setIsPublishing(false);
     }

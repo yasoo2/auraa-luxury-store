@@ -52,6 +52,9 @@ db = client[os.environ['DB_NAME']]
 # Create the main app
 app = FastAPI(title="لورا لاكشري API", version="1.0.0")
 
+# Store database in app state for access in routes
+app.state.db = db
+
 # CORS Configuration - Load from environment variable
 # This allows easy updates without code changes
 cors_origins_env = os.getenv('CORS_ORIGINS', '')

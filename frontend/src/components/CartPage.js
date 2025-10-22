@@ -71,27 +71,20 @@ const CartPage = () => {
         }))
       };
       
-      const res = await fetch(`${API}/shipping/estimate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const data = await apiPost('/api/shipping/estimate', payload);
       
-      if (res.status === 400) {
-        setShippingEstimate({ loading: false, cost: 0, days: null, error: 'unavailable' });
-        toast.warning(isRTL ? 'الشحن غير متاح لبلدك' : 'Shipping unavailable for your country');
-        return;
-      }
-      
-      if (!res.ok) throw new Error('Failed');
-      
-      const data = await res.json();
       const cost = data?.shipping_cost?.[currency] ?? 0;
       const days = data?.estimated_days || null;
       setShippingEstimate({ loading: false, cost, days, error: null });
     } catch (e) {
       console.error('estimateShipping error', e);
-      setShippingEstimate({ loading: false, cost: 15, days: { min: 3, max: 7 }, error: 'fallback' });
+      // Check if error is 400 (unavailable)
+      if (e.message && e.message.includes('400')) {
+        setShippingEstimate({ loading: false, cost: 0, days: null, error: 'unavailable' });
+        toast.warning(isRTL ? 'الشحن غير متاح لبلدك' : 'Shipping unavailable for your country');
+      } else {
+        setShippingEstimate({ loading: false, cost: 15, days: { min: 3, max: 7 }, error: 'fallback' });
+      }
     }
   };
 

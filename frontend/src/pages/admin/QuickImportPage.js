@@ -79,21 +79,20 @@ const QuickImportPage = () => {
   const pollImportProgress = async (jobId) => {
     const pollInterval = setInterval(async () => {
       try {
-        const statusResponse = await axios.get(`/api/imports/${jobId}/status`);
-        const status = statusResponse.data;
+        const status = await apiGet(`/api/imports/${jobId}/status`);
 
         setImportCounter(status.processed || 0);
 
         // Get imported products from staging area
         if (status.processed > 0) {
-          const productsResponse = await axios.get(`/api/products/staging?job_id=${jobId}`);
-          setStagingProducts(productsResponse.data || []);
+          const products = await apiGet(`/api/products/staging?job_id=${jobId}`);
+          setStagingProducts(products || []);
         }
 
         if (status.state === 'completed') {
           clearInterval(pollInterval);
           setIsImporting(false);
-          toast.success(`✅ اكتمل الاستيراد! تم استيراد ${status.imported} منتج`);
+          toast.success(`✅ اكتمل الاستيراد! تم استيراد ${status.processed} منتج`);
         } else if (status.state === 'failed') {
           clearInterval(pollInterval);
           setIsImporting(false);

@@ -129,22 +129,16 @@ const ProductDetailPage = () => {
         markup_pct: 10,
         items: [{ product_id: id, quantity: 1 }]
       };
-      const res = await fetch(`${API}/shipping/estimate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.status === 400) {
-        setShippingInfo({ loading: false, cost: 0, days: null, error: 'unavailable' });
-        return;
-      }
-      if (!res.ok) throw new Error('Failed');
-      const data = await res.json();
+      const data = await apiPost('/api/shipping/estimate', payload);
       const cost = data?.shipping_cost?.[currency] ?? 0;
       const days = data?.estimated_days || null;
       setShippingInfo({ loading: false, cost, days, error: null });
     } catch (e) {
-      setShippingInfo({ loading: false, cost: 0, days: null, error: 'server' });
+      if (e.message && e.message.includes('400')) {
+        setShippingInfo({ loading: false, cost: 0, days: null, error: 'unavailable' });
+      } else {
+        setShippingInfo({ loading: false, cost: 0, days: null, error: 'server' });
+      }
     }
   };
 

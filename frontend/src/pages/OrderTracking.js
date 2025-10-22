@@ -51,18 +51,12 @@ const OrderTracking = () => {
     setLoading(true);
     try {
       const searchParam = trackingNumber || orderNumber;
-      const response = await fetch(`${API_URL}/api/orders/track/${searchParam}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        setTrackingData(data);
-      } else {
-        toast.error(isRTL ? 'لم يتم العثور على الطلب' : 'Order not found');
-        setTrackingData(null);
-      }
+      const data = await apiGet(`/api/orders/track/${searchParam}`);
+      setTrackingData(data);
     } catch (error) {
       console.error('Error tracking order:', error);
-      toast.error(isRTL ? 'حدث خطأ في البحث' : 'Error occurred while searching');
+      toast.error(isRTL ? 'لم يتم العثور على الطلب' : 'Order not found');
+      setTrackingData(null);
     } finally {
       setLoading(false);
     }

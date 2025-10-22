@@ -276,3 +276,8 @@ class CJDropshippingService:
 
 # Global instance
 cj_service = CJDropshippingService()
+
+
+def get_cj_service() -> CJDropshippingService:
+    """Get CJ Dropshipping service instance"""
+    return cj_service

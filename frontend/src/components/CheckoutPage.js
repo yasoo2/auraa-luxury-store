@@ -102,19 +102,7 @@ const CheckoutPage = () => {
         markup_pct: 10,
         items: (cart?.items || []).map((it) => ({ product_id: it.product_id, quantity: it.quantity }))
       };
-      const res = await fetch(`${API}/shipping/estimate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.status === 400) {
-        const detail = await res.json();
-        setShippingEstimate({ loading: false, cost: 0, days: null, error: 'unavailable' });
-        toast.error(isRTL ? 'الشحن غير متاح لبلدك' : 'Shipping is not available for your country');
-        return;
-      }
-      if (!res.ok) throw new Error('Failed');
-      const data = await res.json();
+      const data = await apiPost('/api/shipping/estimate', payload);
       const cost = data?.shipping_cost?.[currency] ?? 0;
       const days = data?.estimated_days || null;
       setShippingEstimate({ loading: false, cost, days, error: null });

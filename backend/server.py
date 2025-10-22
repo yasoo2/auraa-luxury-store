@@ -236,7 +236,7 @@ async def generate_sitemap():
         raise HTTPException(status_code=500, detail="Failed to generate sitemap")
 
 # ======================================
-# Real AliExpress Service Endpoints (Web Scraping)
+# Import Service Endpoints
 # ======================================
 
 @api_router.get("/imports/{job_id}/status")

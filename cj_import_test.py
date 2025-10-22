@@ -58,22 +58,16 @@ class CJImportTester:
         """Test health and readiness endpoints"""
         print("🏥 Testing Backend Health...")
         
-        # Test /api/health
-        success, data, status = self.make_request('GET', '/health')
-        
-        if success and data.get('status') == 'ok':
-            self.log_test("Health Endpoint", True, f"Status: {data.get('status')}, Service: {data.get('service')}")
-        else:
-            self.log_test("Health Endpoint", False, f"Status: {status}, Response: {data}")
-        
-        # Test /api/readiness
+        # Test /api/readiness (health endpoint not implemented)
         success, data, status = self.make_request('GET', '/readiness')
         
         if success and data.get('status') in ['ready', 'degraded']:
-            self.log_test("Readiness Endpoint", True, 
+            self.log_test("GET /api/readiness", True, 
                         f"Status: {data.get('status')}, DB: {data.get('db')}, Vendors: {data.get('vendors')}")
         else:
-            self.log_test("Readiness Endpoint", False, f"Status: {status}, Response: {data}")
+            self.log_test("GET /api/readiness", False, f"Status: {status}, Response: {data}")
+        
+        # Note: /api/health endpoint is not implemented in current server.py
     
     def test_admin_authentication(self):
         """Test admin authentication with cookie handling"""

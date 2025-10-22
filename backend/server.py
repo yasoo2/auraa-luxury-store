@@ -286,9 +286,11 @@ async def start_import_job(
         background_tasks.add_task(
             background_import_cj_products,
             job_id=job_id,
-            total_count=count,
             keyword=keyword,
-            db=db
+            category_id=None,
+            max_products=count,
+            db=db,
+            cj_service=cj_service
         )
         
         return {

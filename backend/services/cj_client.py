@@ -89,7 +89,7 @@ async def _get_access_token(force: bool = False) -> str:
 
         logger.info("🔑 Requesting a fresh CJ access token")
         data = await _request_json(
-            "POST", "/authentication/getAccessToken",
+            "POST", "/v1/authentication/getAccessToken",
             json={"email": CJ_EMAIL, "password": CJ_API_KEY},
             authenticated=False,
         )

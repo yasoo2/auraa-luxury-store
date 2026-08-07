@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getAuthTranslation } from '../translations/auth';
 import JewelExhibit from './JewelExhibit';
+import { newOAuthState, rememberOAuthStart } from '../lib/oauthState';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import axios from 'axios';
@@ -126,11 +127,8 @@ const AuthPage = () => {
       // A random value we hand to Google and check again when the browser
       // comes back. Without it, an attacker could hand a victim a prepared
       // callback URL and sign them into the attacker's account.
-      const state = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
-      sessionStorage.setItem('oauth_state', state);
-      sessionStorage.setItem('oauth_redirect_uri', redirectUrl);
+      const state = newOAuthState();
+      rememberOAuthStart(state, redirectUrl);
       sessionStorage.setItem('auth_redirect', from);
 
       const response = await axios.get(`${BACKEND_URL}/api/auth/oauth/google/url`, {

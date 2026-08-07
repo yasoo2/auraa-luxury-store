@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { getAuthTranslation } from '../translations/auth';
 import axios from 'axios';
 import { API_BASE_URL } from '../api';
+import { clearOAuthStart, readOAuthStart } from '../lib/oauthState';
 
 /**
  * Where Google sends the browser back to.
@@ -69,8 +70,9 @@ const OAuthCallback = () => {
 
       const code = params.get('code');
       const returnedState = params.get('state');
-      const expectedState = sessionStorage.getItem('oauth_state');
-      const redirectUri = sessionStorage.getItem('oauth_redirect_uri')
+      const started = readOAuthStart();
+      const expectedState = started.state;
+      const redirectUri = started.redirectUri
         || `${window.location.origin}/auth/oauth-callback`;
 
       if (!code) return fail('session_id_required');
@@ -80,8 +82,7 @@ const OAuthCallback = () => {
         console.error('OAuth state mismatch — refusing to complete sign-in');
         return fail('oauth_state_mismatch');
       }
-      sessionStorage.removeItem('oauth_state');
-      sessionStorage.removeItem('oauth_redirect_uri');
+      clearOAuthStart();
 
       try {
         const response = await axios.post(

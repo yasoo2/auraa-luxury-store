@@ -1413,7 +1413,7 @@ class _FakeCJ:
 
     async def request(self, method, url, json=None, headers=None):
         self.calls.append((url.rsplit("/api2.0", 1)[-1], (headers or {}).get("CJ-Access-Token")))
-        if url.endswith("/authentication/getAccessToken"):
+        if url.endswith("/v1/authentication/getAccessToken"):
             if json.get("email") and json.get("password"):
                 return _FakeResponse(200, {"code": 200, "result": True, "data": {
                     "accessToken": REAL_TOKEN,
@@ -1443,7 +1443,7 @@ def test_calls_carry_the_issued_token_not_the_api_key(fake_cj):
 
     sent = dict(fake_cj.calls)
     assert sent["/v1/product/list"] == REAL_TOKEN, "the API key was sent as the access token"
-    assert sent["/authentication/getAccessToken"] is None, "the token call must not need a token"
+    assert sent["/v1/authentication/getAccessToken"] is None, "the token call must not need a token"
 
 
 def test_the_token_is_cached_because_cj_rate_limits_issuing_it(fake_cj):
@@ -1484,3 +1484,15 @@ def test_missing_credentials_say_which_variables_to_set(fake_cj, monkeypatch):
     with pytest.raises(cj_client.CJError) as e:
         asyncio.get_event_loop().run_until_complete(cj_client._get_access_token())
     assert "CJ_DROPSHIP_EMAIL" in str(e.value)
+
+
+def test_the_token_call_uses_the_versioned_path(fake_cj):
+    """
+    Every other call in this client is versioned (/v1/product/list); the token
+    call was not, so it addressed a path CJ does not serve. The sibling client
+    in this same repo had it right, which is what gave the mismatch away.
+    """
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(cj_client.list_products(1, 1))
+    paths = [p for p, _ in fake_cj.calls]
+    assert "/v1/authentication/getAccessToken" in paths, paths

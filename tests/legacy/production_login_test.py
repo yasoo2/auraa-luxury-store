@@ -22,17 +22,17 @@ def test_production_login():
     test_accounts = [
         {
             "identifier": "younes.sowady2011@gmail.com",
-            "password": "younes2025",
+            "password": os.getenv("SEED_ADMIN_PASSWORD", ""),
             "description": "Primary super admin (email)"
         },
         {
             "identifier": "00905013715391",
-            "password": "younes2025", 
+            "password": os.getenv("SEED_ADMIN_PASSWORD", ""), 
             "description": "Super admin (phone)"
         },
         {
             "identifier": "info@auraaluxury.com",
-            "password": "younes2025",
+            "password": os.getenv("SEED_ADMIN_PASSWORD", ""),
             "description": "Info email super admin"
         },
         {

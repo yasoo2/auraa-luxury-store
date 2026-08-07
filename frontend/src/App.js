@@ -58,7 +58,11 @@ function App() {
           <WishlistProvider>
             <CartProvider>
             <Router>
-              <div className="App" dir="auto">
+              {/* Direction is set on <html> by LanguageContext. dir="auto" here overrode
+              that inherited value and resolved from the first strong character in the
+              whole subtree, so Arabic text rendered inside an LTR paragraph and
+              punctuation landed on the wrong side ("!أهلاً بعودتك"). */}
+            <div className="App">
                 <Helmet>
                   <title>Auraa Luxury - Premium Accessories</title>
                   <meta name="description" content="Premium luxury accessories for the discerning customer" />

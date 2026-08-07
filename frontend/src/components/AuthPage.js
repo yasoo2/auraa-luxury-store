@@ -188,19 +188,24 @@ const AuthPage = () => {
         <div className="absolute inset-0 animate-gold-shimmer opacity-30"></div>
       </div>
       
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+      {/* Reserve the cookie banner's height so the centred card — and the submit
+          button at its bottom edge — is never under the fixed banner. */}
+      <div
+        className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8"
+        style={{ paddingBottom: 'calc(2rem + var(--cookie-banner-h, 0px))' }}
+      >
         <div className="max-w-md w-full">
           {/* Luxury Card */}
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-8 shadow-2xl animate-luxury-zoom-in">
+          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-6 sm:p-8 shadow-2xl animate-luxury-zoom-in">
             {/* Header */}
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center mb-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center animate-rotate-glow shadow-lg">
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center mb-3">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center animate-rotate-glow shadow-lg">
                   <span className="text-white font-bold text-2xl font-display">A</span>
                 </div>
               </div>
-              <h1 className="font-display text-3xl font-bold text-white animate-text-sparkle mb-2">Auraa Luxury</h1>
-              <h2 className="text-xl font-semibold text-amber-200 mb-2 animate-fade-in-up" data-testid="auth-title">
+              <h1 className="font-display text-2xl sm:text-3xl font-bold text-white animate-text-sparkle mb-1">Auraa Luxury</h1>
+              <h2 className="text-lg sm:text-xl font-semibold text-amber-200 mb-1 animate-fade-in-up" data-testid="auth-title">
                 {getAuthTranslation(isLogin ? 'login' : 'register', language)}
               </h2>
               <p className="text-white/80 animate-slide-in-right">
@@ -284,7 +289,7 @@ const AuthPage = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
                 <div className="grid grid-cols-2 gap-4 animate-fade-in-up">
                   <div className="relative">

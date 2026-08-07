@@ -1217,6 +1217,706 @@ async def super_admin_change_role(
 
 
 # ============================================================================
+# ADMIN — Orders, settings, theme, CMS, media, analytics
+#
+# These paths were called by the admin pages but implemented nowhere, so every
+# admin screen fell back to mock data or an error toast.
+#
+# Settings and theme are stored as single documents and returned verbatim: the
+# frontend merges the response into its own defaults (`{...prev, ...data}`),
+# so persisting the shape it sends keeps the two in step without this layer
+# having to know every field.
+# ============================================================================
+
+SETTINGS_DOC_ID = "store_settings"
+THEME_DOC_ID = "store_theme"
+
+UPLOAD_DIR = ROOT_DIR / "static" / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(ROOT_DIR / "static")), name="static")
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+
+
+class OrderStatusUpdate(BaseModel):
+    status: OrderStatus
+
+
+async def _get_singleton(doc_id: str) -> Dict[str, Any]:
+    doc = await db.site_config.find_one({"_id": doc_id})
+    if not doc:
+        return {}
+    doc.pop("_id", None)
+    return doc
+
+
+async def _put_singleton(doc_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    payload = {k: v for k, v in payload.items() if k != "_id"}
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.site_config.update_one({"_id": doc_id}, {"$set": payload}, upsert=True)
+    return payload
+
+
+# ---------------------------------------------------------------------------
+# Orders (admin view)
+# ---------------------------------------------------------------------------
+
+@api_router.get("/admin/orders")
+async def admin_list_orders(
+    status: Optional[OrderStatus] = None,
+    admin: User = Depends(get_admin_user)
+):
+    query = {"status": status.value} if status else {}
+    orders = await db.orders.find(query).sort("created_at", -1).to_list(length=None)
+
+    for order in orders:
+        order.pop("_id", None)
+        # The table shows who placed each order.
+        user = await db.users.find_one({"id": order.get("user_id")})
+        order["customer_email"] = user.get("email") if user else None
+        order["customer_name"] = user.get("name") if user else None
+
+    return orders
+
+
+@api_router.put("/admin/orders/{order_id}")
+async def admin_update_order_status(
+    order_id: str,
+    payload: OrderStatusUpdate,
+    admin: User = Depends(get_admin_user)
+):
+    result = await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {"status": payload.status.value,
+                  "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    return {"success": True, "id": order_id, "status": payload.status.value}
+
+
+# ---------------------------------------------------------------------------
+# Settings and theme
+# ---------------------------------------------------------------------------
+
+@api_router.get("/admin/settings")
+async def admin_get_settings(admin: User = Depends(get_admin_user)):
+    return await _get_singleton(SETTINGS_DOC_ID)
+
+
+@api_router.put("/admin/settings")
+async def admin_update_settings(
+    payload: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
+    return await _put_singleton(SETTINGS_DOC_ID, payload)
+
+
+@api_router.get("/admin/theme")
+async def admin_get_theme(admin: User = Depends(get_admin_user)):
+    return await _get_singleton(THEME_DOC_ID)
+
+
+@api_router.put("/admin/theme")
+async def admin_update_theme(
+    payload: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
+    return await _put_singleton(THEME_DOC_ID, payload)
+
+
+# ---------------------------------------------------------------------------
+# CMS pages
+# ---------------------------------------------------------------------------
+
+@api_router.get("/admin/cms-pages")
+async def admin_list_cms_pages(admin: User = Depends(get_admin_user)):
+    pages = await db.cms_pages.find({}).to_list(length=None)
+    for page in pages:
+        page.pop("_id", None)
+    return pages
+
+
+@api_router.post("/admin/cms-pages")
+async def admin_create_cms_page(page: CMSPage, admin: User = Depends(get_admin_user)):
+    if await db.cms_pages.find_one({"slug": page.slug}):
+        raise HTTPException(status_code=400, detail="A page with this slug already exists")
+
+    await db.cms_pages.insert_one(page.model_dump())
+    return page
+
+
+@api_router.put("/admin/cms-pages/{page_id}")
+async def admin_update_cms_page(
+    page_id: str,
+    updates: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
+    updates = {k: v for k, v in updates.items() if k not in ("_id", "id")}
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    result = await db.cms_pages.update_one({"id": page_id}, {"$set": updates})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    page = await db.cms_pages.find_one({"id": page_id})
+    page.pop("_id", None)
+    return page
+
+
+@api_router.delete("/admin/cms-pages/{page_id}")
+async def admin_delete_cms_page(page_id: str, admin: User = Depends(get_admin_user)):
+    result = await db.cms_pages.delete_one({"id": page_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Page not found")
+    return {"success": True, "id": page_id}
+
+
+@api_router.get("/cms-pages/{slug}")
+async def get_public_cms_page(slug: str):
+    """Public read for a published page, used to render CMS-driven routes."""
+    page = await db.cms_pages.find_one({"slug": slug, "is_active": True})
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+    page.pop("_id", None)
+    return page
+
+
+# ---------------------------------------------------------------------------
+# Media
+#
+# Files are written to the local static directory. On Render's ephemeral disk
+# these do not survive a redeploy — object storage is the durable answer, but
+# that needs bucket credentials this codebase does not yet carry.
+# ---------------------------------------------------------------------------
+
+@api_router.post("/admin/upload-image")
+async def admin_upload_image(
+    file: UploadFile = File(...),
+    admin: User = Depends(get_admin_user)
+):
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported type {file.content_type}. Allowed: JPEG, PNG, WebP, GIF"
+        )
+
+    contents = await file.read()
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="File exceeds the 5 MB limit")
+
+    # Verify it really is an image rather than trusting the declared type.
+    try:
+        Image.open(io.BytesIO(contents)).verify()
+    except Exception:
+        raise HTTPException(status_code=400, detail="File is not a valid image")
+
+    # Generate the name: a caller-supplied filename could escape the directory.
+    suffix = Path(file.filename or "").suffix.lower() or ".jpg"
+    if suffix not in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
+        suffix = ".jpg"
+    stored_name = f"{uuid.uuid4()}{suffix}"
+
+    async with aiofiles.open(UPLOAD_DIR / stored_name, "wb") as f:
+        await f.write(contents)
+
+    url = f"/static/uploads/{stored_name}"
+    await db.media.insert_one({
+        "id": str(uuid.uuid4()),
+        "filename": stored_name,
+        "original_name": file.filename,
+        "url": url,
+        "size": len(contents),
+        "content_type": file.content_type,
+        "uploaded_by": admin.id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    return {"url": url, "filename": stored_name, "size": len(contents)}
+
+
+@api_router.get("/admin/media")
+async def admin_list_media(admin: User = Depends(get_admin_user)):
+    items = await db.media.find({}).sort("created_at", -1).to_list(length=None)
+    for item in items:
+        item.pop("_id", None)
+    return items
+
+
+@api_router.delete("/admin/media/{media_id}")
+async def admin_delete_media(media_id: str, admin: User = Depends(get_admin_user)):
+    item = await db.media.find_one({"id": media_id})
+    if not item:
+        raise HTTPException(status_code=404, detail="Media not found")
+
+    # Remove the file, but treat a missing one as already deleted.
+    try:
+        (UPLOAD_DIR / item["filename"]).unlink(missing_ok=True)
+    except Exception as e:
+        logger.warning(f"Could not remove media file {item.get('filename')}: {e}")
+
+    await db.media.delete_one({"id": media_id})
+    return {"success": True, "id": media_id}
+
+
+# ---------------------------------------------------------------------------
+# Analytics
+# ---------------------------------------------------------------------------
+
+@api_router.get("/admin/analytics")
+async def admin_analytics(
+    range: str = Query("30d", description="7d | 30d | 90d | all"),
+    admin: User = Depends(get_admin_user)
+):
+    """Store metrics over a window, computed from orders/users/products."""
+    days = {"7d": 7, "30d": 30, "90d": 90}.get(range)
+    since = datetime.now(timezone.utc) - timedelta(days=days) if days else None
+
+    orders = await db.orders.find({}).to_list(length=None)
+
+    def in_window(order) -> bool:
+        if since is None:
+            return True
+        created = order.get("created_at")
+        if isinstance(created, str):
+            try:
+                created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            except ValueError:
+                return False
+        if not isinstance(created, datetime):
+            return False
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        return created >= since
+
+    windowed = [o for o in orders if in_window(o)]
+    revenue = sum(o.get("total_amount", 0) or 0 for o in windowed)
+
+    status_counts: Dict[str, int] = {}
+    for o in windowed:
+        key = o.get("status", "pending")
+        status_counts[key] = status_counts.get(key, 0) + 1
+
+    # Best sellers by quantity across the window.
+    sold: Dict[str, int] = {}
+    for o in windowed:
+        for item in o.get("items", []):
+            sold[item["product_id"]] = sold.get(item["product_id"], 0) + item.get("quantity", 0)
+
+    top_products = []
+    for pid, qty in sorted(sold.items(), key=lambda kv: kv[1], reverse=True)[:5]:
+        product = await db.products.find_one({"id": pid})
+        top_products.append({
+            "product_id": pid,
+            "name": product.get("name") if product else "Unknown",
+            "quantity_sold": qty,
+        })
+
+    return {
+        "range": range,
+        "total_revenue": round(revenue, 2),
+        "total_orders": len(windowed),
+        "average_order_value": round(revenue / len(windowed), 2) if windowed else 0,
+        "total_users": await db.users.count_documents({}),
+        "total_products": await db.products.count_documents({"staging": {"$ne": True}}),
+        "orders_by_status": status_counts,
+        "top_products": top_products,
+    }
+
+
+# ============================================================================
+# SETUP — first admin bootstrap
+#
+# Without this there is no way to obtain the first admin account: every admin
+# endpoint requires an existing admin, so the store could never be configured.
+# ============================================================================
+
+class FirstAdminRequest(BaseModel):
+    email: EmailStr
+    password: str
+    name: Optional[str] = None
+    setup_key: Optional[str] = None
+
+
+@api_router.get("/setup/check-admin")
+async def check_admin_exists():
+    """Public: reports only whether setup is still needed, never who the admin is."""
+    return {"has_admin": await db.users.count_documents({"is_admin": True}) > 0}
+
+
+@api_router.post("/setup/create-first-admin")
+async def create_first_admin(payload: FirstAdminRequest):
+    """
+    Create the initial super admin. Closes permanently once any admin exists,
+    so it cannot be replayed to mint a second one.
+    """
+    if await db.users.count_documents({"is_admin": True}) > 0:
+        raise HTTPException(status_code=403, detail="An admin already exists")
+
+    # Optional shared secret, so a race to this endpoint on a fresh deploy
+    # cannot be won by a stranger.
+    expected_key = os.getenv("ADMIN_SETUP_KEY")
+    if expected_key and payload.setup_key != expected_key:
+        raise HTTPException(status_code=403, detail="Invalid setup key")
+
+    if len(payload.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    if await db.users.find_one({"email": payload.email}):
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    user = {
+        "id": str(uuid.uuid4()),
+        "email": payload.email,
+        "password": bcrypt.hashpw(payload.password.encode(), bcrypt.gensalt()).decode(),
+        "name": payload.name or payload.email.split("@")[0],
+        "phone": None,
+        "is_admin": True,
+        "is_super_admin": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.users.insert_one(dict(user))
+    logger.info(f"✅ First super admin created: {payload.email}")
+
+    user.pop("password", None)
+    user.pop("_id", None)
+    return {"success": True, "user": user}
+
+
+# ============================================================================
+# ADMIN — Product management (bulk operations)
+# ============================================================================
+
+class BulkIdsRequest(BaseModel):
+    ids: List[str]
+
+
+class BulkUpdateRequest(BaseModel):
+    ids: List[str]
+    data: Dict[str, Any]
+
+
+@api_router.get("/admin/products")
+async def admin_list_products(
+    include_staging: bool = False,
+    admin: User = Depends(get_admin_user)
+):
+    """Unlike the storefront listing, this returns raw documents unfiltered by
+    schema validity — the admin needs to see malformed rows in order to fix them."""
+    query = {} if include_staging else {"staging": {"$ne": True}}
+    products = await db.products.find(query).sort("created_at", -1).to_list(length=None)
+    for p in products:
+        p.pop("_id", None)
+    return products
+
+
+@api_router.post("/admin/products/bulk-delete")
+async def admin_bulk_delete_products(
+    payload: BulkIdsRequest,
+    admin: User = Depends(get_admin_user)
+):
+    if not payload.ids:
+        raise HTTPException(status_code=400, detail="No product ids provided")
+
+    result = await db.products.delete_many({"id": {"$in": payload.ids}})
+    logger.info(f"🗑️  {admin.email} bulk-deleted {result.deleted_count} products")
+    return {"success": True, "deleted": result.deleted_count}
+
+
+@api_router.post("/admin/products/bulk-update")
+async def admin_bulk_update_products(
+    payload: BulkUpdateRequest,
+    admin: User = Depends(get_admin_user)
+):
+    if not payload.ids:
+        raise HTTPException(status_code=400, detail="No product ids provided")
+
+    # `id` must not be settable in bulk — it would collapse many products onto one.
+    updates = {k: v for k, v in payload.data.items() if k not in ("_id", "id")}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.products.update_many({"id": {"$in": payload.ids}}, {"$set": updates})
+    return {"success": True, "updated": result.modified_count}
+
+
+@api_router.delete("/admin/products/{product_id}")
+async def admin_delete_product(product_id: str, admin: User = Depends(get_admin_user)):
+    result = await db.products.delete_one({"id": product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"success": True, "id": product_id}
+
+
+# ============================================================================
+# ADMIN — Super admin account actions
+# ============================================================================
+
+class ResetPasswordRequest(BaseModel):
+    user_id: str
+    new_password: str
+    current_password: Optional[str] = None
+
+
+class ToggleStatusRequest(BaseModel):
+    user_id: str
+    is_active: Optional[bool] = None
+
+
+@api_router.post("/admin/super-admin-reset-password")
+async def super_admin_reset_password(
+    payload: ResetPasswordRequest,
+    admin: User = Depends(get_super_admin_user)
+):
+    return await admin_change_user_password(
+        payload.user_id, ChangePasswordRequest(new_password=payload.new_password), admin
+    )
+
+
+@api_router.post("/admin/super-admin-toggle-status")
+async def super_admin_toggle_status(
+    payload: ToggleStatusRequest,
+    admin: User = Depends(get_super_admin_user)
+):
+    """Enable or disable an account. Disabled users cannot authenticate."""
+    user = await db.users.find_one({"id": payload.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.get("is_super_admin"):
+        raise HTTPException(status_code=400, detail="Cannot disable a super admin")
+
+    new_value = payload.is_active if payload.is_active is not None \
+        else not user.get("is_active", True)
+
+    await db.users.update_one({"id": payload.user_id}, {"$set": {"is_active": new_value}})
+    return {"success": True, "user_id": payload.user_id, "is_active": new_value}
+
+
+# ============================================================================
+# GEO / SHIPPING / PLACEHOLDER
+# ============================================================================
+
+@api_router.get("/geo/detect")
+async def geo_detect(request: Request):
+    """Detect the visitor's country for currency and VAT defaults."""
+    try:
+        from services.geoip_service import GeoIPService
+        service = GeoIPService()
+        country = service.get_country_from_request(request)
+        config = service.get_country_config(country)
+
+        return {
+            "country_code": country,
+            "currency": service.get_currency(country),
+            "vat_rate": service.get_vat_rate(country),
+            "is_gcc": service.is_gcc_country(country),
+            "config": config,
+        }
+    except Exception as e:
+        logger.warning(f"Geo detection failed, falling back to SA: {e}")
+        # A detection failure must not break the storefront.
+        return {"country_code": "SA", "currency": "SAR", "vat_rate": 0.15,
+                "is_gcc": True, "config": {}}
+
+
+@api_router.get("/placeholder/{width}/{height}")
+async def placeholder_image(width: int, height: int):
+    """Neutral placeholder used where a product image is missing."""
+    width = max(1, min(width, 2000))
+    height = max(1, min(height, 2000))
+
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}">'
+        f'<rect width="100%" height="100%" fill="#f4efe7"/>'
+        f'<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" '
+        f'fill="#b9a88f" font-family="sans-serif" font-size="{max(10, min(width, height) // 8)}">'
+        f'{width}×{height}</text></svg>'
+    )
+    return Response(content=svg, media_type="image/svg+xml",
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
+# ============================================================================
+# AUTO-UPDATE — currency rates, price sync, scheduled task visibility
+#
+# Backed by the existing services (currency, scheduler, product sync), which
+# were written but had no HTTP surface, so the AutoUpdatePage had nothing to
+# call.
+# ============================================================================
+
+class ShippingItemRequest(BaseModel):
+    product_id: str
+    quantity: int = 1
+
+
+class ShippingEstimateRequest(BaseModel):
+    country_code: str = "SA"
+    items: List[ShippingItemRequest] = []
+
+
+@api_router.get("/auto-update/status")
+async def auto_update_status(admin: User = Depends(get_admin_user)):
+    """Snapshot of the background automation, for the AutoUpdate dashboard."""
+    last_currency = await db.exchange_rates.find_one(sort=[("updated_at", -1)])
+    last_sync = await db.sync_logs.find_one(sort=[("created_at", -1)])
+
+    for doc in (last_currency, last_sync):
+        if doc:
+            doc.pop("_id", None)
+
+    return {
+        "scheduler_running": bool(getattr(app.state, "scheduler_running", False)),
+        "last_currency_update": (last_currency or {}).get("updated_at"),
+        "last_product_sync": (last_sync or {}).get("created_at"),
+        "total_products": await db.products.count_documents({}),
+        "pending_import_jobs": await db.import_jobs.count_documents(
+            {"status": {"$in": ["pending", "running"]}}
+        ),
+    }
+
+
+@api_router.get("/auto-update/currency-rates")
+async def auto_update_currency_rates(admin: User = Depends(get_admin_user)):
+    try:
+        from services.currency_service import get_currency_service
+        rates = await get_currency_service(db).get_latest_rates("USD")
+        return {"base": "USD", "rates": rates,
+                "updated_at": datetime.now(timezone.utc).isoformat()}
+    except Exception as e:
+        logger.error(f"Could not load currency rates: {e}")
+        raise HTTPException(status_code=502, detail="Currency service unavailable")
+
+
+@api_router.post("/auto-update/trigger-currency-update")
+async def auto_update_trigger_currency(admin: User = Depends(get_admin_user)):
+    try:
+        from services.currency_service import get_currency_service
+        ok = await get_currency_service(db).update_exchange_rates()
+        return {"success": bool(ok),
+                "message": "Exchange rates refreshed" if ok else "Refresh failed"}
+    except Exception as e:
+        logger.error(f"Currency update failed: {e}")
+        raise HTTPException(status_code=502, detail="Currency update failed")
+
+
+@api_router.get("/auto-update/scheduled-task-logs")
+async def auto_update_task_logs(limit: int = 50, admin: User = Depends(get_admin_user)):
+    logs = await db.scheduled_task_logs.find({}).sort(
+        "created_at", -1).to_list(length=max(1, min(limit, 500)))
+    for log in logs:
+        log.pop("_id", None)
+    return logs
+
+
+@api_router.get("/auto-update/bulk-import-tasks")
+async def auto_update_import_tasks(limit: int = 50, admin: User = Depends(get_admin_user)):
+    jobs = await db.import_jobs.find({}).sort(
+        "created_at", -1).to_list(length=max(1, min(limit, 500)))
+    for job in jobs:
+        job.pop("_id", None)
+    return jobs
+
+
+@api_router.post("/auto-update/sync-products")
+async def auto_update_sync_products(
+    background_tasks: BackgroundTasks,
+    admin: User = Depends(get_admin_user)
+):
+    """Kick off a supplier sync in the background and return immediately."""
+    if not cj_service:
+        raise HTTPException(status_code=503, detail="Supplier service unavailable")
+
+    job_manager = ImportJobManager(db)
+    job_id = await job_manager.create_job(
+        job_type="sync", supplier="cj", params={"triggered_by": admin.email}
+    )
+
+    background_tasks.add_task(
+        background_import_cj_products,
+        job_id=job_id, keyword="luxury jewelry accessories",
+        category_id=None, max_products=50, db=db, cj_service=cj_service,
+    )
+
+    return {"success": True, "jobId": job_id, "message": "Product sync started"}
+
+
+@api_router.post("/auto-update/update-all-prices")
+async def auto_update_all_prices(admin: User = Depends(get_admin_user)):
+    """
+    Recompute selling prices from cost using the pricing rules.
+    Products without a cost are left untouched rather than zeroed out.
+    """
+    try:
+        from services.pricing_service import PricingService
+        pricing = PricingService()
+    except Exception as e:
+        logger.error(f"Pricing service unavailable: {e}")
+        raise HTTPException(status_code=503, detail="Pricing service unavailable")
+
+    products = await db.products.find({}).to_list(length=None)
+    updated = skipped = 0
+
+    for product in products:
+        cost = product.get("cost_price") or product.get("source_price")
+        if not cost:
+            skipped += 1
+            continue
+        try:
+            result = pricing.calculate_final_price(float(cost))
+            price = result.get("final_price") if isinstance(result, dict) else float(result)
+            await db.products.update_one(
+                {"id": product["id"]},
+                {"$set": {"price": round(float(price), 2),
+                          "updated_at": datetime.now(timezone.utc).isoformat()}},
+            )
+            updated += 1
+        except Exception as e:
+            logger.warning(f"Price update skipped for {product.get('id')}: {e}")
+            skipped += 1
+
+    await db.scheduled_task_logs.insert_one({
+        "task": "update-all-prices", "updated": updated, "skipped": skipped,
+        "triggered_by": admin.email, "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    return {"success": True, "updated": updated, "skipped": skipped}
+
+
+@api_router.post("/shipping/estimate")
+async def shipping_estimate(payload: ShippingEstimateRequest):
+    """Estimate shipping for a basket. Public — checkout needs it before login."""
+    try:
+        from services.geoip_service import GeoIPService
+        config = GeoIPService().get_country_config(payload.country_code)
+    except Exception:
+        config = {}
+
+    subtotal = 0.0
+    for item in payload.items:
+        product = await db.products.find_one({"id": item.product_id})
+        if product:
+            subtotal += (product.get("price") or 0) * max(1, item.quantity)
+
+    free_threshold = float(config.get("free_shipping_threshold", 200))
+    base_cost = float(config.get("shipping_cost", 25))
+    cost = 0.0 if subtotal >= free_threshold else base_cost
+
+    return {
+        "country_code": payload.country_code,
+        "currency": config.get("currency", "SAR"),
+        "subtotal": round(subtotal, 2),
+        "shipping_cost": round(cost, 2),
+        "free_shipping_threshold": free_threshold,
+        "qualifies_for_free_shipping": cost == 0,
+        "estimated_days": config.get("delivery_days", "5-10"),
+    }
+
+
+# ============================================================================
 # AUTHENTICATION ROUTES
 # ============================================================================
 try:

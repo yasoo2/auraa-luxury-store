@@ -161,6 +161,11 @@ async def login(credentials: UserLogin, request: Request, response: Response):
         # Verify password
         if not verify_password(credentials.password, user["password"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
+
+        # Disabled accounts must not authenticate, or the admin toggle is cosmetic.
+        # Absent field means active, so existing users are unaffected.
+        if user.get("is_active") is False:
+            raise HTTPException(status_code=403, detail="Account is disabled")
         
         access_token = await _issue_session(db, response, user)
 

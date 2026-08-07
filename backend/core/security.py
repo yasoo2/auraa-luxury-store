@@ -216,6 +216,11 @@ async def get_current_user_doc(request: Request) -> Dict[str, Any]:
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
+    # A token minted before the account was disabled must stop working too,
+    # otherwise disabling only takes effect at the next login.
+    if user.get("is_active") is False:
+        raise HTTPException(status_code=403, detail="Account is disabled")
+
     user.pop("_id", None)
     user.pop("password", None)
     return user

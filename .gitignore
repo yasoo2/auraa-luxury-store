@@ -1328,3 +1328,7 @@ frontend/node_modules/.cache/default-development/6.pack
 # Environment files
 *.env
 *.env.*
+
+# User-uploaded media — runtime data, never source
+backend/static/uploads/*
+!backend/static/uploads/.gitkeep

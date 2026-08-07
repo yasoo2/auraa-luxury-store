@@ -44,6 +44,12 @@ class UserRegister(BaseModel):
     password: str
     name: Optional[str] = None
     phone: Optional[str] = None
+    # The sign-up form asks for these two and always has. They were not on the
+    # model, so pydantic dropped them and every customer was stored under the
+    # local part of their email address.
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    country: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -117,12 +123,19 @@ async def register(user: UserRegister, request: Request, response: Response):
             raise HTTPException(status_code=400, detail="Email already registered")
         
         # Create new user
+        full_name = " ".join(
+            part for part in [user.first_name, user.last_name] if part
+        ).strip()
+
         user_data = {
             "id": str(uuid.uuid4()),
             "email": user.email,
             "password": hash_password(user.password),
-            "name": user.name or user.email.split('@')[0],
+            "name": user.name or full_name or user.email.split('@')[0],
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "phone": user.phone,
+            "country": user.country,
             "is_admin": False,
             "is_super_admin": False,
             "created_at": datetime.now(timezone.utc).isoformat(),

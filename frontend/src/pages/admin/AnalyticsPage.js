@@ -38,83 +38,10 @@ const AnalyticsPage = () => {
   const { t, language } = useLanguage();
   const isRTL = language === 'ar';
   
-  const [analytics, setAnalytics] = useState({});
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('7d');
-
-  // Mock Analytics Data
-  const generateMockAnalytics = () => {
-    return {
-      overview: {
-        totalRevenue: 45320.50,
-        totalOrders: 234,
-        totalCustomers: 156,
-        totalProducts: 48,
-        revenueChange: 12.5,
-        ordersChange: 8.3,
-        customersChange: 15.2,
-        productsChange: 4.2
-      },
-      salesChart: [
-        { date: '2025-01-01', sales: 2400, orders: 12 },
-        { date: '2025-01-02', sales: 1800, orders: 8 },
-        { date: '2025-01-03', sales: 3200, orders: 16 },
-        { date: '2025-01-04', sales: 2800, orders: 14 },
-        { date: '2025-01-05', sales: 3600, orders: 18 },
-        { date: '2025-01-06', sales: 4200, orders: 21 },
-        { date: '2025-01-07', sales: 3800, orders: 19 }
-      ],
-      topProducts: [
-        { name: 'قلادة ذهبية فاخرة', sales: 24, revenue: 7200 },
-        { name: 'أقراط لؤلؤ كلاسيكية', sales: 18, revenue: 2700 },
-        { name: 'ساعة ذهبية فاخرة', sales: 12, revenue: 10800 },
-        { name: 'خاتم مرصع بالماس', sales: 15, revenue: 4500 },
-        { name: 'سوار ذهبي متعدد الطبقات', sales: 20, revenue: 5000 }
-      ],
-      categoryDistribution: [
-        { name: isRTL ? 'قلادات' : 'Necklaces', value: 35, color: '#D97706' },
-        { name: isRTL ? 'أقراط' : 'Earrings', value: 25, color: '#F59E0B' },
-        { name: isRTL ? 'أساور' : 'Bracelets', value: 20, color: '#FCD34D' },
-        { name: isRTL ? 'خواتم' : 'Rings', value: 15, color: '#FEF3C7' },
-        { name: isRTL ? 'ساعات' : 'Watches', value: 5, color: '#FFFBEB' }
-      ],
-      customerMetrics: {
-        newCustomers: 23,
-        returningCustomers: 67,
-        averageOrderValue: 193.68,
-        customerLifetimeValue: 542.30
-      },
-      geographicData: [
-        { region: isRTL ? 'الرياض' : 'Riyadh', orders: 89, percentage: 38 },
-        { region: isRTL ? 'جدة' : 'Jeddah', orders: 67, percentage: 29 },
-        { region: isRTL ? 'الدمام' : 'Dammam', orders: 34, percentage: 15 },
-        { region: isRTL ? 'مكة المكرمة' : 'Makkah', orders: 28, percentage: 12 },
-        { region: isRTL ? 'المدينة المنورة' : 'Madinah', orders: 16, percentage: 6 }
-      ],
-      recentActivity: [
-        { 
-          time: '2025-01-07T14:30:00Z', 
-          action: isRTL ? 'طلب جديد من فاطمة أحمد' : 'New order from Fatima Ahmed',
-          amount: 599.99 
-        },
-        { 
-          time: '2025-01-07T13:15:00Z', 
-          action: isRTL ? 'تسجيل عميل جديد: سارة محمد' : 'New customer registration: Sara Mohammed',
-          amount: 0 
-        },
-        { 
-          time: '2025-01-07T12:45:00Z', 
-          action: isRTL ? 'طلب مكتمل - تم التسليم' : 'Order completed - Delivered',
-          amount: 299.99 
-        },
-        { 
-          time: '2025-01-07T11:30:00Z', 
-          action: isRTL ? 'إضافة منتج جديد' : 'New product added',
-          amount: 0 
-        }
-      ]
-    };
-  };
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     fetchAnalytics();
@@ -124,10 +51,17 @@ const AnalyticsPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/admin/analytics?range=${dateRange}`);
-      setAnalytics(response.data || generateMockAnalytics());
+      setAnalytics(response.data || null);
+      setLoadError(response.data ? '' : (isRTL ? 'لا توجد بيانات لهذه المدة' : 'No data for this range'));
     } catch (error) {
+      // This page used to fall back to figures written into the file — an
+      // invented revenue of 45,320.50 among them — with nothing on screen to
+      // mark them as fictional. A store owner could plan around a number that
+      // never happened. Show nothing rather than something false.
       console.error('Error fetching analytics:', error);
-      setAnalytics(generateMockAnalytics());
+      setAnalytics(null);
+      setLoadError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر تحميل التحليلات' : 'Could not load analytics'));
     } finally {
       setLoading(false);
     }
@@ -160,6 +94,28 @@ const AnalyticsPage = () => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+      </div>
+    );
+  }
+
+  // No data means no page. The alternative — the one this page used to take —
+  // was to fill the cards with figures written into the source file.
+  if (!analytics) {
+    return (
+      <div
+        role="alert"
+        data-testid="analytics-error"
+        className="border border-red-300 bg-red-50 text-red-800 rounded-lg px-5 py-6 text-center"
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        <p className="font-semibold mb-1">
+          {loadError || (isRTL ? 'لا توجد بيانات' : 'No data')}
+        </p>
+        <p className="text-sm opacity-80">
+          {isRTL
+            ? 'لا تُعرض أرقام تقديرية هنا — إمّا بيانات متجرك الحقيقية أو لا شيء.'
+            : 'No estimated figures are shown here — either your real data, or nothing.'}
+        </p>
       </div>
     );
   }

@@ -84,7 +84,7 @@ const ThemeCustomization = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API}/admin/theme`, theme, {
+      await axios.put(`${API}/admin/theme`, theme, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(isRTL ? 'تم حفظ التصميم' : 'Theme saved successfully');

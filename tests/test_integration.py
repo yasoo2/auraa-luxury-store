@@ -1643,6 +1643,41 @@ def test_the_report_never_prints_a_key(monkeypatch):
     assert "22 chars" in report["keys"]["CJ_API_KEY"]
 
 
+def test_the_email_is_shown_in_full_so_it_can_be_compared(monkeypatch):
+    """
+    The email was masked alongside the keys, which was caution in the wrong
+    place: "in…om" cannot be compared against a CJ login, and comparing them is
+    the entire reason an admin opens this screen. A key is a credential; an
+    account email is an identifier, and the store's own.
+    """
+    _cj_env(monkeypatch, CJ_API_KEY="super-secret-key-value",
+            CJ_EMAIL="info@auraaluxury.com")
+    report = cj_client.credential_report()
+    assert report["emails"]["CJ_EMAIL"] == "info@auraaluxury.com"
+    assert report["emails"]["CJ_DROPSHIP_EMAIL"] == "unset"
+    # ...and the keys stay masked in the same breath.
+    assert "super-secret-key-value" not in str(report)
+
+
+def test_the_rejection_message_shows_the_email_it_actually_sent(monkeypatch):
+    _cj_env(monkeypatch, CJ_DROPSHIP_API_KEY="k" * 32,
+            CJ_EMAIL="info@auraaluxury.com")
+    monkeypatch.setattr(cj_client, "_client", _PickyCJ("nothing-matches"))
+    monkeypatch.setattr(cj_client, "CJ_EMAIL_VAR", "CJ_EMAIL")
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "info@auraaluxury.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY_VAR", "CJ_DROPSHIP_API_KEY")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "k" * 32)
+    cj_client._reset_token()
+
+    import asyncio
+    with pytest.raises(cj_client.CJError) as e:
+        asyncio.get_event_loop().run_until_complete(cj_client._get_access_token())
+    message = str(e.value)
+    assert "info@auraaluxury.com" in message, "the admin cannot check what was sent"
+    assert "k" * 32 not in message, "the key must never be printed"
+    cj_client._reset_token()
+
+
 def test_each_attempt_is_named_by_the_variable_it_actually_came_from(monkeypatch):
     """
     Reproduces what the live dashboard printed:

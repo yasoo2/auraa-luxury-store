@@ -77,7 +77,7 @@ function App() {
 
                 <Navbar />
                 
-                <main className="min-h-screen bg-gradient-to-br from-neutral-50 to-stone-100">
+                <main className="app-main bg-gradient-to-br from-neutral-50 to-stone-100">
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/products" element={<ProductsPage />} />

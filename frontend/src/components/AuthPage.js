@@ -4,6 +4,7 @@ import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getAuthTranslation } from '../translations/auth';
+import JewelExhibit from './JewelExhibit';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import axios from 'axios';
@@ -22,7 +23,7 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);  // Add remember me state
+  const [rememberMe, setRememberMe] = useState(false);
   const turnstileRef = useRef(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -42,11 +43,11 @@ const AuthPage = () => {
       if (turnstileRef.current.children.length > 0) {
         turnstileRef.current.innerHTML = '';
       }
-      
+
       // Render new widget with optimized settings
       window.turnstile.render(turnstileRef.current, {
         sitekey: TURNSTILE_SITE_KEY,
-        theme: 'light',
+        theme: 'dark',
         size: 'compact', // Smaller size for faster loading
         language: language === 'ar' ? 'ar' : 'en',
         callback: function(token) {
@@ -77,19 +78,19 @@ const AuthPage = () => {
     e.preventDefault();
     setLoading(true);
     setError(''); // Clear previous errors
-    
+
     // Turnstile check - but don't strictly block
     // If no token and widget failed to load, proceed anyway
     if (!turnstileToken && window.turnstile) {
       // Wait a moment for Turnstile to complete
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // If still no token, use fallback
       if (!turnstileToken) {
         setTurnstileToken('fallback');
       }
     }
-    
+
     try {
       let result;
       if (isLogin) {
@@ -99,7 +100,7 @@ const AuthPage = () => {
       } else {
         // Validate that at least email or phone is provided
         if (!formData.email && !formData.phone) {
-          setError(language === 'ar' ? 'يجب إدخال البريد الإلكتروني أو رقم الهاتف على الأقل' : 'At least email or phone is required');
+          setError(getAuthTranslation('email_or_phone_required', language));
           setLoading(false);
           return;
         }
@@ -107,7 +108,7 @@ const AuthPage = () => {
         const registrationData = { ...formData, remember_me: rememberMe };
         result = await register(registrationData, turnstileToken);
       }
-      
+
       if (result.success) {
         // Immediate navigation without delay
         navigate(from, { replace: true });
@@ -129,12 +130,16 @@ const AuthPage = () => {
   const switchMode = () => {
     setIsLogin(!isLogin);
     setError(''); // Clear error when switching modes
+    // Register is the taller form. Switching to it while scrolled down left the
+    // first fields above the viewport, so start the new form from its top.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setFormData({
       email: '',
       password: '',
       first_name: '',
       last_name: '',
-      phone: ''
+      phone: '',
+      country: 'SA'
     });
   };
 
@@ -145,10 +150,10 @@ const AuthPage = () => {
       const response = await axios.get(`${BACKEND_URL}/api/auth/oauth/google/url`, {
         params: { redirect_url: redirectUrl }
       });
-      
+
       // Save provider info
       sessionStorage.setItem('oauth_provider', 'google');
-      
+
       // Redirect to Google OAuth
       window.location.href = response.data.url;
     } catch (error) {
@@ -158,80 +163,62 @@ const AuthPage = () => {
     }
   };
 
-  const handleFacebookLogin = async () => {
-    setLoading(true);
-    try {
-      const redirectUrl = `${window.location.origin}/auth/oauth-callback`;
-      const response = await axios.get(`${BACKEND_URL}/api/auth/oauth/facebook/url`, {
-        params: { redirect_url: redirectUrl }
-      });
-      
-      // Save provider info
-      sessionStorage.setItem('oauth_provider', 'facebook');
-      
-      // Redirect to Facebook OAuth
-      window.location.href = response.data.url;
-    } catch (error) {
-      console.error('Facebook OAuth error:', error);
-      setError(getAuthTranslation('oauth_session_invalid', language));
-      setLoading(false);
-    }
-  };
+  const phoneField = (opts) => (
+    <PhoneInput
+      country={'sa'}
+      value={formData.phone}
+      onChange={(phone, country) =>
+        setFormData({ ...formData, phone: '+' + phone, country: (country?.countryCode || 'sa').toUpperCase() })
+      }
+      inputProps={{ name: 'phone', required: opts.required, placeholder: opts.placeholder }}
+      containerClass="phone-input-container"
+      buttonClass="phone-input-button"
+      dropdownClass="phone-input-dropdown"
+      searchClass="phone-input-search"
+      enableSearch={true}
+      searchPlaceholder={language === 'ar' ? 'ابحث عن بلد...' : 'Search country...'}
+      inputClass="phone-input-field"
+    />
+  );
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Luxury Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-amber-900 to-black">
-        <div className="absolute inset-0 opacity-20" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23fbbf24' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-        <div className="absolute inset-0 animate-gold-shimmer opacity-30"></div>
-      </div>
-      
-      {/* Reserve the cookie banner's height so the centred card — and the submit
-          button at its bottom edge — is never under the fixed banner. */}
-      <div
-        className="auth-page relative z-10 min-h-screen flex items-center justify-center px-4 py-8"
-        style={{ paddingBottom: 'calc(2rem + var(--cookie-banner-h, 0px))' }}
-      >
-        <div className="max-w-md w-full">
-          {/* Luxury Card */}
-          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-6 sm:p-8 shadow-2xl animate-luxury-zoom-in">
-            {/* Header */}
-            <div className="text-center mb-6">
-              <div className="flex items-center justify-center mb-3">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 rounded-full flex items-center justify-center animate-rotate-glow shadow-lg">
-                  <span className="text-white font-bold text-2xl font-display">A</span>
-                </div>
-              </div>
-              <h1 className="font-display text-2xl sm:text-3xl font-bold text-white animate-text-sparkle mb-1">Auraa Luxury</h1>
-              <h2 className="text-lg sm:text-xl font-semibold text-amber-200 mb-1 animate-fade-in-up" data-testid="auth-title">
-                {getAuthTranslation(isLogin ? 'login' : 'register', language)}
-              </h2>
-              <p className="text-white/80 animate-slide-in-right">
-                {isLogin 
-                  ? (language === 'ar' ? 'أهلاً بعودتك!' : 'Welcome back!') 
-                  : (language === 'ar' ? 'انضم إلى Auraa Luxury' : 'Join Auraa Luxury')
-                }
-              </p>
-            </div>
+    /* The page is its own dark stage: one warm light from above, the piece on
+       one side, the form on the other. The stage uses min-height rather than a
+       fixed height so a taller form (register mode, an error banner, a browser
+       with large default text) pushes the page instead of being clipped. */
+    <div className="auth-page">
+      <div className="auth-stage">
+        <div className="auth-stage__light" aria-hidden="true" />
+        <div className="auth-stage__floor" aria-hidden="true" />
 
-            {/* Error Message */}
+        <div className="auth-case">
+          <JewelExhibit language={language} />
+
+          <div className="auth-rule" aria-hidden="true" />
+
+          <div className="auth-form">
+            <div className="auth-form__kicker">
+              {language === 'ar' ? 'حسابك' : 'YOUR ACCOUNT'}
+            </div>
+            <h1 className="auth-form__title" data-testid="auth-title">
+              {getAuthTranslation(isLogin ? 'login' : 'register', language)}
+            </h1>
+
             {error && (
-              <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 animate-shake">
-                <p className="text-red-200 text-center text-sm font-medium">{error}</p>
+              <div className="auth-alert" role="alert">
+                {error}
               </div>
             )}
 
-            {/* OAuth Buttons */}
             {isLogin && (
-              <div className="space-y-3">
+              <>
                 <button
+                  type="button"
                   onClick={handleGoogleLogin}
                   disabled={loading}
-                  className="w-full bg-white text-gray-700 border border-gray-300 rounded-xl px-4 py-3 flex items-center justify-center space-x-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="auth-oauth"
                 >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -239,81 +226,59 @@ const AuthPage = () => {
                   </svg>
                   <span>{getAuthTranslation('continue_with_google', language)}</span>
                 </button>
-                
-                {/* Facebook OAuth temporarily disabled - will be enabled after Facebook App setup */}
-                {/* <button
-                  onClick={handleFacebookLogin}
-                  disabled={loading}
-                  className="w-full bg-[#1877F2] text-white rounded-xl px-4 py-3 flex items-center justify-center space-x-2 hover:bg-[#166FE5] transition-colors disabled:opacity-50"
+
+                <div className="auth-sep">{getAuthTranslation('or', language)}</div>
+              </>
+            )}
+
+            {isLogin && (
+              <div className="auth-seg" role="tablist">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={loginMethod === 'email'}
+                  onClick={() => setLoginMethod('email')}
+                  className={loginMethod === 'email' ? 'is-on' : ''}
                 >
-                  <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                  <span>{getAuthTranslation('continue_with_facebook', language)}</span>
-                </button> */}
-                
-                <div className="flex items-center space-x-4 my-4">
-                  <div className="flex-1 border-t border-white/30"></div>
-                  <span className="text-white/70 text-sm">{getAuthTranslation('or', language)}</span>
-                  <div className="flex-1 border-t border-white/30"></div>
-                </div>
+                  <Mail aria-hidden="true" />
+                  {getAuthTranslation('email', language)}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={loginMethod === 'phone'}
+                  onClick={() => setLoginMethod('phone')}
+                  className={loginMethod === 'phone' ? 'is-on' : ''}
+                >
+                  <Phone aria-hidden="true" />
+                  {getAuthTranslation('phone', language)}
+                </button>
               </div>
             )}
 
-            {/* Login/Register Method Toggle */}
-            <div className="flex space-x-2 bg-white/10 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setLoginMethod('email')}
-                className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
-                  loginMethod === 'email'
-                    ? 'bg-amber-500 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white'
-                }`}
-              >
-                <Mail className="inline h-4 w-4 mr-2" />
-                {getAuthTranslation('email', language)}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLoginMethod('phone')}
-                className={`flex-1 py-2 px-4 rounded-lg transition-all duration-300 ${
-                  loginMethod === 'phone'
-                    ? 'bg-amber-500 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white'
-                }`}
-              >
-                <Phone className="inline h-4 w-4 mr-2" />
-                {getAuthTranslation('phone', language)}
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="auth-fields">
               {!isLogin && (
-                <div className="grid grid-cols-2 gap-4 animate-fade-in-up">
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                <div className="auth-row2">
+                  <div className="auth-field">
+                    <User className="auth-field__icon" aria-hidden="true" />
                     <input
                       type="text"
                       name="first_name"
                       placeholder={getAuthTranslation('first_name', language)}
                       value={formData.first_name}
                       onChange={handleInputChange}
-                      className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
                       required
                       data-testid="first-name-input"
                     />
                   </div>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                  <div className="auth-field">
+                    <User className="auth-field__icon" aria-hidden="true" />
                     <input
                       type="text"
                       name="last_name"
                       placeholder={getAuthTranslation('last_name', language)}
                       value={formData.last_name}
                       onChange={handleInputChange}
-                      className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
                       required
                       data-testid="last-name-input"
                     />
@@ -321,183 +286,119 @@ const AuthPage = () => {
                 </div>
               )}
 
-              {/* Email or Phone Input based on loginMethod */}
               {isLogin && loginMethod === 'email' && (
-                <div className="relative animate-slide-in-left">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                <div className="auth-field">
+                  <Mail className="auth-field__icon" aria-hidden="true" />
                   <input
                     type="email"
                     name="email"
                     placeholder={getAuthTranslation('email', language)}
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
                     required
                     data-testid="email-input"
                   />
                 </div>
               )}
 
-              {isLogin && loginMethod === 'phone' && (
-                <div className="animate-slide-in-left">
-                  <PhoneInput
-                    country={'sa'}
-                    value={formData.phone}
-                    onChange={(phone) => setFormData({ ...formData, phone: '+' + phone })}
-                    inputProps={{
-                      name: 'phone',
-                      required: true,
-                      className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
-                    }}
-                    containerClass="phone-input-container"
-                    buttonClass="phone-input-button"
-                    dropdownClass="phone-input-dropdown"
-                    searchClass="phone-input-search"
-                    enableSearch={true}
-                    searchPlaceholder={language === 'ar' ? "ابحث عن بلد..." : "Search country..."}
-                    inputClass="phone-input-field"
-                  />
-                </div>
-              )}
+              {isLogin && loginMethod === 'phone' && phoneField({ required: true })}
 
-              {/* Register: Both Email and Phone required */}
               {!isLogin && (
                 <>
-                  <div className="relative animate-slide-in-left">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+                  <div className="auth-field">
+                    <Mail className="auth-field__icon" aria-hidden="true" />
                     <input
                       type="email"
                       name="email"
                       placeholder={language === 'ar' ? 'البريد الإلكتروني (اختياري)' : 'Email (optional)'}
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
                       data-testid="email-input"
                     />
                   </div>
 
-                  <div className="animate-slide-in-left">
-                    <PhoneInput
-                      country={'sa'}
-                      value={formData.phone}
-                      onChange={(phone, country) => setFormData({ ...formData, phone: '+' + phone, country: country.countryCode.toUpperCase() })}
-                      inputProps={{
-                        name: 'phone',
-                        required: false,
-                        placeholder: language === 'ar' ? 'رقم الهاتف (اختياري)' : 'Phone (optional)',
-                        className: 'w-full bg-white/10 border border-white/30 rounded-xl px-14 py-3 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300'
-                      }}
-                      containerClass="phone-input-container"
-                      buttonClass="phone-input-button"
-                      dropdownClass="phone-input-dropdown"
-                      searchClass="phone-input-search"
-                      enableSearch={true}
-                      searchPlaceholder={language === 'ar' ? "ابحث عن بلد..." : "Search country..."}
-                      inputClass="phone-input-field"
-                    />
-                  </div>
-                  
-                  {/* Info message */}
-                  <p className="text-xs text-amber-300/70 text-center -mt-2">
-                    {language === 'ar' ? 'يجب إدخال البريد أو رقم الهاتف على الأقل' : 'At least email or phone is required'}
-                  </p>
+                  {phoneField({
+                    required: false,
+                    placeholder: language === 'ar' ? 'رقم الهاتف (اختياري)' : 'Phone (optional)'
+                  })}
+
+                  <p className="auth-hint">{getAuthTranslation('email_or_phone_required', language)}</p>
                 </>
               )}
 
-              <div className="relative animate-slide-in-right">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-amber-300" />
+              <div className="auth-field">
+                <Lock className="auth-field__icon" aria-hidden="true" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   placeholder={getAuthTranslation('password', language)}
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full bg-white/10 border border-white/30 rounded-xl px-12 py-3 pr-12 text-white placeholder-white/70 focus:outline-none focus:border-amber-400 transition-all duration-300"
                   required
                   minLength={6}
                   data-testid="password-input"
                 />
                 <button
                   type="button"
+                  className="auth-field__toggle"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-300 hover:text-amber-200 transition-colors duration-200"
+                  aria-label={
+                    showPassword
+                      ? (language === 'ar' ? 'إخفاء كلمة المرور' : 'Hide password')
+                      : (language === 'ar' ? 'إظهار كلمة المرور' : 'Show password')
+                  }
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
                 </button>
               </div>
 
-              {isLogin && (
-                <div className="text-right animate-fade-in-up">
-                  <Link 
-                    to="/forgot-password" 
-                    className="text-sm text-amber-300 hover:text-amber-200 transition-colors duration-200"
-                  >
-                    {getAuthTranslation('forgot_password', language)}
-                  </Link>
+              <div className="auth-meta">
+                <label htmlFor="rememberMe">
+                  <input
+                    type="checkbox"
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  {language === 'ar' ? 'تذكّرني شهرين' : 'Remember me'}
+                </label>
+                {isLogin && (
+                  <Link to="/forgot-password">{getAuthTranslation('forgot_password', language)}</Link>
+                )}
+              </div>
+
+              {/* Only reserve room for the challenge when one is actually configured. */}
+              {TURNSTILE_SITE_KEY && (
+                <div className="auth-turnstile">
+                  <div ref={turnstileRef} className="cf-turnstile" data-theme="dark"></div>
                 </div>
               )}
 
-              {/* Remember Me Checkbox */}
-              <div className="flex items-center mt-4 animate-fade-in-up">
-                <input
-                  type="checkbox"
-                  id="rememberMe"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 text-amber-500 bg-white/10 border-amber-300 rounded focus:ring-amber-500 focus:ring-2"
-                />
-                <label htmlFor="rememberMe" className="ml-2 text-sm text-white/80">
-                  {language === 'ar' ? 'تذكرني لمدة شهرين' : 'Remember me for 2 months'}
-                </label>
-              </div>
-
-              {/* Cloudflare Turnstile */}
-              <div className="flex justify-center my-4">
-                <div ref={turnstileRef} className="cf-turnstile" data-theme="light"></div>
-              </div>
-
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 data-testid="auth-submit-button"
-                className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 animate-pulse-gold shadow-2xl animate-luxury-zoom-in"
+                className="auth-submit"
               >
-                {loading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span className="ml-2">{language === 'ar' ? 'جاري...' : 'Loading...'}</span>
-                  </div>
-                ) : (
-                  getAuthTranslation(isLogin ? 'login' : 'register', language)
-                )}
+                {loading
+                  ? getAuthTranslation('loading', language)
+                  : getAuthTranslation(isLogin ? 'login' : 'register', language)}
               </button>
             </form>
 
-            {/* Switch Mode */}
-            <div className="mt-6 text-center animate-fade-in-up">
-              <p className="text-white/80">
-                {isLogin 
-                  ? (language === 'ar' ? 'ليس لديك حساب؟' : "Don't have an account?") 
-                  : (language === 'ar' ? 'لديك حساب بالفعل؟' : 'Already have an account?')
-                }
-                {' '}
-                <button
-                  type="button"
-                  onClick={switchMode}
-                  className="text-amber-300 hover:text-amber-200 font-medium underline transition-colors duration-200"
-                  data-testid="switch-auth-mode"
-                >
-                  {getAuthTranslation(isLogin ? 'register' : 'login', language)}
-                </button>
-              </p>
-            </div>
+            <p className="auth-switch">
+              {isLogin
+                ? getAuthTranslation('no_account', language)
+                : getAuthTranslation('have_account', language)}
+              {' '}
+              <button type="button" onClick={switchMode} data-testid="switch-auth-mode">
+                {getAuthTranslation(isLogin ? 'register' : 'login', language)}
+              </button>
+            </p>
 
-            {/* Info - Removed demo credentials for security */}
-
-            {/* Security Notice */}
-            <div className="mt-6 text-center text-sm text-white/60 animate-fade-in-up">
-              <p>🔒 بياناتك محمية ومشفرة</p>
-            </div>
+            <p className="auth-note">
+              {language === 'ar' ? '🔒 بياناتك محمية ومشفّرة' : '🔒 Your data is encrypted and protected'}
+            </p>
           </div>
         </div>
       </div>

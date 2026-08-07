@@ -815,9 +815,11 @@ def test_placeholder_returns_svg_and_clamps_size(client):
 # Auto-update and shipping
 # ---------------------------------------------------------------------------
 
+# /auto-update/currency-rates is deliberately absent: reading published
+# exchange rates is public, because every visitor needs them to see prices.
+# Triggering a refresh is still admin-only and is covered below.
 AUTO_UPDATE_PATHS = [
     ("get", "/api/auto-update/status"),
-    ("get", "/api/auto-update/currency-rates"),
     ("get", "/api/auto-update/scheduled-task-logs"),
     ("get", "/api/auto-update/bulk-import-tasks"),
     ("post", "/api/auto-update/trigger-currency-update"),
@@ -1104,3 +1106,24 @@ def test_google_callback_refuses_an_off_site_redirect_uri(client, google_configu
     r = client.post("/api/auth/oauth/google/callback",
                     json={"code": "auth-code", "redirect_uri": "https://evil.example.com/cb"})
     assert r.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Currency rates
+# ---------------------------------------------------------------------------
+
+def test_currency_rates_are_public(client):
+    """
+    Every visitor's LanguageContext calls this to price the catalogue. It used
+    to require an admin token, so every customer got 403 and the store fell
+    back to USD-only rates.
+    """
+    r = client.get("/api/auto-update/currency-rates")
+    assert r.status_code != 401, "signed-out visitors must be able to read rates"
+    assert r.status_code != 403, "customers must not need admin to see prices"
+
+
+def test_refreshing_currency_rates_still_needs_admin(client):
+    """Reading is public; making the server go fetch new rates is not."""
+    r = client.post("/api/auto-update/trigger-currency-update")
+    assert r.status_code in (401, 403), r.text

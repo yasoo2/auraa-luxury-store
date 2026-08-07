@@ -1510,3 +1510,106 @@ def test_the_token_call_sends_apikey_not_password(fake_cj):
     import asyncio
     asyncio.get_event_loop().run_until_complete(cj_client.list_products(1, 1))
     assert any(p.endswith("/v1/authentication/getAccessToken") for p, _ in fake_cj.calls)
+
+
+# --- several similarly named CJ variables ----------------------------------
+
+def _cj_env(monkeypatch, **vars):
+    for name in ("CJ_DROPSHIP_API_KEY", "CJ_API_KEY", "CJ_ACCESS_TOKEN",
+                 "CJ_DROPSHIP_EMAIL", "CJ_EMAIL"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in vars.items():
+        monkeypatch.setenv(name, value)
+
+
+class _PickyCJ(_FakeCJ):
+    """Accepts exactly one API key, the way CJ accepts exactly one."""
+
+    def __init__(self, good_key):
+        super().__init__()
+        self.good_key = good_key
+
+    async def request(self, method, url, json=None, headers=None):
+        self.calls.append((url.rsplit("/api2.0", 1)[-1], (headers or {}).get("CJ-Access-Token")))
+        if url.endswith("/v1/authentication/getAccessToken"):
+            if json.get("apiKey") == self.good_key:
+                return _FakeResponse(200, {"code": 200, "result": True, "data": {
+                    "accessToken": REAL_TOKEN, "accessTokenExpiryDate": "2030-01-01T00:00:00"}})
+            return _FakeResponse(200, {"code": 1600005, "result": False,
+                                       "message": "Email or password is wrong"})
+        if (headers or {}).get("CJ-Access-Token") != REAL_TOKEN:
+            return _FakeResponse(401, {"code": 1600001, "result": False, "message": "bad token"})
+        return _FakeResponse(200, {"code": 200, "result": True, "data": {"list": []}})
+
+
+def test_the_right_key_is_found_even_when_it_is_not_the_first_variable(monkeypatch):
+    """
+    This deployment has both CJ_DROPSHIP_API_KEY and CJ_API_KEY. Preferring one
+    and stopping meant a correct key sitting in the other variable still read as
+    "Email or password is wrong".
+    """
+    _cj_env(monkeypatch, CJ_DROPSHIP_API_KEY="the-wrong-one",
+            CJ_API_KEY="the-right-one", CJ_EMAIL="shop@example.com")
+    monkeypatch.setattr(cj_client, "_client", _PickyCJ("the-right-one"))
+    cj_client._reset_token()
+
+    import asyncio
+    token = asyncio.get_event_loop().run_until_complete(cj_client._get_access_token())
+    assert token == REAL_TOKEN
+    cj_client._reset_token()
+
+
+def test_when_no_key_works_the_error_names_what_was_tried(monkeypatch):
+    _cj_env(monkeypatch, CJ_DROPSHIP_API_KEY="wrong-a", CJ_API_KEY="wrong-b",
+            CJ_EMAIL="shop@example.com")
+    monkeypatch.setattr(cj_client, "_client", _PickyCJ("something-else"))
+    cj_client._reset_token()
+
+    import asyncio
+    with pytest.raises(cj_client.CJError) as e:
+        asyncio.get_event_loop().run_until_complete(cj_client._get_access_token())
+    message = str(e.value)
+    assert "CJ_DROPSHIP_API_KEY" in message and "CJ_API_KEY" in message
+    assert "My CJ" in message, "the message must say where to get a real key"
+    # The keys themselves must never appear in something an admin screen renders.
+    assert "wrong-a" not in message and "wrong-b" not in message
+    cj_client._reset_token()
+
+
+def test_the_report_never_prints_a_key(monkeypatch):
+    _cj_env(monkeypatch, CJ_API_KEY="super-secret-key-value", CJ_EMAIL="a@b.c")
+    report = cj_client.credential_report()
+    assert "super-secret-key-value" not in str(report)
+    assert "22 chars" in report["keys"]["CJ_API_KEY"]
+
+
+def test_rechecking_the_connection_does_not_burn_cjs_token_quota(fake_cj):
+    """
+    CJ issues an access token at most once per 300 seconds. The Integrations
+    screen calls authenticate() on every press of "re-check", and it used to
+    force a re-issue — so the second press inside five minutes came back as
+    "Email or password is wrong" on a connection that was perfectly healthy.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+    for _ in range(3):
+        loop.run_until_complete(cj_client.authenticate())
+    auths = [c for c in fake_cj.calls if "getAccessToken" in c[0]]
+    assert len(auths) == 1, f"re-checking three times issued {len(auths)} tokens"
+
+
+def test_a_successful_check_says_which_variables_worked(monkeypatch):
+    """
+    Reporting only "authenticated" leaves an owner with two similarly named
+    keys no way to tell which one is live, so the dead one stays forever.
+    """
+    _cj_env(monkeypatch, CJ_DROPSHIP_API_KEY="the-wrong-one",
+            CJ_API_KEY="the-right-one", CJ_EMAIL="shop@example.com")
+    monkeypatch.setattr(cj_client, "_client", _PickyCJ("the-right-one"))
+    cj_client._reset_token()
+
+    import asyncio
+    result = asyncio.get_event_loop().run_until_complete(cj_client.authenticate())
+    assert result["credentials_used"] == "CJ_EMAIL + CJ_API_KEY", result
+    assert "the-right-one" not in str(result), "the key itself must not be reported"
+    cj_client._reset_token()

@@ -47,10 +47,15 @@ async def test_auth():
     try:
         logger.info("🔐 Testing CJ authentication...")
         result = await authenticate()
-        
+
+        # Name the variables that worked: this deployment carries more than one
+        # CJ key, and knowing which one is live is what lets the unused ones be
+        # deleted instead of guessed at.
+        used = result.get("credentials_used")
         return {
             "ok": True,
-            "message": "✅ Authentication successful",
+            "message": f"✅ Authentication successful ({used})" if used
+                       else "✅ Authentication successful",
             "data": result
         }
     except Exception as e:

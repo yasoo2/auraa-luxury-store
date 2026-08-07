@@ -11,11 +11,55 @@ logger = logging.getLogger(__name__)
 
 CJ_BASE = os.getenv("CJ_BASE", "https://developers.cjdropshipping.com/api2.0")
 
-# Both spellings are accepted: deployments in the wild have the key under
-# CJ_API_KEY and the email under CJ_EMAIL, and a mismatch here reads as
-# "credentials rejected" with nothing to show why.
-CJ_API_KEY = os.getenv("CJ_DROPSHIP_API_KEY") or os.getenv("CJ_API_KEY") or ""
-CJ_EMAIL = os.getenv("CJ_DROPSHIP_EMAIL") or os.getenv("CJ_EMAIL") or ""
+# This deployment carries several similarly named variables — CJ_API_KEY and
+# CJ_DROPSHIP_API_KEY both exist, and only one of them is the API key CJ wants.
+# Rather than make the shop owner guess which, try each in turn and say which
+# one worked.
+KEY_VARS = ("CJ_DROPSHIP_API_KEY", "CJ_API_KEY", "CJ_ACCESS_TOKEN")
+EMAIL_VARS = ("CJ_DROPSHIP_EMAIL", "CJ_EMAIL")
+
+CJ_API_KEY = next((os.getenv(v) for v in KEY_VARS if os.getenv(v)), "")
+CJ_EMAIL = next((os.getenv(v) for v in EMAIL_VARS if os.getenv(v)), "")
+
+
+def _fingerprint(value: str) -> str:
+    """Enough to tell two values apart, never enough to use one."""
+    if not value:
+        return "unset"
+    return f"{value[:2]}…{value[-2:]} ({len(value)} chars)"
+
+
+def credential_report() -> Dict[str, Any]:
+    """
+    Which CJ variables this deployment has, and how they differ — without
+    printing any of them. "Email or password is wrong" is unactionable on its
+    own when four similarly named variables are in play.
+    """
+    return {
+        "emails": {v: _fingerprint(os.getenv(v) or "") for v in EMAIL_VARS},
+        "keys": {v: _fingerprint(os.getenv(v) or "") for v in KEY_VARS},
+    }
+
+
+def _credential_pairs():
+    """
+    Every (email, key) worth trying, most likely first.
+
+    The module-level CJ_EMAIL/CJ_API_KEY lead: they are what an explicit
+    override sets, and they are the values resolved when the process started.
+    Anything else the environment offers follows as an alternative.
+    """
+    emails = [("CJ_EMAIL", CJ_EMAIL)] if CJ_EMAIL else []
+    keys = [("CJ_API_KEY", CJ_API_KEY)] if CJ_API_KEY else []
+    emails += [(v, os.getenv(v)) for v in EMAIL_VARS if os.getenv(v)]
+    keys += [(v, os.getenv(v)) for v in KEY_VARS if os.getenv(v)]
+    seen = set()
+    for ev, email in emails:
+        for kv, key in keys:
+            if (email, key) in seen:
+                continue
+            seen.add((email, key))
+            yield ev, email, kv, key
 
 # غيّر القيم حسب سياسة CJ الفعلية:
 REQUESTS_PER_SEC = int(os.getenv("CJ_RPS", "2"))  # حد أقصى 2 طلب/ثانية
@@ -49,14 +93,17 @@ class CJError(Exception):
 _token: Optional[str] = None
 _token_expires_at: float = 0.0
 _token_lock = asyncio.Lock()
+# Which pair of environment variables produced the token in hand. Reported to
+# the admin screen so a deployment carrying duplicates can drop the unused one.
+_token_source: Optional[str] = None
 
 # Refresh a little early rather than discovering expiry mid-import.
 _TOKEN_SAFETY_MARGIN = 3600  # seconds
 
 
 def _reset_token() -> None:
-    global _token, _token_expires_at
-    _token, _token_expires_at = None, 0.0
+    global _token, _token_expires_at, _token_source
+    _token, _token_expires_at, _token_source = None, 0.0, None
 
 
 def _parse_expiry(raw: Any) -> float:
@@ -75,38 +122,57 @@ def _parse_expiry(raw: Any) -> float:
 async def _get_access_token(force: bool = False) -> str:
     """The cached access token, fetching a new one only when it is needed."""
     import time
-    global _token, _token_expires_at
+    global _token, _token_expires_at, _token_source
 
     async with _token_lock:
         if not force and _token and time.time() < _token_expires_at - _TOKEN_SAFETY_MARGIN:
             return _token
 
-        if not CJ_EMAIL or not CJ_API_KEY:
+        pairs = list(_credential_pairs())
+        if not pairs:
             raise CJError(
-                "CJ credentials are not configured: set CJ_DROPSHIP_EMAIL and "
-                "CJ_DROPSHIP_API_KEY (or CJ_EMAIL / CJ_API_KEY)"
+                "CJ credentials are not configured. Set an email in one of "
+                f"{', '.join(EMAIL_VARS)} and an API key in one of "
+                f"{', '.join(KEY_VARS)}."
             )
 
         # The field is apiKey, not password. CJ's own rejection said so:
         #   "CJ error 1600005: Email or password is wrong ... We recommend
         #    switching to the apiKey mode"
-        # The sibling client in this repo had it right all along.
-        logger.info("🔑 Requesting a fresh CJ access token")
-        data = await _request_json(
-            "POST", "/v1/authentication/getAccessToken",
-            json={"email": CJ_EMAIL, "apiKey": CJ_API_KEY},
-            authenticated=False,
+        last_error = None
+        for email_var, email, key_var, key in pairs:
+            logger.info(f"🔑 Requesting a CJ access token with {email_var} + {key_var}")
+            try:
+                data = await _request_json(
+                    "POST", "/v1/authentication/getAccessToken",
+                    json={"email": email, "apiKey": key},
+                    authenticated=False,
+                )
+            except CJError as e:
+                # Wrong pair; keep the reason and try the next combination.
+                last_error = e
+                logger.warning(f"🔑 {email_var} + {key_var} rejected: {e}")
+                continue
+
+            payload = data.get("data") or {}
+            token = payload.get("accessToken")
+            if not token:
+                last_error = CJError(f"CJ returned no access token: {data}")
+                continue
+
+            _token = token
+            _token_expires_at = _parse_expiry(payload.get("accessTokenExpiryDate"))
+            _token_source = f"{email_var} + {key_var}"
+            logger.info(f"🔑 CJ access token obtained using {_token_source}")
+            return _token
+
+        tried = ", ".join(f"{e}+{k}" for e, _, k, _ in pairs)
+        report = credential_report()
+        raise CJError(
+            f"{last_error}. Tried {len(pairs)} combination(s): {tried}. "
+            f"Variables present — emails: {report['emails']}, keys: {report['keys']}. "
+            "The API key comes from CJ: My CJ → Authorization → API."
         )
-
-        payload = data.get("data") or {}
-        token = payload.get("accessToken")
-        if not token:
-            raise CJError(f"CJ returned no access token: {data}")
-
-        _token = token
-        _token_expires_at = _parse_expiry(payload.get("accessTokenExpiryDate"))
-        logger.info("🔑 CJ access token obtained")
-        return _token
 
 def _should_retry(exc: Exception) -> bool:
     """نعيد المحاولة على 429 + كل 5xx + أخطاء الشبكة"""
@@ -134,9 +200,9 @@ async def _request_json(
     _retrying: bool = False,
 ) -> Dict[str, Any]:
     """طلب HTTP مع rate limiting و retries تلقائية"""
-    if not CJ_API_KEY:
-        raise CJError("CJ_DROPSHIP_API_KEY not configured")
-
+    # Credentials are checked where they are used — _get_access_token names
+    # every variable it tried. This guard read a constant resolved at import,
+    # so it fired even when a valid key was available later.
     headers = {"Content-Type": "application/json"}
     if authenticated:
         headers["CJ-Access-Token"] = await _get_access_token()
@@ -213,13 +279,23 @@ async def import_products_by_ids(product_ids: List[str]) -> Dict[str, Any]:
 
 async def authenticate() -> Dict[str, Any]:
     """
-    Force a fresh access token and report what CJ said.
+    Report whether this deployment holds a usable CJ access token.
 
-    Used by the admin Integrations screen, so it must answer for the whole
-    exchange — not merely that the HTTP call did not throw.
+    Deliberately does *not* force a re-issue. CJ allows getAccessToken once per
+    300 seconds, so a forced refresh on every press of the admin's "re-check"
+    button turned a perfectly healthy connection into "Email or password is
+    wrong" the second time it was pressed. The token in hand was obtained from
+    CJ and nothing else could have produced it, so holding one is the answer to
+    the question this endpoint asks. Whether CJ still honours it is the
+    question /ping asks, by spending it on a real call.
     """
-    token = await _get_access_token(force=True)
-    return {"authenticated": True, "token_suffix": token[-6:], "expires_at": _token_expires_at}
+    token = await _get_access_token()
+    return {
+        "authenticated": True,
+        "token_suffix": token[-6:],
+        "expires_at": _token_expires_at,
+        "credentials_used": _token_source,
+    }
 
 # Graceful shutdown
 async def close_client():

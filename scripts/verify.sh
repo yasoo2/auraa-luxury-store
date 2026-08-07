@@ -61,6 +61,24 @@ fi
 if [ -d "$ROOT/frontend/node_modules" ]; then
   step "Frontend build" \
     bash -c "cd '$ROOT/frontend' && CI=false npx craco build"
+
+  # The service worker sits between every visitor and every page, and nothing
+  # else here would notice it breaking: it once returned undefined from
+  # respondWith, which the browser reports as a hard network error on the page
+  # the shopper asked for. Needs the build above, and a real browser.
+  if [ -d "$ROOT/frontend/build" ]; then
+    blue "→ Service worker survives going offline"
+    node "$ROOT/scripts/verify-sw.mjs" "$ROOT/frontend/build" > /tmp/verify-step.log 2>&1
+    case "$?" in
+      0) green "  ✓ Service worker survives going offline" ;;
+      # Exit 2 means the check could not run. Say so — a check that silently
+      # counts as a pass is worse than one that is missing.
+      2) red   "  ! skipped — $(tail -1 /tmp/verify-step.log)" ;;
+      *) red   "  ✗ Service worker survives going offline"
+         tail -25 /tmp/verify-step.log | sed 's/^/    /'
+         FAILED=1 ;;
+    esac
+  fi
 else
   red "  ! skipping frontend — run: cd frontend && npm install --legacy-peer-deps"
 fi

@@ -47,121 +47,120 @@ self.addEventListener('activate', (event) => {
         }
       }));
     }).then(() => {
-      // FORCE take control of all clients immediately
+      // Take control immediately. This fires "controllerchange" in every open
+      // tab, which is the single signal the page reloads on — the extra
+      // SW_UPDATED broadcast that used to live here made a second reload race
+      // the first, and index.js had a third on top of that.
       return self.clients.claim();
-    }).then(() => {
-      // Notify all clients to reload for new version
-      return self.clients.matchAll({ includeUncontrolled: true, type: 'window' })
-        .then((clients) => {
-          clients.forEach(client => {
-            client.postMessage({
-              type: 'SW_UPDATED',
-              version: APP_VERSION,
-              timestamp: BUILD_TIMESTAMP,
-              message: 'New version available - reloading...'
-            });
-          });
-        });
     })
   );
 });
 
-// Fetch Event - NETWORK FIRST strategy for dynamic content
+// --- Fetch ------------------------------------------------------------------
+//
+// Two rules this file did not follow, and each one broke something real:
+//
+// 1. Every path that calls respondWith MUST end in a Response. The old handler
+//    returned undefined when the network failed for a non-document, and
+//    returned caches.match('/offline.html') for documents — which is *also*
+//    undefined whenever that page is not in the cache. The browser then reports
+//    "Failed to convert value to 'Response'" and the navigation dies with a
+//    hard network error instead of a page. That is what made /profile
+//    unreachable.
+//
+// 2. Authenticated API responses must never enter Cache Storage. The old
+//    handler cached anything answering 200 whose path merely *contained*
+//    "/auth" or "/admin" — /api/auth/me included. Cache Storage is keyed by
+//    origin, not by user: on a shared device the next person to go offline
+//    would be handed the previous person's profile. The API is now not
+//    intercepted at all; the browser fetches it directly.
+
+function offlineFallback() {
+  // A Response body can be read once, so build a fresh one every time.
+  return new Response(
+    '<!doctype html><meta charset="utf-8"><title>غير متصل</title>'
+    + '<body style="font-family:system-ui;text-align:center;padding:3rem">'
+    + '<h1>لا يوجد اتصال بالإنترنت</h1><p>No internet connection</p>',
+    { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  );
+}
+
+function cachePut(key, response) {
+  return caches.open(CACHE_NAME)
+    .then((cache) => cache.put(key, response))
+    .catch((err) => console.debug('[SW] Cache put failed:', err));
+}
+
+// Navigations: the network decides, the cached shell rescues. Cache-first here
+// is what serves a stale app after a deploy, so it is deliberately not used.
+async function documentResponse(request) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      // Store one shell under "/" — this SPA renders every route from it, so a
+      // per-route copy would only grow the cache without adding anything.
+      cachePut('/', response.clone());
+    }
+    return response;
+  } catch (err) {
+    return (await caches.match('/'))
+      || (await caches.match('/offline.html'))
+      || offlineFallback();
+  }
+}
+
+// Static assets are content-hashed by the build, so a cache hit can be trusted
+// and refreshed behind the user's back.
+async function assetResponse(request) {
+  const cached = await caches.match(request);
+  if (cached) {
+    fetch(request)
+      .then((response) => {
+        if (response && response.ok && response.type === 'basic') {
+          cachePut(request, response.clone());
+        }
+      })
+      .catch(() => {/* a background refresh that fails changes nothing */});
+    return cached;
+  }
+
+  try {
+    const response = await fetch(request);
+    if (response && response.ok && response.type === 'basic') {
+      cachePut(request, response.clone());
+    }
+    return response;
+  } catch (err) {
+    return offlineFallback();
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  
-  // Only handle GET requests
-  if (request.method !== 'GET') {
-    return; // Let non-GET requests pass through
-  }
-  
-  const url = new URL(request.url);
-  
-  // CRITICAL: For API and dynamic routes, ALWAYS fetch from network first
-  // This prevents showing stale admin UI or data
-  if (url.pathname.startsWith('/api/') || 
-      url.pathname.includes('/admin') ||
-      url.pathname.includes('/auth') ||
-      url.pathname.includes('.json') ||
-      url.pathname.includes('.js') ||
-      url.pathname.includes('.css')) {
-    
-    // NETWORK FIRST - Always try network, fallback to cache only if offline
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Clone and cache successful responses
-          if (response && response.status === 200) {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then(cache => cache.put(request, responseToCache))
-              .catch(err => console.debug('[SW] Cache put failed:', err));
-          }
-          return response;
-        })
-        .catch(() => {
-          // Only use cache if network fails (offline)
-          return caches.match(request).then(cachedResponse => {
-            if (cachedResponse) {
-              console.log('[SW] Serving from cache (offline):', url.pathname);
-              return cachedResponse;
-            }
-            // Return offline page for navigation
-            if (request.destination === 'document') {
-              return caches.match('/offline.html');
-            }
-            return new Response('Network error', { status: 503 });
-          });
-        })
-    );
+
+  if (request.method !== 'GET') return;
+
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch (err) {
     return;
   }
-  
-  // For other static assets, use cache first (faster)
-  event.respondWith(
-    caches.match(request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          // Serve from cache but update in background
-          fetch(request)
-            .then(response => {
-              if (response && response.status === 200) {
-                caches.open(CACHE_NAME)
-                  .then(cache => cache.put(request, response))
-                  .catch(err => console.debug('[SW] Background update failed:', err));
-              }
-            })
-            .catch(() => {/* Ignore background update failures */});
-          
-          return cachedResponse;
-        }
-        
-        // Not in cache, fetch from network
-        return fetch(request)
-          .then((response) => {
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-            
-            const requestUrl = new URL(request.url);
-            if (requestUrl.protocol === 'chrome-extension:' || requestUrl.protocol === 'about:') {
-              return response;
-            }
-            
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then((cache) => cache.put(request, responseToCache))
-              .catch((err) => console.debug('Cache put failed:', err));
-            
-            return response;
-          })
-          .catch(() => {
-            if (request.destination === 'document') {
-              return caches.match('/offline.html');
-            }
-          });
-      })
-  );
+
+  // Anything not ours — the API host, fonts, analytics — is none of our
+  // business, and chrome-extension: URLs cannot be cached at all.
+  if (url.origin !== self.location.origin) return;
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  // The API is never intercepted and never cached. See rule 2 above.
+  if (url.pathname.startsWith('/api/')) return;
+
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(documentResponse(request));
+    return;
+  }
+
+  event.respondWith(assetResponse(request));
 });
 
 // Background Sync for offline actions

@@ -11,61 +11,33 @@ root.render(
   </React.StrictMode>,
 );
 
-// Register Service Worker for PWA with AUTO-UPDATE
+// Register the service worker.
+//
+// Exactly one thing reloads the page: the moment a new worker takes control.
+// There used to be three racing each other — a timer after "installed", a
+// SW_UPDATED message from the worker, and controllerchange — so a single
+// deploy could reload a shopper mid-checkout more than once.
 if ('serviceWorker' in navigator) {
+  // No controller on a first visit: the worker claims the page a moment after
+  // it installs, and reloading then would restart every visit for nothing.
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let reloading = false;
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    showUpdateNotification();
+    window.location.reload();
+  });
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        console.log('✅ SW registered: ', registration);
-        
-        // AUTOMATIC UPDATE CHECKING every 60 seconds
-        setInterval(() => {
-          registration.update();
-        }, 60000);
-        
-        // Check for updates immediately
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          console.log('🔄 New Service Worker found, installing...');
-          
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('✨ New version available! Auto-updating...');
-              
-              // AUTOMATICALLY apply update without asking user
-              newWorker.postMessage({ type: 'SKIP_WAITING' });
-              
-              // Show a subtle notification (optional)
-              showUpdateNotification();
-              
-              // Reload after 1 second to apply changes
-              setTimeout(() => {
-                window.location.reload();
-              }, 1000);
-            }
-          });
-        });
+        setInterval(() => registration.update(), 60000);
       })
       .catch((registrationError) => {
-        console.log('❌ SW registration failed: ', registrationError);
+        console.warn('Service worker registration failed:', registrationError);
       });
-  });
-
-  // Listen for controlling service worker change
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    console.log('🔄 Service Worker controller changed, reloading...');
-    window.location.reload();
-  });
-  
-  // Listen for messages from Service Worker
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SW_UPDATED') {
-      console.log('📦 SW Update:', event.data.message, 'Version:', event.data.version);
-      // Auto-reload to get new version
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-    }
   });
 }
 

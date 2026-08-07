@@ -1414,11 +1414,14 @@ class _FakeCJ:
     async def request(self, method, url, json=None, headers=None):
         self.calls.append((url.rsplit("/api2.0", 1)[-1], (headers or {}).get("CJ-Access-Token")))
         if url.endswith("/v1/authentication/getAccessToken"):
-            if json.get("email") and json.get("password"):
+            # CJ wants apiKey. Sending "password" earns error 1600005.
+            if json.get("email") and json.get("apiKey"):
                 return _FakeResponse(200, {"code": 200, "result": True, "data": {
                     "accessToken": REAL_TOKEN,
                     "accessTokenExpiryDate": "2030-01-01T00:00:00"}})
-            return _FakeResponse(200, {"code": 1600001, "result": False, "message": "bad creds"})
+            return _FakeResponse(200, {"code": 1600005, "result": False, "message":
+                "Email or password is wrong, please check and try again. "
+                "We recommend switching to the apiKey mode"})
         if (headers or {}).get("CJ-Access-Token") != REAL_TOKEN:
             return _FakeResponse(401, {"code": 1600001, "result": False,
                                        "message": "Invalid API key or access token"})
@@ -1496,3 +1499,14 @@ def test_the_token_call_uses_the_versioned_path(fake_cj):
     asyncio.get_event_loop().run_until_complete(cj_client.list_products(1, 1))
     paths = [p for p, _ in fake_cj.calls]
     assert "/v1/authentication/getAccessToken" in paths, paths
+
+
+def test_the_token_call_sends_apikey_not_password(fake_cj):
+    """
+    CJ names the field apiKey. Sending it as "password" is rejected with 1600005
+    and CJ's own message tells you so — the sibling client in this repo had it
+    right, this one did not.
+    """
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(cj_client.list_products(1, 1))
+    assert any(p.endswith("/v1/authentication/getAccessToken") for p, _ in fake_cj.calls)

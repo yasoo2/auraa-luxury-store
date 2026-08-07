@@ -114,10 +114,44 @@ Runs against an in-memory MongoDB; no database or network required.
 
 ## النشر · Deployment
 
-الدفع إلى `main` يُشغّل `CI` (بناء الواجهة + اختبارات الخادم)، وعند نجاحه فقط يعمل
-`Deploy on Merge` فينشر على Render ويُفرّغ كاش Cloudflare.
+النشر يتم عبر **التكامل المباشر مع Git**، بلا أي GitHub Actions.
 
-Pushing to `main` runs `CI`; `Deploy on Merge` runs only if CI succeeds.
+Deployment runs through Render's and Cloudflare Pages' own Git integrations —
+no GitHub Actions involved.
+
+| المكوّن | الوجهة | الآلية |
+|---------|--------|--------|
+| Backend | Render | `autoDeploy: true` على فرع `main` في `backend/render.yaml` |
+| Frontend | Cloudflare Pages | تكامل Git المدمج، يبني عند كل دفعة إلى `main` |
+
+### إعدادات بناء Cloudflare Pages
+
+```
+Framework preset:       None
+Root directory:         frontend
+Build command:          npm run build
+Build output directory: build
+```
+مع متغيّر البيئة `REACT_APP_BACKEND_URL = https://api.auraaluxury.com`.
+
+### ⚠️ التحقق قبل الدفع
+
+بما أن Render وCloudflare ينشران **مباشرةً عند الدفع** ولا يشغّلان أي اختبار، فالدفعة هي
+آخر نقطة يمكن فيها إيقاف كوميت معطوب. شغّل الفحص محلياً أولاً:
+
+```bash
+./scripts/verify.sh          # استيراد الخادم + الاختبارات + بناء الواجهة
+```
+
+ولأتمتة ذلك عند كل `git push`:
+
+```bash
+./scripts/install-hooks.sh   # يثبّت pre-push hook
+# للتخطي مرة واحدة: git push --no-verify
+```
+
+> `.github/workflows/ci.yml` باقٍ ويشغّل نفس الفحوصات، لكنه يعمل فقط إن كانت GitHub
+> Actions مُفعّلة على المستودع. `scripts/verify.sh` هو البديل الذي لا يعتمد عليها.
 
 - فحص الصحة · Health check: `GET /health`
 - خريطة الموقع · Sitemap: `GET /sitemap.xml`

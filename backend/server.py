@@ -26,6 +26,18 @@ from enum import Enum
 # Import services
 from services.background_import import ImportJobManager, background_import_cj_products
 
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
+# Configure logging. This must come before anything that logs at import time —
+# the CJ initialization below logs on failure, and referencing `logger` before
+# it exists would turn a recoverable service outage into a boot crash.
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Initialize CJ service (for readiness check)
 try:
     from services.cj_dropshipping import CJDropshippingService
@@ -33,16 +45,6 @@ try:
 except Exception as e:
     logger.warning(f"CJ service initialization failed: {e}")
     cj_service = None
-
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -132,6 +134,179 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
 app.add_middleware(CustomCORSMiddleware)
 
 api_router = APIRouter(prefix="/api")
+
+security = HTTPBearer()
+
+# JWT settings — must match routes/auth.py, which mints the tokens verified here.
+SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
+ALGORITHM = "HS256"
+
+
+# =============================================================================
+# Health Checks
+# =============================================================================
+
+async def _health_payload():
+    """Shared health body. Reports DB reachability without failing the check."""
+    db_ok = True
+    try:
+        await db.command("ping")
+    except Exception:
+        db_ok = False
+
+    return {
+        "status": "ok",
+        "db": db_ok,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """Liveness probe. Referenced by render.yaml `healthCheckPath`."""
+    return await _health_payload()
+
+
+@api_router.get("/health")
+async def api_health_check():
+    """Same probe under /api, which is what the frontend calls."""
+    return await _health_payload()
+
+
+# =============================================================================
+# Core Models
+# =============================================================================
+
+class CategoryType(str, Enum):
+    earrings = "earrings"
+    necklaces = "necklaces"
+    bracelets = "bracelets"
+    rings = "rings"
+    watches = "watches"
+    sets = "sets"
+
+
+class OrderStatus(str, Enum):
+    pending = "pending"
+    processing = "processing"
+    shipped = "shipped"
+    delivered = "delivered"
+    cancelled = "cancelled"
+
+
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    # Accounts created by routes/auth.py carry a single `name` and no phone, so
+    # these stay optional — requiring them would 500 on every such user.
+    name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[Dict[str, Any]] = None
+    created_at: Optional[Any] = None
+    is_admin: bool = False
+    is_super_admin: bool = False
+
+
+class Product(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    price: float
+    original_price: Optional[float] = None
+    discount_percentage: Optional[int] = None
+    category: CategoryType
+    images: List[str]
+    in_stock: bool = True
+    stock_quantity: int = 100
+    rating: float = 0.0
+    reviews_count: int = 0
+    external_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class ProductCreate(BaseModel):
+    name: str
+    description: str
+    price: float
+    original_price: Optional[float] = None
+    discount_percentage: Optional[int] = None
+    category: CategoryType
+    images: List[str]
+    stock_quantity: int = 100
+    external_url: Optional[str] = None
+
+
+class CartItem(BaseModel):
+    product_id: str
+    quantity: int
+    price: float
+
+
+class Cart(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    items: List[CartItem] = []
+    total_amount: float = 0.0
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class Order(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    items: List[CartItem]
+    total_amount: float
+    currency: str = "SAR"
+    order_number: Optional[str] = None
+    shipping_address: Dict[str, Any]
+    payment_method: str
+    status: OrderStatus = OrderStatus.pending
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    tracking_number: Optional[str] = None
+
+
+class OrderCreate(BaseModel):
+    shipping_address: Dict[str, Any]
+    payment_method: str
+
+
+# =============================================================================
+# Auth Dependencies
+# =============================================================================
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> User:
+    """Resolve the caller from a bearer token minted by routes/auth.py."""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # routes/auth.py puts the id in `user_id` and the email in `sub`; older
+    # tokens put the id in `sub`. Accept both so existing sessions keep working.
+    user_id = payload.get("user_id") or payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    user.pop("_id", None)
+    user.pop("password", None)
+    return User(**user)
+
+
+async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    """Require an admin caller. Super admins are admins too."""
+    if not (current_user.is_admin or current_user.is_super_admin):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
 
 # Health Check Endpoint
 # =============================================================================
@@ -484,6 +659,308 @@ async def publish_staging_products(data: Dict[str, Any]):
     except Exception as e:
         logger.error(f"Error publishing staging products: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# STOREFRONT — Products, Categories, Cart, Orders
+#
+# Registered after the /products/staging routes above so that the literal
+# "staging" path keeps precedence over /products/{product_id}.
+# ============================================================================
+
+def _localize(doc: Dict[str, Any], language: Optional[str]) -> Dict[str, Any]:
+    """Pick the localized name/description, falling back across languages."""
+    if not language:
+        return doc
+
+    primary = "ar" if language.startswith("ar") else "en"
+    secondary = "en" if primary == "ar" else "ar"
+
+    doc["name"] = (
+        doc.get(f"name_{primary}") or doc.get("name") or doc.get(f"name_{secondary}")
+    )
+    doc["description"] = (
+        doc.get(f"description_{primary}")
+        or doc.get("description")
+        or doc.get(f"description_{secondary}")
+    )
+    return doc
+
+
+@api_router.get("/products", response_model=List[Product])
+async def get_products(
+    category: Optional[CategoryType] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    search: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 20,
+    language: Optional[str] = Query(None, description="Preferred language (ar|en)")
+):
+    """List live products. Staging products are excluded from the storefront."""
+    query: Dict[str, Any] = {"staging": {"$ne": True}}
+
+    if category:
+        query["category"] = category
+    if min_price is not None:
+        query["price"] = {"$gte": min_price}
+    if max_price is not None:
+        query.setdefault("price", {})["$lte"] = max_price
+    if search:
+        query["$or"] = [
+            {field: {"$regex": search, "$options": "i"}}
+            for field in ("name", "description", "name_en", "name_ar",
+                          "description_en", "description_ar")
+        ]
+
+    products = await db.products.find(query).skip(skip).limit(limit).to_list(length=None)
+
+    # Skip documents that don't satisfy the schema rather than failing the
+    # whole listing — imported supplier data is not always well-formed.
+    valid_products = []
+    for product in products:
+        try:
+            valid_products.append(Product(**_localize(product, language)))
+        except Exception as e:
+            logger.warning(f"Skipping malformed product {product.get('id', 'unknown')}: {e}")
+
+    return valid_products
+
+
+@api_router.get("/categories")
+async def get_categories():
+    return [
+        {"id": "earrings", "name": "أقراط", "name_en": "Earrings", "icon": "💎"},
+        {"id": "necklaces", "name": "قلادات", "name_en": "Necklaces", "icon": "📿"},
+        {"id": "bracelets", "name": "أساور", "name_en": "Bracelets", "icon": "⭕"},
+        {"id": "rings", "name": "خواتم", "name_en": "Rings", "icon": "💍"},
+        {"id": "watches", "name": "ساعات", "name_en": "Watches", "icon": "⌚"},
+        {"id": "sets", "name": "أطقم", "name_en": "Sets", "icon": "✨"}
+    ]
+
+
+@api_router.get("/products/{product_id}", response_model=Product)
+async def get_product(product_id: str, language: Optional[str] = Query(None)):
+    product = await db.products.find_one({"id": product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    try:
+        return Product(**_localize(product, language))
+    except Exception as e:
+        logger.error(f"Malformed product data for id {product_id}: {e}")
+        raise HTTPException(status_code=500, detail="Product data is corrupted")
+
+
+@api_router.post("/products", response_model=Product)
+async def create_product(product_data: ProductCreate, admin: User = Depends(get_admin_user)):
+    product = Product(**product_data.model_dump())
+    await db.products.insert_one(product.model_dump())
+    return product
+
+
+@api_router.put("/products/{product_id}", response_model=Product)
+async def update_product(
+    product_id: str,
+    product_data: ProductCreate,
+    admin: User = Depends(get_admin_user)
+):
+    result = await db.products.update_one(
+        {"id": product_id},
+        {"$set": product_data.model_dump(exclude_unset=True)}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    product = await db.products.find_one({"id": product_id})
+    return Product(**product)
+
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(product_id: str, admin: User = Depends(get_admin_user)):
+    result = await db.products.delete_one({"id": product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product deleted successfully"}
+
+
+# ---------------------------------------------------------------------------
+# Cart
+# ---------------------------------------------------------------------------
+
+@api_router.get("/cart", response_model=Cart)
+async def get_cart(current_user: User = Depends(get_current_user)):
+    cart = await db.carts.find_one({"user_id": current_user.id})
+    if not cart:
+        new_cart = Cart(user_id=current_user.id)
+        await db.carts.insert_one(new_cart.model_dump())
+        return new_cart
+
+    cart.pop("_id", None)
+    return Cart(**cart)
+
+
+@api_router.post("/cart/add")
+async def add_to_cart(
+    product_id: str,
+    quantity: int = 1,
+    current_user: User = Depends(get_current_user)
+):
+    if quantity < 1:
+        raise HTTPException(status_code=400, detail="Quantity must be at least 1")
+
+    product = await db.products.find_one({"id": product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    cart = await db.carts.find_one({"user_id": current_user.id})
+    if not cart:
+        cart = Cart(user_id=current_user.id).model_dump()
+        await db.carts.insert_one(dict(cart))
+
+    cart_items = cart.get("items", [])
+    existing_item = next(
+        (item for item in cart_items if item["product_id"] == product_id), None
+    )
+
+    if existing_item:
+        existing_item["quantity"] += quantity
+    else:
+        cart_items.append({
+            "product_id": product_id,
+            "quantity": quantity,
+            "price": product["price"]
+        })
+
+    total = sum(item["quantity"] * item["price"] for item in cart_items)
+
+    await db.carts.update_one(
+        {"user_id": current_user.id},
+        {"$set": {
+            "items": cart_items,
+            "total_amount": total,
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+
+    return {"message": "Item added to cart", "total_amount": total}
+
+
+@api_router.delete("/cart/remove/{product_id}")
+async def remove_from_cart(product_id: str, current_user: User = Depends(get_current_user)):
+    cart = await db.carts.find_one({"user_id": current_user.id})
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found")
+
+    cart_items = [
+        item for item in cart.get("items", []) if item["product_id"] != product_id
+    ]
+    total = sum(item["quantity"] * item["price"] for item in cart_items)
+
+    await db.carts.update_one(
+        {"user_id": current_user.id},
+        {"$set": {
+            "items": cart_items,
+            "total_amount": total,
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+
+    return {"message": "Item removed from cart", "total_amount": total}
+
+
+# ---------------------------------------------------------------------------
+# Orders
+# ---------------------------------------------------------------------------
+
+@api_router.post("/orders", response_model=Order)
+async def create_order(
+    order_data: OrderCreate,
+    current_user: User = Depends(get_current_user)
+):
+    cart = await db.carts.find_one({"user_id": current_user.id})
+    if not cart or not cart.get("items"):
+        raise HTTPException(status_code=400, detail="Cart is empty")
+
+    order = Order(
+        user_id=current_user.id,
+        items=cart["items"],
+        total_amount=cart["total_amount"],
+        currency="SAR",
+        order_number=f"AUR-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
+        tracking_number=f"TRK-{str(uuid.uuid4())[:10].upper()}",
+        shipping_address=order_data.shipping_address,
+        payment_method=order_data.payment_method
+    )
+
+    await db.orders.insert_one(order.model_dump())
+
+    # Empty the cart now that its contents belong to the order.
+    await db.carts.update_one(
+        {"user_id": current_user.id},
+        {"$set": {"items": [], "total_amount": 0.0}}
+    )
+
+    return order
+
+
+@api_router.get("/orders", response_model=List[Order])
+async def get_orders(current_user: User = Depends(get_current_user)):
+    orders = await db.orders.find(
+        {"user_id": current_user.id}
+    ).sort("created_at", -1).to_list(length=None)
+
+    result = []
+    for order in orders:
+        order.pop("_id", None)
+        try:
+            result.append(Order(**order))
+        except Exception as e:
+            logger.warning(f"Skipping malformed order {order.get('id', 'unknown')}: {e}")
+    return result
+
+
+@api_router.get("/orders/my-orders")
+async def get_my_orders(current_user: User = Depends(get_current_user)):
+    orders = await db.orders.find(
+        {"user_id": current_user.id}
+    ).sort("created_at", -1).to_list(length=None)
+
+    return {"orders": [
+        {
+            "id": o.get("id"),
+            "order_number": o.get("order_number"),
+            "tracking_number": o.get("tracking_number"),
+            "status": o.get("status", "pending"),
+            "created_at": o.get("created_at"),
+            "total_amount": o.get("total_amount", 0.0),
+            "currency": o.get("currency", "SAR"),
+            "shipping_address": o.get("shipping_address", {})
+        }
+        for o in orders
+    ]}
+
+
+@api_router.get("/orders/track/{search_param}")
+async def track_order(search_param: str):
+    """Public order lookup by tracking number, order number, or id."""
+    order = None
+    for field in ("tracking_number", "order_number", "id"):
+        order = await db.orders.find_one({field: search_param})
+        if order:
+            break
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    return {
+        "order_number": order.get("order_number"),
+        "tracking_number": order.get("tracking_number"),
+        "status": order.get("status", "pending"),
+        "created_at": order.get("created_at"),
+        "total_amount": order.get("total_amount", 0.0),
+        "currency": order.get("currency", "SAR")
+    }
 
 
 # ============================================================================

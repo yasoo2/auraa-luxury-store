@@ -12,6 +12,8 @@ import os
 import logging
 import uuid
 
+from auth.oauth_service import oauth_service
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -32,9 +34,18 @@ class UserRegister(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    # The frontend sends `identifier`, which may be either an email address or a
+    # phone number (AuthPage lets the user pick). Keep it a plain str so phone
+    # logins are not rejected by email validation.
+    identifier: str
     password: str
+    remember_me: bool = False
     turnstile_token: Optional[str] = None
+
+
+class OAuthSessionRequest(BaseModel):
+    session_id: str
+    provider: str = "google"
 
 
 class TokenResponse(BaseModel):
@@ -149,12 +160,15 @@ async def login(credentials: UserLogin, request: Request, response: Response):
     """
     try:
         db = request.app.state.db
-        
-        # Find user
-        user = await db.users.find_one({"email": credentials.email})
+
+        # Find user by email or phone
+        identifier = credentials.identifier.strip()
+        user = await db.users.find_one({
+            "$or": [{"email": identifier}, {"phone": identifier}]
+        })
         if not user:
             raise HTTPException(status_code=401, detail="Invalid email or password")
-        
+
         # Verify password
         if not verify_password(credentials.password, user["password"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -182,7 +196,7 @@ async def login(credentials: UserLogin, request: Request, response: Response):
         user.pop("password", None)
         user.pop("_id", None)
         
-        logger.info(f"✅ User logged in: {credentials.email}")
+        logger.info(f"✅ User logged in: {identifier}")
         
         return {
             "access_token": access_token,
@@ -206,36 +220,64 @@ async def logout(response: Response):
     return {"message": "Logged out successfully"}
 
 
-@router.get("/oauth/google/url")
-async def google_oauth_url(redirect_url: str):
+@router.get("/oauth/{provider}/url")
+async def oauth_url(provider: str, redirect_url: str):
     """
-    Get Google OAuth URL for authentication
+    Get the OAuth sign-in URL for a provider ('google' or 'facebook').
     """
     try:
-        from services.auth.oauth_service import get_google_oauth_url
-        
-        oauth_url = await get_google_oauth_url(redirect_url)
+        oauth_url = oauth_service.get_oauth_url(provider, redirect_url)
         return {"url": oauth_url}
-        
-    except ImportError:
-        logger.error("OAuth service not available")
-        raise HTTPException(status_code=501, detail="OAuth not implemented")
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"OAuth URL generation error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to build OAuth URL")
 
 
-@router.get("/oauth/google/callback")
-async def google_oauth_callback(code: str, request: Request, response: Response):
+@router.post("/oauth/session")
+async def oauth_session(payload: OAuthSessionRequest, request: Request, response: Response):
     """
-    Handle Google OAuth callback
+    Exchange an OAuth session_id for an app session.
+
+    The sign-in URL returned by /oauth/{provider}/url redirects back with a
+    session_id in the URL fragment; the frontend posts it here. Creates the
+    user on first sign-in, then issues the same tokens as password login.
     """
     try:
-        from services.auth.oauth_service import handle_google_callback
-        
         db = request.app.state.db
-        user_data = await handle_google_callback(code, db)
-        
+
+        profile = await oauth_service.get_user_from_session(payload.session_id)
+        if not profile or not profile.get("email"):
+            raise HTTPException(status_code=401, detail="Invalid or expired OAuth session")
+
+        email = profile["email"]
+        user_data = await db.users.find_one({"email": email})
+
+        if not user_data:
+            # First sign-in via OAuth: create the account. No password is set,
+            # so password login stays unavailable until the user sets one.
+            user_data = {
+                "id": str(uuid.uuid4()),
+                "email": email,
+                "name": profile.get("name") or email.split('@')[0],
+                "picture": profile.get("picture"),
+                "phone": None,
+                "auth_provider": payload.provider,
+                "is_admin": False,
+                "is_super_admin": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(dict(user_data))
+            logger.info(f"✅ New user registered via {payload.provider}: {email}")
+        else:
+            logger.info(f"✅ User logged in via {payload.provider}: {email}")
+
+        user_data.pop("password", None)
+        user_data.pop("_id", None)
+
         # Create tokens
         access_token = create_access_token(
             data={"sub": user_data["email"], "user_id": user_data["id"]},
@@ -258,15 +300,16 @@ async def google_oauth_callback(code: str, request: Request, response: Response)
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "user": user_data
+            "user": user_data,
+            # AuthPage routes the user to add a phone number when this is true.
+            "needs_phone": not user_data.get("phone")
         }
-        
-    except ImportError:
-        logger.error("OAuth service not available")
-        raise HTTPException(status_code=501, detail="OAuth not implemented")
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"OAuth callback error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"OAuth session error: {e}")
+        raise HTTPException(status_code=500, detail="OAuth sign-in failed")
 
 
 @router.post("/refresh")
@@ -290,7 +333,7 @@ async def refresh_token(request: Request, response: Response):
             
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Refresh token expired")
-        except jwt.JWTError:
+        except jwt.PyJWTError:
             raise HTTPException(status_code=401, detail="Invalid refresh token")
         
         # Create new access token
@@ -334,7 +377,7 @@ async def get_current_user(request: Request):
                 
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token expired")
-        except jwt.JWTError:
+        except jwt.PyJWTError:
             raise HTTPException(status_code=401, detail="Invalid token")
         
         # Get user from database

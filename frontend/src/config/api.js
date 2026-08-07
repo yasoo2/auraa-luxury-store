@@ -3,14 +3,15 @@
  * Re-export from api.js for backward compatibility
  */
 
-import api, { 
-  apiFetch, 
-  apiGet, 
-  apiPost, 
-  apiPut, 
+// `hasApiKey` was imported here but never exported by ../api, which produced a
+// webpack "export not found" warning and an undefined binding at runtime.
+import api, {
+  apiFetch,
+  apiGet,
+  apiPost,
+  apiPut,
   apiDelete,
-  getApiUrl,
-  hasApiKey 
+  getApiUrl
 } from '../api';
 
 export default api;
@@ -21,6 +22,5 @@ export {
   apiPost,
   apiPut,
   apiDelete,
-  getApiUrl,
-  hasApiKey
+  getApiUrl
 };

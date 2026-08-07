@@ -1,6 +1,7 @@
 # routes/cj_admin.py
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from services.cj_client import list_products, authenticate
+from core.security import require_admin_doc
 from services.import_service import bulk_import_products
 from pydantic import BaseModel
 from typing import Optional
@@ -8,7 +9,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin/cj", tags=["CJ Admin"])
+# These endpoints spend CJ API quota and write products, so the whole router
+# requires an admin caller. Previously every one of them was public.
+router = APIRouter(
+    prefix="/api/admin/cj",
+    tags=["CJ Admin"],
+    dependencies=[Depends(require_admin_doc)],
+)
 
 class ImportRequest(BaseModel):
     count: int = 50

@@ -1,12 +1,23 @@
 name: Deploy on Merge (Render + Cloudflare)
 
+# Runs only after CI succeeds on main. Previously this fired on every push
+# with no build or test in between, which is how a server stripped from 63
+# endpoints to 8 reached production unnoticed.
 on:
-  push:
-    branches: [ main ]   # غيّرها لو فرعك الأساسي اسمه غير main
+  workflow_run:
+    workflows: ["CI"]
+    branches: [ main ]
+    types: [ completed ]
+  workflow_dispatch:   # manual re-deploy without a new commit
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # workflow_run fires on failure too, so the result must be checked.
+    # workflow_dispatch has no source run, hence the second condition.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v4
 

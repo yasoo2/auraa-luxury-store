@@ -59,50 +59,66 @@ app.state.db = db
 
 # CORS Configuration - Load from environment variable
 # This allows easy updates without code changes
+import re
+
 cors_origins_env = os.getenv('CORS_ORIGINS', '')
 allowed_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
 
 # Fallback to default patterns if env variable is empty
 if not allowed_origins:
-    # Get app name from environment for dynamic Emergent URLs
-    app_name = os.getenv('APP_NAME', 'app')
-    
     allowed_origins = [
         "https://auraaluxury.com",
         "https://www.auraaluxury.com",
         "https://api.auraaluxury.com",
-        f"https://cjdrop-import.preview.emergentagent.com",
-        f"https://{app_name}.emergent.host",
         "http://localhost:3000",
         "http://localhost:8001",
     ]
 
-print(f"✅ CORS configured with {len(allowed_origins)} origins")
+# Preview deployments. Previously any origin merely *containing* ".vercel.app"
+# was allowed with credentials, so https://evil.vercel.app — or even
+# https://vercel.app.attacker.com — could read authenticated responses on
+# behalf of a signed-in user. This anchors the match to the project's own
+# preview subdomains and requires a full-host match.
+_preview_pattern = os.getenv(
+    'CORS_PREVIEW_REGEX',
+    r'^https://[a-z0-9-]*auraa[a-z0-9-]*\.vercel\.app$'
+)
+try:
+    PREVIEW_ORIGIN_RE = re.compile(_preview_pattern)
+except re.error as e:
+    logger.error(f"Invalid CORS_PREVIEW_REGEX ({e}); preview origins disabled")
+    PREVIEW_ORIGIN_RE = None
 
-# Custom CORS Handler for Vercel Preview URLs
+# Localhost on any port, for local development only.
+LOCALHOST_RE = re.compile(r'^http://(localhost|127\.0\.0\.1)(:\d+)?$')
+
+logger.info(
+    f"✅ CORS: {len(allowed_origins)} exact origins, "
+    f"preview pattern={_preview_pattern!r}"
+)
+
+
+def is_origin_allowed(origin: Optional[str]) -> bool:
+    """Exact-match an origin, or match the anchored preview/localhost patterns."""
+    if not origin:
+        return False
+    if origin in allowed_origins:
+        return True
+    if PREVIEW_ORIGIN_RE and PREVIEW_ORIGIN_RE.match(origin):
+        return True
+    return bool(LOCALHOST_RE.match(origin))
+
+
+# Custom CORS Handler
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
+from middleware.rate_limiter import RateLimitMiddleware
 
 class CustomCORSMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         origin = request.headers.get("origin")
-        
-        # Check if origin matches patterns
-        is_allowed = False
-        if origin:
-            # Exact match
-            if origin in allowed_origins:
-                is_allowed = True
-            # Vercel preview URLs
-            elif ".vercel.app" in origin:
-                is_allowed = True
-            # Development localhost with any port
-            elif origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
-                is_allowed = True
-            # Emergent preview URLs
-            elif ".emergentagent.com" in origin or ".emergent.host" in origin:
-                is_allowed = True
-        
+        is_allowed = is_origin_allowed(origin)
+
         # Handle preflight
         if request.method == "OPTIONS":
             response = StarletteResponse(status_code=200)
@@ -130,16 +146,23 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
         
         return response
 
-# Apply custom CORS middleware FIRST
+# Middleware runs in reverse registration order, so registering the rate
+# limiter first and CORS second means CORS is outermost — a 429 still carries
+# the CORS headers the browser needs to expose the response to the frontend.
+app.add_middleware(
+    RateLimitMiddleware,
+    max_requests=int(os.getenv("AUTH_RATE_LIMIT_MAX", "10")),
+    window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "300")),
+)
 app.add_middleware(CustomCORSMiddleware)
 
 api_router = APIRouter(prefix="/api")
 
-security = HTTPBearer()
-
-# JWT settings — must match routes/auth.py, which mints the tokens verified here.
-SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
-ALGORITHM = "HS256"
+from core.security import (
+    get_current_user_doc,
+    require_admin_doc,
+    require_super_admin_doc,
+)
 
 
 # =============================================================================
@@ -275,37 +298,20 @@ class OrderCreate(BaseModel):
 # Auth Dependencies
 # =============================================================================
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> User:
-    """Resolve the caller from a bearer token minted by routes/auth.py."""
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    # routes/auth.py puts the id in `user_id` and the email in `sub`; older
-    # tokens put the id in `sub`. Accept both so existing sessions keep working.
-    user_id = payload.get("user_id") or payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    user = await db.users.find_one({"id": user_id})
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-
-    user.pop("_id", None)
-    user.pop("password", None)
+async def get_current_user(user: Dict[str, Any] = Depends(get_current_user_doc)) -> User:
+    """Typed view of the caller resolved by core.security."""
     return User(**user)
 
 
-async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
+async def get_admin_user(user: Dict[str, Any] = Depends(require_admin_doc)) -> User:
     """Require an admin caller. Super admins are admins too."""
-    if not (current_user.is_admin or current_user.is_super_admin):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
+    return User(**user)
+
+
+async def get_super_admin_user(
+    user: Dict[str, Any] = Depends(require_super_admin_doc)
+) -> User:
+    return User(**user)
 
 
 # Health Check Endpoint
@@ -434,7 +440,8 @@ async def start_import_job(
     source: str = "cj",
     count: int = 50,
     batch_size: int = 20,
-    keyword: str = "luxury jewelry accessories"
+    keyword: str = "luxury jewelry accessories",
+    admin: User = Depends(get_admin_user)
 ):
     """
     Start a new import job from CJ Dropshipping
@@ -484,7 +491,7 @@ async def start_import_job(
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/imports/{job_id}/status")
-async def get_unified_import_status(job_id: str):
+async def get_unified_import_status(job_id: str, admin: User = Depends(get_admin_user)):
     """
     Get import job status for Quick Import page
     Returns unified format for all import sources
@@ -559,7 +566,10 @@ async def check_readiness():
 # ============================================================================
 
 @api_router.get("/products/staging")
-async def get_staging_products(job_id: Optional[str] = None):
+async def get_staging_products(
+    job_id: Optional[str] = None,
+    admin: User = Depends(get_admin_user)
+):
     """
     Get products from staging area (imported but not yet published)
     """
@@ -582,7 +592,11 @@ async def get_staging_products(job_id: Optional[str] = None):
 
 
 @api_router.put("/products/staging/{product_id}")
-async def update_staging_product(product_id: str, updates: Dict[str, Any]):
+async def update_staging_product(
+    product_id: str,
+    updates: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
     """
     Update a product in staging area
     """
@@ -607,7 +621,7 @@ async def update_staging_product(product_id: str, updates: Dict[str, Any]):
 
 
 @api_router.delete("/products/staging/{product_id}")
-async def delete_staging_product(product_id: str):
+async def delete_staging_product(product_id: str, admin: User = Depends(get_admin_user)):
     """
     Delete a product from staging area
     """
@@ -626,7 +640,10 @@ async def delete_staging_product(product_id: str):
 
 
 @api_router.post("/products/publish-staging")
-async def publish_staging_products(data: Dict[str, Any]):
+async def publish_staging_products(
+    data: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
     """
     Publish staging products to live store
     Moves products from staging=True to staging=False (live)
@@ -870,6 +887,82 @@ async def remove_from_cart(product_id: str, current_user: User = Depends(get_cur
 
 
 # ---------------------------------------------------------------------------
+# Wishlist
+#
+# WishlistContext and WishlistPage have always called these paths, but no
+# implementation existed anywhere in the codebase — every call 404'd and the
+# frontend silently fell back to localStorage, so wishlists never synced
+# across devices.
+# ---------------------------------------------------------------------------
+
+class WishlistAddRequest(BaseModel):
+    product_id: str
+
+
+async def _wishlist_products(product_ids: List[str]) -> List[Dict[str, Any]]:
+    """Hydrate wishlist ids into product documents, dropping any that vanished."""
+    if not product_ids:
+        return []
+
+    docs = await db.products.find({"id": {"$in": product_ids}}).to_list(length=None)
+    by_id = {}
+    for doc in docs:
+        doc.pop("_id", None)
+        by_id[doc["id"]] = doc
+
+    # Preserve the order the user added them in.
+    return [by_id[pid] for pid in product_ids if pid in by_id]
+
+
+@api_router.get("/wishlist")
+async def get_wishlist(current_user: User = Depends(get_current_user)):
+    wishlist = await db.wishlists.find_one({"user_id": current_user.id})
+    product_ids = wishlist.get("product_ids", []) if wishlist else []
+
+    return {
+        "product_ids": product_ids,
+        "products": await _wishlist_products(product_ids)
+    }
+
+
+@api_router.post("/wishlist/add")
+async def add_to_wishlist(
+    payload: WishlistAddRequest,
+    current_user: User = Depends(get_current_user)
+):
+    product = await db.products.find_one({"id": payload.product_id})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # $addToSet keeps this idempotent — adding twice is not an error.
+    await db.wishlists.update_one(
+        {"user_id": current_user.id},
+        {
+            "$addToSet": {"product_ids": payload.product_id},
+            "$set": {"updated_at": datetime.now(timezone.utc)}
+        },
+        upsert=True
+    )
+
+    return {"message": "Added to wishlist", "product_id": payload.product_id}
+
+
+@api_router.delete("/wishlist/remove/{product_id}")
+async def remove_from_wishlist(
+    product_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    await db.wishlists.update_one(
+        {"user_id": current_user.id},
+        {
+            "$pull": {"product_ids": product_id},
+            "$set": {"updated_at": datetime.now(timezone.utc)}
+        }
+    )
+    return {"message": "Removed from wishlist", "product_id": product_id}
+
+
+# ---------------------------------------------------------------------------
 # Orders
 # ---------------------------------------------------------------------------
 
@@ -961,6 +1054,166 @@ async def track_order(search_param: str):
         "total_amount": order.get("total_amount", 0.0),
         "currency": order.get("currency", "SAR")
     }
+
+
+# ============================================================================
+# ADMIN — User management
+#
+# Implements the paths UsersManagementPage and AdminManagement already call.
+# routes/super_admin.py exposes /super-admin/manage/* instead, which no part
+# of the frontend requests, so wiring that router would not have helped.
+# ============================================================================
+
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+
+
+class ChangeRoleRequest(BaseModel):
+    user_id: str
+    new_role: str  # "user" | "admin" | "super_admin"
+    current_password: Optional[str] = None
+
+
+def _public_user(doc: Dict[str, Any]) -> Dict[str, Any]:
+    doc.pop("_id", None)
+    doc.pop("password", None)
+    return doc
+
+
+@api_router.get("/admin/users")
+async def admin_list_users(
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    admin: User = Depends(get_admin_user)
+):
+    """List users with their order counts, for the users management table."""
+    # Whitelist sort fields: sort_by reaches Mongo directly.
+    allowed_sorts = {"created_at", "email", "name", "total_orders", "total_activity_time"}
+    if sort_by not in allowed_sorts:
+        sort_by = "created_at"
+    direction = -1 if sort_order == "desc" else 1
+
+    users = await db.users.find({}).to_list(length=None)
+
+    for user in users:
+        _public_user(user)
+        user["total_orders"] = await db.orders.count_documents({"user_id": user.get("id")})
+
+    users.sort(key=lambda u: (u.get(sort_by) is None, u.get(sort_by, "")),
+               reverse=(direction == -1))
+    return users
+
+
+@api_router.get("/admin/users/all")
+async def admin_list_all_users(admin: User = Depends(get_admin_user)):
+    users = await db.users.find({}).to_list(length=None)
+    return [_public_user(u) for u in users]
+
+
+@api_router.patch("/admin/users/{user_id}/toggle-admin")
+async def admin_toggle_admin(user_id: str, admin: User = Depends(get_super_admin_user)):
+    """Grant or revoke admin. Super-admin only — this hands out privileges."""
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.get("is_super_admin"):
+        raise HTTPException(status_code=400, detail="Cannot change a super admin's role")
+
+    new_value = not user.get("is_admin", False)
+    await db.users.update_one({"id": user_id}, {"$set": {"is_admin": new_value}})
+    return {"success": True, "user_id": user_id, "is_admin": new_value}
+
+
+@api_router.patch("/admin/users/{user_id}/change-password")
+async def admin_change_user_password(
+    user_id: str,
+    payload: ChangePasswordRequest,
+    admin: User = Depends(get_super_admin_user)
+):
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    hashed = bcrypt.hashpw(payload.new_password.encode(), bcrypt.gensalt()).decode()
+    await db.users.update_one({"id": user_id}, {"$set": {"password": hashed}})
+
+    # Force re-authentication everywhere this user was signed in.
+    tokens = await db.refresh_tokens.find({"user_id": user_id}).to_list(length=None)
+    for t in tokens:
+        await db.revoked_tokens.update_one(
+            {"jti": t["jti"]},
+            {"$set": {"jti": t["jti"], "revoked_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
+
+    return {"success": True, "message": "Password updated"}
+
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, admin: User = Depends(get_super_admin_user)):
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.get("is_super_admin"):
+        raise HTTPException(status_code=400, detail="Cannot delete a super admin")
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+    await db.users.delete_one({"id": user_id})
+    await db.carts.delete_many({"user_id": user_id})
+    await db.wishlists.delete_many({"user_id": user_id})
+    return {"success": True, "message": "User deleted"}
+
+
+@api_router.delete("/admin/super-admin-delete/{user_id}")
+async def super_admin_delete_user(user_id: str, admin: User = Depends(get_super_admin_user)):
+    """Alias kept for AdminManagementSection, which calls this path."""
+    return await admin_delete_user(user_id, admin)
+
+
+@api_router.get("/admin/super-admin-statistics")
+async def super_admin_statistics(admin: User = Depends(get_super_admin_user)):
+    return {
+        "total_users": await db.users.count_documents({}),
+        "total_admins": await db.users.count_documents({"is_admin": True}),
+        "total_super_admins": await db.users.count_documents({"is_super_admin": True}),
+        "total_products": await db.products.count_documents({"staging": {"$ne": True}}),
+        "total_orders": await db.orders.count_documents({}),
+    }
+
+
+@api_router.post("/admin/super-admin-change-role")
+async def super_admin_change_role(
+    payload: ChangeRoleRequest,
+    admin: User = Depends(get_super_admin_user)
+):
+    """Set a user's role. The caller re-enters their password to confirm."""
+    if payload.new_role not in ("user", "admin", "super_admin"):
+        raise HTTPException(status_code=400, detail="Invalid role")
+
+    # Re-authenticate the caller: this is a privilege escalation path.
+    caller = await db.users.find_one({"id": admin.id})
+    if not payload.current_password or not caller or not caller.get("password"):
+        raise HTTPException(status_code=400, detail="Current password is required")
+    if not bcrypt.checkpw(payload.current_password.encode(), caller["password"].encode()):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+
+    target = await db.users.find_one({"id": payload.user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if payload.user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot change your own role")
+
+    await db.users.update_one({"id": payload.user_id}, {"$set": {
+        "is_admin": payload.new_role in ("admin", "super_admin"),
+        "is_super_admin": payload.new_role == "super_admin",
+    }})
+
+    return {"success": True, "user_id": payload.user_id, "new_role": payload.new_role}
 
 
 # ============================================================================

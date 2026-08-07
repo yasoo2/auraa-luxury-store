@@ -417,11 +417,6 @@ code {
   text-decoration: underline;
 }
 
-.auth-turnstile {
-  display: flex;
-  justify-content: center;
-}
-
 .auth-submit {
   width: 100%;
   height: 48px;

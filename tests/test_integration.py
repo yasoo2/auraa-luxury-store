@@ -1465,17 +1465,23 @@ class _FakeResponse:
 
 
 class _FakeCJ:
-    """Behaves the way CJ does: the token endpoint reads the body, every other
-    endpoint requires the issued token in the header."""
+    """Behaves the way CJ does: the token endpoint is a POST that reads the
+    body, every read endpoint is a GET taking query parameters, and every one
+    of them requires the issued token in the header."""
 
     def __init__(self):
         self.calls = []
+        self.requests = []
 
-    async def request(self, method, url, json=None, headers=None):
+    async def request(self, method, url, json=None, params=None, headers=None):
         self.calls.append((url.rsplit("/api2.0", 1)[-1], (headers or {}).get("CJ-Access-Token")))
+        self.requests.append({"method": method, "url": url, "json": json, "params": params})
         if url.endswith("/v1/authentication/getAccessToken"):
+            if method != "POST":
+                return _FakeResponse(200, {"code": 16900202, "result": False,
+                                           "message": f"Request method '{method}' not supported"})
             # CJ wants apiKey. Sending "password" earns error 1600005.
-            if json.get("email") and json.get("apiKey"):
+            if (json or {}).get("email") and (json or {}).get("apiKey"):
                 return _FakeResponse(200, {"code": 200, "result": True, "data": {
                     "accessToken": REAL_TOKEN,
                     "accessTokenExpiryDate": "2030-01-01T00:00:00"}})
@@ -1485,6 +1491,11 @@ class _FakeCJ:
         if (headers or {}).get("CJ-Access-Token") != REAL_TOKEN:
             return _FakeResponse(401, {"code": 1600001, "result": False,
                                        "message": "Invalid API key or access token"})
+        # Reads are GETs. CJ answers anything else on them with 16900202, which
+        # is precisely what the live store saw on /admin/cj/ping.
+        if method != "GET":
+            return _FakeResponse(200, {"code": 16900202, "result": False,
+                                       "message": f"Request method '{method}' not supported"})
         return _FakeResponse(200, {"code": 200, "result": True, "data": {"list": [{"pid": "1"}]}})
 
 
@@ -1507,6 +1518,37 @@ def test_calls_carry_the_issued_token_not_the_api_key(fake_cj):
     sent = dict(fake_cj.calls)
     assert sent["/v1/product/list"] == REAL_TOKEN, "the API key was sent as the access token"
     assert sent["/v1/authentication/getAccessToken"] is None, "the token call must not need a token"
+
+
+def test_reads_are_GETs_with_query_parameters(fake_cj):
+    """
+    Authentication succeeded and then every real call failed with
+
+        CJ error 16900202: Request method 'POST' not supported
+
+    because the read endpoints were called as POST with a JSON body. CJ serves
+    them as GET with query parameters; only the token exchange is a POST.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(cj_client.list_products(2, 7, keyword="ring"))
+    loop.run_until_complete(cj_client.get_product_details("PID-9"))
+
+    by_path = {r["url"].rsplit("/api2.0", 1)[-1]: r for r in fake_cj.requests}
+
+    token_call = by_path["/v1/authentication/getAccessToken"]
+    assert token_call["method"] == "POST", "the token exchange is the one POST"
+    assert token_call["json"]["email"], "and it carries a body"
+
+    listing = by_path["/v1/product/list"]
+    assert listing["method"] == "GET", f"product/list sent as {listing['method']}"
+    assert listing["params"] == {"pageNum": 2, "pageSize": 7, "productNameEn": "ring"}
+    assert listing["json"] is None, "a GET must not carry a JSON body"
+
+    detail = by_path["/v1/product/query"]
+    assert detail["method"] == "GET", f"product/query sent as {detail['method']}"
+    assert detail["params"] == {"pid": "PID-9"}
+    assert detail["json"] is None
 
 
 def test_the_token_is_cached_because_cj_rate_limits_issuing_it(fake_cj):
@@ -1589,10 +1631,11 @@ class _PickyCJ(_FakeCJ):
         super().__init__()
         self.good_key = good_key
 
-    async def request(self, method, url, json=None, headers=None):
+    async def request(self, method, url, json=None, params=None, headers=None):
         self.calls.append((url.rsplit("/api2.0", 1)[-1], (headers or {}).get("CJ-Access-Token")))
+        self.requests.append({"method": method, "url": url, "json": json, "params": params})
         if url.endswith("/v1/authentication/getAccessToken"):
-            if json.get("apiKey") == self.good_key:
+            if (json or {}).get("apiKey") == self.good_key:
                 return _FakeResponse(200, {"code": 200, "result": True, "data": {
                     "accessToken": REAL_TOKEN, "accessTokenExpiryDate": "2030-01-01T00:00:00"}})
             return _FakeResponse(200, {"code": 1600005, "result": False,

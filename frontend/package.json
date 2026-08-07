@@ -64,6 +64,7 @@
     "@craco/craco": "^7.1.0",
     "@eslint/js": "9.23.0",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^7.0.3",
     "eslint": "9.23.0",
     "eslint-plugin-import": "2.31.0",
     "eslint-plugin-jsx-a11y": "6.10.2",
@@ -75,7 +76,7 @@
   "scripts": {
     "start": "craco start",
     "prebuild": "node -e \"const fs=require('fs');const t=Date.now();let c=fs.readFileSync('public/sw.js','utf8');c=c.replace(/const BUILD_TIMESTAMP = Date\\.now\\(\\);/,'const BUILD_TIMESTAMP = '+t+';');fs.writeFileSync('public/sw.js',c);console.log('✅ Cache timestamp updated:',t)\"",
-    "build": "craco build",
+    "build": "cross-env CI=false craco build",
     "postbuild": "echo '✅ Build complete with cache-busting enabled'",
     "test": "craco test",
     "eject": "react-scripts eject"

@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Shield, User, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../api';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
-
+const API_URL = API_BASE_URL;
 const AdminSetup = () => {
   const navigate = useNavigate();
   const { login } = useAuth();

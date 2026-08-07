@@ -1,6 +1,10 @@
 import axios from 'axios';
+import { resolveApiUrl } from '../api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+// Shared with api.js so both transports agree on the host. An empty fallback
+// sent requests to the SPA origin, where the catch-all returns index.html at
+// status 200 and every call appears to succeed while returning HTML.
+const BACKEND_URL = resolveApiUrl();
 
 // Create axios instance with credentials
 const axiosInstance = axios.create({

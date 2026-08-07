@@ -3,9 +3,9 @@ import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../api';
+import { API_BASE_URL } from '../../api';
 
-const API_BASE = process.env.REACT_APP_BACKEND_URL || '';
-
+const API_BASE = API_BASE_URL;
 const QuickImportPage = () => {
   const [language, setLanguage] = useState('ar');
   const [backendReady, setBackendReady] = useState(false);

@@ -7,13 +7,14 @@ import { getAuthTranslation } from '../translations/auth';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import axios from 'axios';
+import { API_BASE_URL } from '../api';
 
 const AuthPage = () => {
   const { login, register } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+  const BACKEND_URL = API_BASE_URL;
   const TURNSTILE_SITE_KEY = process.env.REACT_APP_TURNSTILE_SITE_KEY;
   const [isLogin, setIsLogin] = useState(true);
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'

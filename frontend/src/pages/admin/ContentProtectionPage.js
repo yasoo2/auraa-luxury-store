@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { API_BASE_URL } from '../../api';
 
 const ContentProtectionPage = () => {
   const { language } = useLanguage();
@@ -44,8 +45,7 @@ const ContentProtectionPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIncident, setSelectedIncident] = useState(null);
 
-  const API_URL = process.env.REACT_APP_BACKEND_URL;
-
+  const API_URL = API_BASE_URL;
   useEffect(() => {
     loadAnalytics();
     loadIncidents();

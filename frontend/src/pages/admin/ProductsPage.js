@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { API_BASE_URL } from '../../api';
 
 const ProductsPage = () => {
   const { language, currency } = useLanguage();
@@ -41,8 +42,7 @@ const ProductsPage = () => {
   const [imageUploadProgress, setImageUploadProgress] = useState({});
   
   const isRTL = language === 'ar';
-  const API_URL = process.env.REACT_APP_BACKEND_URL;
-
+  const API_URL = API_BASE_URL;
   // Form state
   const [formData, setFormData] = useState({
     name: '',

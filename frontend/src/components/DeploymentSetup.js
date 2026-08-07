@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { CheckCircle, AlertCircle, Loader, Settings } from 'lucide-react';
+import { API_BASE_URL } from '../api';
 
 const DeploymentSetup = () => {
   const [setupStatus, setSetupStatus] = useState('idle');
   const [setupResults, setSetupResults] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
+  const BACKEND_URL = API_BASE_URL;
   const runDeploymentSetup = async () => {
     setLoading(true);
     setSetupStatus('running');

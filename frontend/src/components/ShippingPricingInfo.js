@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Truck, Package, DollarSign, Info, MapPin } from 'lucide-react';
 import { Card } from './ui/card';
 import axios from 'axios';
+import { API_BASE_URL } from '../api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = API_BASE_URL;
 const API = `${BACKEND_URL}/api`;
 
 /**

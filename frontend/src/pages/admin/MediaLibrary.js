@@ -18,8 +18,9 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card } from '../../components/ui/card';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '../../api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = API_BASE_URL;
 const API = `${BACKEND_URL}/api`;
 
 const MediaLibrary = () => {

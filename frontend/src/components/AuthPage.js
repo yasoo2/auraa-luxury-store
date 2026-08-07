@@ -191,7 +191,7 @@ const AuthPage = () => {
       {/* Reserve the cookie banner's height so the centred card — and the submit
           button at its bottom edge — is never under the fixed banner. */}
       <div
-        className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8"
+        className="auth-page relative z-10 min-h-screen flex items-center justify-center px-4 py-8"
         style={{ paddingBottom: 'calc(2rem + var(--cookie-banner-h, 0px))' }}
       >
         <div className="max-w-md w-full">

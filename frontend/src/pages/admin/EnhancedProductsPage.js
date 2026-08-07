@@ -41,6 +41,7 @@ const EnhancedProductsPage = () => {
   const API_URL = API_BASE_URL;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -134,9 +135,14 @@ const EnhancedProductsPage = () => {
       setLoading(true);
       const response = await axios.get(`${API_URL}/api/products`);
       setProducts(response.data || []);
+      setLoadError('');
     } catch (error) {
+      // Invented products are worse than none: the owner sees a catalogue that
+      // isn't theirs and cannot tell.
       console.error('Error fetching products:', error);
-      setProducts(generateMockProducts());
+      setProducts([]);
+      setLoadError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر تحميل المنتجات' : 'Could not load products'));
     } finally {
       setLoading(false);
     }
@@ -211,103 +217,6 @@ const EnhancedProductsPage = () => {
     }
   };
 
-  const generateMockProducts = () => {
-    return [
-      {
-        id: '1',
-        name: 'قلادة ذهبية فاخرة',
-        name_en: 'Luxury Gold Necklace',
-        description: 'قلادة ذهبية مصنوعة من الذهب عيار 18 مع تصميم عصري',
-        price: 1299.99,
-        original_price: 1599.99,
-        category: 'necklaces',
-        images: ['https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400'],
-        stock_quantity: 25,
-        sku: 'AL-NECK-001',
-        material: 'gold',
-        color: 'gold',
-        is_featured: true,
-        is_active: true,
-        rating: 4.8,
-        reviews_count: 124,
-        created_at: '2024-01-01T10:00:00Z'
-      },
-      {
-        id: '2',
-        name: 'أقراط لؤلؤ طبيعية',
-        name_en: 'Natural Pearl Earrings',
-        description: 'أقراط مصنوعة من اللؤلؤ الطبيعي مع تصميم كلاسيكي',
-        price: 899.99,
-        category: 'earrings',
-        images: ['https://images.unsplash.com/photo-1506755855567-92ff770e8d00?w=400'],
-        stock_quantity: 15,
-        sku: 'AL-EAR-002',
-        material: 'pearl',
-        color: 'white',
-        is_featured: false,
-        is_active: true,
-        rating: 4.9,
-        reviews_count: 87,
-        created_at: '2024-01-02T10:00:00Z'
-      },
-      {
-        id: '3',
-        name: 'خاتم مرصع بالماس',
-        name_en: 'Diamond Ring',
-        description: 'خاتم فاخر مرصع بالماس الطبيعي',
-        price: 2999.99,
-        category: 'rings',
-        images: ['https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400'],
-        stock_quantity: 8,
-        sku: 'AL-RING-003',
-        material: 'diamond',
-        color: 'silver',
-        is_featured: true,
-        is_active: true,
-        rating: 4.7,
-        reviews_count: 45,
-        created_at: '2024-01-03T10:00:00Z'
-      },
-      {
-        id: '4',
-        name: 'سوار ذهبي متعدد الطبقات',
-        name_en: 'Multi-layer Gold Bracelet',
-        description: 'سوار ذهبي أنيق بتصميم متعدد الطبقات',
-        price: 749.99,
-        original_price: 999.99,
-        category: 'bracelets',
-        images: ['https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=400'],
-        stock_quantity: 30,
-        sku: 'AL-BRAC-004',
-        material: 'gold',
-        color: 'gold',
-        is_featured: false,
-        is_active: true,
-        rating: 4.6,
-        reviews_count: 78,
-        created_at: '2024-01-04T10:00:00Z'
-      },
-      {
-        id: '5',
-        name: 'ساعة نسائية أنيقة',
-        name_en: 'Elegant Ladies Watch',
-        description: 'ساعة نسائية فاخرة مع حزام جلدي',
-        price: 1899.99,
-        category: 'watches',
-        images: ['https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400'],
-        stock_quantity: 12,
-        sku: 'AL-WATCH-005',
-        material: 'gold',
-        color: 'rose-gold',
-        is_featured: true,
-        is_active: false,
-        rating: 4.8,
-        reviews_count: 156,
-        created_at: '2024-01-05T10:00:00Z'
-      }
-    ];
-  };
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat(isRTL ? 'ar-SA' : 'en-US', {
       style: 'currency',
@@ -334,6 +243,16 @@ const EnhancedProductsPage = () => {
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      {loadError && (
+        <div
+          role="alert"
+          data-testid="products-error"
+          className="border border-red-300 bg-red-50 text-red-800 rounded-lg px-4 py-3 text-sm"
+        >
+          {loadError}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">

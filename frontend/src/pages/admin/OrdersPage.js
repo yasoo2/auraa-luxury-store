@@ -30,6 +30,8 @@ const OrdersPage = () => {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [actionError, setActionError] = useState('');
 
   const orderStatuses = {
     pending: { 
@@ -68,90 +70,34 @@ const OrdersPage = () => {
       setLoading(true);
       const response = await axios.get(`${API}/admin/orders`);
       setOrders(response.data || []);
+      setLoadError('');
     } catch (error) {
+      // An invented order list is indistinguishable from a real one on screen.
+      // "No orders" is at least true; a red banner says why.
       console.error('Error fetching orders:', error);
-      // For now, show mock data since backend endpoint might not exist yet
-      setOrders(generateMockOrders());
+      setOrders([]);
+      setLoadError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر تحميل الطلبات' : 'Could not load orders'));
     } finally {
       setLoading(false);
     }
   };
 
-  const generateMockOrders = () => {
-    return [
-      {
-        id: 'order-001',
-        customer_name: 'فاطمة أحمد',
-        customer_email: 'fatima@example.com',
-        total: 599.99,
-        status: 'pending',
-        created_at: '2025-01-06T10:30:00Z',
-        items: [
-          { product_name: 'قلادة ذهبية فاخرة', quantity: 1, price: 299.99 },
-          { product_name: 'أقراط لؤلؤ كلاسيكية', quantity: 2, price: 150.00 }
-        ]
-      },
-      {
-        id: 'order-002',
-        customer_name: 'سارة محمد',
-        customer_email: 'sara@example.com',
-        total: 299.99,
-        status: 'processing',
-        created_at: '2025-01-06T09:15:00Z',
-        items: [
-          { product_name: 'خاتم مرصع بالماس', quantity: 1, price: 299.99 }
-        ]
-      },
-      {
-        id: 'order-003',
-        customer_name: 'نورا سعد',
-        customer_email: 'nora@example.com',
-        total: 899.99,
-        status: 'shipped',
-        created_at: '2025-01-05T16:45:00Z',
-        items: [
-          { product_name: 'ساعة ذهبية فاخرة', quantity: 1, price: 899.99 }
-        ]
-      },
-      {
-        id: 'order-004',
-        customer_name: 'أمل خالد',
-        customer_email: 'amal@example.com',
-        total: 249.99,
-        status: 'delivered',
-        created_at: '2025-01-04T14:20:00Z',
-        items: [
-          { product_name: 'سوار ذهبي متعدد الطبقات', quantity: 1, price: 249.99 }
-        ]
-      },
-      {
-        id: 'order-005',
-        customer_name: 'ريم عبدالله',
-        customer_email: 'reem@example.com',
-        total: 150.00,
-        status: 'cancelled',
-        created_at: '2025-01-04T11:30:00Z',
-        items: [
-          { product_name: 'أقراط لؤلؤ كلاسيكية', quantity: 1, price: 150.00 }
-        ]
-      }
-    ];
-  };
-
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       await axios.put(`${API}/admin/orders/${orderId}`, { status: newStatus });
-      setOrders(orders.map(order => 
+      setOrders(orders.map(order =>
         order.id === orderId ? { ...order, status: newStatus } : order
       ));
+      setActionError('');
       setShowOrderModal(false);
     } catch (error) {
+      // The old version updated the row and closed the dialog even when the
+      // save failed — so "تم الشحن" appeared on screen and never reached the
+      // database. Leave the row alone and say so.
       console.error('Error updating order status:', error);
-      // For mock data, just update locally
-      setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      ));
-      setShowOrderModal(false);
+      setActionError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر حفظ حالة الطلب — لم يتغيّر شيء' : 'Could not save the order status — nothing changed'));
     }
   };
 
@@ -196,6 +142,16 @@ const OrdersPage = () => {
           {isRTL ? `إجمالي الطلبات: ${filteredOrders.length}` : `Total Orders: ${filteredOrders.length}`}
         </div>
       </div>
+
+      {(loadError || actionError) && (
+        <div
+          role="alert"
+          data-testid="orders-error"
+          className="border border-red-300 bg-red-50 text-red-800 rounded-lg px-4 py-3 text-sm"
+        >
+          {loadError || actionError}
+        </div>
+      )}
 
       {/* Filters and Search */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">

@@ -1155,3 +1155,27 @@ def test_google_links_to_an_account_registered_with_different_capitals(
     )
     assert total == 1, "a second account was created for the same person"
     assert r.json()["user"]["is_admin"] is True, "signed into a new account, losing admin"
+
+
+def test_registration_keeps_the_name_the_form_collected(client):
+    """
+    The sign-up form has always sent first_name/last_name. They were absent
+    from the model, so every customer was stored under their email prefix and
+    the admin users table showed a column of login handles.
+    """
+    r = client.post("/api/auth/register", json={
+        "email": "person@example.com", "password": "pw123456",
+        "first_name": "يونس", "last_name": "السعدي", "phone": "+966500000000",
+    })
+    assert r.status_code == 200, r.text
+    user = r.json()["user"]
+    assert user["first_name"] == "يونس"
+    assert user["last_name"] == "السعدي"
+    assert user["name"] == "يونس السعدي"
+
+
+def test_registration_without_a_name_still_works(client):
+    r = client.post("/api/auth/register",
+                    json={"email": "noname@example.com", "password": "pw123456"})
+    assert r.status_code == 200, r.text
+    assert r.json()["user"]["name"] == "noname"

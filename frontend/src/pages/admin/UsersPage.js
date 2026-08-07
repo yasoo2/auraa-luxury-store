@@ -35,6 +35,8 @@ const UsersPage = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -45,127 +47,61 @@ const UsersPage = () => {
       setLoading(true);
       const response = await axios.get(`${API}/admin/users`);
       setUsers(response.data || []);
+      setLoadError('');
     } catch (error) {
+      // Showing invented customers here would be worse than showing none: the
+      // owner cannot tell the difference, and an empty list is at least true.
       console.error('Error fetching users:', error);
-      // For now, show mock data since backend endpoint might not exist yet
-      setUsers(generateMockUsers());
+      setUsers([]);
+      setLoadError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر تحميل المستخدمين' : 'Could not load users'));
     } finally {
       setLoading(false);
     }
   };
 
-  const generateMockUsers = () => {
-    return [
-      {
-        id: 'user-001',
-        email: 'admin@auraa.com',
-        first_name: 'مدير',
-        last_name: 'النظام',
-        phone: '+966501234567',
-        is_admin: true,
-        is_active: true,
-        created_at: '2025-01-01T10:00:00Z',
-        last_login: '2025-01-07T08:30:00Z',
-        orders_count: 0,
-        total_spent: 0
-      },
-      {
-        id: 'user-002',
-        email: 'fatima@example.com',
-        first_name: 'فاطمة',
-        last_name: 'أحمد',
-        phone: '+966501234568',
-        is_admin: false,
-        is_active: true,
-        created_at: '2025-01-02T14:30:00Z',
-        last_login: '2025-01-06T16:45:00Z',
-        orders_count: 3,
-        total_spent: 899.97
-      },
-      {
-        id: 'user-003',
-        email: 'sara@example.com',
-        first_name: 'سارة',
-        last_name: 'محمد',
-        phone: '+966501234569',
-        is_admin: false,
-        is_active: true,
-        created_at: '2025-01-03T09:15:00Z',
-        last_login: '2025-01-06T12:20:00Z',
-        orders_count: 1,
-        total_spent: 299.99
-      },
-      {
-        id: 'user-004',
-        email: 'nora@example.com',
-        first_name: 'نورا',
-        last_name: 'سعد',
-        phone: '+966501234570',
-        is_admin: false,
-        is_active: true,
-        created_at: '2025-01-04T11:00:00Z',
-        last_login: '2025-01-05T18:30:00Z',
-        orders_count: 2,
-        total_spent: 1149.98
-      },
-      {
-        id: 'user-005',
-        email: 'amal@example.com',
-        first_name: 'أمل',
-        last_name: 'خالد',
-        phone: '+966501234571',
-        is_admin: false,
-        is_active: false,
-        created_at: '2025-01-05T16:45:00Z',
-        last_login: '2025-01-05T17:00:00Z',
-        orders_count: 1,
-        total_spent: 249.99
-      },
-      {
-        id: 'user-006',
-        email: 'reem@example.com',
-        first_name: 'ريم',
-        last_name: 'عبدالله',
-        phone: '+966501234572',
-        is_admin: false,
-        is_active: true,
-        created_at: '2025-01-06T13:20:00Z',
-        last_login: null,
-        orders_count: 0,
-        total_spent: 0
-      }
-    ];
-  };
-
+  // Both of these used to PUT /admin/users/{id}, which the server has never
+  // had — and then updated the row anyway when the call failed, so the change
+  // looked saved and never was. These are the endpoints that actually exist.
   const updateUserStatus = async (userId, newStatus) => {
     try {
-      await axios.put(`${API}/admin/users/${userId}`, { is_active: newStatus });
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, is_active: newStatus } : user
+      const { data } = await axios.post(`${API}/admin/super-admin-toggle-status`, {
+        user_id: userId,
+        is_active: newStatus,
+      });
+      setUsers(users.map(user =>
+        user.id === userId ? { ...user, is_active: data.is_active } : user
       ));
+      setActionError('');
     } catch (error) {
       console.error('Error updating user status:', error);
-      // For mock data, just update locally
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, is_active: newStatus } : user
-      ));
+      setActionError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر تغيير حالة الحساب' : 'Could not change the account status'));
     }
   };
 
-  const toggleAdminRole = async (userId, isAdmin) => {
+  const toggleAdminRole = async (userId) => {
     try {
-      await axios.put(`${API}/admin/users/${userId}`, { is_admin: isAdmin });
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, is_admin: isAdmin } : user
+      const { data } = await axios.patch(`${API}/admin/users/${userId}/toggle-admin`);
+      setUsers(users.map(user =>
+        user.id === userId ? { ...user, is_admin: data.is_admin } : user
       ));
+      setActionError('');
     } catch (error) {
       console.error('Error updating user role:', error);
-      // For mock data, just update locally
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, is_admin: isAdmin } : user
-      ));
+      setActionError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر تغيير الصلاحية' : 'Could not change the role'));
     }
   };
+
+  // Accounts store a single `name`; the registration form's first/last names
+  // are only kept when the server was given them. Compose a display name from
+  // whatever exists rather than assuming a shape.
+  const displayName = (user) =>
+    [user?.first_name, user?.last_name].filter(Boolean).join(' ')
+    || user?.name
+    || user?.email?.split('@')[0]
+    || '';
 
   const filteredUsers = users.filter(user => {
     const matchesRole = roleFilter === 'all' || 
@@ -174,9 +110,8 @@ const UsersPage = () => {
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'active' && user.is_active) ||
                          (statusFilter === 'inactive' && !user.is_active);
-    const matchesSearch = user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const haystack = `${displayName(user)} ${user.email || ''} ${user.phone || ''}`.toLowerCase();
+    const matchesSearch = haystack.includes(searchQuery.toLowerCase());
     return matchesRole && matchesStatus && matchesSearch;
   });
 
@@ -216,6 +151,18 @@ const UsersPage = () => {
           <div>{isRTL ? `العملاء: ${users.filter(u => !u.is_admin).length}` : `Customers: ${users.filter(u => !u.is_admin).length}`}</div>
         </div>
       </div>
+
+      {/* A failure has to be visible. Silently showing an empty table, or worse
+          an invented one, is how the old version hid its own breakage. */}
+      {(loadError || actionError) && (
+        <div
+          role="alert"
+          data-testid="users-error"
+          className="border border-red-300 bg-red-50 text-red-800 rounded-lg px-4 py-3 text-sm"
+        >
+          {loadError || actionError}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -343,13 +290,13 @@ const UsersPage = () => {
                       <div className="flex-shrink-0 h-10 w-10">
                         <div className="h-10 w-10 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 flex items-center justify-center">
                           <span className="text-white font-semibold text-sm">
-                            {user.first_name.charAt(0)}
+                            {displayName(user).charAt(0)}
                           </span>
                         </div>
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {user.first_name} {user.last_name}
+                          {displayName(user)}
                         </div>
                         <div className="text-sm text-gray-500 flex items-center">
                           <Mail className="h-3 w-3 mr-1" />
@@ -455,11 +402,11 @@ const UsersPage = () => {
                 <div className="flex items-center mb-4">
                   <div className="h-16 w-16 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 flex items-center justify-center mr-4">
                     <span className="text-white font-bold text-xl">
-                      {selectedUser.first_name.charAt(0)}
+                      {displayName(selectedUser).charAt(0)}
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold">{selectedUser.first_name} {selectedUser.last_name}</h3>
+                    <h3 className="text-xl font-semibold">{displayName(selectedUser)}</h3>
                     <p className="text-gray-600">{selectedUser.email}</p>
                   </div>
                 </div>
@@ -521,7 +468,7 @@ const UsersPage = () => {
 
                   {!selectedUser.is_admin && (
                     <Button
-                      onClick={() => toggleAdminRole(selectedUser.id, true)}
+                      onClick={() => toggleAdminRole(selectedUser.id)}
                       variant="outline"
                       size="sm"
                       className="border-purple-300 text-purple-600 hover:bg-purple-50"
@@ -533,7 +480,7 @@ const UsersPage = () => {
 
                   {selectedUser.is_admin && selectedUser.email !== 'admin@auraa.com' && (
                     <Button
-                      onClick={() => toggleAdminRole(selectedUser.id, false)}
+                      onClick={() => toggleAdminRole(selectedUser.id)}
                       variant="outline"
                       size="sm"
                       className="border-gray-300 text-gray-600 hover:bg-gray-50"

@@ -87,10 +87,14 @@ async def _get_access_token(force: bool = False) -> str:
                 "CJ_DROPSHIP_API_KEY (or CJ_EMAIL / CJ_API_KEY)"
             )
 
+        # The field is apiKey, not password. CJ's own rejection said so:
+        #   "CJ error 1600005: Email or password is wrong ... We recommend
+        #    switching to the apiKey mode"
+        # The sibling client in this repo had it right all along.
         logger.info("🔑 Requesting a fresh CJ access token")
         data = await _request_json(
             "POST", "/v1/authentication/getAccessToken",
-            json={"email": CJ_EMAIL, "password": CJ_API_KEY},
+            json={"email": CJ_EMAIL, "apiKey": CJ_API_KEY},
             authenticated=False,
         )
 

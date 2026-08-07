@@ -27,3 +27,99 @@ code {
     opacity: 1;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Auth page: fit the form in short viewports.
+
+   The card is ~770px tall. On a 1366x600 laptop only ~500px is left once the
+   navbar is subtracted, so the submit button and the sign-up link sat 220px
+   below the fold and could only be reached by scrolling.
+
+   These rules key off viewport *height*, which is the actual constraint —
+   width was never the problem. Tall screens keep the roomier spacing.
+--------------------------------------------------------------------------- */
+
+@media (max-height: 820px) {
+  .auth-page {
+    padding-top: 1rem;
+    padding-bottom: calc(1rem + var(--cookie-banner-h, 0px));
+    align-items: flex-start;
+  }
+
+  /* The glass card */
+  .auth-page .rounded-3xl {
+    padding: 1rem;
+  }
+
+  /* Header block: logo, wordmark, title, greeting */
+  .auth-page header,
+  .auth-page .text-center.mb-6 {
+    margin-bottom: 0.5rem;
+  }
+
+  .auth-page .rounded-full.animate-rotate-glow {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .auth-page .rounded-full.animate-rotate-glow span {
+    font-size: 1.25rem;
+  }
+
+  /* The navbar already shows the brand, so the wordmark is redundant here. */
+  .auth-page h1.animate-text-sparkle {
+    font-size: 1.25rem;
+    margin-bottom: 0;
+  }
+
+  .auth-page form {
+    gap: 0.625rem;
+  }
+
+  .auth-page form > * + * {
+    margin-top: 0.625rem;
+  }
+
+  /* Inputs and the provider buttons */
+  .auth-page input,
+  .auth-page form button,
+  .auth-page .space-y-3 > button {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Very short viewports need the decorative pieces gone entirely. */
+@media (max-height: 720px) {
+  /* Only the greeting paragraph — `animate-slide-in-right` is also on the
+     password field wrapper, and a bare class selector hid that too. */
+  .auth-page .flex.items-center.justify-center.mb-3,
+  .auth-page h1.animate-text-sparkle,
+  .auth-page p.animate-slide-in-right {
+    display: none;
+  }
+
+  .auth-page .rounded-3xl {
+    padding: 0.75rem;
+  }
+
+  /* Purely decorative: the "or" rule between the provider button and the
+     credential fields. Hiding it costs nothing functionally. */
+  .auth-page .relative.flex.items-center,
+  .auth-page .my-4.flex.items-center {
+    display: none;
+  }
+
+  .auth-page form {
+    gap: 0.45rem;
+  }
+
+  .auth-page form > * + * {
+    margin-top: 0.45rem;
+  }
+
+  .auth-page input {
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+  }
+}

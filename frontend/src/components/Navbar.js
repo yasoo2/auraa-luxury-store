@@ -76,7 +76,10 @@ const Navbar = () => {
   return (
     <nav className="nav-glass sticky top-0" style={{ zIndex: 200 }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative flex justify-between items-center min-h-16 md:min-h-20 py-2" style={{ direction: 'ltr' }}>
+        {/* min-w-0 lets the flex children shrink instead of forcing the row wider
+              than the viewport, which pushed the right-hand actions off-screen at
+              tablet widths. */}
+        <div className="relative flex justify-between items-center gap-2 min-w-0 min-h-16 md:min-h-20 py-2" style={{ direction: 'ltr' }}>
           {/* Logo (default inline left) - Mobile optimized */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
             <Link to="/" className="flex flex-col items-start py-1 md:py-2 flex-shrink-0">
@@ -149,14 +152,14 @@ const Navbar = () => {
           </div>
 
           {/* Search Bar (desktop) */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center">
-            <div className="relative">
+          <form onSubmit={handleSearch} className="hidden lg:flex items-center flex-1 min-w-0 mx-2">
+            <div className="relative w-full">
               <Input
                 type="text"
                 placeholder={isRTL ? 'ابحث عن المنتجات...' : 'Search products...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 pr-10 search-expand focus-ring"
+                className="w-full max-w-xs pr-10 search-expand focus-ring"
                 dir={isRTL ? 'rtl' : 'ltr'}
               />
               <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400`} />
@@ -164,7 +167,7 @@ const Navbar = () => {
           </form>
 
           {/* Right Actions - Mobile optimized */}
-          <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-1 sm:space-x-2 md:space-x-4' : 'space-x-1 sm:space-x-2 md:space-x-4'}`}>
+          <div className={`flex items-center min-w-0 ${isRTL ? 'space-x-reverse space-x-1 sm:space-x-2 md:space-x-4' : 'space-x-1 sm:space-x-2 md:space-x-4'}`}>
             {/* Language Currency Selector - Hidden on smallest screens */}
             <div className="hidden sm:block">
               <LanguageCurrencySelector />

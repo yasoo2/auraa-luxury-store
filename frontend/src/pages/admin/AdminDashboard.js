@@ -8,6 +8,7 @@ import OrdersPage from './OrdersPage';
 import UsersPage from './UsersPage';
 import SettingsPage from './SettingsPage';
 import AnalyticsPage from './AnalyticsPage';
+import IntegrationsPage from './IntegrationsPage';
 import AutoUpdatePage from './AutoUpdatePage';
 import BulkImportPage from './BulkImportPage';
 import QuickImportPage from './QuickImportPage';
@@ -94,6 +95,11 @@ const AdminDashboard = () => {
       name: isRTL ? 'التحليلات' : 'Analytics',
       path: '/admin/analytics',
       icon: BarChart
+    },
+    {
+      name: isRTL ? 'التكاملات' : 'Integrations',
+      path: '/admin/integrations',
+      icon: Plug
     },
     {
       name: isRTL ? 'التحديثات التلقائية' : 'Auto Updates',
@@ -211,10 +217,6 @@ const AdminDashboard = () => {
 
         {/* Main Content */}
         <main className="flex-1 p-6">
-          {/* Integrations and Content Protection are not routed: every endpoint
-              they call is missing from the server, so the pages opened, accepted
-              input and saved nothing. The components remain in the repo — restore
-              the import, the menu entry and the route once the backend exists. */}
           <Routes>
             <Route path="/" element={<Navigate to="/admin/products" replace />} />
             <Route path="/products" element={<EnhancedProductsPage />} />
@@ -223,6 +225,7 @@ const AdminDashboard = () => {
             <Route path="/quick-import" element={<QuickImportPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/integrations" element={<IntegrationsPage />} />
             <Route path="/auto-update" element={<AutoUpdatePage />} />
             <Route path="/cms-pages" element={<CMSPagesManager />} />
             <Route path="/theme" element={<ThemeCustomization />} />

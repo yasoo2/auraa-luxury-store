@@ -17,6 +17,7 @@ import shutil
 import aiofiles
 from PIL import Image
 import io
+import re
 from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
@@ -420,19 +421,26 @@ async def generate_sitemap():
 # Import Service Endpoints
 # ======================================
 
+class ImportRequest(BaseModel):
+    source: str = "cj"
+    count: int = 50
+    batch_size: int = 20
+    keyword: str = "luxury jewelry accessories"
+
+
 @api_router.post("/imports/start")
 async def start_import_job(
     background_tasks: BackgroundTasks,
-    source: str = "cj",
-    count: int = 50,
-    batch_size: int = 20,
-    keyword: str = "luxury jewelry accessories",
+    payload: ImportRequest = ImportRequest(),
     admin: User = Depends(get_admin_user)
 ):
     """
     Start a new import job from CJ Dropshipping
     Returns job_id for tracking progress
     """
+    source, count = payload.source, payload.count
+    batch_size, keyword = payload.batch_size, payload.keyword
+
     try:
         if count < 1 or count > 1000:
             raise HTTPException(status_code=400, detail="Count must be between 1 and 1000")
@@ -728,6 +736,269 @@ async def get_products(
             logger.warning(f"Skipping malformed product {product.get('id', 'unknown')}: {e}")
 
     return valid_products
+
+
+# ---------------------------------------------------------------------------
+# Recommendations, comparison and search
+#
+# The storefront has always rendered these three features. None of the three
+# endpoints existed, so every visitor was shown products invented in the
+# browser — the comparison table filled its weight and quality columns with
+# Math.random(). These compute from the catalogue and the order book instead.
+# ---------------------------------------------------------------------------
+
+RECOMMENDATION_TYPES = ("personalized", "similar", "trending", "bestsellers", "complements")
+
+
+async def _live_products(query: Dict[str, Any], limit: int, language: Optional[str] = None):
+    """Fetch live products for `query`, skipping any that fail validation."""
+    query = {**query, "staging": {"$ne": True}}
+    docs = await db.products.find(query).limit(max(1, min(limit, 50))).to_list(length=None)
+    out = []
+    for doc in docs:
+        try:
+            out.append(Product(**_localize(doc, language)))
+        except Exception:
+            continue
+    return out
+
+
+async def _ordered_by_ids(ids: List[str], limit: int, language: Optional[str] = None):
+    """Products for `ids`, preserving the ranking order the caller computed."""
+    if not ids:
+        return []
+    found = {p.id: p for p in await _live_products({"id": {"$in": ids}}, len(ids), language)}
+    return [found[i] for i in ids if i in found][:limit]
+
+
+async def _bestseller_ids(limit: int, exclude: Optional[str] = None) -> List[str]:
+    """Product ids ranked by units actually sold, newest orders included."""
+    sold: Dict[str, int] = {}
+    async for order in db.orders.find({}, {"items": 1}):
+        for item in order.get("items") or []:
+            pid = item.get("product_id") or item.get("id")
+            if pid and pid != exclude:
+                sold[pid] = sold.get(pid, 0) + int(item.get("quantity") or 1)
+    return [pid for pid, _ in sorted(sold.items(), key=lambda kv: -kv[1])][:limit]
+
+
+@api_router.get("/recommendations", response_model=List[Product])
+async def get_recommendations(
+    request: Request,
+    type: str = "personalized",
+    limit: int = 6,
+    userId: Optional[str] = None,
+    productId: Optional[str] = None,
+    category: Optional[str] = None,
+    language: Optional[str] = Query(None),
+):
+    """
+    Products to suggest, computed from real catalogue and order data.
+
+    Every strategy falls back to the next most general one rather than
+    returning nothing, so the row is never empty on a young store — but every
+    product in it is a product that exists.
+    """
+    if type not in RECOMMENDATION_TYPES:
+        type = "personalized"
+    limit = max(1, min(limit, 24))
+
+    seed = await db.products.find_one({"id": productId}) if productId else None
+    picks: List[str] = []
+
+    if type == "similar" and seed:
+        siblings = await _live_products(
+            {"category": seed.get("category"), "id": {"$ne": productId}}, limit * 2, language)
+        picks = [p.id for p in sorted(siblings, key=lambda p: -p.rating)]
+
+    elif type == "complements" and seed:
+        # Bought in the same order as this product, most frequent first.
+        together: Dict[str, int] = {}
+        async for order in db.orders.find({"items.product_id": productId}, {"items": 1}):
+            for item in order.get("items") or []:
+                pid = item.get("product_id") or item.get("id")
+                if pid and pid != productId:
+                    together[pid] = together.get(pid, 0) + 1
+        picks = [pid for pid, _ in sorted(together.items(), key=lambda kv: -kv[1])]
+        if not picks:
+            # Nothing bought alongside it yet: suggest other categories.
+            others = await _live_products(
+                {"category": {"$ne": seed.get("category")}}, limit * 2, language)
+            picks = [p.id for p in sorted(others, key=lambda p: -p.rating)]
+
+    elif type == "trending":
+        # What visitors have actually been opening, last 14 days.
+        since = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
+        counts: Dict[str, int] = {}
+        async for ev in db.recommendation_events.find({"created_at": {"$gte": since}}, {"product_id": 1}):
+            pid = ev.get("product_id")
+            if pid:
+                counts[pid] = counts.get(pid, 0) + 1
+        picks = [pid for pid, _ in sorted(counts.items(), key=lambda kv: -kv[1])]
+
+    elif type == "bestsellers":
+        picks = await _bestseller_ids(limit * 2)
+
+    elif type == "personalized":
+        # The categories this shopper has actually bought from or opened.
+        user_id = userId
+        if not user_id:
+            try:
+                user = await get_current_user_doc(request)
+                user_id = user.get("id")
+            except Exception:
+                user_id = None
+
+        if user_id:
+            seen_categories: Dict[str, int] = {}
+            async for order in db.orders.find({"user_id": user_id}, {"items": 1}):
+                for item in order.get("items") or []:
+                    pid = item.get("product_id") or item.get("id")
+                    doc = await db.products.find_one({"id": pid}, {"category": 1}) if pid else None
+                    if doc and doc.get("category"):
+                        seen_categories[doc["category"]] = seen_categories.get(doc["category"], 0) + 2
+            async for ev in db.recommendation_events.find({"user_id": user_id}, {"product_id": 1}):
+                doc = await db.products.find_one({"id": ev.get("product_id")}, {"category": 1})
+                if doc and doc.get("category"):
+                    seen_categories[doc["category"]] = seen_categories.get(doc["category"], 0) + 1
+
+            for cat, _ in sorted(seen_categories.items(), key=lambda kv: -kv[1]):
+                for p in await _live_products({"category": cat}, limit, language):
+                    if p.id not in picks:
+                        picks.append(p.id)
+
+        if not picks:
+            picks = await _bestseller_ids(limit * 2)
+
+    results = await _ordered_by_ids(picks, limit, language)
+
+    # Top up from the requested category, then from anything live, so the row
+    # is useful on day one — still only real products.
+    if len(results) < limit:
+        have = {p.id for p in results}
+        filler_query: Dict[str, Any] = {"id": {"$nin": list(have) + ([productId] if productId else [])}}
+        if category:
+            filler_query["category"] = category
+        filler = await _live_products(filler_query, limit * 2, language)
+        if not filler and category:
+            filler_query.pop("category")
+            filler = await _live_products(filler_query, limit * 2, language)
+        results.extend(sorted(filler, key=lambda p: -p.rating)[: limit - len(results)])
+
+    return results[:limit]
+
+
+class RecommendationEvent(BaseModel):
+    productId: str
+    type: Optional[str] = None
+    userId: Optional[str] = None
+
+
+@api_router.post("/recommendations/track")
+async def track_recommendation(payload: RecommendationEvent, request: Request):
+    """
+    Record that a suggested product was opened.
+
+    This is what makes "trending" and "personalized" mean anything — without
+    it both would be guesses. Anonymous visitors are counted too; only the
+    product, the strategy and the timestamp are stored.
+    """
+    user_id = payload.userId
+    if not user_id:
+        try:
+            user_id = (await get_current_user_doc(request)).get("id")
+        except Exception:
+            user_id = None
+
+    await db.recommendation_events.insert_one({
+        "product_id": payload.productId,
+        "type": payload.type,
+        "user_id": user_id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return {"success": True}
+
+
+class CompareRequest(BaseModel):
+    productIds: List[str]
+
+
+@api_router.post("/products/compare")
+async def compare_products(payload: CompareRequest, language: Optional[str] = Query(None)):
+    """
+    Side-by-side attributes for the selected products.
+
+    Returns only what each product actually carries. The previous behaviour —
+    inventing a material, a size and a Math.random() weight — put fictional
+    specifications in front of a paying customer.
+    """
+    ids = payload.productIds[:6]
+    if not ids:
+        raise HTTPException(status_code=400, detail="No product IDs provided")
+
+    docs = await db.products.find({"id": {"$in": ids}, "staging": {"$ne": True}}).to_list(length=None)
+    by_id = {d["id"]: d for d in docs if d.get("id")}
+
+    # Shipping, warranty and returns are properties of the shop, not of an
+    # individual necklace. The old version varied them per row by array index,
+    # which meant two identical products advertised different delivery times.
+    settings = await _get_singleton(SETTINGS_DOC_ID)
+    policies = {
+        "shipping_time": settings.get("shipping_time"),
+        "warranty": settings.get("warranty"),
+        "return_policy": settings.get("return_policy"),
+    }
+
+    out: Dict[str, Any] = {}
+    for pid in ids:
+        doc = by_id.get(pid)
+        if not doc:
+            continue
+        doc = _localize(doc, language)
+        out[pid] = {
+            "id": pid,
+            "name": doc.get("name"),
+            "images": doc.get("images") or [],
+            "price": doc.get("price"),
+            "original_price": doc.get("original_price"),
+            "category": doc.get("category"),
+            "rating": doc.get("rating", 0),
+            "reviews_count": doc.get("reviews_count", 0),
+            "in_stock": doc.get("in_stock", True),
+            "stock_quantity": doc.get("stock_quantity") or doc.get("stock"),
+            # Present only when the product record has them. A missing value
+            # is returned as null and rendered as a dash, never guessed.
+            "sku": doc.get("sku"),
+            "brand": doc.get("brand"),
+            "material": doc.get("material"),
+            "color": doc.get("color"),
+            "size": doc.get("size"),
+            "weight": f"{doc['weight_kg']} kg" if doc.get("weight_kg") else None,
+            "discount_percentage": doc.get("discount_percentage"),
+            "stock_status": (
+                "in_stock" if doc.get("in_stock", True) and (doc.get("stock_quantity") or doc.get("stock") or 0) > 5
+                else "low_stock" if doc.get("in_stock", True)
+                else "out_of_stock"
+            ),
+            **policies,
+        }
+    return out
+
+
+@api_router.get("/search", response_model=List[Product])
+async def search_products(
+    q: str = Query(..., min_length=1),
+    limit: int = 10,
+    language: Optional[str] = Query(None),
+):
+    """Search live products by name and description, in both languages."""
+    fields = ("name", "description", "name_en", "name_ar", "description_en",
+              "description_ar", "sku", "category")
+    escaped = re.escape(q.strip())
+    return await _live_products(
+        {"$or": [{f: {"$regex": escaped, "$options": "i"}} for f in fields]},
+        limit, language,
+    )
 
 
 @api_router.get("/categories")

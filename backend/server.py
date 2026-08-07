@@ -1868,6 +1868,15 @@ async def admin_list_products(
     products = await db.products.find(query).sort("created_at", -1).to_list(length=None)
     for p in products:
         p.pop("_id", None)
+        # Flag rows the storefront will refuse to render, with the reason, so
+        # a product that exists but is invisible to customers is visible here.
+        try:
+            Product(**p)
+            p["storefront_visible"] = True
+            p["storefront_issue"] = None
+        except Exception as e:
+            p["storefront_visible"] = False
+            p["storefront_issue"] = str(e).split("\n")[1].strip() if "\n" in str(e) else str(e)
     return products
 
 

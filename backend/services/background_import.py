@@ -141,6 +141,54 @@ class ImportJobManager:
         return job.get(field) if job else None
 
 
+# The storefront accepts six categories and nothing else; a product whose
+# category is anything else fails validation and is dropped from the listing
+# without a word to anyone. CJ sends free text such as "Jewelry & Accessories",
+# so an imported product used to be published and then simply never appear.
+STORE_CATEGORIES = ("earrings", "necklaces", "bracelets", "rings", "watches", "sets")
+
+CATEGORY_KEYWORDS = {
+    "earrings":  ["earring", "ear ring", "ear stud", "stud", "hoop", "قرط", "أقراط", "حلق", "حلقان"],
+    "necklaces": ["necklace", "pendant", "chain", "choker", "collar", "locket",
+                  "قلادة", "قلائد", "عقد", "عقود", "سلسلة", "تعليقة", "طوق"],
+    "bracelets": ["bracelet", "bangle", "cuff", "anklet", "wristband", "charm bracelet",
+                  "سوار", "أساور", "إسورة", "خلخال", "معصم"],
+    "rings":     ["ring", "band ring", "signet", "خاتم", "خواتم", "دبلة"],
+    "watches":   ["watch", "timepiece", "wristwatch", "ساعة", "ساعات"],
+    "sets":      ["set", "jewelry set", "jewellery set", "combo", "kit", "parure",
+                  "طقم", "أطقم", "مجموعة"],
+}
+
+
+def classify_category(product: dict) -> str:
+    """
+    Pick one of the store's six categories from CJ's free-text fields.
+
+    Checks the most specific signal first (the product's own name), then CJ's
+    category label. "sets" is matched last because the word "set" appears in
+    plenty of single-item titles.
+    """
+    haystacks = [
+        str(product.get("productNameEn") or ""),
+        str(product.get("productName") or ""),
+        str(product.get("categoryName") or ""),
+    ]
+
+    for text in haystacks:
+        low = text.lower()
+        if not low:
+            continue
+        for category in ("earrings", "necklaces", "bracelets", "rings", "watches", "sets"):
+            for word in CATEGORY_KEYWORDS[category]:
+                if word in low:
+                    return category
+
+    # Nothing recognisable. "sets" is the store's catch-all, and the flag
+    # written alongside it lets the admin find these and re-file them —
+    # far better than a product that exists but is invisible.
+    return "sets"
+
+
 def _collect_images(product: dict) -> list:
     """
     Every image CJ gives us, not just the thumbnail.
@@ -294,7 +342,9 @@ async def background_import_cj_products(
                     "sku": product.get('productSku', ''),
                     "stock": product.get('sellQuantity', 0),
                     "in_stock": True,
-                    "category": product.get('categoryName', ''),
+                    "category": classify_category(product),
+                    "supplier_category": product.get('categoryName', ''),
+                    "category_auto": True,
                     "weight_kg": weight,
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "updated_at": datetime.now(timezone.utc).isoformat(),

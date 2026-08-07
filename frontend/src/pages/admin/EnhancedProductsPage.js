@@ -133,7 +133,7 @@ const EnhancedProductsPage = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/products`);
+      const response = await axios.get(`${API_URL}/api/admin/products`);
       setProducts(response.data || []);
       setLoadError('');
     } catch (error) {

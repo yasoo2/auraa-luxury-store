@@ -42,14 +42,28 @@ def _fingerprint(value: str) -> str:
     return f"{value[:2]}…{value[-2:]} ({len(value)} chars)"
 
 
+def _shown_email(value: str) -> str:
+    """
+    The email in full.
+
+    It was masked alongside the keys at first, which was caution in the wrong
+    place. An API key is a credential; an account email is an identifier, and
+    it is the store's own — already on its invoices and its contact page.
+    Masking it hid the one thing this screen exists to let an admin check:
+    whether the address configured here is the address CJ knows. "in…om" is
+    not something anyone can compare against their CJ login.
+    """
+    return value or "unset"
+
+
 def credential_report() -> Dict[str, Any]:
     """
-    Which CJ variables this deployment has, and how they differ — without
-    printing any of them. "Email or password is wrong" is unactionable on its
-    own when four similarly named variables are in play.
+    Which CJ variables this deployment has, and how they differ. Emails in
+    full so they can be compared against the CJ account; keys fingerprinted,
+    because those are secrets and this text is rendered on a screen.
     """
     return {
-        "emails": {v: _fingerprint(os.getenv(v) or "") for v in EMAIL_VARS},
+        "emails": {v: _shown_email(os.getenv(v) or "") for v in EMAIL_VARS},
         "keys": {v: _fingerprint(os.getenv(v) or "") for v in KEY_VARS},
     }
 
@@ -191,7 +205,7 @@ async def _get_access_token(force: bool = False) -> str:
         # Name every attempt by the variable *and* the value's fingerprint, so
         # two variables holding two different keys can never read as one.
         tried = "; ".join(
-            f"{ev}[{_fingerprint(email)}] + {kv}[{_fingerprint(key)}]"
+            f"{ev}[{_shown_email(email)}] + {kv}[{_fingerprint(key)}]"
             for ev, email, kv, key in pairs
         )
         distinct_keys = len({k for _, _, _, k in pairs})

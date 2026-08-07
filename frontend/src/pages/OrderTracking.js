@@ -8,6 +8,7 @@ import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
 import { formatDate as formatDateUtil } from '../utils/dateUtils';
 import { apiGet } from '../api';
+import { API_BASE_URL } from '../api';
 
 const OrderTracking = () => {
   const { language } = useLanguage();
@@ -20,7 +21,7 @@ const OrderTracking = () => {
   const [loading, setLoading] = useState(false);
   const [userOrders, setUserOrders] = useState([]);
 
-  const API_URL = process.env.REACT_APP_BACKEND_URL; // Must use env var only
+  const API_URL = API_BASE_URL;
 
   useEffect(() => {
     if (isAuthenticated && user) {

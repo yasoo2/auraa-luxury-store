@@ -9,8 +9,9 @@ import HeartButton from './HeartButton';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';
+import { API_BASE_URL } from '../api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = API_BASE_URL;
 const API = `${BACKEND_URL}/api`;
 
 const HomePage = () => {

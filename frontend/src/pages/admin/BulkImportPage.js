@@ -15,6 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { API_BASE_URL } from '../../api';
 
 const BulkImportPage = () => {
   const { language } = useLanguage();
@@ -27,8 +28,7 @@ const BulkImportPage = () => {
   const [importResults, setImportResults] = useState([]);
   const [currentStep, setCurrentStep] = useState('upload'); // upload, preview, import, results
 
-  const API_URL = process.env.REACT_APP_BACKEND_URL;
-
+  const API_URL = API_BASE_URL;
   const csvTemplate = `name,name_en,description,price,category,images,stock_quantity,sku,material,color,tags
 قلادة ذهبية,Golden Necklace,قلادة ذهبية فاخرة,299.99,necklaces,https://example.com/image1.jpg,100,NK001,gold,gold,"jewelry,luxury,necklace"
 أقراط لؤلؤ,Pearl Earrings,أقراط لؤلؤية طبيعية,199.99,earrings,https://example.com/image2.jpg,50,ER001,pearl,white,"jewelry,pearl,earrings"`;

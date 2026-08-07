@@ -6,9 +6,9 @@ import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { API_BASE_URL } from '../api';
 
-const API = process.env.REACT_APP_BACKEND_URL || '';
-
+const API = API_BASE_URL;
 const ContactUs = () => {
   const { language } = useLanguage();
   const isRTL = language === 'ar';

@@ -8,7 +8,45 @@
  * All requests automatically include credentials for cookie-based auth.
  */
 
-const API_URL = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || '';
+// Production API host, used when no build-time env var was provided.
+const PRODUCTION_API_URL = 'https://api.auraaluxury.com';
+
+/**
+ * Resolve the API base URL.
+ *
+ * Falling back to '' was silently destructive on Cloudflare Pages: relative
+ * calls like /api/products hit the SPA catch-all (`/* /index.html 200`), which
+ * answers with the HTML page at status 200. Every request then "succeeded"
+ * while returning markup, so the frontend parsed HTML as JSON and the whole
+ * site failed with no obvious error.
+ */
+export function resolveApiUrl() {
+  const configured = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL;
+  if (configured) return configured.replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined') {
+    const { hostname } = window.location;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:8001';
+    }
+    console.warn(
+      'REACT_APP_BACKEND_URL was not set at build time; falling back to ' +
+      `${PRODUCTION_API_URL}. Set it in the deployment environment.`
+    );
+    return PRODUCTION_API_URL;
+  }
+
+  return PRODUCTION_API_URL;
+}
+
+/**
+ * Resolved API base URL. Import this instead of reading the env var directly:
+ * `process.env.REACT_APP_BACKEND_URL` is `undefined` when unset, and
+ * `${undefined}/api/products` builds the literal path "undefined/api/products".
+ */
+export const API_BASE_URL = resolveApiUrl();
+
+const API_URL = API_BASE_URL;
 
 /**
  * Make API requests with consistent configuration

@@ -9,9 +9,9 @@ import {
   AlertCircle, Clock, Activity, TrendingUp
 } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
+const BACKEND_URL = API_BASE_URL;
 const AdminManagement = () => {
   const { user } = useAuth();
   const { language } = useLanguage();

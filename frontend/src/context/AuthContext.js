@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../api';
 
 const AuthContext = createContext();
 
@@ -42,8 +43,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
+  const BACKEND_URL = API_BASE_URL;
   // Check auth status on mount (cookie, or a stored token if one survives)
   const checkAuthStatus = useCallback(async () => {
     try {

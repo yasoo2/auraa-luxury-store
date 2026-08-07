@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { API_BASE_URL } from '../../api';
 
 const ProductFormModal = ({ 
   isOpen, 
@@ -165,7 +166,7 @@ const ProductFormModal = ({
       formDataUpload.append('image', file);
 
       // Upload to backend
-      const API_URL = process.env.REACT_APP_BACKEND_URL;
+      const API_URL = API_BASE_URL;
       const token = localStorage.getItem('token');
       
       const response = await fetch(`${API_URL}/api/admin/upload-image`, {

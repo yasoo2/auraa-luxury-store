@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useLanguage } from '../../context/LanguageContext';
+import { API_BASE_URL } from '../../api';
 
 const AutoUpdatePage = () => {
   const { language } = useLanguage();
@@ -30,8 +31,7 @@ const AutoUpdatePage = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-
+  const BACKEND_URL = API_BASE_URL;
   useEffect(() => {
     fetchAutoUpdateStatus();
     fetchCurrencyRates();

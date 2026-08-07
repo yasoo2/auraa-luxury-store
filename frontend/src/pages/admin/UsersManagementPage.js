@@ -4,13 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Trash2, Edit, Shield, ShieldOff, Key, Search, UserPlus } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../api';
 
 const UsersManagementPage = () => {
   const { user } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-  
+  const BACKEND_URL = API_BASE_URL;
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

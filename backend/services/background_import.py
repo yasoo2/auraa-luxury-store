@@ -3,6 +3,8 @@ Background Import Job System
 Handles async product imports that continue even if user closes browser
 """
 import asyncio
+import json
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
@@ -139,6 +141,58 @@ class ImportJobManager:
         return job.get(field) if job else None
 
 
+def _collect_images(product: dict) -> list:
+    """
+    Every image CJ gives us, not just the thumbnail.
+
+    The field is called productImageSet on some endpoints and productImages on
+    others, and is sometimes a JSON string rather than a list — so normalise
+    before trusting it. Order is preserved and duplicates dropped, with the
+    main image first.
+    """
+    candidates = []
+    main = product.get('productImage')
+    if main:
+        candidates.append(main)
+
+    for key in ('productImageSet', 'productImages', 'images'):
+        raw = product.get(key)
+        if not raw:
+            continue
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except (ValueError, TypeError):
+                raw = [part for part in raw.split(',') if part.strip()]
+        if isinstance(raw, list):
+            candidates.extend(item for item in raw if isinstance(item, str))
+
+    seen, out = set(), []
+    for url in candidates:
+        url = url.strip()
+        if url.startswith('http') and url not in seen:
+            seen.add(url)
+            out.append(url)
+    return out[:10]
+
+
+def _clean_description(product: dict) -> str:
+    """
+    CJ's description is HTML. Strip it to text so it can be shown safely and
+    indexed by search engines; fall back through the fields it may live in.
+    """
+    for key in ('description', 'productDescription', 'descriptionEn', 'remark'):
+        raw = product.get(key)
+        if not raw or not isinstance(raw, str):
+            continue
+        text = re.sub(r'<[^>]+>', ' ', raw)
+        text = re.sub(r'&[a-z]+;', ' ', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        if len(text) >= 20:
+            return text[:2000]
+    return ''
+
+
 async def background_import_cj_products(
     job_id: str,
     keyword: Optional[str],
@@ -227,16 +281,16 @@ async def background_import_cj_products(
                     "id": str(uuid.uuid4()),
                     "source": "cj_dropshipping",
                     "external_id": product_id,
-                    "name": product.get('productNameEn', ''),
-                    "name_ar": product.get('productName', ''),
-                    "description": product.get('productName', ''),
-                    "description_ar": product.get('productName', ''),
+                    "name": product.get('productNameEn') or product.get('productName', ''),
+                    "name_ar": product.get('productName') or product.get('productNameEn', ''),
+                    "description": _clean_description(product) or product.get('productNameEn', ''),
+                    "description_ar": _clean_description(product) or product.get('productName', ''),
                     "price": pricing['final_price_sar'],  # Auto-calculated price with profit + tax + shipping
                     "original_price": pricing['breakdown']['base_cost_sar'],  # Original cost for reference
                     "supplier_price": base_cost,  # CJ price
                     "supplier_shipping": shipping_cost,
                     "price_breakdown": pricing['breakdown'],  # Full pricing details
-                    "images": [product.get('productImage')] if product.get('productImage') else [],
+                    "images": _collect_images(product),
                     "sku": product.get('productSku', ''),
                     "stock": product.get('sellQuantity', 0),
                     "in_stock": True,

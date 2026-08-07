@@ -1179,3 +1179,114 @@ def test_registration_without_a_name_still_works(client):
                     json={"email": "noname@example.com", "password": "pw123456"})
     assert r.status_code == 200, r.text
     assert r.json()["user"]["name"] == "noname"
+
+
+# ---------------------------------------------------------------------------
+# Storefront: recommendations, comparison, search
+#
+# All three features were rendered to every visitor while none of the three
+# endpoints existed, so the browser filled them in — the comparison table
+# generated its weights and quality scores with Math.random().
+# ---------------------------------------------------------------------------
+
+def test_recommendations_return_only_real_products(seeded):
+    r = seeded.get("/api/recommendations", params={"type": "personalized", "limit": 6})
+    assert r.status_code == 200, r.text
+    ids = {p["id"] for p in r.json()}
+    assert ids, "the row must not be empty when the catalogue has products"
+    # p3 is staging and p4 is malformed; neither may reach a customer.
+    assert "p3" not in ids
+    assert ids <= {"p1", "p2"}
+
+
+def test_similar_recommendations_share_the_category_and_exclude_the_product(seeded):
+    r = seeded.get("/api/recommendations", params={"type": "similar", "productId": "p1", "limit": 5})
+    assert r.status_code == 200, r.text
+    for p in r.json():
+        assert p["id"] != "p1", "a product cannot be similar to itself"
+
+
+def test_unknown_recommendation_type_falls_back_instead_of_failing(seeded):
+    assert seeded.get("/api/recommendations", params={"type": "nonsense"}).status_code == 200
+
+
+def test_tracking_a_click_feeds_trending(seeded):
+    for _ in range(3):
+        assert seeded.post("/api/recommendations/track",
+                           json={"productId": "p2", "type": "trending"}).status_code == 200
+
+    r = seeded.get("/api/recommendations", params={"type": "trending", "limit": 3})
+    assert r.status_code == 200, r.text
+    assert r.json()[0]["id"] == "p2", "the most-opened product must lead the row"
+
+
+def test_compare_returns_stored_values_and_never_invents_specifications(seeded):
+    r = seeded.post("/api/products/compare", json={"productIds": ["p1", "p2"]})
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert set(data) == {"p1", "p2"}
+    assert data["p1"]["price"] == 250.0
+    # The seed products carry no material or colour, so those must come back
+    # null — the old code filled them with "18K Gold" chosen by array index.
+    assert data["p1"]["material"] is None
+    assert data["p1"]["color"] is None
+    assert data["p1"]["stock_status"] in ("in_stock", "low_stock", "out_of_stock")
+
+
+def test_compare_skips_staging_products(seeded):
+    data = seeded.post("/api/products/compare", json={"productIds": ["p1", "p3"]}).json()
+    assert "p3" not in data
+
+
+def test_compare_rejects_an_empty_request(seeded):
+    assert seeded.post("/api/products/compare", json={"productIds": []}).status_code == 400
+
+
+def test_search_finds_products_by_name(seeded):
+    r = seeded.get("/api/search", params={"q": "Necklace"})
+    assert r.status_code == 200, r.text
+    assert [p["id"] for p in r.json()] == ["p2"]
+
+
+def test_search_excludes_staging(seeded):
+    assert all(p["id"] != "p3" for p in seeded.get("/api/search", params={"q": "Staged"}).json())
+
+
+def test_search_treats_the_query_as_text_not_a_pattern(seeded):
+    """A regex metacharacter must not blow up or match everything."""
+    r = seeded.get("/api/search", params={"q": "a(b"})
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+# ---------------------------------------------------------------------------
+# Quick import
+# ---------------------------------------------------------------------------
+
+def test_import_start_reads_the_count_it_is_given(client, monkeypatch):
+    """
+    The page sends count and keyword in the JSON body. They were declared as
+    query parameters, so the body was discarded and every run imported the
+    default 50 with the default keyword.
+    """
+    captured = {}
+
+    async def fake_import(**kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(server, "background_import_cj_products", fake_import)
+    register(client, email="imp@b.com")
+    make_admin(client, "imp@b.com")
+
+    r = client.post("/api/imports/start",
+                    json={"source": "cj", "count": 200, "keyword": "gold rings"})
+    assert r.status_code == 200, r.text
+    assert captured.get("max_products") == 200, f"count ignored: {captured}"
+    assert captured.get("keyword") == "gold rings", f"keyword ignored: {captured}"
+
+
+def test_import_start_still_rejects_an_out_of_range_count(client):
+    register(client, email="imp2@b.com")
+    make_admin(client, "imp2@b.com")
+    r = client.post("/api/imports/start", json={"count": 5000})
+    assert r.status_code == 400

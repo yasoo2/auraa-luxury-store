@@ -97,120 +97,16 @@ const SmartRecommendations = ({
       if (category) params.set('category', category);
 
       const response = await axios.get(`${API}/recommendations?${params.toString()}`);
-      setRecommendations(response.data || generateMockRecommendations());
+      setRecommendations(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
+      // The row hides itself when there is nothing to show. It used to fill
+      // with products invented in this file — shown to a paying customer as
+      // though the shop stocked them.
       console.error('Recommendations error:', error);
-      setRecommendations(generateMockRecommendations());
+      setRecommendations([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateMockRecommendations = () => {
-    const mockProducts = [
-      {
-        id: 'rec-1',
-        name: isRTL ? 'قلادة ذهبية مع قلب' : 'Gold Heart Necklace',
-        name_en: 'Gold Heart Necklace',
-        price: 299.99,
-        original_price: 399.99,
-        currency: 'SAR',
-        image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=400&fit=crop',
-        rating: 4.8,
-        reviews_count: 142,
-        category: 'necklaces',
-        is_new: false,
-        is_bestseller: true,
-        discount_percentage: 25,
-        recommendation_score: 0.92,
-        recommendation_reason: isRTL ? 'يتناسب مع ذوقك الكلاسيكي' : 'Matches your classic taste',
-        ai_tags: [isRTL ? 'أنيق' : 'Elegant', isRTL ? 'كلاسيكي' : 'Classic']
-      },
-      {
-        id: 'rec-2',
-        name: isRTL ? 'أقراط لؤلؤ فاخرة' : 'Luxury Pearl Earrings',
-        name_en: 'Luxury Pearl Earrings',
-        price: 199.99,
-        currency: 'SAR',
-        image: 'https://images.unsplash.com/photo-1506755855567-92ff770e8d00?w=400&h=400&fit=crop',
-        rating: 4.9,
-        reviews_count: 89,
-        category: 'earrings',
-        is_new: true,
-        is_bestseller: false,
-        recommendation_score: 0.88,
-        recommendation_reason: isRTL ? 'العملاء الذين اشتروا منتجات مماثلة أحبوا هذا أيضاً' : 'Customers who bought similar items also loved this',
-        ai_tags: [isRTL ? 'فاخر' : 'Luxury', isRTL ? 'لؤلؤ طبيعي' : 'Natural Pearl']
-      },
-      {
-        id: 'rec-3',
-        name: isRTL ? 'سوار ذهبي مطعم بالألماس' : 'Diamond-Studded Gold Bracelet',
-        name_en: 'Diamond-Studded Gold Bracelet',
-        price: 699.99,
-        currency: 'SAR',
-        image: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=400&h=400&fit=crop',
-        rating: 4.7,
-        reviews_count: 76,
-        category: 'bracelets',
-        is_new: false,
-        is_bestseller: true,
-        recommendation_score: 0.85,
-        recommendation_reason: isRTL ? 'رائج حالياً في منطقتك' : 'Trending in your area',
-        ai_tags: [isRTL ? 'ماس' : 'Diamond', isRTL ? 'راقي' : 'Premium']
-      },
-      {
-        id: 'rec-4',
-        name: isRTL ? 'خاتم خطوبة كلاسيكي' : 'Classic Engagement Ring',
-        name_en: 'Classic Engagement Ring',
-        price: 1299.99,
-        currency: 'SAR',
-        image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop',
-        rating: 4.9,
-        reviews_count: 234,
-        category: 'rings',
-        is_new: false,
-        is_bestseller: true,
-        recommendation_score: 0.90,
-        recommendation_reason: isRTL ? 'الأكثر شيوعاً هذا الشهر' : 'Most popular this month',
-        ai_tags: [isRTL ? 'خطوبة' : 'Engagement', isRTL ? 'كلاسيكي' : 'Classic']
-      },
-      {
-        id: 'rec-5',
-        name: isRTL ? 'ساعة نسائية أنيقة' : 'Elegant Women\'s Watch',
-        name_en: 'Elegant Women\'s Watch',
-        price: 899.99,
-        original_price: 1199.99,
-        currency: 'SAR',
-        image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=400&h=400&fit=crop',
-        rating: 4.6,
-        reviews_count: 156,
-        category: 'watches',
-        is_new: true,
-        is_bestseller: false,
-        discount_percentage: 25,
-        recommendation_score: 0.83,
-        recommendation_reason: isRTL ? 'يكمل إطلالتك المهنية' : 'Complements your professional look',
-        ai_tags: [isRTL ? 'أنيق' : 'Elegant', isRTL ? 'عملي' : 'Practical']
-      },
-      {
-        id: 'rec-6',
-        name: isRTL ? 'طقم مجوهرات متناسق' : 'Matching Jewelry Set',
-        name_en: 'Matching Jewelry Set',
-        price: 599.99,
-        currency: 'SAR',
-        image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&h=400&fit=crop',
-        rating: 4.8,
-        reviews_count: 98,
-        category: 'sets',
-        is_new: false,
-        is_bestseller: true,
-        recommendation_score: 0.87,
-        recommendation_reason: isRTL ? 'توفير ممتاز عند شراؤه كطقم' : 'Great value when bought as a set',
-        ai_tags: [isRTL ? 'طقم' : 'Set', isRTL ? 'متناسق' : 'Coordinated']
-      }
-    ];
-
-    return mockProducts.slice(0, limit);
   };
 
   const formatCurrency = (amount) => {

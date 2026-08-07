@@ -61,8 +61,7 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
       fields: [
         { key: 'price', label: isRTL ? 'السعر الحالي' : 'Current Price', type: 'price' },
         { key: 'original_price', label: isRTL ? 'السعر الأصلي' : 'Original Price', type: 'price' },
-        { key: 'discount_percentage', label: isRTL ? 'نسبة الخصم' : 'Discount', type: 'percentage' },
-        { key: 'value_rating', label: isRTL ? 'تقييم القيمة' : 'Value Rating', type: 'rating' }
+        { key: 'discount_percentage', label: isRTL ? 'نسبة الخصم' : 'Discount', type: 'percentage' }
       ]
     },
     {
@@ -73,8 +72,7 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
         { key: 'material', label: isRTL ? 'المادة' : 'Material', type: 'text' },
         { key: 'color', label: isRTL ? 'اللون' : 'Color', type: 'color' },
         { key: 'size', label: isRTL ? 'الحجم' : 'Size', type: 'text' },
-        { key: 'weight', label: isRTL ? 'الوزن' : 'Weight', type: 'text' },
-        { key: 'dimensions', label: isRTL ? 'الأبعاد' : 'Dimensions', type: 'text' }
+        { key: 'weight', label: isRTL ? 'الوزن' : 'Weight', type: 'text' }
       ]
     },
     {
@@ -83,9 +81,7 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
       icon: Star,
       fields: [
         { key: 'rating', label: isRTL ? 'التقييم العام' : 'Overall Rating', type: 'rating' },
-        { key: 'reviews_count', label: isRTL ? 'عدد المراجعات' : 'Review Count', type: 'number' },
-        { key: 'quality_score', label: isRTL ? 'نقاط الجودة' : 'Quality Score', type: 'rating' },
-        { key: 'durability', label: isRTL ? 'المتانة' : 'Durability', type: 'rating' }
+        { key: 'reviews_count', label: isRTL ? 'عدد المراجعات' : 'Review Count', type: 'number' }
       ]
     },
     {
@@ -111,40 +107,14 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
     try {
       const productIds = comparisonProducts.map(p => p.id);
       const response = await axios.post(`${API}/products/compare`, { productIds });
-      setComparisonData(response.data || generateMockComparisonData());
+      setComparisonData(response.data || {});
     } catch (error) {
       console.error('Comparison data error:', error);
-      setComparisonData(generateMockComparisonData());
+      // No invented specifications. The table renders a dash for anything the
+      // product record does not carry — a customer comparing jewellery must
+      // not be shown a material or a weight that was made up on the spot.
+      setComparisonData({});
     }
-  };
-
-  const generateMockComparisonData = () => {
-    const mockData = {};
-    comparisonProducts.forEach((product, index) => {
-      mockData[product.id] = {
-        ...product,
-        brand: 'Auraa Luxury',
-        sku: `AL-${product.id.slice(-4).toUpperCase()}`,
-        material: index % 3 === 0 ? (isRTL ? 'ذهب عيار 18' : '18K Gold') : 
-                 index % 3 === 1 ? (isRTL ? 'فضة استرليني' : 'Sterling Silver') : 
-                 (isRTL ? 'لؤلؤ طبيعي' : 'Natural Pearl'),
-        color: index % 4 === 0 ? (isRTL ? 'ذهبي' : 'Gold') :
-               index % 4 === 1 ? (isRTL ? 'فضي' : 'Silver') :
-               index % 4 === 2 ? (isRTL ? 'ذهبي وردي' : 'Rose Gold') :
-               (isRTL ? 'أبيض' : 'White'),
-        size: index % 3 === 0 ? 'M' : index % 3 === 1 ? 'L' : 'S',
-        weight: `${(Math.random() * 50 + 10).toFixed(1)}g`,
-        dimensions: `${(Math.random() * 5 + 2).toFixed(1)} x ${(Math.random() * 5 + 2).toFixed(1)}cm`,
-        quality_score: Math.random() * 1 + 4,
-        durability: Math.random() * 1 + 4,
-        value_rating: Math.random() * 1 + 4,
-        stock_status: index % 3 === 0 ? 'in_stock' : index % 3 === 1 ? 'low_stock' : 'pre_order',
-        shipping_time: index % 2 === 0 ? (isRTL ? '2-3 أيام' : '2-3 days') : (isRTL ? '5-7 أيام' : '5-7 days'),
-        warranty: index % 2 === 0 ? (isRTL ? 'سنة واحدة' : '1 Year') : (isRTL ? 'سنتان' : '2 Years'),
-        return_policy: isRTL ? '30 يوم إرجاع مجاني' : '30-day free returns'
-      };
-    });
-    return mockData;
   };
 
   const searchProducts = async (query) => {

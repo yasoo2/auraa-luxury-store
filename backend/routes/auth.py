@@ -10,6 +10,7 @@ import jwt
 import bcrypt
 import os
 import logging
+import re
 import uuid
 
 from auth.oauth_service import (
@@ -295,7 +296,17 @@ async def oauth_google_callback(
 
     try:
         db = request.app.state.db
+
+        # Registration stores the address exactly as it was typed, while Google
+        # reports it lowercased. Matching only the lowercase form would miss an
+        # account registered as "Name@Gmail.com" and silently create a second
+        # one — losing that customer's orders, wishlist and admin rights. Try
+        # the exact form first, then fall back to a case-insensitive match.
         user_data = await db.users.find_one({"email": email})
+        if not user_data:
+            user_data = await db.users.find_one(
+                {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+            )
 
         if not user_data:
             # First sign-in via Google: create the account. No password is set,

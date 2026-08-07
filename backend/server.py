@@ -169,19 +169,52 @@ from core.security import (
 # Health Checks
 # =============================================================================
 
+def _sanitize_db_error(exc: Exception) -> str:
+    """
+    Short, safe description of a database failure.
+
+    Driver errors can echo the connection URI, which carries the password, so
+    the message is never returned verbatim — only the exception type plus a
+    hint matched from known failure modes.
+    """
+    name = type(exc).__name__
+    text = str(exc).lower()
+
+    if "authentication failed" in text or "auth failed" in text:
+        hint = "authentication failed — check the username and password in MONGO_URL"
+    elif "timed out" in text or "serverselectiontimeout" in name.lower():
+        hint = "cannot reach the cluster — check the Atlas Network Access IP allowlist"
+    elif "name does not exist" in text or "nodename nor servname" in text:
+        hint = "cluster hostname does not resolve — check the host in MONGO_URL"
+    elif "ssl" in text or "tls" in text:
+        hint = "TLS handshake failed"
+    else:
+        hint = "see the service logs for the full error"
+
+    return f"{name}: {hint}"
+
+
 async def _health_payload():
     """Shared health body. Reports DB reachability without failing the check."""
     db_ok = True
+    db_error = None
     try:
         await db.command("ping")
-    except Exception:
+    except Exception as e:
         db_ok = False
+        # Reported so a failing deployment can be diagnosed from the endpoint
+        # itself; swallowing it silently left `db: false` with no explanation.
+        db_error = _sanitize_db_error(e)
+        logger.error(f"Health check database ping failed: {type(e).__name__}: {e}")
 
-    return {
+    payload = {
         "status": "ok",
         "db": db_ok,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
+    if db_error:
+        payload["db_error"] = db_error
+    return payload
 
 
 @app.get("/health")

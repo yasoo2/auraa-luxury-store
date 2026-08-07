@@ -1290,3 +1290,84 @@ def test_import_start_still_rejects_an_out_of_range_count(client):
     make_admin(client, "imp2@b.com")
     r = client.post("/api/imports/start", json={"count": 5000})
     assert r.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Imported products must actually reach the storefront
+#
+# The storefront accepts six categories and drops anything else with only a log
+# line. CJ sends free text, so an imported product was published and then never
+# appeared — in the shop or on the admin's own products screen.
+# ---------------------------------------------------------------------------
+
+from services.background_import import (  # noqa: E402
+    classify_category, _collect_images, _clean_description,
+)
+
+
+@pytest.mark.parametrize("payload,expected", [
+    ({"productNameEn": "18K Gold Plated Pendant Necklace", "categoryName": "Jewelry"}, "necklaces"),
+    ({"productNameEn": "Women Stud Earrings", "categoryName": "Jewelry"}, "earrings"),
+    ({"productNameEn": "Stainless Steel Bangle", "categoryName": "Jewelry"}, "bracelets"),
+    ({"productNameEn": "Engagement Ring", "categoryName": "Jewelry"}, "rings"),
+    ({"productNameEn": "Quartz Wristwatch", "categoryName": "Watches"}, "watches"),
+    ({"productName": "قلادة ذهبية", "categoryName": ""}, "necklaces"),
+    ({"productName": "طقم مجوهرات", "categoryName": ""}, "sets"),
+    # Nothing recognisable still lands somewhere valid rather than nowhere.
+    ({"productNameEn": "Mystery Item", "categoryName": "Other"}, "sets"),
+])
+def test_cj_categories_map_onto_the_six_the_shop_accepts(payload, expected):
+    assert classify_category(payload) == expected
+
+
+def test_an_imported_product_is_visible_in_the_shop(client):
+    """The end of the pipeline: what the importer writes must survive the
+    storefront's own validation, or the shop shows nothing after an import."""
+    cj = {
+        "productNameEn": "18K Gold Plated Pendant Necklace",
+        "productName": "قلادة مطلية بالذهب",
+        "categoryName": "Jewelry & Accessories",   # not one of the six
+        "productImage": "https://cf.cjdropshipping.com/a.jpg",
+        "productImageSet": '["https://cf.cjdropshipping.com/a.jpg","https://cf.cjdropshipping.com/b.jpg"]',
+        "description": "<p>18K gold plated. <b>Hypoallergenic</b> &amp; tarnish resistant.</p>",
+    }
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(client._db.products.insert_one({
+        "id": "cj-1", "source": "cj_dropshipping",
+        "name": cj["productNameEn"], "description": _clean_description(cj),
+        "price": 180.0, "images": _collect_images(cj),
+        "category": classify_category(cj), "in_stock": True, "staging": False,
+    }))
+
+    listed = client.get("/api/products").json()
+    assert [p["id"] for p in listed] == ["cj-1"], "the imported product never reached the shop"
+    assert listed[0]["category"] == "necklaces"
+    assert len(listed[0]["images"]) == 2, "only the thumbnail was kept"
+    assert "<" not in listed[0]["description"], "HTML reached the customer"
+    assert listed[0]["description"] != listed[0]["name"], "description is a copy of the title"
+
+    # And it must be reachable through the category filter customers use.
+    assert client.get("/api/products", params={"category": "necklaces"}).json()
+
+
+def test_admin_listing_flags_products_the_shop_will_not_show(client):
+    """
+    A product can exist and still be invisible to customers. The admin screen
+    has to say so — silence here is how 50 imported products go missing.
+    """
+    register(client, email="pv@b.com")
+    make_admin(client, "pv@b.com")
+
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(client._db.products.insert_many([
+        {"id": "good", "name": "Ring", "description": "d", "price": 10.0,
+         "category": "rings", "images": [], "staging": False},
+        {"id": "bad", "name": "Broken", "description": "d", "price": 10.0,
+         "category": "Jewelry & Accessories", "images": [], "staging": False},
+    ]))
+
+    rows = {p["id"]: p for p in client.get("/api/admin/products").json()}
+    assert set(rows) == {"good", "bad"}, "the admin must see everything, valid or not"
+    assert rows["good"]["storefront_visible"] is True
+    assert rows["bad"]["storefront_visible"] is False
+    assert "category" in (rows["bad"]["storefront_issue"] or "")

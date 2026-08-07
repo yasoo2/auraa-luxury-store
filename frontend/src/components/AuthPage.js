@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,10 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  // Null until the backend answers: the Google button stays hidden until we
+  // know the deployment actually has credentials, so it can never be a button
+  // that fails when clicked.
+  const [googleEnabled, setGoogleEnabled] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -32,6 +36,15 @@ const AuthPage = () => {
   });
 
   const from = location.state?.from?.pathname || '/';
+
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get(`${BACKEND_URL}/api/auth/oauth/providers`)
+      .then((res) => { if (!cancelled) setGoogleEnabled(!!res.data?.google); })
+      .catch(() => { if (!cancelled) setGoogleEnabled(false); });
+    return () => { cancelled = true; };
+  }, [BACKEND_URL]);
 
   // The Turnstile widget used to be rendered here. It was failing to load on
   // this domain — it drew nothing but a bare "Troubleshoot" link, 150px of it,
@@ -109,18 +122,26 @@ const AuthPage = () => {
     setLoading(true);
     try {
       const redirectUrl = `${window.location.origin}/auth/oauth-callback`;
+
+      // A random value we hand to Google and check again when the browser
+      // comes back. Without it, an attacker could hand a victim a prepared
+      // callback URL and sign them into the attacker's account.
+      const state = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      sessionStorage.setItem('oauth_state', state);
+      sessionStorage.setItem('oauth_redirect_uri', redirectUrl);
+      sessionStorage.setItem('auth_redirect', from);
+
       const response = await axios.get(`${BACKEND_URL}/api/auth/oauth/google/url`, {
-        params: { redirect_url: redirectUrl }
+        params: { redirect_url: redirectUrl, state }
       });
 
-      // Save provider info
-      sessionStorage.setItem('oauth_provider', 'google');
-
-      // Redirect to Google OAuth
       window.location.href = response.data.url;
     } catch (error) {
       console.error('Google OAuth error:', error);
-      setError(getAuthTranslation('oauth_session_invalid', language));
+      const detail = error.response?.data?.detail;
+      setError(getAuthTranslation(detail || 'oauth_session_invalid', language));
       setLoading(false);
     }
   };
@@ -172,7 +193,7 @@ const AuthPage = () => {
               </div>
             )}
 
-            {isLogin && (
+            {isLogin && googleEnabled && (
               <>
                 <button
                   type="button"

@@ -49,6 +49,18 @@ services:
       - key: CORS_ORIGINS
         sync: false
 
+      # --- Optional: sign in with Google -----------------------------------
+      # From an OAuth 2.0 Client ID (type "Web application") in the store's own
+      # Google Cloud project. Both must be set or the sign-in page hides the
+      # Google button entirely rather than showing one that fails.
+      # Authorised redirect URIs on that client must list, exactly:
+      #   https://auraaluxury.com/auth/oauth-callback
+      #   https://www.auraaluxury.com/auth/oauth-callback
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
       # --- Optional: suppliers, email, currency ----------------------------
       - key: CJ_DROPSHIP_API_KEY
         sync: false

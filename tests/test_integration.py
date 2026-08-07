@@ -32,6 +32,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from mongomock_motor import AsyncMongoMockClient  # noqa: E402
 
 import server  # noqa: E402
+from auth.oauth_service import oauth_service  # noqa: E402
 from middleware.rate_limiter import reset_rate_limits  # noqa: E402
 
 
@@ -951,3 +952,155 @@ def test_rate_limit_is_per_ip(client):
                     json={"identifier": "v@b.com", "password": "pw123456"},
                     headers={"X-Forwarded-For": "198.51.100.7"})
     assert r.status_code == 200, r.text
+
+
+# ---------------------------------------------------------------------------
+# Sign in with Google
+#
+# The flow used to route through a third-party broker; these pin down the
+# replacement so the button can't silently regress into something that sends
+# customers to Google and brings them back still signed out.
+# ---------------------------------------------------------------------------
+
+GOOGLE_CREDS = {"GOOGLE_CLIENT_ID": "test-client-id.apps.googleusercontent.com",
+                "GOOGLE_CLIENT_SECRET": "test-client-secret"}
+CALLBACK = "https://auraaluxury.com/auth/oauth-callback"
+STATE = "0123456789abcdef0123456789abcdef"
+
+
+@pytest.fixture
+def google_configured(monkeypatch):
+    for k, v in GOOGLE_CREDS.items():
+        monkeypatch.setenv(k, v)
+
+
+def test_providers_reports_google_off_when_unconfigured(client, monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("GOOGLE_CLIENT_SECRET", raising=False)
+    r = client.get("/api/auth/oauth/providers")
+    assert r.status_code == 200
+    assert r.json() == {"google": False}
+
+
+def test_providers_reports_google_on_when_configured(client, google_configured):
+    assert client.get("/api/auth/oauth/providers").json() == {"google": True}
+
+
+def test_oauth_url_points_at_google_not_a_third_party(client, google_configured):
+    r = client.get("/api/auth/oauth/google/url",
+                   params={"redirect_url": CALLBACK, "state": STATE})
+    assert r.status_code == 200, r.text
+    url = r.json()["url"]
+    assert url.startswith("https://accounts.google.com/o/oauth2/v2/auth?")
+    assert "emergentagent" not in url
+    assert GOOGLE_CREDS["GOOGLE_CLIENT_ID"] in url
+    assert STATE in url
+    # The secret must never reach the browser.
+    assert GOOGLE_CREDS["GOOGLE_CLIENT_SECRET"] not in url
+
+
+def test_oauth_url_is_503_when_google_is_not_configured(client, monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLIENT_ID", raising=False)
+    monkeypatch.delenv("GOOGLE_CLIENT_SECRET", raising=False)
+    r = client.get("/api/auth/oauth/google/url",
+                   params={"redirect_url": CALLBACK, "state": STATE})
+    assert r.status_code == 503
+
+
+def test_oauth_url_refuses_an_off_site_return_address(client, google_configured):
+    r = client.get("/api/auth/oauth/google/url",
+                   params={"redirect_url": "https://evil.example.com/steal", "state": STATE})
+    assert r.status_code == 400
+
+
+def test_oauth_url_requires_a_state(client, google_configured):
+    r = client.get("/api/auth/oauth/google/url",
+                   params={"redirect_url": CALLBACK, "state": "short"})
+    assert r.status_code == 400
+
+
+def test_unsupported_provider_is_rejected(client, google_configured):
+    r = client.get("/api/auth/oauth/facebook/url",
+                   params={"redirect_url": CALLBACK, "state": STATE})
+    assert r.status_code == 400
+
+
+def _fake_exchange(profile=None, raises=None):
+    async def exchange(code, redirect_uri):
+        if raises:
+            raise raises
+        return profile
+    return exchange
+
+
+def test_google_callback_creates_the_account_and_issues_a_session(
+    client, google_configured, monkeypatch
+):
+    monkeypatch.setattr(
+        oauth_service, "exchange_code",
+        _fake_exchange({"sub": "g-1", "email": "New.Person@Gmail.com",
+                        "email_verified": True, "name": "New Person", "picture": None}),
+    )
+    r = client.post("/api/auth/oauth/google/callback",
+                    json={"code": "auth-code", "redirect_uri": CALLBACK})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["access_token"]
+    # Stored lowercase so a later password login on the same address matches.
+    assert body["user"]["email"] == "new.person@gmail.com"
+    assert body["needs_phone"] is True
+    assert "access_token" in r.cookies or "access_token" in r.headers.get("set-cookie", "")
+
+
+def test_google_callback_signs_into_the_existing_account(
+    client, google_configured, monkeypatch
+):
+    register(client, email="existing@b.com")
+    monkeypatch.setattr(
+        oauth_service, "exchange_code",
+        _fake_exchange({"sub": "g-2", "email": "existing@b.com",
+                        "email_verified": True, "name": "Existing", "picture": None}),
+    )
+    r = client.post("/api/auth/oauth/google/callback",
+                    json={"code": "auth-code", "redirect_uri": CALLBACK})
+    assert r.status_code == 200, r.text
+    # Same account, not a duplicate.
+    import asyncio
+    count = asyncio.get_event_loop().run_until_complete(
+        client._db.users.count_documents({"email": "existing@b.com"})
+    )
+    assert count == 1
+
+
+def test_google_callback_refuses_an_unverified_email(client, google_configured, monkeypatch):
+    """
+    Otherwise an account whose address was never proven could be used to claim
+    an existing customer's account.
+    """
+    register(client, email="victim@b.com")
+    monkeypatch.setattr(
+        oauth_service, "exchange_code",
+        _fake_exchange({"sub": "g-3", "email": "victim@b.com",
+                        "email_verified": False, "name": "Not Really", "picture": None}),
+    )
+    r = client.post("/api/auth/oauth/google/callback",
+                    json={"code": "auth-code", "redirect_uri": CALLBACK})
+    assert r.status_code == 401
+    assert r.json()["detail"] == "google_email_not_verified"
+
+
+def test_google_callback_rejects_a_bad_code(client, google_configured, monkeypatch):
+    from auth.oauth_service import OAuthExchangeError
+    monkeypatch.setattr(
+        oauth_service, "exchange_code",
+        _fake_exchange(raises=OAuthExchangeError("nope")),
+    )
+    r = client.post("/api/auth/oauth/google/callback",
+                    json={"code": "stale-code", "redirect_uri": CALLBACK})
+    assert r.status_code == 401
+
+
+def test_google_callback_refuses_an_off_site_redirect_uri(client, google_configured):
+    r = client.post("/api/auth/oauth/google/callback",
+                    json={"code": "auth-code", "redirect_uri": "https://evil.example.com/cb"})
+    assert r.status_code == 400

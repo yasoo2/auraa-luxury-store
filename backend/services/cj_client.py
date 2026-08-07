@@ -18,8 +18,21 @@ CJ_BASE = os.getenv("CJ_BASE", "https://developers.cjdropshipping.com/api2.0")
 KEY_VARS = ("CJ_DROPSHIP_API_KEY", "CJ_API_KEY", "CJ_ACCESS_TOKEN")
 EMAIL_VARS = ("CJ_DROPSHIP_EMAIL", "CJ_EMAIL")
 
-CJ_API_KEY = next((os.getenv(v) for v in KEY_VARS if os.getenv(v)), "")
-CJ_EMAIL = next((os.getenv(v) for v in EMAIL_VARS if os.getenv(v)), "")
+
+def _resolve(names):
+    """The first variable in `names` that holds a value, and that value."""
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return name, value
+    return "", ""
+
+
+# Keep the variable each value came from. Reporting a value under a name it did
+# not come from is how the first version of this printed the same label twice —
+# two different keys were tried and the message called both CJ_API_KEY.
+CJ_API_KEY_VAR, CJ_API_KEY = _resolve(KEY_VARS)
+CJ_EMAIL_VAR, CJ_EMAIL = _resolve(EMAIL_VARS)
 
 
 def _fingerprint(value: str) -> str:
@@ -41,24 +54,33 @@ def credential_report() -> Dict[str, Any]:
     }
 
 
-def _credential_pairs():
+def _candidates(names, override_var, override_value, fallback_label):
     """
-    Every (email, key) worth trying, most likely first.
+    Every distinct value the environment offers for `names`, in preference
+    order, each labelled with the variable it actually came from.
 
-    The module-level CJ_EMAIL/CJ_API_KEY lead: they are what an explicit
-    override sets, and they are the values resolved when the process started.
-    Anything else the environment offers follows as an alternative.
+    The module-level value leads: it is what an explicit override sets. It is
+    labelled with the variable it was resolved from, so two variables holding
+    two different values never report under one name.
     """
-    emails = [("CJ_EMAIL", CJ_EMAIL)] if CJ_EMAIL else []
-    keys = [("CJ_API_KEY", CJ_API_KEY)] if CJ_API_KEY else []
-    emails += [(v, os.getenv(v)) for v in EMAIL_VARS if os.getenv(v)]
-    keys += [(v, os.getenv(v)) for v in KEY_VARS if os.getenv(v)]
-    seen = set()
+    out, seen = [], set()
+    if override_value:
+        out.append((override_var or fallback_label, override_value))
+        seen.add(override_value)
+    for name in names:
+        value = os.getenv(name)
+        if value and value not in seen:
+            seen.add(value)
+            out.append((name, value))
+    return out
+
+
+def _credential_pairs():
+    """Every (email, key) worth trying, most likely first."""
+    emails = _candidates(EMAIL_VARS, CJ_EMAIL_VAR, CJ_EMAIL, "CJ_EMAIL")
+    keys = _candidates(KEY_VARS, CJ_API_KEY_VAR, CJ_API_KEY, "CJ_API_KEY")
     for ev, email in emails:
         for kv, key in keys:
-            if (email, key) in seen:
-                continue
-            seen.add((email, key))
             yield ev, email, kv, key
 
 # غيّر القيم حسب سياسة CJ الفعلية:
@@ -166,12 +188,22 @@ async def _get_access_token(force: bool = False) -> str:
             logger.info(f"🔑 CJ access token obtained using {_token_source}")
             return _token
 
-        tried = ", ".join(f"{e}+{k}" for e, _, k, _ in pairs)
-        report = credential_report()
+        # Name every attempt by the variable *and* the value's fingerprint, so
+        # two variables holding two different keys can never read as one.
+        tried = "; ".join(
+            f"{ev}[{_fingerprint(email)}] + {kv}[{_fingerprint(key)}]"
+            for ev, email, kv, key in pairs
+        )
+        distinct_keys = len({k for _, _, _, k in pairs})
         raise CJError(
             f"{last_error}. Tried {len(pairs)} combination(s): {tried}. "
-            f"Variables present — emails: {report['emails']}, keys: {report['keys']}. "
-            "The API key comes from CJ: My CJ → Authorization → API."
+            f"CJ rejected {distinct_keys} distinct API key(s) against "
+            f"{len({e for _, e, _, _ in pairs})} email(s), so the values "
+            "themselves are wrong, not which variable holds them. Two things "
+            "make CJ answer 1600005: the email must be the one you log in to "
+            "CJ with, and only the API key currently shown in My CJ → "
+            "Authorization → API is valid — generating a new key revokes the "
+            "old one."
         )
 
 def _should_retry(exc: Exception) -> bool:

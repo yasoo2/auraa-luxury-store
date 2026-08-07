@@ -1643,6 +1643,41 @@ def test_the_report_never_prints_a_key(monkeypatch):
     assert "22 chars" in report["keys"]["CJ_API_KEY"]
 
 
+def test_each_attempt_is_named_by_the_variable_it_actually_came_from(monkeypatch):
+    """
+    Reproduces what the live dashboard printed:
+
+        Tried 2 combination(s): CJ_EMAIL+CJ_API_KEY, CJ_EMAIL+CJ_API_KEY
+
+    Two *different* keys were tried and both were reported under one name,
+    because the module-level value was labelled with a hardcoded variable name
+    instead of the variable it was resolved from. The report is the whole point
+    of trying several — a report that cannot tell them apart is worth nothing.
+    """
+    _cj_env(monkeypatch, CJ_DROPSHIP_API_KEY="b" * 32, CJ_API_KEY="3" * 32,
+            CJ_EMAIL="info@auraaluxury.com")
+    monkeypatch.setattr(cj_client, "_client", _PickyCJ("no-key-works-here"))
+    monkeypatch.setattr(cj_client, "CJ_API_KEY_VAR", "CJ_DROPSHIP_API_KEY")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "b" * 32)
+    monkeypatch.setattr(cj_client, "CJ_EMAIL_VAR", "CJ_EMAIL")
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "info@auraaluxury.com")
+    cj_client._reset_token()
+
+    import asyncio
+    with pytest.raises(cj_client.CJError) as e:
+        asyncio.get_event_loop().run_until_complete(cj_client._get_access_token())
+    message = str(e.value)
+
+    attempts = message.split("combination(s): ")[1].split(". CJ rejected")[0]
+    assert attempts.count("CJ_DROPSHIP_API_KEY") == 1, attempts
+    assert "CJ_API_KEY[" in attempts, attempts
+    assert len(set(attempts.split("; "))) == 2, f"two attempts printed alike: {attempts}"
+    # Both keys were genuinely tried, so the values are the problem.
+    assert "2 distinct API key(s)" in message
+    assert "b" * 32 not in message and "3" * 32 not in message
+    cj_client._reset_token()
+
+
 def test_rechecking_the_connection_does_not_burn_cjs_token_quota(fake_cj):
     """
     CJ issues an access token at most once per 300 seconds. The Integrations

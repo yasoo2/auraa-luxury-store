@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown, Route as RouteIcon, ShieldAlert } from 'lucide-react';
@@ -41,6 +41,29 @@ const Navbar = () => {
   const [showCategories, setShowCategories] = useState(false);
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const navRef = useRef(null);
+
+  // The navbar is in flow (sticky, not fixed) and its height changes at the md
+  // breakpoint and when the mobile menu opens. Publishing the measured height
+  // lets full-height pages claim exactly the space that's left, instead of
+  // assuming 100vh and pushing a scrollbar onto every screen.
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return undefined;
+
+    const publish = () =>
+      document.documentElement.style.setProperty('--nav-h', `${el.offsetHeight}px`);
+
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    window.addEventListener('resize', publish);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', publish);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -74,7 +97,7 @@ const Navbar = () => {
   const trackOrderLabel = isRTL ? 'تتبع الطلب' : 'Track Order';
 
   return (
-    <nav className="nav-glass sticky top-0" style={{ zIndex: 200 }}>
+    <nav ref={navRef} className="nav-glass sticky top-0" style={{ zIndex: 200 }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* min-w-0 lets the flex children shrink instead of forcing the row wider
               than the viewport, which pushed the right-hand actions off-screen at

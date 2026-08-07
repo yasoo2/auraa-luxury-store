@@ -28,98 +28,582 @@ code {
   }
 }
 
+/* The navbar is sticky, which means it still occupies flow space. A main of
+   100vh therefore always overshoots the viewport by the navbar's height and
+   leaves a dead strip below the fold on every page. Claim what's actually
+   left instead. --nav-h is published by the navbar itself. */
+.app-main {
+  min-height: calc(100vh - var(--nav-h, 5.25rem));
+}
+
 /* ---------------------------------------------------------------------------
-   Auth page: fit the form in short viewports.
+   Auth page — presented as an exhibit: a dark stage lit from above, the piece
+   on one side, the form on the other.
 
-   The card is ~770px tall. On a 1366x600 laptop only ~500px is left once the
-   navbar is subtracted, so the submit button and the sign-up link sat 220px
-   below the fold and could only be reached by scrolling.
+   Sizing rule, and the whole reason this file exists: the stage claims exactly
+   the viewport minus the sticky navbar minus the cookie banner. Both are
+   measured at runtime and published as custom properties, not guessed — the
+   navbar changes height at the md breakpoint and the banner disappears once
+   it's accepted.
 
-   These rules key off viewport *height*, which is the actual constraint —
-   width was never the problem. Tall screens keep the roomier spacing.
+   min-height, never height: a taller form (register mode, an error banner, a
+   browser with large default text) must push the page rather than be clipped.
 --------------------------------------------------------------------------- */
 
-@media (max-height: 820px) {
-  .auth-page {
-    padding-top: 1rem;
-    padding-bottom: calc(1rem + var(--cookie-banner-h, 0px));
-    align-items: flex-start;
-  }
+.auth-page {
+  --auth-gold: #c9a227;
+  --auth-gold-lt: #ebd68f;
+  --auth-fg: #f0ebe1;
+  --auth-muted: rgba(240, 235, 225, 0.45);
+  --auth-line: rgba(255, 255, 255, 0.13);
+  /* Match .app-main exactly so the dark stage reaches the fold with no strip
+     of the site's light background showing underneath it. */
+  min-height: calc(100vh - var(--nav-h, 5.25rem));
+  background: #0a0908;
+  color: var(--auth-fg);
+}
 
-  /* The glass card */
-  .auth-page .rounded-3xl {
-    padding: 1rem;
-  }
+.auth-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  /* The cookie banner is fixed to the bottom of the viewport, so it covers the
+     stage rather than displacing it. Padding — not a smaller min-height — is
+     what keeps the form above it: the flex centring happens inside the padding
+     box, so the content sits in the space that is actually visible. */
+  padding-bottom: calc(1.5rem + var(--cookie-banner-h, 0px));
+  min-height: calc(100vh - var(--nav-h, 5.25rem));
+}
 
-  /* Header block: logo, wordmark, title, greeting */
-  .auth-page header,
-  .auth-page .text-center.mb-6 {
-    margin-bottom: 0.5rem;
-  }
+.auth-stage__light,
+.auth-stage__floor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
 
-  .auth-page .rounded-full.animate-rotate-glow {
-    width: 2.75rem;
-    height: 2.75rem;
-  }
+/* One light source, everything else falls away. */
+.auth-stage__light {
+  background: radial-gradient(ellipse 44% 80% at 34% 0%, rgba(201, 162, 39, 0.17), transparent 62%);
+}
 
-  .auth-page .rounded-full.animate-rotate-glow span {
-    font-size: 1.25rem;
-  }
+.auth-stage__floor {
+  top: auto;
+  height: 42%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent);
+}
 
-  /* The navbar already shows the brand, so the wordmark is redundant here. */
-  .auth-page h1.animate-text-sparkle {
-    font-size: 1.25rem;
-    margin-bottom: 0;
-  }
+.auth-case {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 200px 1px minmax(0, 350px);
+  gap: 2.4rem;
+  align-items: center;
+}
 
-  .auth-page form {
-    gap: 0.625rem;
-  }
+.auth-rule {
+  width: 1px;
+  height: 250px;
+  background: linear-gradient(to bottom, transparent, rgba(201, 162, 39, 0.22), transparent);
+}
 
-  .auth-page form > * + * {
-    margin-top: 0.625rem;
-  }
+/* --- the exhibit --------------------------------------------------------- */
 
-  /* Inputs and the provider buttons */
-  .auth-page input,
-  .auth-page form button,
-  .auth-page .space-y-3 > button {
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+.auth-exhibit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-exhibit__frames {
+  position: relative;
+  width: 160px;
+  height: 232px;
+}
+
+/* Pieces crossfade in place so the column never reflows mid-rotation. */
+.auth-exhibit__frame {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: scale(0.965);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+
+.auth-exhibit__frame.is-on {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.auth-exhibit__frame svg {
+  filter: drop-shadow(0 16px 30px rgba(0, 0, 0, 0.7));
+}
+
+.auth-exhibit__plate {
+  margin-top: 1rem;
+  text-align: center;
+  animation: auth-plate-in 0.5s ease;
+}
+
+.auth-exhibit__ref {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  color: var(--auth-gold);
+}
+
+.auth-exhibit__name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.95rem;
+  margin-top: 0.35rem;
+}
+
+.auth-exhibit__dots {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+}
+
+.auth-exhibit__dots button {
+  width: 5px;
+  height: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.auth-exhibit__dots button.is-on {
+  width: 16px;
+  border-radius: 3px;
+  background: var(--auth-gold);
+}
+
+@keyframes auth-plate-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
-/* Very short viewports need the decorative pieces gone entirely. */
-@media (max-height: 720px) {
-  /* Only the greeting paragraph — `animate-slide-in-right` is also on the
-     password field wrapper, and a bare class selector hid that too. */
-  .auth-page .flex.items-center.justify-center.mb-3,
-  .auth-page h1.animate-text-sparkle,
-  .auth-page p.animate-slide-in-right {
+/* --- the form ------------------------------------------------------------ */
+
+.auth-form {
+  width: 100%;
+}
+
+.auth-form__kicker {
+  font-size: 0.6rem;
+  letter-spacing: 0.28em;
+  color: var(--auth-gold);
+  margin-bottom: 0.6rem;
+}
+
+.auth-form__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 400;
+  line-height: 1.25;
+  margin-bottom: 1.1rem;
+}
+
+.auth-alert {
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.14);
+  color: #fecaca;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.auth-oauth {
+  width: 100%;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--auth-fg);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: 0.16s;
+}
+
+.auth-oauth:hover:not(:disabled) {
+  border-color: var(--auth-gold);
+  background: rgba(201, 162, 39, 0.1);
+}
+
+.auth-oauth:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-oauth svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.auth-sep {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1rem 0;
+  color: var(--auth-muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+}
+
+.auth-sep::before,
+.auth-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-seg {
+  display: flex;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  margin-bottom: 1rem;
+}
+
+.auth-seg button {
+  flex: 1;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 0;
+  background: none;
+  color: var(--auth-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: 0.16s;
+}
+
+.auth-seg button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.auth-seg button.is-on {
+  background: var(--auth-gold);
+  color: #12100d;
+  font-weight: 700;
+}
+
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.auth-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+}
+
+.auth-field {
+  position: relative;
+}
+
+.auth-field input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid var(--auth-line);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--auth-fg);
+  /* Logical padding: the leading icon and the trailing toggle swap sides with
+     the document direction, so this works unchanged in Arabic and English. */
+  padding-inline: 2.5rem;
+  font-size: 0.87rem;
+  transition: 0.16s;
+}
+
+.auth-field input:focus {
+  outline: 0;
+  border-color: var(--auth-gold);
+  background: rgba(201, 162, 39, 0.07);
+}
+
+.auth-field input::placeholder {
+  color: rgba(240, 235, 225, 0.32);
+}
+
+.auth-field__icon {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 0.85rem;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--auth-gold);
+  pointer-events: none;
+}
+
+.auth-field__toggle {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 0.85rem;
+  transform: translateY(-50%);
+  display: flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(240, 235, 225, 0.4);
+  cursor: pointer;
+  transition: 0.16s;
+}
+
+.auth-field__toggle:hover {
+  color: var(--auth-gold-lt);
+}
+
+.auth-field__toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.auth-hint {
+  margin-top: -0.2rem;
+  font-size: 0.7rem;
+  text-align: center;
+  color: rgba(235, 214, 143, 0.6);
+}
+
+.auth-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+}
+
+.auth-meta label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--auth-muted);
+  cursor: pointer;
+}
+
+.auth-meta input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--auth-gold);
+}
+
+.auth-meta a {
+  color: var(--auth-gold-lt);
+  text-decoration: none;
+}
+
+.auth-meta a:hover {
+  text-decoration: underline;
+}
+
+.auth-turnstile {
+  display: flex;
+  justify-content: center;
+}
+
+.auth-submit {
+  width: 100%;
+  height: 48px;
+  border: 0;
+  cursor: pointer;
+  background: linear-gradient(100deg, var(--auth-gold-lt), var(--auth-gold) 52%, #9c7a18);
+  color: #12100d;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition: 0.16s;
+}
+
+.auth-submit:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.auth-switch {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--auth-muted);
+}
+
+.auth-switch button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--auth-gold-lt);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.auth-note {
+  margin-top: 0.7rem;
+  text-align: center;
+  font-size: 0.68rem;
+  color: rgba(240, 235, 225, 0.34);
+}
+
+/* The shared phone widget is styled for the old rounded card; square it off
+   and match the height of the other fields on this page only. */
+.auth-page .phone-input-container .react-tel-input .form-control {
+  height: 44px;
+  border-radius: 0;
+  border-color: var(--auth-line) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  font-size: 0.87rem;
+}
+
+.auth-page .phone-input-container .react-tel-input .flag-dropdown {
+  border-radius: 0;
+  border-color: var(--auth-line) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+
+/* --- fitting the viewport ------------------------------------------------ */
+
+/* Short laptops: tighten the form's own rhythm. The exhibit sits beside the
+   form, not above it, so it is never what pushes the submit button down and
+   does not need to shrink here. */
+@media (max-height: 700px) {
+  .auth-stage {
+    padding-block: 0.75rem;
+    padding-bottom: calc(0.75rem + var(--cookie-banner-h, 0px));
+  }
+
+  .auth-rule {
+    height: 200px;
+  }
+
+  /* ~70px comes off the form here, which is what lets it clear a 1366x600
+     laptop with the cookie banner still up rather than only after it's
+     dismissed. Nothing is hidden that you need in order to sign in. */
+  .auth-form__kicker {
     display: none;
   }
 
-  .auth-page .rounded-3xl {
-    padding: 0.75rem;
+  .auth-form__title {
+    font-size: 1.4rem;
+    margin-bottom: 0.7rem;
   }
 
-  /* Purely decorative: the "or" rule between the provider button and the
-     credential fields. Hiding it costs nothing functionally. */
-  .auth-page .relative.flex.items-center,
-  .auth-page .my-4.flex.items-center {
+  .auth-oauth {
+    height: 38px;
+  }
+
+  .auth-sep {
+    margin: 0.55rem 0;
+  }
+
+  .auth-seg {
+    margin-bottom: 0.7rem;
+  }
+
+  .auth-seg button {
+    height: 30px;
+  }
+
+  .auth-fields {
+    gap: 0.5rem;
+  }
+
+  .auth-field input,
+  .auth-page .phone-input-container .react-tel-input .form-control {
+    height: 40px;
+  }
+
+  .auth-submit {
+    height: 44px;
+  }
+
+  .auth-switch {
+    margin-top: 0.6rem;
+  }
+
+  .auth-note {
+    display: none;
+  }
+}
+
+/* Anything shorter than this can't afford decoration at all. */
+@media (max-height: 480px) {
+  .auth-case {
+    grid-template-columns: minmax(0, 350px);
+  }
+
+  .auth-exhibit,
+  .auth-rule {
+    display: none;
+  }
+}
+
+/* Below the tablet breakpoint the piece moves above the form. */
+@media (max-width: 900px) {
+  .auth-case {
+    grid-template-columns: minmax(0, 380px);
+    justify-items: center;
+    gap: 1rem;
+  }
+
+  .auth-rule {
     display: none;
   }
 
-  .auth-page form {
-    gap: 0.45rem;
+  .auth-exhibit__frames {
+    transform: scale(0.62);
+    transform-origin: top center;
+    height: 144px; /* 232 * 0.62 */
   }
 
-  .auth-page form > * + * {
-    margin-top: 0.45rem;
+  .auth-exhibit__plate {
+    margin-top: 0.5rem;
   }
 
-  .auth-page input {
-    padding-top: 0.375rem;
-    padding-bottom: 0.375rem;
+  .auth-exhibit__dots {
+    display: none;
+  }
+}
+
+/* Stacked, the piece costs about 200px. Measured end to end — navbar, form,
+   cookie banner, breathing room — a stacked exhibit needs roughly 960px of
+   viewport height before the submit button starts falling below the fold. Any
+   shorter and the form gets the whole stage; decoration never costs a tap. */
+@media (max-width: 900px) and (max-height: 960px) {
+  .auth-exhibit {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-exhibit__frame,
+  .auth-exhibit__plate,
+  .auth-exhibit__dots button {
+    transition: none;
+    animation: none;
   }
 }

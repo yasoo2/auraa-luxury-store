@@ -1127,3 +1127,31 @@ def test_refreshing_currency_rates_still_needs_admin(client):
     """Reading is public; making the server go fetch new rates is not."""
     r = client.post("/api/auto-update/trigger-currency-update")
     assert r.status_code in (401, 403), r.text
+
+
+def test_google_links_to_an_account_registered_with_different_capitals(
+    client, google_configured, monkeypatch
+):
+    """
+    Registration keeps the address as typed; Google reports it lowercased.
+    Matching only the lowercase form created a second account and quietly
+    stripped the customer of their orders, wishlist and admin rights.
+    """
+    register(client, email="Younes.Person@gmail.com")
+    make_admin(client, "Younes.Person@gmail.com")
+
+    monkeypatch.setattr(
+        oauth_service, "exchange_code",
+        _fake_exchange({"sub": "g-9", "email": "younes.person@gmail.com",
+                        "email_verified": True, "name": "Younes", "picture": None}),
+    )
+    r = client.post("/api/auth/oauth/google/callback",
+                    json={"code": "auth-code", "redirect_uri": CALLBACK})
+    assert r.status_code == 200, r.text
+
+    import asyncio
+    total = asyncio.get_event_loop().run_until_complete(
+        client._db.users.count_documents({})
+    )
+    assert total == 1, "a second account was created for the same person"
+    assert r.json()["user"]["is_admin"] is True, "signed into a new account, losing admin"

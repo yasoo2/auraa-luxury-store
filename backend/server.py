@@ -57,56 +57,9 @@ app = FastAPI(title="لورا لاكشري API", version="1.0.0")
 # Store database in app state for access in routes
 app.state.db = db
 
-# CORS Configuration - Load from environment variable
-# This allows easy updates without code changes
-import re
-
-cors_origins_env = os.getenv('CORS_ORIGINS', '')
-allowed_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
-
-# Fallback to default patterns if env variable is empty
-if not allowed_origins:
-    allowed_origins = [
-        "https://auraaluxury.com",
-        "https://www.auraaluxury.com",
-        "https://api.auraaluxury.com",
-        "http://localhost:3000",
-        "http://localhost:8001",
-    ]
-
-# Preview deployments. Previously any origin merely *containing* ".vercel.app"
-# was allowed with credentials, so https://evil.vercel.app — or even
-# https://vercel.app.attacker.com — could read authenticated responses on
-# behalf of a signed-in user. This anchors the match to the project's own
-# preview subdomains and requires a full-host match.
-_preview_pattern = os.getenv(
-    'CORS_PREVIEW_REGEX',
-    r'^https://[a-z0-9-]*auraa[a-z0-9-]*\.vercel\.app$'
-)
-try:
-    PREVIEW_ORIGIN_RE = re.compile(_preview_pattern)
-except re.error as e:
-    logger.error(f"Invalid CORS_PREVIEW_REGEX ({e}); preview origins disabled")
-    PREVIEW_ORIGIN_RE = None
-
-# Localhost on any port, for local development only.
-LOCALHOST_RE = re.compile(r'^http://(localhost|127\.0\.0\.1)(:\d+)?$')
-
-logger.info(
-    f"✅ CORS: {len(allowed_origins)} exact origins, "
-    f"preview pattern={_preview_pattern!r}"
-)
-
-
-def is_origin_allowed(origin: Optional[str]) -> bool:
-    """Exact-match an origin, or match the anchored preview/localhost patterns."""
-    if not origin:
-        return False
-    if origin in allowed_origins:
-        return True
-    if PREVIEW_ORIGIN_RE and PREVIEW_ORIGIN_RE.match(origin):
-        return True
-    return bool(LOCALHOST_RE.match(origin))
+# CORS Configuration — the allowlist itself lives in core.origins so the OAuth
+# route can vet its return address against exactly the same rule.
+from core.origins import is_origin_allowed  # noqa: E402
 
 
 # Custom CORS Handler

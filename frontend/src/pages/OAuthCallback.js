@@ -6,6 +6,15 @@ import { getAuthTranslation } from '../translations/auth';
 import axios from 'axios';
 import { API_BASE_URL } from '../api';
 
+/**
+ * Where Google sends the browser back to.
+ *
+ * Google returns `?code=...&state=...` in the query string (the old broker used
+ * a `#fragment`, which is why this page used to read window.location.hash and
+ * find nothing). The code is single-use and worthless without the client
+ * secret, so it is safe for it to pass through the address bar — the exchange
+ * itself happens server-side.
+ */
 const OAuthCallback = () => {
   const navigate = useNavigate();
   const auth = useAuth();
@@ -13,79 +22,75 @@ const OAuthCallback = () => {
   const [status, setStatus] = useState('processing');
   const [error, setError] = useState('');
   const BACKEND_URL = API_BASE_URL;
+
   useEffect(() => {
+    let cancelled = false;
+
+    const fail = (key) => {
+      if (cancelled) return;
+      setStatus('error');
+      setError(getAuthTranslation(key, language) || key);
+      setTimeout(() => navigate('/auth'), 4000);
+    };
+
     const processOAuthCallback = async () => {
+      const params = new URLSearchParams(window.location.search);
+
+      // Google reports a refusal (the user pressed Cancel, the client is
+      // misconfigured) here rather than by failing the redirect.
+      if (params.get('error')) {
+        console.error('Google returned an error:', params.get('error'));
+        return fail('oauth_session_invalid');
+      }
+
+      const code = params.get('code');
+      const returnedState = params.get('state');
+      const expectedState = sessionStorage.getItem('oauth_state');
+      const redirectUri = sessionStorage.getItem('oauth_redirect_uri')
+        || `${window.location.origin}/auth/oauth-callback`;
+
+      if (!code) return fail('session_id_required');
+
+      // The state we generated before leaving must come back untouched.
+      if (!expectedState || returnedState !== expectedState) {
+        console.error('OAuth state mismatch — refusing to complete sign-in');
+        return fail('oauth_state_mismatch');
+      }
+      sessionStorage.removeItem('oauth_state');
+      sessionStorage.removeItem('oauth_redirect_uri');
+
       try {
-        // Get session_id from URL fragment
-        const fragment = window.location.hash.substring(1);
-        const params = new URLSearchParams(fragment);
-        const sessionId = params.get('session_id');
-        
-        if (!sessionId) {
-          setStatus('error');
-          setError(getAuthTranslation('session_id_required', language));
-          setTimeout(() => navigate('/auth'), 3000);
-          return;
-        }
-        
-        // Get provider from session storage
-        const provider = sessionStorage.getItem('oauth_provider') || 'google';
-        
-        // Process OAuth session with backend
         const response = await axios.post(
-          `${BACKEND_URL}/api/auth/oauth/session`,
-          { 
-            session_id: sessionId,
-            provider: provider
-          },
-          {
-            withCredentials: true // Send and receive cookies
-          }
+          `${BACKEND_URL}/api/auth/oauth/google/callback`,
+          { code, redirect_uri: redirectUri, provider: 'google' },
+          { withCredentials: true }
         );
-        
-        console.log('✅ OAuth response:', response.data);
-        
+
         const { access_token, user, needs_phone } = response.data;
-        
-        if (!access_token || !user) {
-          throw new Error('Invalid OAuth response from server');
-        }
-        
-        // Store token permanently in localStorage (session never expires unless manual logout)
-        // Token is valid for 1 year - effectively permanent session
+        if (!access_token || !user) throw new Error('Invalid OAuth response from server');
+        if (cancelled) return;
+
         localStorage.setItem('token', access_token);
-        if (auth && typeof auth.setToken === 'function') {
-          auth.setToken(access_token);
-        }
-        if (auth && typeof auth.setUser === 'function') {
-          auth.setUser(user);
-        }
-        
-        // Clean up
+        if (auth && typeof auth.setToken === 'function') auth.setToken(access_token);
+        if (auth && typeof auth.setUser === 'function') auth.setUser(user);
+
         sessionStorage.removeItem('oauth_provider');
-        
-        // Check if phone number is needed
+
         if (needs_phone) {
-          // Redirect to phone collection
           navigate('/profile?tab=profile&add_phone=true');
         } else {
-          // Success - redirect to home or intended destination
           const from = sessionStorage.getItem('auth_redirect') || '/';
           sessionStorage.removeItem('auth_redirect');
           navigate(from);
         }
-      } catch (error) {
-        console.error('OAuth processing error:', error);
-        setStatus('error');
-        const errorMsg = error.response?.data?.detail || 'oauth_session_invalid';
-        setError(getAuthTranslation(errorMsg, language));
-        
-        // Redirect to login after 3 seconds
-        setTimeout(() => navigate('/auth'), 3000);
+      } catch (err) {
+        console.error('OAuth processing error:', err);
+        fail(err.response?.data?.detail || 'oauth_session_invalid');
       }
     };
 
     processOAuthCallback();
+    return () => { cancelled = true; };
   }, [navigate, auth, language, BACKEND_URL]);
 
   return (
@@ -102,7 +107,7 @@ const OAuthCallback = () => {
             </p>
           </>
         )}
-        
+
         {status === 'error' && (
           <>
             <div className="text-red-500 text-6xl mb-4">⚠️</div>

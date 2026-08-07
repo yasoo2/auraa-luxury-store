@@ -32,6 +32,9 @@ export const authTranslations = {
     password_too_short: 'كلمة المرور قصيرة جداً (8 أحرف على الأقل)',
     oauth_session_invalid: 'فشل تسجيل الدخول. يرجى المحاولة مرة أخرى',
     session_id_required: 'بيانات الجلسة مفقودة',
+    oauth_state_mismatch: 'رابط العودة غير صالح. ابدأ تسجيل الدخول من جديد',
+    google_email_not_verified: 'بريد حساب جوجل غير موثّق. وثّقه لدى جوجل ثم أعد المحاولة',
+    google_signin_unavailable: 'تسجيل الدخول بجوجل غير مفعّل حالياً',
     
     // Success
     login_success: 'تم تسجيل الدخول بنجاح',
@@ -115,6 +118,9 @@ export const authTranslations = {
     password_too_short: 'Password too short (minimum 8 characters)',
     oauth_session_invalid: 'Login failed. Please try again',
     session_id_required: 'Session data missing',
+    oauth_state_mismatch: 'That return link is not valid. Please start signing in again',
+    google_email_not_verified: 'This Google account has an unverified email. Verify it with Google and try again',
+    google_signin_unavailable: 'Google sign-in is not enabled right now',
     
     // Success
     login_success: 'Logged in successfully',

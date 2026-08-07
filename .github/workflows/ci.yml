@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  backend:
+    name: Backend — import + integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install mongomock_motor pytest
+
+      # Catches boot-time breakage (bad imports, names used before definition)
+      # before it can reach production.
+      - name: Import check
+        working-directory: backend
+        env:
+          MONGO_URL: mongodb://localhost:27017
+          DB_NAME: ci_db
+          JWT_SECRET_KEY: ci-test-secret
+          ENV: test
+        run: python -c "import server; print(f'{len(server.app.routes)} routes registered')"
+
+      - name: Integration tests
+        env:
+          MONGO_URL: mongodb://localhost:27017
+          DB_NAME: ci_db
+          JWT_SECRET_KEY: ci-test-secret
+          ENV: test
+        run: python -m pytest tests/test_integration.py -v
+
+  frontend:
+    name: Frontend — build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm install --legacy-peer-deps
+
+      - name: Build
+        working-directory: frontend
+        env:
+          CI: false  # CRA treats warnings as errors under CI otherwise
+        run: npm run build

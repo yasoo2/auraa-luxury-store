@@ -14,23 +14,53 @@ export const useAuth = () => {
 // Note: axios is already configured globally in /config/axios.js
 // All requests will automatically include credentials (cookies)
 
+// Auth travels two ways and both must work:
+//  - HttpOnly cookies, used by api.js (bare fetch, no header) and by
+//    checkAuthStatus so the session survives a reload.
+//  - `Authorization: Bearer` from localStorage, which the admin pages
+//    (AdminManagement, AutoUpdatePage, ProductFormModal, ...) read directly.
+// This context previously stored no token at all, so every one of those pages
+// sent `Bearer null` and got a 401.
+const TOKEN_KEY = 'token';
+
+const storeToken = (token) => {
+  try {
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  } catch (e) {
+    // Private browsing can throw on localStorage writes; cookies still work.
+    console.warn('Could not persist auth token:', e);
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-  // Check auth status on mount (using cookie)
+  // Check auth status on mount (cookie, or a stored token if one survives)
   const checkAuthStatus = useCallback(async () => {
     try {
+      const stored = localStorage.getItem(TOKEN_KEY);
+      if (stored) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${stored}`;
+      }
+
       const response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
         withCredentials: true
       });
-      
+
       console.log('✅ User authenticated:', response.data);
       setUser(response.data);
     } catch (error) {
       console.log('❌ Not authenticated');
+      storeToken(null);
       setUser(null);
     } finally {
       setLoading(false);
@@ -62,7 +92,8 @@ export const AuthProvider = ({ children }) => {
       );
 
       console.log('✅ Login successful:', response.data);
-      
+
+      storeToken(response.data.access_token);
       const userData = response.data.user;
       setUser(userData);
 
@@ -102,7 +133,8 @@ export const AuthProvider = ({ children }) => {
       );
 
       console.log('✅ Registration successful:', response.data);
-      
+
+      storeToken(response.data.access_token);
       const newUser = response.data.user;
       setUser(newUser);
 
@@ -130,6 +162,9 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Clear locally even if the request failed, so the UI cannot be left
+      // showing a signed-in state the server no longer honours.
+      storeToken(null);
       setUser(null);
     }
   };

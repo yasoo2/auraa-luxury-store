@@ -13,16 +13,22 @@ import logging
 import uuid
 
 from auth.oauth_service import oauth_service
+from core.security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    clear_auth_cookies,
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    get_current_user_doc,
+    is_refresh_token_revoked,
+    revoke_refresh_token,
+    set_auth_cookies,
+    REFRESH_COOKIE,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-# JWT Configuration
-SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'your-secret-key-change-in-production')
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_DAYS = 3650  # 10 years for "forever" sessions
 
 
 # Pydantic Models
@@ -55,25 +61,25 @@ class TokenResponse(BaseModel):
 
 
 # Helper Functions
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    """Create JWT access token"""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+async def _issue_session(db, response: Response, user: Dict[str, Any]) -> str:
+    """
+    Mint an access/refresh pair for `user`, record the refresh token's jti,
+    and set both as HttpOnly cookies. Returns the access token so callers can
+    also return it in the body for clients that use the Authorization header.
+    """
+    claims = {"sub": user["email"], "user_id": user["id"]}
 
+    access_token = create_access_token(claims)
+    refresh_token, jti = create_refresh_token(claims)
 
-def create_refresh_token(data: dict):
-    """Create long-lived refresh token (10 years)"""
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    await db.refresh_tokens.insert_one({
+        "jti": jti,
+        "user_id": user["id"],
+        "created_at": datetime.now(timezone.utc),
+    })
+
+    set_auth_cookies(response, access_token, refresh_token)
+    return access_token
 
 
 def hash_password(password: str) -> str:
@@ -114,26 +120,9 @@ async def register(user: UserRegister, request: Request, response: Response):
         }
         
         await db.users.insert_one(user_data)
-        
-        # Create tokens
-        access_token = create_access_token(
-            data={"sub": user.email, "user_id": user_data["id"]},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
-        refresh_token = create_refresh_token(
-            data={"sub": user.email, "user_id": user_data["id"]}
-        )
-        
-        # Set refresh token as HttpOnly cookie (10 years)
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="lax",
-            max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60  # 10 years in seconds
-        )
-        
+
+        access_token = await _issue_session(db, response, user_data)
+
         # Return user data (without password)
         user_data.pop("password", None)
         user_data.pop("_id", None)
@@ -173,29 +162,12 @@ async def login(credentials: UserLogin, request: Request, response: Response):
         if not verify_password(credentials.password, user["password"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
         
-        # Create tokens
-        access_token = create_access_token(
-            data={"sub": user["email"], "user_id": user["id"]},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
-        refresh_token = create_refresh_token(
-            data={"sub": user["email"], "user_id": user["id"]}
-        )
-        
-        # Set refresh token as HttpOnly cookie (10 years)
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="lax",
-            max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
-        )
-        
+        access_token = await _issue_session(db, response, user)
+
         # Return user data (without password)
         user.pop("password", None)
         user.pop("_id", None)
-        
+
         logger.info(f"✅ User logged in: {identifier}")
         
         return {
@@ -212,11 +184,23 @@ async def login(credentials: UserLogin, request: Request, response: Response):
 
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(request: Request, response: Response):
     """
-    Logout user by clearing refresh token cookie
+    Log out: revoke the refresh token server-side and clear both cookies.
+
+    Clearing the cookie alone left the token usable by anyone who had copied
+    it, so logout did not actually end the session.
     """
-    response.delete_cookie(key="refresh_token")
+    token = request.cookies.get(REFRESH_COOKIE)
+    if token:
+        try:
+            payload = decode_token(token)
+            await revoke_refresh_token(request.app.state.db, payload.get("jti"))
+        except HTTPException:
+            # Already expired or malformed — nothing to revoke.
+            pass
+
+    clear_auth_cookies(response)
     return {"message": "Logged out successfully"}
 
 
@@ -278,25 +262,8 @@ async def oauth_session(payload: OAuthSessionRequest, request: Request, response
         user_data.pop("password", None)
         user_data.pop("_id", None)
 
-        # Create tokens
-        access_token = create_access_token(
-            data={"sub": user_data["email"], "user_id": user_data["id"]},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
-        refresh_token = create_refresh_token(
-            data={"sub": user_data["email"], "user_id": user_data["id"]}
-        )
-        
-        # Set refresh token cookie
-        response.set_cookie(
-            key="refresh_token",
-            value=refresh_token,
-            httponly=True,
-            secure=True,
-            samesite="lax",
-            max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
-        )
-        
+        access_token = await _issue_session(db, response, user_data)
+
         return {
             "access_token": access_token,
             "token_type": "bearer",
@@ -315,38 +282,42 @@ async def oauth_session(payload: OAuthSessionRequest, request: Request, response
 @router.post("/refresh")
 async def refresh_token(request: Request, response: Response):
     """
-    Refresh access token using refresh token from cookie
+    Exchange the refresh cookie for a fresh session.
+
+    Rotates the refresh token: the presented one is revoked and replaced, so a
+    stolen token stops working as soon as the real user refreshes.
     """
     try:
-        refresh_token = request.cookies.get("refresh_token")
-        if not refresh_token:
+        db = request.app.state.db
+
+        token = request.cookies.get(REFRESH_COOKIE)
+        if not token:
             raise HTTPException(status_code=401, detail="No refresh token")
-        
-        # Decode and verify refresh token
-        try:
-            payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
-            email = payload.get("sub")
-            user_id = payload.get("user_id")
-            
-            if not email or not user_id:
-                raise HTTPException(status_code=401, detail="Invalid token")
-            
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Refresh token expired")
-        except jwt.PyJWTError:
+
+        payload = decode_token(token)
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="Not a refresh token")
+
+        user_id = payload.get("user_id")
+        if not user_id:
             raise HTTPException(status_code=401, detail="Invalid refresh token")
-        
-        # Create new access token
-        access_token = create_access_token(
-            data={"sub": email, "user_id": user_id},
-            expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
-        
+
+        if await is_refresh_token_revoked(db, payload.get("jti")):
+            raise HTTPException(status_code=401, detail="Refresh token revoked")
+
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        # Rotate: retire the presented token before issuing its replacement.
+        await revoke_refresh_token(db, payload.get("jti"))
+        access_token = await _issue_session(db, response, user)
+
         return {
             "access_token": access_token,
             "token_type": "bearer"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -355,46 +326,12 @@ async def refresh_token(request: Request, response: Response):
 
 
 @router.get("/me")
-async def get_current_user(request: Request):
+async def get_current_user(user: Dict[str, Any] = Depends(get_current_user_doc)):
     """
-    Get current user info from access token
+    Return the signed-in user.
+
+    Resolves the token from the Authorization header or the access_token
+    cookie. Header-only meant AuthContext (which sends cookies and no header)
+    always got a 401, so the session never survived a page reload.
     """
-    try:
-        # Get token from Authorization header
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            raise HTTPException(status_code=401, detail="Not authenticated")
-        
-        token = auth_header.split(" ")[1]
-        
-        # Decode token
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            user_id = payload.get("user_id")
-            
-            if not user_id:
-                raise HTTPException(status_code=401, detail="Invalid token")
-                
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token expired")
-        except jwt.PyJWTError:
-            raise HTTPException(status_code=401, detail="Invalid token")
-        
-        # Get user from database
-        db = request.app.state.db
-        user = await db.users.find_one({"id": user_id})
-        
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        # Remove sensitive data
-        user.pop("password", None)
-        user.pop("_id", None)
-        
-        return user
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Get current user error: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get user info")
+    return user

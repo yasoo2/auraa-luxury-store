@@ -1,6 +1,7 @@
 // Auraa Luxury - Updated Version 2.0
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import './App.css';
 
@@ -85,8 +86,8 @@ function App() {
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/setup" element={<DeploymentSetup />} />
                     <Route path="/admin-setup" element={<AdminSetup />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                    <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
                     
                     {/* Legal and Info Pages */}
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -101,8 +102,8 @@ function App() {
                     <Route path="/track-order" element={<Navigate to="/order-tracking" replace />} />
                     
                     {/* Admin Routes */}
-                    <Route path="/admin/*" element={<AdminDashboard />} />
-                    <Route path="/admin-management" element={<AdminManagement />} />
+                    <Route path="/admin/*" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
+                    <Route path="/admin-management" element={<ProtectedRoute requireSuperAdmin><AdminManagement /></ProtectedRoute>} />
                     
                     {/* Date Test Page (for testing Hijri conversion) */}
                     <Route path="/date-test" element={<DateTestPage />} />

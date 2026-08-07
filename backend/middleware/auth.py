@@ -1,31 +1,21 @@
 """
-Authentication middleware for admin and super admin verification
+Authentication middleware for admin and super admin verification.
+
+Previously `verify_super_admin` returned a hardcoded super-admin dict for any
+non-empty string, so any value in the Authorization header granted full
+super-admin access. It now performs real verification via core.security.
 """
-from fastapi import Depends, HTTPException, status
-from typing import Dict
-import os
-from datetime import datetime, timedelta, timezone
-import jwt
+from fastapi import Depends, Request
+from typing import Dict, Any
 
-# JWT Configuration
-SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
-ALGORITHM = "HS256"
+from core.security import require_admin_doc, require_super_admin_doc
 
 
-async def verify_super_admin(token: str = None) -> Dict:
-    """
-    Verify super admin access
-    For testing purposes, this is a placeholder
-    """
-    # This is a placeholder - in production, implement proper JWT verification
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
-        )
-    
-    return {
-        "id": "test-super-admin",
-        "email": "admin@test.com",
-        "is_super_admin": True
-    }
+async def verify_super_admin(request: Request) -> Dict[str, Any]:
+    """Verify the caller is a super admin. Raises 401/403 otherwise."""
+    return await require_super_admin_doc(request)
+
+
+async def verify_admin(request: Request) -> Dict[str, Any]:
+    """Verify the caller is an admin (super admins included)."""
+    return await require_admin_doc(request)

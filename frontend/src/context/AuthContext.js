@@ -74,6 +74,8 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'wrong_password' };
       } else if (error.response?.status === 404) {
         return { success: false, error: 'account_not_found' };
+      } else if (error.response?.status === 429) {
+        return { success: false, error: 'too_many_requests' };
       } else {
         return { success: false, error: 'login_failed' };
       }

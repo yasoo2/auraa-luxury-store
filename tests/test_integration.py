@@ -1371,3 +1371,116 @@ def test_admin_listing_flags_products_the_shop_will_not_show(client):
     assert rows["good"]["storefront_visible"] is True
     assert rows["bad"]["storefront_visible"] is False
     assert "category" in (rows["bad"]["storefront_issue"] or "")
+
+
+# ---------------------------------------------------------------------------
+# CJ access tokens
+#
+# The client sent the account API key as the CJ-Access-Token header. CJ's
+# /getAccessToken reads the request body, so authentication appeared to
+# succeed while every real call came back 401 "Invalid API key or access
+# token" — exactly what the Integrations screen showed.
+# ---------------------------------------------------------------------------
+
+import services.cj_client as cj_client  # noqa: E402
+
+REAL_TOKEN = "AT-real-token-xyz"
+
+
+class _FakeResponse:
+    def __init__(self, status, payload):
+        self.status_code, self._payload = status, payload
+
+    def json(self):
+        return self._payload
+
+    @property
+    def text(self):
+        return str(self._payload)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            import httpx
+            raise httpx.HTTPStatusError("err", request=None, response=self)
+
+
+class _FakeCJ:
+    """Behaves the way CJ does: the token endpoint reads the body, every other
+    endpoint requires the issued token in the header."""
+
+    def __init__(self):
+        self.calls = []
+
+    async def request(self, method, url, json=None, headers=None):
+        self.calls.append((url.rsplit("/api2.0", 1)[-1], (headers or {}).get("CJ-Access-Token")))
+        if url.endswith("/authentication/getAccessToken"):
+            if json.get("email") and json.get("password"):
+                return _FakeResponse(200, {"code": 200, "result": True, "data": {
+                    "accessToken": REAL_TOKEN,
+                    "accessTokenExpiryDate": "2030-01-01T00:00:00"}})
+            return _FakeResponse(200, {"code": 1600001, "result": False, "message": "bad creds"})
+        if (headers or {}).get("CJ-Access-Token") != REAL_TOKEN:
+            return _FakeResponse(401, {"code": 1600001, "result": False,
+                                       "message": "Invalid API key or access token"})
+        return _FakeResponse(200, {"code": 200, "result": True, "data": {"list": [{"pid": "1"}]}})
+
+
+@pytest.fixture
+def fake_cj(monkeypatch):
+    fake = _FakeCJ()
+    monkeypatch.setattr(cj_client, "_client", fake)
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "shop@example.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "APIKEY-not-a-token")
+    cj_client._reset_token()
+    yield fake
+    cj_client._reset_token()
+
+
+def test_calls_carry_the_issued_token_not_the_api_key(fake_cj):
+    import asyncio
+    result = asyncio.get_event_loop().run_until_complete(cj_client.list_products(1, 1))
+    assert result["result"] is True
+
+    sent = dict(fake_cj.calls)
+    assert sent["/v1/product/list"] == REAL_TOKEN, "the API key was sent as the access token"
+    assert sent["/authentication/getAccessToken"] is None, "the token call must not need a token"
+
+
+def test_the_token_is_cached_because_cj_rate_limits_issuing_it(fake_cj):
+    import asyncio
+    loop = asyncio.get_event_loop()
+    for _ in range(3):
+        loop.run_until_complete(cj_client.list_products(1, 1))
+    auths = [c for c in fake_cj.calls if "getAccessToken" in c[0]]
+    assert len(auths) == 1, f"authenticated {len(auths)} times for three calls"
+
+
+def test_a_rejected_token_is_refreshed_and_the_call_retried(fake_cj):
+    import asyncio
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(cj_client.list_products(1, 1))
+
+    # CJ revoked it: the next call 401s, and the client must recover by itself.
+    cj_client._token = "stale-token"
+    result = loop.run_until_complete(cj_client.list_products(1, 1))
+    assert result["result"] is True
+    assert len([c for c in fake_cj.calls if "getAccessToken" in c[0]]) == 2
+
+
+def test_a_failure_reported_with_http_200_is_still_a_failure(fake_cj, monkeypatch):
+    """CJ answers many errors with 200 and result=false. Treating that as
+    success is how a broken connection reported itself healthy."""
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "")
+    cj_client._reset_token()
+    import asyncio
+    with pytest.raises(cj_client.CJError):
+        asyncio.get_event_loop().run_until_complete(cj_client.list_products(1, 1))
+
+
+def test_missing_credentials_say_which_variables_to_set(fake_cj, monkeypatch):
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "")
+    cj_client._reset_token()
+    import asyncio
+    with pytest.raises(cj_client.CJError) as e:
+        asyncio.get_event_loop().run_until_complete(cj_client._get_access_token())
+    assert "CJ_DROPSHIP_EMAIL" in str(e.value)

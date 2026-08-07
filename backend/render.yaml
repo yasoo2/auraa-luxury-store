@@ -11,38 +11,55 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+
     envVars:
+      # --- Required. The app refuses to start without these. ---------------
       - key: ENV
         value: production
-      - key: MONGODB_URI
-        sync: false
+
+      # server.py reads os.environ['MONGO_URL'] and os.environ['DB_NAME']
+      # directly, so a missing value is a KeyError at import time, not a
+      # warning. DB_NAME was previously declared here as MONGO_DB_NAME, which
+      # the code never reads — recreating the service from this blueprint
+      # would have failed to boot.
       - key: MONGO_URL
         sync: false
-      - key: MONGO_DB_NAME
+      - key: DB_NAME
         value: auraa_luxury_db
+
+      # core/security.py refuses to start in production rather than sign
+      # tokens with a key committed to this repository. Set this to the value
+      # from the previous deployment to keep existing sessions valid;
+      # generating a new one logs every user out.
+      - key: JWT_SECRET_KEY
+        sync: false
+
+      # --- Recommended ------------------------------------------------------
+      # Comma-separated. Falls back to the auraaluxury hosts when empty.
       - key: CORS_ORIGINS
         sync: false
-      - key: JWT_SECRET_KEY
-        generateValue: true
-      - key: CJ_API_KEY
-        sync: false
+
+      # --- Optional: suppliers, email, currency ----------------------------
       - key: CJ_DROPSHIP_API_KEY
         sync: false
       - key: CJ_DROPSHIP_EMAIL
         sync: false
-      - key: GOOGLE_CLIENT_ID
+      - key: SENDGRID_API_KEY
         sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASSWORD
-        sync: false
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_PUBLISHABLE_KEY
-        sync: false
-      - key: TURNSTILE_SECRET_KEY
+      - key: SENDGRID_FROM_EMAIL
         sync: false
       - key: EXCHANGE_RATE_API_KEY
         sync: false
+
+      # Guards /api/setup/create-first-admin on a fresh deployment. Optional,
+      # but without it the first person to reach that endpoint becomes the
+      # super admin.
+      - key: ADMIN_SETUP_KEY
+        sync: false
+
+      # --- Optional: tuning. Defaults are in the code. ----------------------
+      # COOKIE_SECURE=false and COOKIE_CROSS_SITE=false only for local HTTP.
+      # AUTH_RATE_LIMIT_MAX / AUTH_RATE_LIMIT_WINDOW tune login throttling.
+      # REFRESH_TOKEN_EXPIRE_DAYS defaults to 90.
+      # UPLOAD_DIR points media uploads at a mounted disk; Render's default
+      # filesystem is ephemeral and loses uploads on every redeploy.

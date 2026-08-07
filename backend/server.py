@@ -1231,7 +1231,9 @@ async def super_admin_change_role(
 SETTINGS_DOC_ID = "store_settings"
 THEME_DOC_ID = "store_theme"
 
-UPLOAD_DIR = ROOT_DIR / "static" / "uploads"
+# Overridable so tests (and any deployment using a mounted volume) can write
+# somewhere other than the repository tree.
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", ROOT_DIR / "static" / "uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(ROOT_DIR / "static")), name="static")
 

@@ -10,6 +10,7 @@ actually shipped, so these double as regression tests.
 import io
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,8 @@ os.environ.setdefault("ENV", "test")
 # TestClient speaks plain HTTP, and Secure cookies are never sent over HTTP.
 os.environ.setdefault("COOKIE_CROSS_SITE", "false")
 os.environ.setdefault("COOKIE_SECURE", "false")
+# Upload tests write real files; keep them out of the repository tree.
+os.environ.setdefault("UPLOAD_DIR", tempfile.mkdtemp(prefix="auraa-test-uploads-"))
 
 from fastapi.testclient import TestClient  # noqa: E402
 from mongomock_motor import AsyncMongoMockClient  # noqa: E402

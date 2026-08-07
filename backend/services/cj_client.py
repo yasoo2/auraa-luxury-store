@@ -242,6 +242,7 @@ async def _request_json(
     method: str,
     path: str,
     json: Optional[Dict[str, Any]] = None,
+    params: Optional[Dict[str, Any]] = None,
     authenticated: bool = True,
     _retrying: bool = False,
 ) -> Dict[str, Any]:
@@ -258,8 +259,13 @@ async def _request_json(
     async with _sem:             # حد أقصى للتوازي
         async with _limiter:     # حد أقصى للطلبات/الثانية
             logger.info(f"🌐 CJ API Request: {method} {path}")
-            
-            resp = await _client.request(method, url, json=json or {}, headers=headers)
+
+            # Only send a body when there is one. `json={}` used to go out on
+            # every call, which puts a body on a GET — and CJ's read endpoints
+            # are GETs.
+            resp = await _client.request(
+                method, url, json=json, params=params, headers=headers
+            )
             
             try:
                 resp.raise_for_status()
@@ -301,27 +307,24 @@ async def _request_json(
 
 # واجهات ملائمة
 
+# CJ's read endpoints are GETs taking query parameters. Sending them as POST
+# with a JSON body earned:
+#     CJ error 16900202: Request method 'POST' not supported
+# Only the token exchange is a POST. The sibling client in this repo had this
+# right too, which is what gave the mismatch away — again.
+
 async def list_products(page_num: int = 1, page_size: int = 50, keyword: str = "") -> Dict[str, Any]:
     """جلب قائمة المنتجات من CJ"""
-    payload = {
-        "pageNum": page_num, 
-        "pageSize": page_size
-    }
+    params = {"pageNum": page_num, "pageSize": page_size}
     if keyword:
-        payload["productNameEn"] = keyword
-    
-    return await _request_json("POST", "/v1/product/list", json=payload)
+        params["productNameEn"] = keyword
+
+    return await _request_json("GET", "/v1/product/list", params=params)
+
 
 async def get_product_details(pid: str) -> Dict[str, Any]:
     """جلب تفاصيل منتج واحد"""
-    payload = {"pid": pid}
-    return await _request_json("POST", "/v1/product/query", json=payload)
-
-async def import_products_by_ids(product_ids: List[str]) -> Dict[str, Any]:
-    """استيراد منتجات بالـ IDs"""
-    # هذا endpoint مثال - عدّله حسب API الفعلي لـ CJ
-    payload = {"productIds": product_ids}
-    return await _request_json("POST", "/v1/product/import", json=payload)
+    return await _request_json("GET", "/v1/product/query", params={"pid": pid})
 
 async def authenticate() -> Dict[str, Any]:
     """

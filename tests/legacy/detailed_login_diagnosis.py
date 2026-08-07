@@ -21,7 +21,7 @@ def test_password_variations():
     
     # Common password variations
     password_variations = [
-        "younes2025",      # Original from review
+        os.getenv("SEED_ADMIN_PASSWORD", ""),      # Original from review
         "Younes2025",      # Capitalized
         "YOUNES2025",      # All caps
         "younes@2025",     # With @
@@ -214,7 +214,7 @@ def main():
     if existing_accounts:
         print(f"✅ Found {len(existing_accounts)} existing account(s)")
         print("❌ But no working password found for younes.sowady2011@gmail.com")
-        print("🔍 The account exists but password 'younes2025' is incorrect")
+        print("🔍 The account exists but password '<redacted>' is incorrect")
         print("💡 Possible issues:")
         print("   - Password was changed after seed script")
         print("   - Different password was used in production")

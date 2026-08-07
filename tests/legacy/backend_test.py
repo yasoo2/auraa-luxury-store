@@ -695,7 +695,7 @@ class AuraaLuxuryAPITester:
         # Test super admin login with provided credentials
         super_admin_credentials = {
             "identifier": "younes.sowady2011@gmail.com",
-            "password": "younes2025"
+            "password": os.getenv("SEED_ADMIN_PASSWORD", "")
         }
         
         success, data, status = self.make_request('POST', '/auth/login', super_admin_credentials)
@@ -1501,7 +1501,7 @@ class AuraaLuxuryAPITester:
         # Test super admin login with provided credentials
         super_admin_credentials = {
             "identifier": "younes.sowady2011@gmail.com",
-            "password": "younes2025"
+            "password": os.getenv("SEED_ADMIN_PASSWORD", "")
         }
         
         success, data, status = self.make_request('POST', '/auth/login', super_admin_credentials)
@@ -1668,7 +1668,7 @@ class AuraaLuxuryAPITester:
             change_role_request = {
                 "user_id": "invalid_user_id_for_testing",
                 "new_role": "admin",
-                "current_password": "younes2025"
+                "current_password": os.getenv("SEED_ADMIN_PASSWORD", "")
             }
             
             success, data, status = self.make_request('POST', '/super-admin/manage/change-role', change_role_request)
@@ -1682,7 +1682,7 @@ class AuraaLuxuryAPITester:
             change_role_request = {
                 "user_id": test_target['id'],
                 "new_role": "admin",  # Keep as admin
-                "current_password": "younes2025"
+                "current_password": os.getenv("SEED_ADMIN_PASSWORD", "")
             }
             
             success, data, status = self.make_request('POST', '/super-admin/manage/change-role', change_role_request)
@@ -1715,7 +1715,7 @@ class AuraaLuxuryAPITester:
         reset_password_request = {
             "user_id": "invalid_user_id_for_testing",
             "new_password": "new_test_password_123",
-            "current_password": "younes2025"
+            "current_password": os.getenv("SEED_ADMIN_PASSWORD", "")
         }
         
         success, data, status = self.make_request('POST', '/super-admin/manage/reset-password', reset_password_request)

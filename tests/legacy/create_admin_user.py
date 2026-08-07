@@ -10,7 +10,7 @@ from pymongo import MongoClient
 import bcrypt
 
 # MongoDB Atlas Connection String
-MONGO_URI = "mongodb+srv://younessowady2011_db_user:Younes2025@cluster0.rhuhb4i.mongodb.net/auraaluxury?retryWrites=true&w=majority&appName=Cluster0"
+MONGO_URI = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 
 def hash_password(password: str) -> str:
     """Hash password using bcrypt"""

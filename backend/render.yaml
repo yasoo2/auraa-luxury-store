@@ -24,8 +24,11 @@ services:
       # would have failed to boot.
       - key: MONGO_URL
         sync: false
+      # Must match the database in MONGO_URL's path. The live data is in
+      # `auraa_luxury`; the previous value here was `auraa_luxury_db`, which
+      # would have connected to an empty database instead.
       - key: DB_NAME
-        value: auraa_luxury_db
+        value: auraa_luxury
 
       # core/security.py refuses to start in production rather than sign
       # tokens with a key committed to this repository. Set this to the value

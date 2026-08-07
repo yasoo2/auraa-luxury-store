@@ -70,13 +70,13 @@ class ReviewRequestTester:
             return False, {"error": str(e)}, 0
     
     def test_super_admin_authentication(self):
-        """Test login with Super Admin credentials: younes.sowady2011@gmail.com / younes2025"""
+        """Test login with Super Admin credentials: younes.sowady2011@gmail.com / <redacted>"""
         print("\n🔐 TESTING SUPER ADMIN AUTHENTICATION FLOW")
         
         # Test super admin login with provided credentials
         super_admin_credentials = {
             "identifier": "younes.sowady2011@gmail.com",
-            "password": "younes2025"
+            "password": os.getenv("SEED_ADMIN_PASSWORD", "")
         }
         
         success, data, status = self.make_request('POST', '/auth/login', super_admin_credentials)

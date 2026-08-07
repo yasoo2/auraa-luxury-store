@@ -65,7 +65,18 @@ def seed_super_admins():
         # Create initial super admin accounts
         print("\n🔨 Creating initial Super Admin accounts...")
         
-        password = "younes2025"
+        # Read from the environment. This was hardcoded and committed, which
+        # published the super admin password — and the same string was reused
+        # as the MongoDB user's password.
+        password = os.getenv("SEED_ADMIN_PASSWORD")
+        if not password:
+            print("\n❌ SEED_ADMIN_PASSWORD is not set.")
+            print("   Run with:  SEED_ADMIN_PASSWORD='<strong-password>' python seed_super_admin.py")
+            return
+        if len(password) < 12:
+            print("\n❌ SEED_ADMIN_PASSWORD must be at least 12 characters.")
+            return
+
         password_hash = hash_password(password)
         
         super_admins = [
@@ -116,7 +127,9 @@ def seed_super_admins():
             
             for admin in super_admins:
                 print(f"\n   {admin['type'].upper()}: {admin['identifier']}")
-                print(f"   Password: {password}")
+            # The password is not echoed: the operator supplied it, and printing
+            # it would leave it in terminal scrollback and any captured logs.
+            print("\n   Password: the value of SEED_ADMIN_PASSWORD")
             
             print("\n" + "="*60)
             print("\n⚠️  IMPORTANT:")

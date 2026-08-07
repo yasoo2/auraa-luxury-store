@@ -38,7 +38,7 @@ def get_password_hash(password):
 **Test Result**:
 ```bash
 curl -X POST http://localhost:8001/api/auth/login \
-  -d '{"identifier":"younes.sowady2011@gmail.com","password":"younes2025"}'
+  -d '{"identifier":"younes.sowady2011@gmail.com","password":"<redacted>"}'
 
 Response: 200 OK
 {
@@ -51,9 +51,9 @@ Response: 200 OK
 ```
 
 **Super Admin Accounts**:
-1. ✅ `younes.sowady2011@gmail.com` / `younes2025`
-2. ✅ `00905013715391` / `younes2025`
-3. ✅ `info@auraaluxury.com` / `younes2025`
+1. ✅ `younes.sowady2011@gmail.com` / `<redacted>`
+2. ✅ `00905013715391` / `<redacted>`
+3. ✅ `info@auraaluxury.com` / `<redacted>`
 
 ### 2. OAuth Endpoints Working ✅
 **Google OAuth URL**:

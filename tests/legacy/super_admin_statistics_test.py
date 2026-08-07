@@ -67,7 +67,7 @@ class SuperAdminStatisticsTest:
         # Use the exact credentials from the review request
         super_admin_credentials = {
             "identifier": "younes.sowady2011@gmail.com",
-            "password": "younes2025"
+            "password": os.getenv("SEED_ADMIN_PASSWORD", "")
         }
         
         success, data, status = self.make_request('POST', '/auth/login', super_admin_credentials)
@@ -224,7 +224,7 @@ class SuperAdminStatisticsTest:
         print("=" * 60)
         print(f"🔗 Testing API at: {self.api_url}")
         print(f"📋 Review Requirements:")
-        print("   1. Login as Super Admin (younes.sowady2011@gmail.com / younes2025)")
+        print("   1. Login as Super Admin (younes.sowady2011@gmail.com / <redacted>)")
         print("   2. Test GET /api/admin/super-admin-statistics")
         print("   3. Verify response includes required fields")
         print("   4. Confirm no 500 errors")

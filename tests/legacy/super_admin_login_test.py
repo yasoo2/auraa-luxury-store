@@ -197,9 +197,9 @@ class SuperAdminLoginTester:
         
         # Test credentials as specified in the review request
         super_admin_credentials = [
-            ("younes.sowady2011@gmail.com", "younes2025", "Email 1"),
-            ("00905013715391", "younes2025", "Phone"),
-            ("info@auraaluxury.com", "younes2025", "Email 2")
+            ("younes.sowady2011@gmail.com", os.getenv("SEED_ADMIN_PASSWORD", ""), "Email 1"),
+            ("00905013715391", os.getenv("SEED_ADMIN_PASSWORD", ""), "Phone"),
+            ("info@auraaluxury.com", os.getenv("SEED_ADMIN_PASSWORD", ""), "Email 2")
         ]
         
         valid_tokens = []

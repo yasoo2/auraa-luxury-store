@@ -7,6 +7,7 @@ actually shipped, so these double as regression tests.
 
     python -m pytest tests/test_integration.py -v
 """
+import io
 import os
 import sys
 from pathlib import Path
@@ -455,6 +456,429 @@ def test_password_change_revokes_sessions(client):
     client.cookies.clear()
     client.cookies.set("refresh_token", victim_refresh)
     assert client.post("/api/auth/refresh").status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Admin: orders, settings, theme, CMS, media, analytics
+# ---------------------------------------------------------------------------
+
+def as_admin(client, email="boss@b.com", super_admin=True):
+    register(client, email=email)
+    make_admin(client, email, super_admin=super_admin)
+    return client
+
+
+ADMIN_ONLY_PATHS = [
+    ("get", "/api/admin/orders"),
+    ("get", "/api/admin/settings"),
+    ("get", "/api/admin/theme"),
+    ("get", "/api/admin/cms-pages"),
+    ("get", "/api/admin/media"),
+    ("get", "/api/admin/analytics"),
+]
+
+
+@pytest.mark.parametrize("method,path", ADMIN_ONLY_PATHS)
+def test_new_admin_endpoints_reject_anonymous(client, method, path):
+    assert getattr(client, method)(path).status_code in (401, 403)
+
+
+@pytest.mark.parametrize("method,path", ADMIN_ONLY_PATHS)
+def test_new_admin_endpoints_reject_normal_user(client, method, path):
+    register(client, email="plain2@b.com")
+    assert getattr(client, method)(path).status_code == 403
+
+
+def test_admin_orders_list_includes_customer(seeded):
+    register(seeded, email="buyer@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    seeded.post("/api/orders", json={"shipping_address": {}, "payment_method": "cod"})
+    seeded.cookies.clear()
+
+    as_admin(seeded)
+    r = seeded.get("/api/admin/orders")
+    assert r.status_code == 200, r.text
+    assert r.json()[0]["customer_email"] == "buyer@b.com"
+
+
+def test_admin_can_update_order_status(seeded):
+    register(seeded, email="buyer2@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order_id = seeded.post("/api/orders",
+                           json={"shipping_address": {}, "payment_method": "cod"}).json()["id"]
+    seeded.cookies.clear()
+
+    as_admin(seeded)
+    r = seeded.put(f"/api/admin/orders/{order_id}", json={"status": "shipped"})
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "shipped"
+
+
+def test_admin_order_status_rejects_invalid_value(seeded):
+    as_admin(seeded)
+    r = seeded.put("/api/admin/orders/whatever", json={"status": "teleported"})
+    assert r.status_code == 422
+
+
+def test_admin_update_missing_order_404(client):
+    as_admin(client)
+    assert client.put("/api/admin/orders/nope",
+                      json={"status": "shipped"}).status_code == 404
+
+
+def test_settings_roundtrip(client):
+    as_admin(client)
+    assert client.get("/api/admin/settings").json() == {}
+
+    payload = {"store_name": "Auraa", "store_name_ar": "أورا", "logo_url": "/x.png"}
+    assert client.put("/api/admin/settings", json=payload).status_code == 200
+
+    saved = client.get("/api/admin/settings").json()
+    assert saved["store_name"] == "Auraa"
+    assert saved["store_name_ar"] == "أورا"
+
+
+def test_theme_roundtrip(client):
+    as_admin(client)
+    assert client.put("/api/admin/theme",
+                      json={"primary_color": "#b45309"}).status_code == 200
+    assert client.get("/api/admin/theme").json()["primary_color"] == "#b45309"
+
+
+CMS_PAGE = {
+    "slug": "about", "title_en": "About", "title_ar": "من نحن",
+    "content_en": "Hello", "content_ar": "مرحبا", "route": "/about",
+}
+
+
+def test_cms_page_crud(client):
+    as_admin(client)
+
+    created = client.post("/api/admin/cms-pages", json=CMS_PAGE)
+    assert created.status_code == 200, created.text
+    page_id = created.json()["id"]
+
+    assert len(client.get("/api/admin/cms-pages").json()) == 1
+
+    updated = client.put(f"/api/admin/cms-pages/{page_id}", json={"title_en": "About Us"})
+    assert updated.status_code == 200
+    assert updated.json()["title_en"] == "About Us"
+
+    assert client.delete(f"/api/admin/cms-pages/{page_id}").status_code == 200
+    assert client.get("/api/admin/cms-pages").json() == []
+
+
+def test_cms_page_slug_must_be_unique(client):
+    as_admin(client)
+    assert client.post("/api/admin/cms-pages", json=CMS_PAGE).status_code == 200
+    assert client.post("/api/admin/cms-pages", json=CMS_PAGE).status_code == 400
+
+
+def test_public_cms_page_is_readable_and_hides_inactive(client):
+    as_admin(client)
+    page_id = client.post("/api/admin/cms-pages", json=CMS_PAGE).json()["id"]
+
+    client.cookies.clear()
+    assert client.get("/api/cms-pages/about").status_code == 200
+
+    as_admin(client, email="boss2@b.com")
+    client.put(f"/api/admin/cms-pages/{page_id}", json={"is_active": False})
+
+    client.cookies.clear()
+    assert client.get("/api/cms-pages/about").status_code == 404
+
+
+def _png_bytes():
+    from PIL import Image as PILImage
+    buf = io.BytesIO()
+    PILImage.new("RGB", (4, 4), (200, 160, 60)).save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def test_image_upload_and_delete(client):
+    as_admin(client)
+
+    r = client.post("/api/admin/upload-image",
+                    files={"file": ("logo.png", _png_bytes(), "image/png")})
+    assert r.status_code == 200, r.text
+    assert r.json()["url"].startswith("/static/uploads/")
+
+    media = client.get("/api/admin/media").json()
+    assert len(media) == 1
+    assert client.delete(f"/api/admin/media/{media[0]['id']}").status_code == 200
+    assert client.get("/api/admin/media").json() == []
+
+
+def test_upload_rejects_non_image_content_type(client):
+    as_admin(client)
+    r = client.post("/api/admin/upload-image",
+                    files={"file": ("evil.sh", b"#!/bin/sh\nrm -rf /", "text/x-shellscript")})
+    assert r.status_code == 400
+
+
+def test_upload_rejects_disguised_non_image(client):
+    """A declared image/png that is not actually an image must be rejected."""
+    as_admin(client)
+    r = client.post("/api/admin/upload-image",
+                    files={"file": ("fake.png", b"not really a png", "image/png")})
+    assert r.status_code == 400
+
+
+def test_upload_filename_cannot_traverse_directories(client):
+    """The stored name is generated, so a ../ filename cannot escape the dir."""
+    as_admin(client)
+    r = client.post("/api/admin/upload-image",
+                    files={"file": ("../../../../etc/passwd.png", _png_bytes(), "image/png")})
+    assert r.status_code == 200
+    assert ".." not in r.json()["filename"]
+    assert r.json()["url"].startswith("/static/uploads/")
+
+
+def test_analytics_reflects_real_orders(seeded):
+    register(seeded, email="an@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=2")   # 2 x 250 = 500
+    seeded.post("/api/orders", json={"shipping_address": {}, "payment_method": "cod"})
+    seeded.cookies.clear()
+
+    as_admin(seeded)
+    r = seeded.get("/api/admin/analytics?range=30d")
+    assert r.status_code == 200, r.text
+
+    data = r.json()
+    assert data["total_orders"] == 1
+    assert data["total_revenue"] == 500.0
+    assert data["average_order_value"] == 500.0
+    assert data["orders_by_status"]["pending"] == 1
+    assert data["top_products"][0]["product_id"] == "p1"
+    assert data["top_products"][0]["quantity_sold"] == 2
+
+
+def test_analytics_empty_store_does_not_divide_by_zero(client):
+    as_admin(client)
+    data = client.get("/api/admin/analytics").json()
+    assert data["total_orders"] == 0
+    assert data["average_order_value"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Setup bootstrap
+# ---------------------------------------------------------------------------
+
+FIRST_ADMIN = {"email": "root@b.com", "password": "strong-pw-1", "name": "Root"}
+
+
+def test_check_admin_is_public_and_reports_state(client):
+    assert client.get("/api/setup/check-admin").json()["has_admin"] is False
+    client.post("/api/setup/create-first-admin", json=FIRST_ADMIN)
+    assert client.get("/api/setup/check-admin").json()["has_admin"] is True
+
+
+def test_first_admin_is_super_admin_and_can_log_in(client):
+    r = client.post("/api/setup/create-first-admin", json=FIRST_ADMIN)
+    assert r.status_code == 200, r.text
+    assert r.json()["user"]["is_super_admin"] is True
+    assert "password" not in r.json()["user"]
+
+    login = client.post("/api/auth/login",
+                        json={"identifier": "root@b.com", "password": "strong-pw-1"})
+    assert login.status_code == 200, login.text
+
+
+def test_first_admin_endpoint_closes_after_first_use(client):
+    """Otherwise anyone could mint themselves a super admin at any time."""
+    assert client.post("/api/setup/create-first-admin", json=FIRST_ADMIN).status_code == 200
+    second = client.post("/api/setup/create-first-admin",
+                         json={"email": "attacker@b.com", "password": "strong-pw-2"})
+    assert second.status_code == 403
+
+
+def test_first_admin_rejects_weak_password(client):
+    r = client.post("/api/setup/create-first-admin",
+                    json={"email": "weak@b.com", "password": "short"})
+    assert r.status_code == 400
+
+
+def test_first_admin_honours_setup_key(client, monkeypatch):
+    monkeypatch.setenv("ADMIN_SETUP_KEY", "let-me-in")
+    assert client.post("/api/setup/create-first-admin",
+                       json=FIRST_ADMIN).status_code == 403
+    ok = client.post("/api/setup/create-first-admin",
+                     json={**FIRST_ADMIN, "setup_key": "let-me-in"})
+    assert ok.status_code == 200, ok.text
+
+
+# ---------------------------------------------------------------------------
+# Admin product bulk operations
+# ---------------------------------------------------------------------------
+
+def test_admin_products_list_includes_malformed(seeded):
+    """The admin view must surface broken rows so they can be repaired."""
+    as_admin(seeded)
+    ids = {p["id"] for p in seeded.get("/api/admin/products").json()}
+    assert "p4" in ids, "malformed product hidden from the admin view"
+
+
+def test_bulk_delete(seeded):
+    as_admin(seeded)
+    r = seeded.post("/api/admin/products/bulk-delete", json={"ids": ["p1", "p2"]})
+    assert r.status_code == 200 and r.json()["deleted"] == 2
+    assert seeded.get("/api/products").json() == []
+
+
+def test_bulk_update(seeded):
+    as_admin(seeded)
+    r = seeded.post("/api/admin/products/bulk-update",
+                    json={"ids": ["p1"], "data": {"in_stock": False}})
+    assert r.status_code == 200 and r.json()["updated"] == 1
+    assert seeded.get("/api/products/p1").json()["in_stock"] is False
+
+
+def test_bulk_update_cannot_overwrite_ids(seeded):
+    """Setting `id` in bulk would collapse every selected product onto one."""
+    as_admin(seeded)
+    seeded.post("/api/admin/products/bulk-update",
+                json={"ids": ["p1", "p2"], "data": {"id": "same", "in_stock": False}})
+    ids = {p["id"] for p in seeded.get("/api/products").json()}
+    assert ids == {"p1", "p2"}
+
+
+def test_bulk_operations_reject_empty_selection(seeded):
+    as_admin(seeded)
+    assert seeded.post("/api/admin/products/bulk-delete",
+                       json={"ids": []}).status_code == 400
+    assert seeded.post("/api/admin/products/bulk-update",
+                       json={"ids": [], "data": {"x": 1}}).status_code == 400
+
+
+def test_bulk_endpoints_require_admin(seeded):
+    register(seeded, email="nope@b.com")
+    assert seeded.post("/api/admin/products/bulk-delete",
+                       json={"ids": ["p1"]}).status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Account disabling
+# ---------------------------------------------------------------------------
+
+def test_disabled_account_cannot_log_in_or_use_existing_token(client):
+    import asyncio
+    register(client, email="banned@b.com")
+    banned_cookies = dict(client.cookies)
+    banned = asyncio.get_event_loop().run_until_complete(
+        client._db.users.find_one({"email": "banned@b.com"}))
+
+    client.cookies.clear()
+    as_admin(client, email="boss3@b.com")
+    r = client.post("/api/admin/super-admin-toggle-status",
+                    json={"user_id": banned["id"], "is_active": False})
+    assert r.status_code == 200, r.text
+
+    # Fresh login is refused.
+    client.cookies.clear()
+    assert client.post("/api/auth/login",
+                       json={"identifier": "banned@b.com",
+                             "password": "pw123456"}).status_code == 403
+
+    # And the token issued before the ban stops working.
+    for k, v in banned_cookies.items():
+        client.cookies.set(k, v)
+    assert client.get("/api/auth/me").status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Geo and placeholder
+# ---------------------------------------------------------------------------
+
+def test_geo_detect_is_public_and_always_answers(client):
+    r = client.get("/api/geo/detect")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["country_code"]
+    assert body["currency"]
+
+
+def test_placeholder_returns_svg_and_clamps_size(client):
+    r = client.get("/api/placeholder/300/300")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("image/svg+xml")
+
+    huge = client.get("/api/placeholder/99999/99999")
+    assert huge.status_code == 200
+    assert "2000" in huge.text
+
+
+# ---------------------------------------------------------------------------
+# Auto-update and shipping
+# ---------------------------------------------------------------------------
+
+AUTO_UPDATE_PATHS = [
+    ("get", "/api/auto-update/status"),
+    ("get", "/api/auto-update/currency-rates"),
+    ("get", "/api/auto-update/scheduled-task-logs"),
+    ("get", "/api/auto-update/bulk-import-tasks"),
+    ("post", "/api/auto-update/trigger-currency-update"),
+    ("post", "/api/auto-update/update-all-prices"),
+    ("post", "/api/auto-update/sync-products"),
+]
+
+
+@pytest.mark.parametrize("method,path", AUTO_UPDATE_PATHS)
+def test_auto_update_requires_admin(client, method, path):
+    register(client, email="plain3@b.com")
+    assert getattr(client, method)(path).status_code == 403
+
+
+def test_auto_update_status(client):
+    as_admin(client)
+    r = client.get("/api/auto-update/status")
+    assert r.status_code == 200, r.text
+    assert "total_products" in r.json()
+
+
+def test_task_logs_and_import_tasks_are_lists(client):
+    as_admin(client)
+    assert client.get("/api/auto-update/scheduled-task-logs").json() == []
+    assert client.get("/api/auto-update/bulk-import-tasks").json() == []
+
+
+def test_update_all_prices_skips_products_without_cost(seeded):
+    """A product with no cost must keep its price, not be zeroed."""
+    as_admin(seeded)
+    before = seeded.get("/api/products/p1").json()["price"]
+
+    r = seeded.post("/api/auto-update/update-all-prices")
+    assert r.status_code == 200, r.text
+    assert r.json()["skipped"] >= 1
+
+    assert seeded.get("/api/products/p1").json()["price"] == before
+
+
+def test_shipping_estimate_is_public(seeded):
+    r = seeded.post("/api/shipping/estimate",
+                    json={"country_code": "SA",
+                          "items": [{"product_id": "p1", "quantity": 1}]})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["subtotal"] == 250.0
+    assert "shipping_cost" in body
+
+
+def test_shipping_free_above_threshold(seeded):
+    r = seeded.post("/api/shipping/estimate",
+                    json={"country_code": "SA",
+                          "items": [{"product_id": "p1", "quantity": 10}]})
+    body = r.json()
+    assert body["subtotal"] == 2500.0
+    assert body["qualifies_for_free_shipping"] is True
+    assert body["shipping_cost"] == 0
+
+
+def test_shipping_ignores_unknown_products(seeded):
+    r = seeded.post("/api/shipping/estimate",
+                    json={"country_code": "SA",
+                          "items": [{"product_id": "ghost", "quantity": 3}]})
+    assert r.status_code == 200
+    assert r.json()["subtotal"] == 0
 
 
 # ---------------------------------------------------------------------------

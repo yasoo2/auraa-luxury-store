@@ -17,6 +17,13 @@ services:
       - key: ENV
         value: production
 
+      # Without a pin Render builds on its newest Python, which was 3.14.
+      # pydantic_core has no wheel for it, so pip fell back to compiling it
+      # with Rust and failed on Render's read-only filesystem. Kept in step
+      # with backend/.python-version and the version CI runs.
+      - key: PYTHON_VERSION
+        value: 3.11.9
+
       # server.py reads os.environ['MONGO_URL'] and os.environ['DB_NAME']
       # directly, so a missing value is a KeyError at import time, not a
       # warning. DB_NAME was previously declared here as MONGO_DB_NAME, which

@@ -36,11 +36,12 @@
     -->
         <title>Auraa Luxury | Premium Accessories Store</title>
         
-        <!-- Cloudflare Turnstile -->
-        <link rel="preconnect" href="https://challenges.cloudflare.com">
-        <link rel="dns-prefetch" href="https://challenges.cloudflare.com">
-        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-        
+        <!-- Cloudflare Turnstile was loaded here on every page for a widget that
+             only ever appeared on /auth, failed to render there, and was never
+             verified server-side. Re-add these three lines alongside a valid
+             sitekey and a siteverify call in the backend if bot protection is
+             wanted. -->
+
         <!-- Google Analytics 4 -->
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-C44D1325QM"></script>
         <script>

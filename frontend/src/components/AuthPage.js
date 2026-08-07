@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -16,15 +16,12 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const BACKEND_URL = API_BASE_URL;
-  const TURNSTILE_SITE_KEY = process.env.REACT_APP_TURNSTILE_SITE_KEY;
   const [isLogin, setIsLogin] = useState(true);
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [turnstileToken, setTurnstileToken] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const turnstileRef = useRef(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -36,36 +33,13 @@ const AuthPage = () => {
 
   const from = location.state?.from?.pathname || '/';
 
-  // Initialize Turnstile when component mounts or tab changes
-  useEffect(() => {
-    if (window.turnstile && turnstileRef.current && TURNSTILE_SITE_KEY) {
-      // Clear existing widget
-      if (turnstileRef.current.children.length > 0) {
-        turnstileRef.current.innerHTML = '';
-      }
-
-      // Render new widget with optimized settings
-      window.turnstile.render(turnstileRef.current, {
-        sitekey: TURNSTILE_SITE_KEY,
-        theme: 'dark',
-        size: 'compact', // Smaller size for faster loading
-        language: language === 'ar' ? 'ar' : 'en',
-        callback: function(token) {
-          setTurnstileToken(token);
-        },
-        'error-callback': function() {
-          // Don't block user on Turnstile error
-          setTurnstileToken('fallback');
-          console.warn('Turnstile verification failed - proceeding anyway');
-        },
-        'timeout-callback': function() {
-          // Don't block user on timeout
-          setTurnstileToken('fallback');
-          console.warn('Turnstile timeout - proceeding anyway');
-        }
-      });
-    }
-  }, [isLogin, TURNSTILE_SITE_KEY, language]);
+  // The Turnstile widget used to be rendered here. It was failing to load on
+  // this domain — it drew nothing but a bare "Troubleshoot" link, 150px of it,
+  // directly above the submit button — and it protected nothing: the widget's
+  // own error handler let the user through with a 'fallback' token, and the
+  // backend never verified the token at all. Turning it into real protection
+  // means a valid sitekey plus a server-side siteverify call; until both
+  // exist, the box is cost without benefit.
 
   const handleInputChange = (e) => {
     setFormData({
@@ -79,24 +53,12 @@ const AuthPage = () => {
     setLoading(true);
     setError(''); // Clear previous errors
 
-    // Turnstile check - but don't strictly block
-    // If no token and widget failed to load, proceed anyway
-    if (!turnstileToken && window.turnstile) {
-      // Wait a moment for Turnstile to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // If still no token, use fallback
-      if (!turnstileToken) {
-        setTurnstileToken('fallback');
-      }
-    }
-
     try {
       let result;
       if (isLogin) {
         // Use email or phone based on login method
         const identifier = loginMethod === 'phone' ? formData.phone : formData.email;
-        result = await login(identifier, formData.password, turnstileToken, rememberMe);
+        result = await login(identifier, formData.password, undefined, rememberMe);
       } else {
         // Validate that at least email or phone is provided
         if (!formData.email && !formData.phone) {
@@ -106,7 +68,7 @@ const AuthPage = () => {
         }
         // Add remember_me to registration data
         const registrationData = { ...formData, remember_me: rememberMe };
-        result = await register(registrationData, turnstileToken);
+        result = await register(registrationData);
       }
 
       if (result.success) {
@@ -360,19 +322,12 @@ const AuthPage = () => {
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
-                  {language === 'ar' ? 'تذكّرني شهرين' : 'Remember me'}
+                  {language === 'ar' ? 'تذكّرني' : 'Remember me'}
                 </label>
                 {isLogin && (
                   <Link to="/forgot-password">{getAuthTranslation('forgot_password', language)}</Link>
                 )}
               </div>
-
-              {/* Only reserve room for the challenge when one is actually configured. */}
-              {TURNSTILE_SITE_KEY && (
-                <div className="auth-turnstile">
-                  <div ref={turnstileRef} className="cf-turnstile" data-theme="dark"></div>
-                </div>
-              )}
 
               <button
                 type="submit"

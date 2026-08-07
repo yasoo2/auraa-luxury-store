@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -22,15 +22,39 @@ const OAuthCallback = () => {
   const [status, setStatus] = useState('processing');
   const [error, setError] = useState('');
   const BACKEND_URL = API_BASE_URL;
+  // `auth` is the context object, and this effect calls auth.setUser(), which
+  // re-creates it — so the effect re-ran, found the state it had already
+  // consumed missing, and reported a state mismatch over a sign-in that had
+  // just succeeded. The code is single-use anyway: run this exactly once.
+  const ran = useRef(false);
 
   useEffect(() => {
+    if (ran.current) return undefined;
+    ran.current = true;
+
     let cancelled = false;
+
+    const leave = () => {
+      const from = sessionStorage.getItem('auth_redirect') || '/';
+      sessionStorage.removeItem('auth_redirect');
+      navigate(from, { replace: true });
+    };
 
     const fail = (key) => {
       if (cancelled) return;
+
+      // Landing here a second time — Back, reload, a restored tab — finds the
+      // single-use code and state already spent and would otherwise announce
+      // "login failed" to somebody who is, in fact, signed in. If we already
+      // hold a token, nothing is wrong: leave quietly.
+      if (localStorage.getItem('token')) {
+        leave();
+        return;
+      }
+
       setStatus('error');
       setError(getAuthTranslation(key, language) || key);
-      setTimeout(() => navigate('/auth'), 4000);
+      setTimeout(() => navigate('/auth', { replace: true }), 4000);
     };
 
     const processOAuthCallback = async () => {
@@ -76,12 +100,13 @@ const OAuthCallback = () => {
 
         sessionStorage.removeItem('oauth_provider');
 
+        // replace, not push: the callback URL must not stay in history, or
+        // pressing Back lands the user right back on a spent authorization
+        // code.
         if (needs_phone) {
-          navigate('/profile?tab=profile&add_phone=true');
+          navigate('/profile?tab=profile&add_phone=true', { replace: true });
         } else {
-          const from = sessionStorage.getItem('auth_redirect') || '/';
-          sessionStorage.removeItem('auth_redirect');
-          navigate(from);
+          leave();
         }
       } catch (err) {
         console.error('OAuth processing error:', err);

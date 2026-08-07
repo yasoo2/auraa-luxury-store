@@ -1768,7 +1768,16 @@ async def auto_update_status(admin: User = Depends(get_admin_user)):
 
 
 @api_router.get("/auto-update/currency-rates")
-async def auto_update_currency_rates(admin: User = Depends(get_admin_user)):
+async def auto_update_currency_rates():
+    """
+    Today's exchange rates. Public on purpose.
+
+    Every visitor's LanguageContext calls this on load to price the catalogue
+    in their currency, but it required an admin token — so every customer got
+    403 and the whole store silently fell back to USD-only rates. Published
+    exchange rates are not secret; refreshing them still is (see the POST
+    below, which stays admin-only).
+    """
     try:
         from services.currency_service import get_currency_service
         rates = await get_currency_service(db).get_latest_rates("USD")

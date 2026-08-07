@@ -42,8 +42,10 @@ PRODUCTS = [
      "images": ["http://img/1.jpg"], "in_stock": True},
     {"id": "p2", "name": "Silver Necklace", "description": "A necklace", "price": 120.0,
      "category": "necklaces", "images": ["http://img/2.jpg"]},
+    # A product exactly as Quick Import writes it: in stock, waiting for the
+    # owner to review the supplier's title and price before it goes live.
     {"id": "p3", "name": "Staged", "description": "not live", "price": 10.0,
-     "category": "rings", "images": [], "staging": True},
+     "category": "rings", "images": [], "in_stock": True, "staging": True},
     {"id": "p4", "description": "malformed - missing name", "price": 5.0,
      "category": "rings", "images": []},
 ]
@@ -219,6 +221,64 @@ def test_category_filter(seeded):
 def test_product_detail_and_404(seeded):
     assert seeded.get("/api/products/p1").status_code == 200
     assert seeded.get("/api/products/missing").status_code == 404
+
+
+# --- the staging boundary --------------------------------------------------
+#
+# Quick Import writes supplier products with staging=True so the owner can fix
+# the price and rewrite the machine-translated title before pressing "Live".
+# Only the listing honoured that. Every other read of db.products was
+# unfiltered, so "not published yet" meant nothing more than "not in the grid".
+
+def test_a_staging_product_is_not_openable_by_url(seeded):
+    """The listing hid p3; its own page served it in full to anyone."""
+    assert seeded.get("/api/products/p3").status_code == 404
+
+
+def test_a_staging_product_cannot_be_added_to_a_cart(seeded):
+    register(seeded, email="cart-staging@b.com")
+    r = seeded.post("/api/cart/add?product_id=p3&quantity=1")
+    assert r.status_code == 404, "an unreviewed product was sellable"
+    assert seeded.get("/api/cart").json()["items"] == []
+
+
+def test_a_staging_product_cannot_be_wishlisted(seeded):
+    register(seeded, email="wish-staging@b.com")
+    assert seeded.post("/api/wishlist/add", json={"product_id": "p3"}).status_code == 404
+
+
+def test_a_product_pulled_back_to_staging_leaves_the_wishlist(seeded):
+    """Wishlisted while live, then withdrawn — it must stop being shown."""
+    import asyncio
+    register(seeded, email="wish-pulled@b.com")
+    assert seeded.post("/api/wishlist/add", json={"product_id": "p1"}).status_code == 200
+
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {"staging": True}})
+    )
+    body = seeded.get("/api/wishlist").json()
+    assert body["products"] == [], "a withdrawn product still rendered"
+    assert body["product_ids"] == ["p1"], "the id is kept so it returns if re-published"
+
+
+def test_staging_products_are_not_submitted_to_google(seeded):
+    """
+    The worst of the leaks: sitemap.xml selected on in_stock alone, so every
+    unreviewed import was handed to Search Console with the supplier's raw
+    title and an unedited price.
+    """
+    body = seeded.get("/sitemap.xml").text
+    assert "/product/p1" in body, "live products must still be listed"
+    assert "/product/p3" not in body, "an unreviewed product was published to Google"
+
+
+def test_a_staging_product_is_not_priceable_at_checkout(seeded):
+    r = seeded.post("/api/shipping/estimate", json={
+        "country_code": "SA",
+        "items": [{"product_id": "p3", "quantity": 2}],
+    })
+    assert r.status_code == 200
+    assert r.json()["subtotal"] == 0.0, "checkout priced an unpublished product"
 
 
 def test_staging_path_precedence(seeded):
@@ -1510,3 +1570,106 @@ def test_the_token_call_sends_apikey_not_password(fake_cj):
     import asyncio
     asyncio.get_event_loop().run_until_complete(cj_client.list_products(1, 1))
     assert any(p.endswith("/v1/authentication/getAccessToken") for p, _ in fake_cj.calls)
+
+
+# --- several similarly named CJ variables ----------------------------------
+
+def _cj_env(monkeypatch, **vars):
+    for name in ("CJ_DROPSHIP_API_KEY", "CJ_API_KEY", "CJ_ACCESS_TOKEN",
+                 "CJ_DROPSHIP_EMAIL", "CJ_EMAIL"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in vars.items():
+        monkeypatch.setenv(name, value)
+
+
+class _PickyCJ(_FakeCJ):
+    """Accepts exactly one API key, the way CJ accepts exactly one."""
+
+    def __init__(self, good_key):
+        super().__init__()
+        self.good_key = good_key
+
+    async def request(self, method, url, json=None, headers=None):
+        self.calls.append((url.rsplit("/api2.0", 1)[-1], (headers or {}).get("CJ-Access-Token")))
+        if url.endswith("/v1/authentication/getAccessToken"):
+            if json.get("apiKey") == self.good_key:
+                return _FakeResponse(200, {"code": 200, "result": True, "data": {
+                    "accessToken": REAL_TOKEN, "accessTokenExpiryDate": "2030-01-01T00:00:00"}})
+            return _FakeResponse(200, {"code": 1600005, "result": False,
+                                       "message": "Email or password is wrong"})
+        if (headers or {}).get("CJ-Access-Token") != REAL_TOKEN:
+            return _FakeResponse(401, {"code": 1600001, "result": False, "message": "bad token"})
+        return _FakeResponse(200, {"code": 200, "result": True, "data": {"list": []}})
+
+
+def test_the_right_key_is_found_even_when_it_is_not_the_first_variable(monkeypatch):
+    """
+    This deployment has both CJ_DROPSHIP_API_KEY and CJ_API_KEY. Preferring one
+    and stopping meant a correct key sitting in the other variable still read as
+    "Email or password is wrong".
+    """
+    _cj_env(monkeypatch, CJ_DROPSHIP_API_KEY="the-wrong-one",
+            CJ_API_KEY="the-right-one", CJ_EMAIL="shop@example.com")
+    monkeypatch.setattr(cj_client, "_client", _PickyCJ("the-right-one"))
+    cj_client._reset_token()
+
+    import asyncio
+    token = asyncio.get_event_loop().run_until_complete(cj_client._get_access_token())
+    assert token == REAL_TOKEN
+    cj_client._reset_token()
+
+
+def test_when_no_key_works_the_error_names_what_was_tried(monkeypatch):
+    _cj_env(monkeypatch, CJ_DROPSHIP_API_KEY="wrong-a", CJ_API_KEY="wrong-b",
+            CJ_EMAIL="shop@example.com")
+    monkeypatch.setattr(cj_client, "_client", _PickyCJ("something-else"))
+    cj_client._reset_token()
+
+    import asyncio
+    with pytest.raises(cj_client.CJError) as e:
+        asyncio.get_event_loop().run_until_complete(cj_client._get_access_token())
+    message = str(e.value)
+    assert "CJ_DROPSHIP_API_KEY" in message and "CJ_API_KEY" in message
+    assert "My CJ" in message, "the message must say where to get a real key"
+    # The keys themselves must never appear in something an admin screen renders.
+    assert "wrong-a" not in message and "wrong-b" not in message
+    cj_client._reset_token()
+
+
+def test_the_report_never_prints_a_key(monkeypatch):
+    _cj_env(monkeypatch, CJ_API_KEY="super-secret-key-value", CJ_EMAIL="a@b.c")
+    report = cj_client.credential_report()
+    assert "super-secret-key-value" not in str(report)
+    assert "22 chars" in report["keys"]["CJ_API_KEY"]
+
+
+def test_rechecking_the_connection_does_not_burn_cjs_token_quota(fake_cj):
+    """
+    CJ issues an access token at most once per 300 seconds. The Integrations
+    screen calls authenticate() on every press of "re-check", and it used to
+    force a re-issue — so the second press inside five minutes came back as
+    "Email or password is wrong" on a connection that was perfectly healthy.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+    for _ in range(3):
+        loop.run_until_complete(cj_client.authenticate())
+    auths = [c for c in fake_cj.calls if "getAccessToken" in c[0]]
+    assert len(auths) == 1, f"re-checking three times issued {len(auths)} tokens"
+
+
+def test_a_successful_check_says_which_variables_worked(monkeypatch):
+    """
+    Reporting only "authenticated" leaves an owner with two similarly named
+    keys no way to tell which one is live, so the dead one stays forever.
+    """
+    _cj_env(monkeypatch, CJ_DROPSHIP_API_KEY="the-wrong-one",
+            CJ_API_KEY="the-right-one", CJ_EMAIL="shop@example.com")
+    monkeypatch.setattr(cj_client, "_client", _PickyCJ("the-right-one"))
+    cj_client._reset_token()
+
+    import asyncio
+    result = asyncio.get_event_loop().run_until_complete(cj_client.authenticate())
+    assert result["credentials_used"] == "CJ_EMAIL + CJ_API_KEY", result
+    assert "the-right-one" not in str(result), "the key itself must not be reported"
+    cj_client._reset_token()

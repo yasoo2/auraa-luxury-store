@@ -1,9 +1,19 @@
 name: CI
 
+# Actions does not currently start in this repository: every run is recorded as
+# startup_failure under a synthetic "BuildFailed" workflow, and this file has
+# never produced a single run. That is an account-level block (Actions minutes
+# or the spending limit on a private repo, or Actions switched off in settings),
+# not a problem with the YAML below — it parses and is complete.
+#
+# workflow_dispatch is here so the cause can be seen: press "Run workflow" in
+# the Actions tab and GitHub states the reason on the run page. Until it starts,
+# ./scripts/verify.sh is the only gate this repository has.
 on:
   pull_request:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   backend:

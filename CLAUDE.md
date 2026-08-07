@@ -42,8 +42,18 @@
 - `frontend/` — React (CRA + CRACO) + Tailwind. لوحة التحكم في
   `src/pages/admin/`.
 - `tests/test_integration.py` — الاختبارات الخلفية، تعمل بقاعدة في الذاكرة.
-- `scripts/verify.sh` — يشغّل كل ما تشغّله CI. النشر يتم عبر تكامل Render
-  وCloudflare المباشر، وهما لا يشغّلان هذه الفحوص — فشغّلها قبل الدفع.
+- `scripts/verify.sh` — **البوّابة الوحيدة الفعلية.** شغّله قبل كل دفع.
+
+  لا شيء آخر يحرس هذا المستودع اليوم:
+  `.github/workflows/ci.yml` مكتوب وصحيح، لكن GitHub Actions لا يبدأ في هذا
+  المستودع أصلاً — كل تشغيل يُسجَّل `startup_failure` تحت اسم وهمي اسمه
+  `BuildFailed`، وسير العمل `CI` نفسه لم يُشغَّل ولا مرّة واحدة منذ إنشائه.
+  السبب على مستوى الحساب لا الملف (دقائق Actions أو حدّ الإنفاق في مستودع
+  خاص، أو Actions معطّل في الإعدادات) — يُراجَع في
+  Settings ← Billing ← Actions وSettings ← Actions ← General.
+
+  وRender وCloudflare يبنيان من `main` مباشرة ولا يشغّلان أيّ فحص. أي أن
+  ما لا يمسكه `verify.sh` يصل إلى العملاء.
 
 ## النشر
 

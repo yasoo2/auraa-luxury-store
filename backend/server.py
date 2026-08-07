@@ -118,6 +118,27 @@ from core.security import (
     require_super_admin_doc,
 )
 
+# ---------------------------------------------------------------------------
+# The staging boundary.
+#
+# Quick Import writes supplier products with staging=True and the owner reviews
+# them — fixes the price, rewrites the machine-translated title, picks a decent
+# photo — before pressing "Live". Only the product *listing* honoured that.
+# Everything else read the collection unfiltered, so an unreviewed product was
+# still openable by URL, addable to a cart, orderable, wishlistable, and — the
+# worst of them — published to Google in sitemap.xml with the supplier's raw
+# title and an unedited price.
+#
+# One rule, one name. A new query that forgets it is a leak, so anything
+# touching db.products for a shopper goes through LIVE_ONLY or live_product().
+# ---------------------------------------------------------------------------
+LIVE_ONLY: Dict[str, Any] = {"staging": {"$ne": True}}
+
+
+async def live_product(product_id: str) -> Optional[Dict[str, Any]]:
+    """A product a shopper is allowed to see, or None. Staging is invisible."""
+    return await db.products.find_one({"id": product_id, **LIVE_ONLY})
+
 
 # =============================================================================
 # Health Checks
@@ -378,8 +399,9 @@ async def generate_sitemap():
             priority_elem = SubElement(url, 'priority')
             priority_elem.text = '0.8'
         
-        # Add product pages (fetch from database)
-        products = await db.products.find({"in_stock": True}).to_list(length=500)
+        # Add product pages (fetch from database). Staging products are not
+        # submitted to search engines — the owner has not approved them yet.
+        products = await db.products.find({"in_stock": True, **LIVE_ONLY}).to_list(length=500)
         
         for product in products:
             url = SubElement(urlset, 'url')
@@ -1015,7 +1037,7 @@ async def get_categories():
 
 @api_router.get("/products/{product_id}", response_model=Product)
 async def get_product(product_id: str, language: Optional[str] = Query(None)):
-    product = await db.products.find_one({"id": product_id})
+    product = await live_product(product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -1083,7 +1105,7 @@ async def add_to_cart(
     if quantity < 1:
         raise HTTPException(status_code=400, detail="Quantity must be at least 1")
 
-    product = await db.products.find_one({"id": product_id})
+    product = await live_product(product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -1161,7 +1183,9 @@ async def _wishlist_products(product_ids: List[str]) -> List[Dict[str, Any]]:
     if not product_ids:
         return []
 
-    docs = await db.products.find({"id": {"$in": product_ids}}).to_list(length=None)
+    # A product pulled back to staging stops being shown, the same as one that
+    # was deleted — the wishlist keeps the id, so it reappears if it goes live.
+    docs = await db.products.find({"id": {"$in": product_ids}, **LIVE_ONLY}).to_list(length=None)
     by_id = {}
     for doc in docs:
         doc.pop("_id", None)
@@ -1187,7 +1211,7 @@ async def add_to_wishlist(
     payload: WishlistAddRequest,
     current_user: User = Depends(get_current_user)
 ):
-    product = await db.products.find_one({"id": payload.product_id})
+    product = await live_product(payload.product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -2174,7 +2198,7 @@ async def shipping_estimate(payload: ShippingEstimateRequest):
 
     subtotal = 0.0
     for item in payload.items:
-        product = await db.products.find_one({"id": item.product_id})
+        product = await live_product(item.product_id)
         if product:
             subtotal += (product.get("price") or 0) * max(1, item.quantity)
 

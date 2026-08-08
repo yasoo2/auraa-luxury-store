@@ -2269,6 +2269,57 @@ def test_shipping_is_free_because_the_price_already_contains_it(seeded):
     assert body["shipping_included_in_price"] is True
 
 
+def test_a_foreign_customer_is_not_charged_saudi_vat(seeded):
+    """
+    Any country without its own configuration used to be handed the *Saudi*
+    one: quoted in riyals and charged 15% VAT — a tax that country never
+    levied and this shop cannot remit on anyone's behalf. A Saudi seller's
+    exports are zero-rated; what a foreign buyer owes is duty at their own
+    border.
+    """
+    from services.geoip_service import GeoIPService
+    service = GeoIPService()
+
+    assert service.get_country_config("SA")["vat_rate"] == 0.15
+    assert service.get_country_config("AE")["vat_rate"] == 0.05
+
+    for code in ("DE", "US", "JP", "BR", "ZA"):
+        config = service.get_country_config(code)
+        assert config["vat_rate"] == 0.0, f"{code} was charged {config['vat_rate']}"
+        assert config["currency"] == "USD", config
+        assert config["import_duty_may_apply"] is True
+
+
+def test_the_shop_says_import_duty_may_apply_before_the_order(seeded):
+    """Told at checkout, not by customs holding the parcel."""
+    abroad = seeded.post("/api/shipping/estimate", json={
+        "country_code": "DE", "items": []}).json()
+    assert abroad["import_duty_may_apply"] is True, abroad
+
+    home = seeded.post("/api/shipping/estimate", json={
+        "country_code": "SA", "items": []}).json()
+    assert home["import_duty_may_apply"] is False, home
+
+
+def test_a_shopper_may_name_any_country_they_live_in(seeded):
+    """
+    Detection required membership of a six-country Gulf list, so a customer
+    saying "France" was overruled and served as Saudi Arabia.
+    """
+    from services.geoip_service import GeoIPService
+    service = GeoIPService()
+
+    class _Req:
+        def __init__(self, params=None, headers=None):
+            self.query_params = params or {}
+            self.headers = headers or {}
+
+    assert service.get_country_from_request(_Req({"country": "fr"})) == "FR"
+    assert service.get_country_from_request(_Req({}, {"X-User-Country": "jp"})) == "JP"
+    # Nonsense is still refused rather than passed along.
+    assert service.get_country_from_request(_Req({"country": "xxx"})) == "SA"
+
+
 def test_the_delivery_window_is_the_one_the_shop_promises(seeded, monkeypatch):
     """
     No country configuration in this project ever set delivery_days, so the

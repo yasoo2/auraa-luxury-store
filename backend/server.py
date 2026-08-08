@@ -2618,6 +2618,11 @@ async def shipping_estimate(payload: ShippingEstimateRequest):
         "free_shipping": True,
         "shipping_included_in_price": True,
         "qualifies_for_free_shipping": True,
+        # Said, not charged: a buyer outside Saudi Arabia may owe duty at their
+        # own border, and the shop neither collects it nor can remit it. Hiding
+        # that until the parcel is held at customs is how a good order becomes a
+        # refund request.
+        "import_duty_may_apply": bool(config.get("import_duty_may_apply")),
         # The store's own delivery window, in days. Not a supplier promise:
         # CJ's product listing carries no lead time, so this is what the shop
         # commits to. One value for the whole catalogue unless a country

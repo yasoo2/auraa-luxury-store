@@ -115,6 +115,10 @@ if [ -d "$ROOT/frontend/node_modules" ]; then
     # paid for is the expensive failure — as is showing an account number that
     # did not come from the server.
     browser_step "Checkout can only place an order it can be paid for" verify-checkout-payment.mjs
+
+    # Horizontal overflow is invisible on the desktop browser the page was
+    # written on, and unmistakable on the phone most customers arrive with.
+    browser_step "The shop fits on a phone" verify-layout.mjs
   fi
 else
   red "  ! skipping frontend — run: cd frontend && npm install --legacy-peer-deps"

@@ -1,0 +1,139 @@
+/**
+ * Does the shop fit on a phone?
+ *
+ * Horizontal overflow is the single most visible way a page looks broken:
+ * the whole document slides sideways, headings sit half off-screen, and a
+ * sticky header detaches from the content under it. It is invisible on a
+ * desktop browser, which is where it always gets written.
+ *
+ * Also checks the shop's own wordmark, because a media query written for the
+ * carousel once inflated it from 20px to 32px on every phone — the kind of
+ * bug that a person sees instantly and a test suite never mentions.
+ */
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { execSync } from 'node:child_process';
+
+const require = createRequire(import.meta.url);
+
+function loadPlaywright() {
+  const roots = [];
+  if (process.env.PLAYWRIGHT_ROOT) roots.push(process.env.PLAYWRIGHT_ROOT);
+  try {
+    roots.push(execSync('npm root -g', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim());
+  } catch { /* npm may not be on PATH */ }
+  roots.push('/opt/node22/lib/node_modules', '/usr/local/lib/node_modules', '/usr/lib/node_modules');
+  for (const id of ['playwright', ...roots.filter(Boolean).map((r) => path.join(r, 'playwright'))]) {
+    try { return require(id); } catch { /* try the next location */ }
+  }
+  return null;
+}
+
+const playwright = loadPlaywright();
+if (!playwright) {
+  console.log('⏭️  playwright غير مثبَّت — تخطّي فحص التخطيط (npm i -g playwright)');
+  process.exit(2);
+}
+const { chromium } = playwright;
+
+const ROOT = process.argv[2] || 'frontend/build';
+const PORT = 4190;
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+                '.json': 'application/json', '.svg': 'image/svg+xml', '.txt': 'text/plain' };
+
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, 'http://x');
+  let file = path.join(ROOT, url.pathname);
+  if (!fs.existsSync(file) || fs.statSync(file).isDirectory()) file = path.join(ROOT, 'index.html');
+  if (!fs.existsSync(file)) { res.writeHead(404); res.end('nope'); return; }
+  res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
+  fs.createReadStream(file).pipe(res);
+});
+await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
+
+const results = [];
+const check = (n, ok, d = '') => { results.push({ n, ok }); console.log(`${ok ? '✅' : '❌'} ${n}${d ? '  — ' + d : ''}`); };
+
+const IMG = 'data:image/svg+xml;base64,' + Buffer.from(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#e8dcc8"/></svg>'
+).toString('base64');
+
+// Long Arabic names on purpose: a card that fits "خاتم" and bursts on a real
+// CJ title has not been tested with anything the shop actually sells.
+const products = Array.from({ length: 6 }, (_, i) => ({
+  id: `p${i + 1}`,
+  name: `طقم أقراط ستانلس ستيل مطلي ذهب ١٨ قيراط تصميم فاخر رقم ${i + 1}`,
+  description: 'وصف طويل بالعربية.',
+  price: 93.11 + i, category: 'earrings', images: [IMG], image: IMG,
+  rating: 4.5, reviews_count: 12, in_stock: true, stock_quantity: 25,
+  is_active: true, sku: `SKU-${i + 1}`,
+}));
+
+const browser = await chromium.launch({
+  executablePath: '/opt/pw-browsers/chromium', channel: 'chromium', args: ['--no-proxy-server'],
+});
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+await ctx.addInitScript(() => { try { localStorage.setItem('token', 't'); } catch { /* blocked */ } });
+await ctx.route('**/api/**', (route) => {
+  const p = new URL(route.request().url()).pathname;
+  const reply = (b) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+  if (p.endsWith('/api/auth/me')) return reply({ id: 'u1', email: 'b@x.com', first_name: 'يونس', is_admin: true });
+  if (/\/api\/products\/p\d/.test(p)) return reply(products[0]);
+  if (p.includes('/api/products')) return reply(products);
+  if (p.endsWith('/api/cart')) {
+    return reply({ items: products.slice(0, 2).map((x) => ({ product_id: x.id, quantity: 1, price: x.price, product_name: x.name, image: IMG })), total_amount: 188.22 });
+  }
+  if (p.endsWith('/api/payment-methods')) return reply({ methods: [{ id: 'card', provider: 'iyzico', currency: 'USD' }] });
+  if (p.endsWith('/api/geo/detect')) return reply({ country_code: 'SA' });
+  if (p.endsWith('/api/shipping/estimate')) return reply({ shipping_cost: 0, free_shipping: true, estimated_days: '5-15' });
+  return reply([]);
+});
+const page = await ctx.newPage();
+const base = `http://127.0.0.1:${PORT}`;
+
+const PAGES = [['الرئيسية', '/'], ['المنتجات', '/products'], ['المنتج', '/product/p1'],
+               ['السلة', '/cart'], ['السداد', '/checkout']];
+
+for (const [name, route] of PAGES) {
+  await page.goto(`${base}${route}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(900);
+
+  const overflow = await page.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const worst = [];
+    for (const el of document.querySelectorAll('body *')) {
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      // A few pixels of rounding is not a broken page; a whole element
+      // hanging off the side is.
+      const over = Math.max(r.right - vw, -r.left);
+      if (over > 4) worst.push({ over: Math.round(over), tag: el.tagName.toLowerCase(),
+                                 cls: String(el.className).slice(0, 60) });
+    }
+    worst.sort((a, b) => b.over - a.over);
+    return { scroll: document.documentElement.scrollWidth - vw, worst: worst.slice(0, 3) };
+  });
+
+  check(`${name}: لا تتجاوز الصفحة عرض الشاشة`, overflow.scroll <= 1,
+    overflow.scroll > 1 ? `${overflow.scroll}px — ${overflow.worst.map(w => `${w.tag}.${w.cls}(+${w.over})`).join(' ')}` : '');
+}
+
+// The wordmark, at the width where it broke.
+await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(700);
+const brand = await page.evaluate(() => {
+  const el = [...document.querySelectorAll('a[href="/"] span')].find(s => s.textContent.trim() === 'Auraa');
+  if (!el) return null;
+  return { size: parseFloat(getComputedStyle(el).fontSize), height: Math.round(el.getBoundingClientRect().height) };
+});
+check('شعار المتجر بحجمه المقصود على الهاتف', brand !== null && brand.size <= 24,
+  brand ? `${brand.size}px` : 'not found');
+
+await browser.close();
+server.close();
+
+const failed = results.filter((r) => !r.ok).length;
+console.log(failed ? `\n${failed} من ${results.length} فشل` : `\nكل الفحوص تمرّ (${results.length})`);
+process.exit(failed ? 1 : 0);

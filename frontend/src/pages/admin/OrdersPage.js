@@ -35,6 +35,11 @@ const OrdersPage = () => {
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
 
+  // An order is waiting for the owner while it has not been sent on. Read from
+  // supplier_status, and tolerant of orders placed before that field existed.
+  const isAwaitingApproval = (order) =>
+    !order.supplier_order_id && (order.supplier_status || 'awaiting_approval') === 'awaiting_approval';
+
   const orderStatuses = {
     pending: { 
       label: isRTL ? 'قيد المراجعة' : 'Pending', 
@@ -153,8 +158,14 @@ const OrdersPage = () => {
     }
   };
 
+  const awaitingApproval = orders.filter(isAwaitingApproval);
+
   const filteredOrders = orders.filter(order => {
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    const matchesStatus = statusFilter === 'all'
+      ? true
+      : statusFilter === 'awaiting_approval'
+        ? isAwaitingApproval(order)
+        : order.status === statusFilter;
     const matchesSearch = order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          order.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          order.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -205,6 +216,36 @@ const OrdersPage = () => {
         </div>
       )}
 
+      {/* The approval queue, named and counted.
+          Whether an order is waiting for the owner lived only inside the
+          details dialog, so the one thing that stops a parcel moving was
+          invisible until you opened each order one by one. */}
+      {awaitingApproval.length > 0 && (
+        <div
+          className="border border-amber-300 bg-amber-50 rounded-lg px-4 py-3 flex flex-wrap items-center gap-3"
+          data-testid="approval-queue"
+        >
+          <span className="text-amber-900 font-semibold">
+            {isRTL
+              ? `${awaitingApproval.length} طلب بانتظار موافقتك`
+              : `${awaitingApproval.length} order(s) waiting for your approval`}
+          </span>
+          <span className="text-sm text-amber-800">
+            {isRTL
+              ? 'لن يُشترى شيء من المورّد حتى توافق.'
+              : 'Nothing is bought from the supplier until you approve.'}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setStatusFilter('awaiting_approval')}
+            data-testid="show-approval-queue"
+          >
+            {isRTL ? 'أظهرها' : 'Show them'}
+          </Button>
+        </div>
+      )}
+
       {/* Filters and Search */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="flex flex-col md:flex-row gap-4">
@@ -231,6 +272,9 @@ const OrdersPage = () => {
               className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
             >
               <option value="all">{isRTL ? 'جميع الحالات' : 'All Statuses'}</option>
+              <option value="awaiting_approval">
+                {isRTL ? 'بانتظار موافقتي' : 'Needs my approval'}
+              </option>
               {Object.entries(orderStatuses).map(([status, config]) => (
                 <option key={status} value={status}>{config.label}</option>
               ))}
@@ -283,10 +327,24 @@ const OrdersPage = () => {
                       ${order.total.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${orderStatuses[order.status].color}`}>
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {orderStatuses[order.status].label}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${orderStatuses[order.status].color}`}>
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {orderStatuses[order.status].label}
+                        </span>
+                        {isAwaitingApproval(order) ? (
+                          <span
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"
+                            data-testid="row-awaiting"
+                          >
+                            {isRTL ? 'بانتظار موافقتك' : 'Needs your approval'}
+                          </span>
+                        ) : order.supplier_order_id ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {isRTL ? 'أُرسل إلى CJ' : 'Sent to CJ'}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(order.created_at)}

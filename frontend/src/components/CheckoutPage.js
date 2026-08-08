@@ -413,7 +413,22 @@ const CheckoutPage = () => {
                       data-testid="payment-methods-error"
                       className="border border-red-200 bg-red-50 text-red-800 rounded-lg p-4 text-sm"
                     >
-                      {paymentMethods.error}
+                      <p className="mb-3">{paymentMethods.error}</p>
+                      {/* A dropped request, a backend mid-deploy: all
+                          recoverable, and all of them used to mean reloading
+                          the page and filling the address in again. */}
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setPaymentMethods({ loading: true, methods: [], error: '' });
+                          fetchPaymentMethods();
+                        }}
+                        data-testid="retry-payment-methods"
+                        variant="outline"
+                        size="sm"
+                      >
+                        {isRTL ? 'إعادة المحاولة' : 'Try again'}
+                      </Button>
                     </div>
                   ) : paymentMethods.methods.length === 0 ? (
                     <div

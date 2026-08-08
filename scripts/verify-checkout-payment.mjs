@@ -52,6 +52,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 
 // What the fake server offers. Flipped between checks.
 let methods = [];
+let methodsFail = false;
 let placedOrder = null;
 
 const json = (res, body, status = 200) => {
@@ -93,7 +94,11 @@ await ctx.route('**/api/**', async (route) => {
   });
 
   if (p.endsWith('/api/auth/me')) return reply({ id: 'u1', email: 'buyer@x.com', first_name: 'Younes' });
-  if (p.endsWith('/api/payment-methods')) return reply({ methods });
+  if (p.endsWith('/api/payment-methods')) {
+    // 404 is what the deployed backend answers until it catches up.
+    if (methodsFail) return route.fulfill({ status: 404, contentType: 'application/json', body: '{"detail":"Not Found"}' });
+    return reply({ methods });
+  }
   if (p.endsWith('/api/geo/detect')) return reply({ country_code: 'TR' });
   if (p.endsWith('/api/cart')) {
     return reply({
@@ -134,12 +139,28 @@ check('بلا طريقة دفع: يقول ذلك صراحةً',
 check('بلا طريقة دفع: زر إتمام الطلب معطَّل',
   await page.locator('button[type="submit"]').isDisabled());
 
-// --- 2. Both methods offered ----------------------------------------------
+// --- 1b. The endpoint is down: recoverable without losing the form ---------
+// This is the state the live shop passes through on every deploy, because the
+// frontend and the backend are built by two services that finish at different
+// times.
+methodsFail = true;
+await page.goto(`${base}/checkout`, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('[data-testid="payment-methods-error"]', { timeout: 15000 });
+check('تعذّر جلب طرق الدفع: يقول ذلك ولا يخمّن طريقة',
+  await page.locator('[data-testid="payment-methods-error"]').count() === 1);
+
 methods = [
   { id: 'bank_transfer', bank_name: 'VakifBank', account_holder: 'Auraa Luxury',
     iban: IBAN, swift: 'TVBATR2A', account_currency: 'TRY' },
   { id: 'on_confirmation' },
 ];
+methodsFail = false;
+await page.locator('[data-testid="retry-payment-methods"]').click();
+await page.waitForSelector('[data-testid="payment-method"]', { timeout: 15000 });
+check('وإعادة المحاولة تُصلح الحال بلا إعادة تحميل الصفحة',
+  await page.locator('[data-testid="payment-method-bank_transfer"]').count() === 1);
+
+// --- 2. Both methods offered ----------------------------------------------
 await gotoCheckout();
 
 const bank = page.locator('[data-testid="payment-method-bank_transfer"]');

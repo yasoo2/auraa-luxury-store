@@ -499,6 +499,86 @@ def test_an_out_of_stock_product_cannot_be_ordered(seeded):
     assert "stock" in r.json()["detail"].lower()
 
 
+# --- an order waits for a human, and the human is told --------------------
+
+def _place_order(seeded, email="buyer@b.com"):
+    register(seeded, email=email)
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    return seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "cod"}).json()
+
+
+def test_a_new_order_emails_the_owner(seeded, monkeypatch):
+    """
+    Nothing is bought from the supplier until a human approves it, so the queue
+    is invisible unless someone thinks to open the dashboard. The owner gets
+    told.
+    """
+    import services.email_service as email_service
+    sent = []
+    monkeypatch.setattr(email_service, "SENDGRID_API_KEY", "sg-test-key")
+    monkeypatch.setattr(email_service, "send_email",
+                        lambda **kw: sent.append(kw) or True)
+
+    order = _place_order(seeded, "mailed@b.com")
+
+    assert len(sent) == 1, f"the owner was not told: {sent}"
+    body = sent[0]["html_content"]
+    assert order["order_number"] in sent[0]["subject"]
+    assert order["order_number"] in body
+    assert SHIPPING["phone"] in body, "the alert must carry what is needed to judge it"
+    assert "Riyadh" in body
+
+
+def test_a_dead_mail_provider_never_costs_a_customer_their_order(seeded, monkeypatch):
+    """The alert is best-effort; the order is not."""
+    import services.email_service as email_service
+
+    def explode(**kwargs):
+        raise RuntimeError("SendGrid is down")
+
+    monkeypatch.setattr(email_service, "SENDGRID_API_KEY", "sg-test-key")
+    monkeypatch.setattr(email_service, "send_email", explode)
+
+    order = _place_order(seeded, "resilient@b.com")
+    assert order["order_number"], order
+    assert seeded.get("/api/cart").json()["items"] == []
+
+
+def test_a_new_order_waits_for_approval_and_says_so(seeded):
+    # Place the order first: registering swaps the session cookie, so an admin
+    # registered beforehand is no longer the caller by the time the list is read.
+    _place_order(seeded, "waiter@b.com")
+    register(seeded, email="adm-o@b.com")
+    make_admin(seeded, "adm-o@b.com")
+
+    rows = seeded.get("/api/admin/orders").json()
+    assert isinstance(rows, list), rows
+    assert rows[0]["supplier_status"] == "awaiting_approval", rows[0]
+    assert rows[0]["supplier_order_id"] is None
+
+
+def test_sending_to_the_supplier_needs_an_admin(seeded):
+    order = _place_order(seeded, "notadmin@b.com")
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code in (401, 403), r.text
+
+
+def test_an_order_with_no_supplier_reference_is_not_sent(seeded):
+    """
+    A line the supplier cannot identify must stop the whole order: half an
+    order sent is worse than none, because the customer is charged for all of
+    it and receives part.
+    """
+    order = _place_order(seeded, "nosup@b.com")
+    register(seeded, email="adm-ns@b.com")
+    make_admin(seeded, "adm-ns@b.com")
+
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 400, r.text
+    assert "supplier reference" in r.json()["detail"]
+
+
 def test_order_with_empty_cart_is_400(seeded):
     register(seeded, email="empty@b.com")
     r = seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "cod"})

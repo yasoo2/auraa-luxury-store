@@ -25,6 +25,8 @@ const OrdersPage = () => {
   const isRTL = language === 'ar';
   
   const [orders, setOrders] = useState([]);
+  const [sending, setSending] = useState(false);
+  const [supplierResult, setSupplierResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -80,6 +82,33 @@ const OrdersPage = () => {
         || (isRTL ? 'تعذّر تحميل الطلبات' : 'Could not load orders'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const sendToSupplier = async (orderId) => {
+    setSending(true);
+    setSupplierResult(null);
+    try {
+      const { data } = await axios.post(`${API}/admin/orders/${orderId}/send-to-supplier`);
+      setOrders(orders.map(o => o.id === orderId
+        ? { ...o, supplier_order_id: data.supplier_order_id,
+            supplier_shipping_method: data.shipping_method, status: 'processing' }
+        : o));
+      setSelectedOrder(prev => prev && prev.id === orderId
+        ? { ...prev, supplier_order_id: data.supplier_order_id,
+            supplier_shipping_method: data.shipping_method }
+        : prev);
+      setSupplierResult({ ok: true, message: data.message });
+    } catch (error) {
+      // Nothing on screen may claim the order was sent when it was not: the
+      // owner would wait for a parcel nobody is packing.
+      setSupplierResult({
+        ok: false,
+        message: error.response?.data?.detail
+          || (isRTL ? 'تعذّر إرسال الطلب إلى المورّد' : 'Could not send the order to the supplier'),
+      });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -309,6 +338,51 @@ const OrdersPage = () => {
                     <span>${selectedOrder.total.toFixed(2)}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Send to the supplier. Deliberately a separate, explicit action:
+                  it commits the shop to buying the goods, so nothing does it
+                  on a timer or on the customer's checkout. */}
+              <div className="mb-6 border border-amber-200 bg-amber-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-1">
+                  {isRTL ? 'الشراء من المورّد' : 'Buy from the supplier'}
+                </h3>
+                {selectedOrder.supplier_order_id ? (
+                  <p className="text-sm text-green-800" data-testid="supplier-sent">
+                    {isRTL ? 'أُرسل إلى CJ برقم ' : 'Sent to CJ as '}
+                    <span dir="ltr" className="font-mono">{selectedOrder.supplier_order_id}</span>
+                    {selectedOrder.supplier_shipping_method
+                      ? ` — ${selectedOrder.supplier_shipping_method}` : ''}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {isRTL
+                        ? 'يُنشئ الطلب لدى CJ ولا يدفعه — الدفع يبقى بيدك من رصيدك هناك.'
+                        : 'Creates the order on CJ without paying it — payment stays in your hands.'}
+                    </p>
+                    <Button
+                      onClick={() => sendToSupplier(selectedOrder.id)}
+                      disabled={sending}
+                      data-testid="send-to-supplier"
+                      className="bg-amber-600 hover:bg-amber-700"
+                      size="sm"
+                    >
+                      {sending
+                        ? (isRTL ? 'جارٍ الإرسال…' : 'Sending…')
+                        : (isRTL ? 'أرسل إلى CJ' : 'Send to CJ')}
+                    </Button>
+                  </>
+                )}
+                {supplierResult && (
+                  <p
+                    role="alert"
+                    data-testid="supplier-result"
+                    className={`mt-3 text-sm ${supplierResult.ok ? 'text-green-800' : 'text-red-700'}`}
+                  >
+                    {supplierResult.message}
+                  </p>
+                )}
               </div>
 
               {/* Status Update */}

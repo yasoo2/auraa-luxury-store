@@ -251,3 +251,95 @@ def send_order_confirmation_email(
     
     return send_email(user_email, subject, html_content, user_name)
 
+
+
+# ---------------------------------------------------------------------------
+# The owner's alert
+#
+# Orders wait for a human before anything is bought from the supplier, so the
+# store has to tell that human an order is waiting. Without this the queue is
+# only visible to whoever thinks to open the dashboard.
+# ---------------------------------------------------------------------------
+
+ORDER_NOTIFY_EMAIL = os.environ.get("ORDER_NOTIFY_EMAIL", SENDGRID_FROM_EMAIL)
+STORE_ADMIN_URL = os.environ.get("STORE_ADMIN_URL", "https://auraaluxury.com/admin/orders")
+
+
+def email_is_configured() -> bool:
+    """Whether this deployment can actually send mail."""
+    return bool(SENDGRID_API_KEY)
+
+
+def send_order_awaiting_approval_email(order: dict) -> bool:
+    """
+    Tell the owner a paid order is waiting for them to send it to the supplier.
+
+    Returns False rather than raising: a customer's order must not fail because
+    the shop's mail provider is down. The caller logs it.
+    """
+    if not email_is_configured():
+        logger.error(
+            "SENDGRID_API_KEY is not set — nobody was told that order "
+            f"{order.get('order_number')} is waiting for approval"
+        )
+        return False
+
+    number = order.get("order_number") or order.get("id")
+    total = order.get("total_amount", 0)
+    address = order.get("shipping_address") or {}
+    recipient = " ".join(str(address.get(k) or "") for k in ("firstName", "lastName")).strip() \
+        or address.get("fullName") or address.get("name") or "—"
+
+    rows = "".join(
+        f"<tr><td style='padding:6px 10px;border-bottom:1px solid #eee'>{item.get('product_name') or item.get('product_id')}</td>"
+        f"<td style='padding:6px 10px;border-bottom:1px solid #eee;text-align:center'>{item.get('quantity')}</td>"
+        f"<td style='padding:6px 10px;border-bottom:1px solid #eee;text-align:left' dir='ltr'>{item.get('price')} SAR</td></tr>"
+        for item in (order.get("items") or [])
+    )
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family:system-ui,Arial,sans-serif;background:#faf7f2;padding:24px">
+      <div style="max-width:640px;margin:auto;background:#fff;border-radius:12px;padding:24px">
+        <h2 style="color:#b45309;margin:0 0 4px">طلب جديد بانتظار موافقتك</h2>
+        <p style="color:#666;margin:0 0 20px">لن يُشترى شيء من المورّد حتى تضغط «أرسل إلى CJ».</p>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+          <tr><td style="padding:6px 0;color:#666">رقم الطلب</td>
+              <td style="padding:6px 0;font-weight:bold" dir="ltr">{number}</td></tr>
+          <tr><td style="padding:6px 0;color:#666">الإجمالي</td>
+              <td style="padding:6px 0;font-weight:bold" dir="ltr">{total} SAR</td></tr>
+          <tr><td style="padding:6px 0;color:#666">المستلِم</td>
+              <td style="padding:6px 0">{recipient}</td></tr>
+          <tr><td style="padding:6px 0;color:#666">المدينة</td>
+              <td style="padding:6px 0">{address.get('city') or '—'} — {address.get('country') or '—'}</td></tr>
+          <tr><td style="padding:6px 0;color:#666">الهاتف</td>
+              <td style="padding:6px 0" dir="ltr">{address.get('phone') or '—'}</td></tr>
+        </table>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+          <thead><tr style="background:#faf7f2">
+            <th style="padding:8px 10px;text-align:right">المنتج</th>
+            <th style="padding:8px 10px">الكمية</th>
+            <th style="padding:8px 10px;text-align:left">السعر</th>
+          </tr></thead>
+          <tbody>{rows}</tbody>
+        </table>
+
+        <a href="{STORE_ADMIN_URL}"
+           style="display:inline-block;background:#b45309;color:#fff;text-decoration:none;
+                  padding:12px 24px;border-radius:8px;font-weight:bold">
+          مراجعة الطلب
+        </a>
+      </div>
+    </body>
+    </html>
+    """
+
+    return send_email(
+        to_email=ORDER_NOTIFY_EMAIL,
+        subject=f"طلب جديد بانتظار موافقتك #{number}",
+        html_content=html_content,
+    )

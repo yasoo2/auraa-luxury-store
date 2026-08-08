@@ -40,6 +40,16 @@ const OrdersPage = () => {
   const isAwaitingApproval = (order) =>
     !order.supplier_order_id && (order.supplier_status || 'awaiting_approval') === 'awaiting_approval';
 
+  // Looking a status up with no fallback is the same shape of crash that
+  // `order.total` just caused, three lines further down the same loop: one
+  // order with a status this map has never heard of — an old document, a hand
+  // edit, a value the API adds later — and the entire page renders nothing.
+  const statusOf = (order) => orderStatuses[order?.status] || {
+    label: order?.status || (isRTL ? 'غير معروفة' : 'Unknown'),
+    color: 'bg-gray-100 text-gray-800',
+    icon: Clock,
+  };
+
   const orderStatuses = {
     pending: { 
       label: isRTL ? 'قيد المراجعة' : 'Pending', 
@@ -313,7 +323,8 @@ const OrdersPage = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredOrders.map((order) => {
-                const StatusIcon = orderStatuses[order.status].icon;
+                const status = statusOf(order);
+                const StatusIcon = status.icon;
                 return (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -330,9 +341,9 @@ const OrdersPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${orderStatuses[order.status].color}`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
                           <StatusIcon className="h-3 w-3 mr-1" />
-                          {orderStatuses[order.status].label}
+                          {status.label}
                         </span>
                         {isAwaitingApproval(order) ? (
                           <span
@@ -405,7 +416,7 @@ const OrdersPage = () => {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3">{isRTL ? 'عناصر الطلب' : 'Order Items'}</h3>
                 <div className="space-y-3">
-                  {selectedOrder.items.map((item, index) => (
+                  {(selectedOrder.items || []).map((item, index) => (
                     <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <div>
                         <p className="font-medium">{item.product_name}</p>

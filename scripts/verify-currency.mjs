@@ -44,5 +44,37 @@ for (const [name, rates, args, want] of cases) {
   console.log(`${ok ? '✅' : '❌'} ${name}: ${JSON.stringify(got)}${ok ? '' : ` (expected ${JSON.stringify(want)})`}`);
 }
 
-console.log(failed ? `\n${failed} of ${cases.length} currency checks failed` : `\nall ${cases.length} currency checks pass`);
+// --- formatMoney -----------------------------------------------------------
+//
+// Every storefront price used to be printed as `{price} ر.س` with the symbol
+// written into the markup, so the header's currency switcher relabelled
+// nothing and converted nothing. One formatter now owns it, and it must never
+// dress a riyal figure up as dollars when it could not convert.
+const fmStart = src.indexOf('const formatMoney = (');
+if (fmStart === -1) {
+  console.error('formatMoney() not found in LanguageContext.js');
+  process.exit(1);
+}
+const fmRest = src.slice(fmStart);
+const fmFn = fmRest.slice(0, fmRest.indexOf('\n  };') + 5);
+
+const CURRENCIES = { SAR: { symbol: 'ر.س', decimals: 2 }, USD: { symbol: '$', decimals: 2 } };
+const buildFormat = (rates, currency) =>
+  new Function('exchangeRates', 'currency', 'CURRENCIES',
+    `${fn}\n${fmFn}\nreturn formatMoney;`)(rates, currency, CURRENCIES);
+
+const money = [
+  ['SAR stays SAR',                 NOT_LOADED, 'SAR', 175, '175.00 ر.س'],
+  ['converts once rates are in',    LOADED,     'USD', 375, '100.00 $'],
+  ['no rate → the true SAR figure', NOT_LOADED, 'USD', 175, '175.00 ر.س'],
+];
+
+for (const [name, rates, currency, amount, want] of money) {
+  const got = buildFormat(rates, currency)(amount);
+  const ok = got === want;
+  if (!ok) failed++;
+  console.log(`${ok ? '✅' : '❌'} ${name}: ${JSON.stringify(got)}${ok ? '' : ` (expected ${JSON.stringify(want)})`}`);
+}
+
+console.log(failed ? `\n${failed} of ${cases.length + money.length} currency checks failed` : `\nall ${cases.length + money.length} currency checks pass`);
 process.exit(failed ? 1 : 0);

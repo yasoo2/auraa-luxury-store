@@ -224,6 +224,40 @@ def _collect_images(product: dict) -> list:
     return out[:10]
 
 
+# CJ titles are search bait, not names: they cram the whole listing into one
+# line — "European American Niche Design Spliced Heart Earrings For Women,
+# Colorful Titanium Steel Earrings, Personalized Exaggerated Light Luxury Style
+# Ear Jewelry". Printed as a heading it is unreadable, and printed again as the
+# description it is the same paragraph twice.
+_NAME_MAX = 60
+
+
+def _product_name(raw: str) -> str:
+    """
+    A heading a person would read, taken from CJ's keyword-stuffed title.
+
+    The first clause carries the product; everything after the first comma is
+    restatement for the supplier's search engine. Cut there, and only fall back
+    to trimming on length when there is no comma to cut at.
+    """
+    text = re.sub(r'\s+', ' ', (raw or '')).strip()
+    if not text:
+        return ''
+
+    # Both commas: CJ's Arabic titles are separated by the Arabic comma (،,
+    # U+060C), so splitting on the ASCII one alone left them whole.
+    head = re.split(r'[,\u060c]', text)[0].strip()
+    # A first clause that is itself a paragraph is no better than the whole.
+    if len(head) > _NAME_MAX:
+        words, out = head.split(' '), []
+        for word in words:
+            if len(' '.join(out + [word])) > _NAME_MAX:
+                break
+            out.append(word)
+        head = ' '.join(out) or head[:_NAME_MAX]
+    return head.rstrip(' -–—')
+
+
 def _clean_description(product: dict) -> str:
     """
     CJ's description is HTML. Strip it to text so it can be shown safely and
@@ -332,10 +366,14 @@ async def background_import_cj_products(
                     "id": str(uuid.uuid4()),
                     "source": "cj_dropshipping",
                     "external_id": product_id,
-                    "name": product.get('productNameEn') or product.get('productName', ''),
-                    "name_ar": product.get('productName') or product.get('productNameEn', ''),
-                    "description": _clean_description(product) or product.get('productNameEn', ''),
-                    "description_ar": _clean_description(product) or product.get('productName', ''),
+                    "name": _product_name(product.get('productNameEn') or product.get('productName', '')),
+                    "name_ar": _product_name(product.get('productName') or product.get('productNameEn', '')),
+                    # The supplier's full title becomes the description when CJ
+                    # sends no real one. It must never fall back to `name` —
+                    # that printed the identical sentence as heading and as body
+                    # on every product page.
+                    "description": _clean_description(product) or (product.get('productNameEn') or ''),
+                    "description_ar": _clean_description(product) or (product.get('productName') or ''),
                     "price": pricing['final_price_sar'],  # profit + tax + shipping included
                     # Deliberately no "original_price". It used to be set to the
                     # supplier's cost, which the product page renders struck

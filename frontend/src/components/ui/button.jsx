@@ -20,11 +20,17 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
+      // Taller on a phone, unchanged from `sm` up.
+      //
+      // A 36px button is comfortable with a mouse and a poor target with a
+      // thumb — both Apple and Google put the floor at 44px, and most of this
+      // shop's visitors arrive on a phone. "إتمام الطلب", the button the whole
+      // site exists to get pressed, was 36px tall.
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
+        default: "h-11 sm:h-9 px-4 py-2",
+        sm: "h-10 sm:h-8 rounded-md px-3 text-xs",
+        lg: "h-12 sm:h-10 rounded-md px-8",
+        icon: "h-11 w-11 sm:h-9 sm:w-9",
       },
     },
     defaultVariants: {

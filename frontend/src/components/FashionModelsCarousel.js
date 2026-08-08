@@ -190,7 +190,7 @@ const FashionModelsCarousel = () => {
               app to reach a route the router already owns. */}
           <Link
             to="/products"
-            className="inline-block bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 px-6 py-2 sm:px-8 sm:py-3 rounded-full text-white no-underline font-semibold animate-pulse-gold transition-all duration-500 hover:scale-105 shadow-xl text-sm sm:text-base z-20 relative pointer-events-auto"
+            className="inline-flex items-center justify-center min-h-11 bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 px-6 py-2 sm:px-8 sm:py-3 rounded-full text-white no-underline font-semibold animate-pulse-gold transition-all duration-500 hover:scale-105 shadow-xl text-sm sm:text-base z-20 relative pointer-events-auto"
           >
             {isRTL ? 'تسوّق الآن' : 'Shop Now'}
           </Link>

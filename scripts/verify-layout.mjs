@@ -120,6 +120,30 @@ for (const [name, route] of PAGES) {
     overflow.scroll > 1 ? `${overflow.scroll}px — ${overflow.worst.map(w => `${w.tag}.${w.cls}(+${w.over})`).join(' ')}` : '');
 }
 
+// Thumb-sized targets on the actions the shop depends on.
+//
+// Not every control: a breadcrumb and a carousel dot are conventionally small
+// and a blanket rule would be noise nobody acts on. These are the ones that,
+// missed, cost a sale — "إتمام الطلب" was 36px tall, and the cart icon 32.
+const TOUCH = [
+  ['السلة', '/cart', '[data-testid="checkout-button"], a[href="/checkout"]'],
+  ['المنتج', '/product/p1', '[data-testid="add-to-cart-button"]'],
+  ['الشريط العلوي', '/', '[data-testid="cart-link"]'],
+];
+for (const [name, route, selector] of TOUCH) {
+  await page.goto(`${base}${route}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(900);
+  const box = await page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { w: Math.round(r.width), h: Math.round(r.height) };
+  }, selector);
+  check(`${name}: الزرّ الأساسي بحجم يناسب الإصبع`,
+    box !== null && box.h >= 44 && box.w >= 44,
+    box ? `${box.w}×${box.h}` : `${selector} not found`);
+}
+
 // The wordmark, at the width where it broke.
 await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(700);

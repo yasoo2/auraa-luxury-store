@@ -193,13 +193,13 @@ const Navbar = () => {
             </div>
 
             {/* Cart */}
-            <Link to="/cart" className="relative p-1.5 sm:p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
+            <Link to="/cart" className="relative p-3 sm:p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
               <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
               <span className="cart-badge absolute -top-0.5 -right-0.5 bg-brand text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">{cartCount}</span>
             </Link>
 
             {/* Wishlist */}
-            <Link to={user ? '/wishlist' : '/auth'} className="relative p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200">
+            <Link to={user ? '/wishlist' : '/auth'} className="relative p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200">
               <Heart className="h-5 w-5 sm:h-6 sm:w-6" />
               {user && getWishlistCount() > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
@@ -239,7 +239,7 @@ const Navbar = () => {
             {/* Mobile menu button */}
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className="lg:hidden p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200 ml-1" 
+              className="lg:hidden p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200 ms-1" 
               data-testid="mobile-menu-button"
               aria-label="Toggle mobile menu"
             >

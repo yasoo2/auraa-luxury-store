@@ -268,9 +268,11 @@ const ProfilePage = () => {
                   <p className="text-gray-600 mb-4">
                     لم تقم بأي طلبات بعد
                   </p>
-                  <Button className="btn-luxury">
-                    تابع التسوق
-                  </Button>
+                  <Link to="/products">
+                    <Button className="btn-luxury">
+                      تابع التسوق
+                    </Button>
+                  </Link>
                 </Card>
               ) : (
                 orders.map((order) => (

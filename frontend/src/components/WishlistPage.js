@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { 
   Heart, 
@@ -28,6 +29,7 @@ const WishlistPage = () => {
     getWishlistCount,
     syncWithServer 
   } = useWishlist();
+  const { addToCart } = useCart();
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat(isRTL ? 'ar-SA' : 'en-US', {
@@ -203,7 +205,14 @@ const WishlistPage = () => {
                           {isRTL ? 'عرض' : 'View'}
                         </Link>
                       </Button>
-                      <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                      {/* Moving a saved item into the basket is the whole
+                          point of a wishlist, and this button did nothing. */}
+                      <Button
+                        size="sm"
+                        onClick={() => addToCart(item.id, 1)}
+                        data-testid="wishlist-add-to-cart"
+                        className="bg-amber-600 hover:bg-amber-700"
+                      >
                         <ShoppingCart className="h-4 w-4 mr-1" />
                         {isRTL ? 'أضف' : 'Add'}
                       </Button>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -11,8 +13,6 @@ import {
   Minus,
   ShoppingCart,
   Heart,
-  Share2,
-  Eye,
   Award,
   Gem,
   Palette,
@@ -31,6 +31,8 @@ const API = `${BACKEND_URL}/api`;
 
 const ProductComparison = ({ initialProducts = [], onClose = null, isModal = false }) => {
   const { t, language, currency } = useLanguage();
+  const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const isRTL = language === 'ar';
   
   const [comparisonProducts, setComparisonProducts] = useState(initialProducts);
@@ -372,12 +374,24 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
                           </p>
                           
                           <div className="flex gap-2 mt-3">
-                            <Button size="sm" className="flex-1">
+                            <Button
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => addToCart(product.id, 1)}
+                              data-testid="compare-add-to-cart"
+                            >
                               <ShoppingCart className="h-4 w-4 mr-1" />
                               {isRTL ? 'أضف' : 'Add'}
                             </Button>
-                            <Button size="sm" variant="outline">
-                              <Heart className="h-4 w-4" />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => toggleWishlist(product)}
+                              aria-pressed={isInWishlist(product.id)}
+                              aria-label={isRTL ? 'المفضّلة' : 'Wishlist'}
+                              className={isInWishlist(product.id) ? 'text-red-600 border-red-300' : ''}
+                            >
+                              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
                             </Button>
                           </div>
                         </div>
@@ -445,16 +459,7 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
         {/* Footer Actions */}
         {comparisonProducts.length > 0 && (
           <div className={`${isModal ? 'p-6' : ''} border-t border-gray-200 flex items-center justify-between`}>
-            <div className="flex items-center gap-4">
-              <Button variant="outline">
-                <Share2 className="h-4 w-4 mr-2" />
-                {isRTL ? 'مشاركة المقارنة' : 'Share Comparison'}
-              </Button>
-              <Button variant="outline">
-                <Eye className="h-4 w-4 mr-2" />
-                {isRTL ? 'حفظ المقارنة' : 'Save Comparison'}
-              </Button>
-            </div>
+            <div className="flex items-center gap-4" />
             
             <div className="text-sm text-gray-600">
               {isRTL ? 

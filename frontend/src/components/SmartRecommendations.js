@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -33,6 +35,8 @@ const SmartRecommendations = ({
   showTitle = true 
 }) => {
   const { t, language, currency } = useLanguage();
+  const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const isRTL = language === 'ar';
   const navigate = useNavigate();
   
@@ -227,10 +231,23 @@ const SmartRecommendations = ({
               {/* Quick Actions */}
               <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" className="p-2">
-                    <Heart className="h-4 w-4" />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="p-2"
+                    onClick={() => toggleWishlist(product)}
+                    aria-pressed={isInWishlist(product.id)}
+                    aria-label={isRTL ? 'المفضّلة' : 'Wishlist'}
+                  >
+                    <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? 'fill-current text-red-600' : ''}`} />
                   </Button>
-                  <Button size="sm" className="p-2">
+                  <Button
+                    size="sm"
+                    className="p-2"
+                    onClick={() => addToCart(product.id, 1)}
+                    aria-label={isRTL ? 'أضف إلى السلة' : 'Add to cart'}
+                    data-testid="recommendation-add-to-cart"
+                  >
                     <ShoppingCart className="h-4 w-4" />
                   </Button>
                 </div>

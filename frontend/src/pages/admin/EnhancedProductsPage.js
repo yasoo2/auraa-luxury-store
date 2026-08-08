@@ -35,6 +35,7 @@ import {
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { API_BASE_URL } from '../../api';
+import { toast } from 'sonner';
 
 const EnhancedProductsPage = () => {
   const { language, currency, convert } = useLanguage();
@@ -163,20 +164,14 @@ const EnhancedProductsPage = () => {
       setShowModal(false);
       setEditingProduct(null);
     } catch (error) {
+      // This used to add the product to the list anyway, "for demo purposes",
+      // and close the dialog. The save had failed, the shop did not have the
+      // product, and the screen showed it sitting in the catalogue — until
+      // the next refresh made it vanish. Nothing is touched now, the dialog
+      // stays open with the typing still in it, and the reason is said.
       console.error('Error saving product:', error);
-      // For demo purposes, add to local state
-      if (editingProduct) {
-        setProducts(products.map(p => p.id === editingProduct.id ? { ...editingProduct, ...productData } : p));
-      } else {
-        const newProduct = {
-          id: Date.now().toString(),
-          ...productData,
-          created_at: new Date().toISOString()
-        };
-        setProducts([...products, newProduct]);
-      }
-      setShowModal(false);
-      setEditingProduct(null);
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر حفظ المنتج — لم يُحفظ شيء' : 'Could not save the product — nothing was saved'));
     }
   };
 
@@ -192,13 +187,77 @@ const EnhancedProductsPage = () => {
     }
 
     try {
-      await axios.delete(`${API_URL}/api/products/${productId}`);
+      await axios.delete(`${API_URL}/api/admin/products/${productId}`);
       setProducts(products.filter(p => p.id !== productId));
+      toast.success(isRTL ? 'حُذف المنتج' : 'Product deleted');
     } catch (error) {
+      // It used to drop the row from the table whatever the server said. The
+      // product was still on sale, and the only person who believed otherwise
+      // was the one running the shop.
       console.error('Error deleting product:', error);
-      // For demo purposes, remove from local state
-      setProducts(products.filter(p => p.id !== productId));
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر حذف المنتج — ما زال معروضاً' : 'Could not delete the product — it is still on sale'));
     }
+  };
+
+  // Bulk actions. The endpoints have existed all along; the three buttons in
+  // the selection bar were simply never connected to them.
+  const bulkSetActive = async (isActive) => {
+    try {
+      await axios.post(`${API_URL}/api/admin/products/bulk-update`, {
+        ids: selectedProducts,
+        data: { is_active: isActive },
+      });
+      setProducts(products.map(p => (selectedProducts.includes(p.id)
+        ? { ...p, is_active: isActive } : p)));
+      setSelectedProducts([]);
+      toast.success(isActive
+        ? (isRTL ? 'فُعّلت المنتجات المختارة' : 'Selected products activated')
+        : (isRTL ? 'أُلغي تفعيل المنتجات المختارة' : 'Selected products deactivated'));
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر التحديث — لم يتغيّر شيء' : 'Could not update — nothing changed'));
+    }
+  };
+
+  const bulkDelete = async () => {
+    // eslint-disable-next-line no-restricted-globals
+    if (!confirm(isRTL
+      ? `سيُحذف ${selectedProducts.length} منتجاً نهائياً. متأكّد؟`
+      : `${selectedProducts.length} products will be permanently deleted. Sure?`)) {
+      return;
+    }
+    try {
+      await axios.post(`${API_URL}/api/admin/products/bulk-delete`, { ids: selectedProducts });
+      setProducts(products.filter(p => !selectedProducts.includes(p.id)));
+      setSelectedProducts([]);
+      toast.success(isRTL ? 'حُذفت المنتجات المختارة' : 'Selected products deleted');
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر الحذف — لم يُحذف شيء' : 'Could not delete — nothing was deleted'));
+    }
+  };
+
+  // Export writes what is on screen, from what the page already holds. No
+  // endpoint is invented for it, and it never claims rows it does not have.
+  const exportCsv = () => {
+    const columns = ['id', 'name', 'sku', 'category', 'price', 'stock_quantity', 'is_active'];
+    const escape = (value) => {
+      const text = value === null || value === undefined ? '' : String(value);
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const rows = [columns.join(',')];
+    for (const product of filteredProducts) {
+      rows.push(columns.map(c => escape(product[c])).join(','));
+    }
+    // A BOM, or Excel opens Arabic product names as mojibake.
+    const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `auraa-products-${filteredProducts.length}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleSelectAll = () => {
@@ -290,7 +349,7 @@ const EnhancedProductsPage = () => {
             {isRTL ? 'إضافة منتج' : 'Add Product'}
           </Button>
           
-          <Button variant="outline">
+          <Button variant="outline" onClick={exportCsv} data-testid="export-products">
             <Download className="h-4 w-4 mr-2" />
             {isRTL ? 'تصدير' : 'Export'}
           </Button>
@@ -415,13 +474,13 @@ const EnhancedProductsPage = () => {
                 </span>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={() => bulkSetActive(true)} data-testid="bulk-activate">
                   {isRTL ? 'تفعيل' : 'Activate'}
                 </Button>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={() => bulkSetActive(false)} data-testid="bulk-deactivate">
                   {isRTL ? 'إلغاء تفعيل' : 'Deactivate'}
                 </Button>
-                <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
+                <Button size="sm" variant="outline" onClick={bulkDelete} data-testid="bulk-delete" className="text-red-600 border-red-300 hover:bg-red-50">
                   {isRTL ? 'حذف' : 'Delete'}
                 </Button>
               </div>
@@ -574,6 +633,8 @@ const EnhancedProductsPage = () => {
                       <Button 
                         variant="outline" 
                         size="sm" 
+                        onClick={() => handleDeleteProduct(product.id)}
+                        aria-label={isRTL ? 'حذف المنتج' : 'Delete product'}
                         className="text-red-600 border-red-300 hover:bg-red-50"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -688,6 +749,8 @@ const EnhancedProductsPage = () => {
                           <Button 
                             size="sm" 
                             variant="ghost" 
+                            onClick={() => handleDeleteProduct(product.id)}
+                            aria-label={isRTL ? 'حذف المنتج' : 'Delete product'}
                             className="text-red-600 hover:text-red-900"
                           >
                             <Trash2 className="h-4 w-4" />

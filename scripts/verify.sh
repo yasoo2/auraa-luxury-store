@@ -78,6 +78,12 @@ step "The app survives a browser that blocks storage" \
 step "No screen reads a field the API does not send" \
   node "$ROOT/scripts/verify-no-phantom-fields.mjs"
 
+# A button with no handler is valid React, so nothing else here has an opinion
+# about it. "عرض التفاصيل" sat in the customer's order list doing nothing from
+# the day it was written.
+step "Every button does something when pressed" \
+  node "$ROOT/scripts/verify-no-dead-buttons.mjs"
+
 if [ -d "$ROOT/frontend/node_modules" ]; then
   step "Frontend build" \
     bash -c "cd '$ROOT/frontend' && CI=false npx craco build"

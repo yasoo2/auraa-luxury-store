@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { setSEO } from '../utils/seo';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { useLanguage } from '../context/LanguageContext';
 import { trackViewItem, trackAddToCart } from '../utils/analytics';
 import { apiGet, apiPost } from '../api';
@@ -19,6 +20,7 @@ const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const { currency, language, formatMoney } = useLanguage();
   const isRTL = language === 'ar' || language === 'he';
 
@@ -307,7 +309,24 @@ const ProductDetailPage = () => {
                   {isRTL ? 'أضف إلى السلة' : 'Add to Cart'}
                 </Button>
                 <Button onClick={buyNow} variant="outline" className="flex-1 border-amber-600 text-amber-600 hover:bg-amber-50" data-testid="buy-now-button">{isRTL ? 'اشتري الآن' : 'Buy Now'}</Button>
-                <Button variant="outline" size="icon" className="border-gray-300"><Heart className="h-5 w-5" /></Button>
+                {/* The heart on the product page had no onClick from the day
+                    it was drawn. Every shopper who pressed it got nothing, on
+                    the one screen where saving an item matters most. */}
+                <Button
+                  onClick={() => toggleWishlist(product)}
+                  variant="outline"
+                  size="icon"
+                  data-testid="wishlist-toggle"
+                  aria-pressed={isInWishlist(product.id)}
+                  aria-label={isInWishlist(product.id)
+                    ? (isRTL ? 'إزالة من المفضّلة' : 'Remove from wishlist')
+                    : (isRTL ? 'أضف إلى المفضّلة' : 'Add to wishlist')}
+                  className={isInWishlist(product.id)
+                    ? 'border-red-300 text-red-600 hover:bg-red-50'
+                    : 'border-gray-300'}
+                >
+                  <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                </Button>
               </div>
             </div>
 

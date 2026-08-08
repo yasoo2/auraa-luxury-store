@@ -206,9 +206,14 @@ const ThemeCustomization = () => {
           ? 'هذا مثال على كيفية ظهور التصميم الجديد'
           : 'This is how your new theme will look'}
       </p>
-      <div className="flex gap-3 mt-4">
-        <button
+      {/* Pictures of buttons, not buttons: this is a preview of the theme.
+          As <button> elements they were announced to screen readers as
+          controls, and pressing them did nothing because there was nothing
+          to do. */}
+      <div className="flex gap-3 mt-4" aria-hidden="true">
+        <span
           style={{
+            display: 'inline-block',
             backgroundColor: theme.primary_color,
             color: '#FFFFFF',
             padding: '0.5rem 1rem',
@@ -222,9 +227,10 @@ const ThemeCustomization = () => {
           onMouseLeave={() => setPreviewMode(false)}
         >
           {isRTL ? 'زر أساسي' : 'Primary Button'}
-        </button>
-        <button
+        </span>
+        <span
           style={{
+            display: 'inline-block',
             backgroundColor: theme.secondary_color,
             color: theme.primary_color,
             padding: '0.5rem 1rem',
@@ -234,7 +240,7 @@ const ThemeCustomization = () => {
           }}
         >
           {isRTL ? 'زر ثانوي' : 'Secondary Button'}
-        </button>
+        </span>
       </div>
     </Card>
   );

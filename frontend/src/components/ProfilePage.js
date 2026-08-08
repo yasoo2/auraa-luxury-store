@@ -69,15 +69,41 @@ const ProfilePage = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  // "في الانتظار" told the customer nothing: waiting for what, by whom, for
+  // how long? Each label now names what is actually happening to their order.
   const getStatusText = (status) => {
     const statusTexts = {
-      pending: 'في الانتظار',
-      processing: 'قيد المعالجة',
+      pending: 'بانتظار التأكيد',
+      processing: 'قيد التجهيز',
       shipped: 'تم الشحن',
       delivered: 'تم التسليم',
       cancelled: 'ملغي'
     };
     return statusTexts[status] || status;
+  };
+
+  // What happens next, in the customer's words.
+  const getStatusNote = (status) => {
+    const notes = {
+      pending: 'وصلنا طلبك. نراجعه ونتواصل معك لإتمام الدفع قبل الشحن.',
+      processing: 'تم تأكيد طلبك ويجري تجهيزه للشحن.',
+      shipped: 'طلبك في الطريق إليك.',
+      cancelled: 'أُلغي هذا الطلب. تواصل معنا إن كان ذلك غير متوقّع.',
+    };
+    return notes[status] || '';
+  };
+
+  // A payment method the shop actually offers. Anything that was not 'card'
+  // used to be labelled as an electronic payment — one that never happened,
+  // on a shop with no payment provider at all.
+  const getPaymentText = (method) => {
+    const methods = {
+      on_confirmation: 'الدفع عند تأكيد الطلب',
+      cod: 'الدفع عند الاستلام',
+      bank_transfer: 'تحويل بنكي',
+      card: 'بطاقة ائتمانية',
+    };
+    return methods[method] || 'يُحدَّد عند التأكيد';
   };
 
   const handleProfileUpdate = async (e) => {
@@ -244,6 +270,13 @@ const ProfilePage = () => {
                           {isRTL ? 'تاريخ الطلب: ' : 'Order Date: '}
                           {formatDate(order.created_at, language, { format: 'medium' })}
                         </p>
+                        {/* A one-word status leaves the customer guessing.
+                            Say what is happening and what comes next. */}
+                        {getStatusNote(order.status) && (
+                          <p className="text-sm text-amber-700 mt-2" data-testid="order-status-note">
+                            {getStatusNote(order.status)}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center space-x-2 mt-4 md:mt-0">
                         <Badge className={getStatusColor(order.status)}>
@@ -269,7 +302,7 @@ const ProfilePage = () => {
                         <div>
                           <p className="text-sm text-gray-600">طريقة الدفع:</p>
                           <p className="font-medium">
-                            {order.payment_method === 'card' ? 'بطاقة ائتمانية' : 'دفع إلكتروني'}
+                            {getPaymentText(order.payment_method)}
                           </p>
                         </div>
                       </div>

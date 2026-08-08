@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { Phone, Mail, MapPin, Clock, Send, MessageSquare, HeadphonesIcon, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -395,29 +396,29 @@ const ContactUs = () => {
             </h3>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <a href="/return-policy" className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-center">
+              <Link to="/return-policy" className="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-center">
                 <div className="text-blue-600 font-medium">
                   {isRTL ? 'سياسة الإرجاع' : 'Return Policy'}
                 </div>
-              </a>
+              </Link>
               
-              <a href="/shipping-info" className="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors text-center">
+              <Link to="/shipping-info" className="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors text-center">
                 <div className="text-green-600 font-medium">
                   {isRTL ? 'معلومات الشحن' : 'Shipping Info'}
                 </div>
-              </a>
+              </Link>
               
-              <a href="/size-guide" className="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors text-center">
+              <Link to="/size-guide" className="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors text-center">
                 <div className="text-purple-600 font-medium">
                   {isRTL ? 'دليل المقاسات' : 'Size Guide'}
                 </div>
-              </a>
+              </Link>
               
-              <a href="/care-instructions" className="p-4 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors text-center">
+              <Link to="/care-instructions" className="p-4 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors text-center">
                 <div className="text-amber-600 font-medium">
                   {isRTL ? 'تعليمات العناية' : 'Care Instructions'}
                 </div>
-              </a>
+              </Link>
             </div>
           </Card>
         </div>

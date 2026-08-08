@@ -143,24 +143,24 @@ const Footer = () => {
             © 2024 Auraa Luxury. جميع الحقوق محفوظة.
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-            <a href="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">
+            <Link to="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">
               {isRTL ? 'سياسة الخصوصية' : 'Privacy Policy'}
-            </a>
-            <a href="/terms-of-service" className="text-gray-400 hover:text-white transition-colors">
+            </Link>
+            <Link to="/terms-of-service" className="text-gray-400 hover:text-white transition-colors">
               {isRTL ? 'شروط الاستخدام' : 'Terms of Service'}
-            </a>
-            <a href="/cookies-policy" className="text-gray-400 hover:text-white transition-colors">
+            </Link>
+            <Link to="/cookies-policy" className="text-gray-400 hover:text-white transition-colors">
               {isRTL ? 'سياسة الكوكيز' : 'Cookie Policy'}
-            </a>
-            <a href="/return-policy" className="text-gray-400 hover:text-white transition-colors">
+            </Link>
+            <Link to="/return-policy" className="text-gray-400 hover:text-white transition-colors">
               {isRTL ? 'سياسة الإرجاع' : 'Return Policy'}
-            </a>
-            <a href="/contact" className="text-gray-400 hover:text-white transition-colors">
+            </Link>
+            <Link to="/contact" className="text-gray-400 hover:text-white transition-colors">
               {isRTL ? 'اتصل بنا' : 'Contact Us'}
-            </a>
-            <a href="/about" className="text-gray-400 hover:text-white transition-colors">
+            </Link>
+            <Link to="/about" className="text-gray-400 hover:text-white transition-colors">
               {isRTL ? 'عنا' : 'About Us'}
-            </a>
+            </Link>
           </div>
         </div>
       </div>

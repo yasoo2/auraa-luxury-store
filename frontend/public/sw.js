@@ -19,12 +19,22 @@ const FILES_TO_CACHE = [
 // Install Event - Force immediate activation
 self.addEventListener('install', (event) => {
   console.log(`[ServiceWorker] Install v${APP_VERSION} (${BUILD_TIMESTAMP})`);
-  
+
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[ServiceWorker] Pre-caching offline page');
-        return cache.addAll(FILES_TO_CACHE);
+      .then(async (cache) => {
+        // cache.addAll() is all-or-nothing: one file missing and *nothing*
+        // gets cached, including the offline page the fetch handler falls back
+        // to. That single rejection is how a worker ends up controlling pages
+        // with an empty cache and no fallback to give them. Cache each file on
+        // its own instead, and say out loud which ones did not make it.
+        const results = await Promise.allSettled(
+          FILES_TO_CACHE.map((file) => cache.add(file))
+        );
+        const missing = FILES_TO_CACHE.filter((_, i) => results[i].status === 'rejected');
+        if (missing.length) {
+          console.warn('[ServiceWorker] Could not pre-cache:', missing.join(', '));
+        }
       })
       .then(() => {
         // FORCE immediate activation (skip waiting)
@@ -75,13 +85,29 @@ self.addEventListener('activate', (event) => {
 //    would be handed the previous person's profile. The API is now not
 //    intercepted at all; the browser fetches it directly.
 
-function offlineFallback() {
+// The fallback must not claim to know why it fired. "No internet connection"
+// on a machine that is plainly online sends the reader hunting the wrong
+// problem — a 503 with no cause is the service worker's version of made-up
+// data. Carry the real reason: into the console, into the page, and into a
+// header, so the next report names it instead of guessing at it.
+function offlineFallback(request, err) {
+  const reason = err ? `${err.name}: ${err.message}` : 'unknown';
+  const where = request ? new URL(request.url).pathname : '';
+  console.warn(`[SW] network fetch failed for ${where} — ${reason}`);
+
   // A Response body can be read once, so build a fresh one every time.
   return new Response(
-    '<!doctype html><meta charset="utf-8"><title>غير متصل</title>'
+    '<!doctype html><meta charset="utf-8"><title>تعذّر تحميل الصفحة</title>'
     + '<body style="font-family:system-ui;text-align:center;padding:3rem">'
-    + '<h1>لا يوجد اتصال بالإنترنت</h1><p>No internet connection</p>',
-    { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    + '<h1>تعذّر تحميل الصفحة</h1><p>The page could not be loaded</p>'
+    + `<p style="color:#888;font-size:.9rem" dir="ltr">${where} — ${reason}</p>`,
+    {
+      status: 503,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'X-SW-Fallback-Reason': reason.slice(0, 200),
+      },
+    }
   );
 }
 
@@ -103,9 +129,11 @@ async function documentResponse(request) {
     }
     return response;
   } catch (err) {
+    // Serving the cached shell is not a consolation prize: this SPA renders
+    // every route from it, so the shopper gets the actual app back.
     return (await caches.match('/'))
       || (await caches.match('/offline.html'))
-      || offlineFallback();
+      || offlineFallback(request, err);
   }
 }
 
@@ -131,7 +159,7 @@ async function assetResponse(request) {
     }
     return response;
   } catch (err) {
-    return offlineFallback();
+    return offlineFallback(request, err);
   }
 }
 

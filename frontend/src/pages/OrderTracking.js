@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { Package, Truck, MapPin, CheckCircle, Clock, Search, Eye, AlertCircle } from 'lucide-react';
@@ -370,11 +371,11 @@ const OrderTracking = () => {
               }
             </p>
             <div className="space-y-2 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
-              <a href="/contact" className="inline-block">
+              <Link to="/contact" className="inline-block">
                 <Button variant="outline" className="w-full sm:w-auto">
                   {isRTL ? 'تواصل معنا' : 'Contact Us'}
                 </Button>
-              </a>
+              </Link>
               <a href="tel:+905013715391" className="inline-block">
                 <Button className="w-full sm:w-auto">
                   {isRTL ? 'اتصل الآن' : 'Call Now'}

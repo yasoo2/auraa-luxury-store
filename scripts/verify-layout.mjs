@@ -94,7 +94,10 @@ const page = await ctx.newPage();
 const base = `http://127.0.0.1:${PORT}`;
 
 const PAGES = [['الرئيسية', '/'], ['المنتجات', '/products'], ['المنتج', '/product/p1'],
-               ['السلة', '/cart'], ['السداد', '/checkout']];
+               ['السلة', '/cart'], ['السداد', '/checkout'], ['المفضّلة', '/wishlist'],
+               ['الدخول', '/auth'], ['تتبّع الطلب', '/order-tracking'],
+               ['حسابي', '/profile?tab=orders'], ['سياسة الإرجاع', '/return-policy'],
+               ['اتصل بنا', '/contact']];
 
 for (const [name, route] of PAGES) {
   await page.goto(`${base}${route}`, { waitUntil: 'domcontentloaded' });
@@ -103,21 +106,39 @@ for (const [name, route] of PAGES) {
   const overflow = await page.evaluate(() => {
     const vw = document.documentElement.clientWidth;
     const worst = [];
+
     for (const el of document.querySelectorAll('body *')) {
       const r = el.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
+      // Only what a person is meant to read. A decorative blur bleeding off
+      // the edge is a design choice; a sentence half off-screen is a bug.
+      if (el.checkVisibility && !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      const ownText = [...el.childNodes]
+        .filter((n) => n.nodeType === 3 && n.textContent.trim())
+        .map((n) => n.textContent.trim()).join(' ');
+      if (!ownText) continue;
+
       // A few pixels of rounding is not a broken page; a whole element
       // hanging off the side is.
       const over = Math.max(r.right - vw, -r.left);
-      if (over > 4) worst.push({ over: Math.round(over), tag: el.tagName.toLowerCase(),
-                                 cls: String(el.className).slice(0, 60) });
+      if (over > 4) {
+        worst.push({ over: Math.round(over), tag: el.tagName.toLowerCase(),
+                     text: ownText.slice(0, 40) });
+      }
     }
     worst.sort((a, b) => b.over - a.over);
-    return { scroll: document.documentElement.scrollWidth - vw, worst: worst.slice(0, 3) };
+    return { worst: worst.slice(0, 3) };
   });
 
-  check(`${name}: لا تتجاوز الصفحة عرض الشاشة`, overflow.scroll <= 1,
-    overflow.scroll > 1 ? `${overflow.scroll}px — ${overflow.worst.map(w => `${w.tag}.${w.cls}(+${w.over})`).join(' ')}` : '');
+  // Measured per element, not from documentElement.scrollWidth.
+  //
+  // App.css sets `body { overflow-x: hidden }`, which clips the overflow
+  // instead of preventing it: scrollWidth never grows, so a scrollWidth
+  // assertion passes on every page no matter how far the content hangs off.
+  // A 900px canary dropped into this page sat at left:-510 — half of it
+  // unreachable — and the check still reported green.
+  check(`${name}: لا يخرج نصّ خارج الشاشة`, overflow.worst.length === 0,
+    overflow.worst.map((w) => `${w.tag}(+${w.over}px) "${w.text}"`).join(' | '));
 }
 
 // Thumb-sized targets on the actions the shop depends on.

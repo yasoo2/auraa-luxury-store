@@ -2060,6 +2060,117 @@ def test_a_long_cj_title_survives_as_the_description(client, monkeypatch):
     assert len(title) > len(name)
 
 
+class _FulfilmentCJ(_FakeCJ):
+    """CJ as far as fulfilment is concerned: variants, freight, orders."""
+
+    async def request(self, method, url, json=None, params=None, headers=None):
+        self.calls.append((url.rsplit("/api2.0", 1)[-1], (headers or {}).get("CJ-Access-Token")))
+        self.requests.append({"method": method, "url": url, "json": json, "params": params})
+        if url.endswith("/v1/authentication/getAccessToken"):
+            return _FakeResponse(200, {"code": 200, "result": True, "data": {
+                "accessToken": REAL_TOKEN, "accessTokenExpiryDate": "2030-01-01T00:00:00"}})
+        if url.endswith("/v1/product/query"):
+            return _FakeResponse(200, {"code": 200, "result": True, "data": {
+                "variants": [{"vid": "VID-1", "variantSku": "SKU-777"}]}})
+        if url.endswith("/v1/logistic/freightCalculate"):
+            return _FakeResponse(200, {"code": 200, "result": True, "data": [
+                {"logisticName": "CJPacket Ordinary", "logisticPrice": "4.20", "logisticAging": "7-12"},
+                {"logisticName": "DHL", "logisticPrice": "31.00", "logisticAging": "3-5"}]})
+        if url.endswith("/v1/shopping/order/createOrder"):
+            return _FakeResponse(200, {"code": 200, "result": True,
+                                       "data": {"orderId": "CJ-ORDER-1"}})
+        return _FakeResponse(200, {"code": 200, "result": True, "data": {}})
+
+
+def _order_ready_for_cj(seeded, monkeypatch, email="ful@b.com"):
+    import asyncio
+    monkeypatch.setattr(cj_client, "_client", _FulfilmentCJ())
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "shop@example.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "APIKEY")
+    cj_client._reset_token()
+
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {
+            "source": "cj_dropshipping", "external_id": "CJ-777", "sku": "SKU-777"}}))
+    order = _place_order(seeded, email)
+    register(seeded, email="adm-f@b.com")
+    make_admin(seeded, "adm-f@b.com")
+    return order
+
+
+def test_a_dry_run_creates_nothing_at_the_supplier(seeded, monkeypatch):
+    """
+    A way to find out whether fulfilment works before a real customer's order
+    depends on it. It authenticates, resolves every variant and asks CJ for
+    freight — and stops there.
+    """
+    order = _order_ready_for_cj(seeded, monkeypatch, "dry@b.com")
+
+    r = seeded.post(f"/api/admin/orders/{order['id']}/supplier-preview")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["dry_run"] is True
+    assert body["items"][0]["variant_id"] == "VID-1"
+    assert body["would_use"]["name"] == "CJPacket Ordinary", body
+    assert len(body["shipping_options"]) == 2
+
+    paths = [p for p, _ in cj_client._client.calls]
+    assert "/v1/product/query" in paths and "/v1/logistic/freightCalculate" in paths
+    assert "/v1/shopping/order/createOrder" not in paths, "the dry run created an order"
+
+    # And the order is untouched: still waiting for a human.
+    rows = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}
+    assert rows[order["id"]]["supplier_order_id"] is None
+    assert rows[order["id"]]["supplier_status"] == "awaiting_approval"
+    cj_client._reset_token()
+
+
+def test_sending_records_what_the_supplier_answered(seeded, monkeypatch):
+    order = _order_ready_for_cj(seeded, monkeypatch, "send@b.com")
+
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 200, r.text
+    assert r.json()["supplier_order_id"] == "CJ-ORDER-1"
+    assert "not paid" in r.json()["message"]
+
+    rows = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}
+    row = rows[order["id"]]
+    assert row["supplier_status"] == "sent"
+    assert row["supplier_order_id"] == "CJ-ORDER-1"
+    assert row["supplier_shipping_method"] == "CJPacket Ordinary"
+    assert row["sent_to_supplier_by"] == "adm-f@b.com"
+
+    # Sending twice must not buy the goods twice.
+    again = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert again.status_code == 409, again.text
+    cj_client._reset_token()
+
+
+def test_a_dry_run_reports_the_same_refusal_the_real_send_would(seeded, monkeypatch):
+    """
+    The rehearsal is worth nothing unless it walks the same path. Break the
+    variant lookup and both must fail the same way.
+    """
+    import asyncio
+
+    class _NoVariants(_FulfilmentCJ):
+        async def request(self, method, url, json=None, params=None, headers=None):
+            if url.endswith("/v1/product/query"):
+                self.calls.append((url.rsplit("/api2.0", 1)[-1], None))
+                return _FakeResponse(200, {"code": 200, "result": True, "data": {"variants": []}})
+            return await super().request(method, url, json, params, headers)
+
+    order = _order_ready_for_cj(seeded, monkeypatch, "novar@b.com")
+    monkeypatch.setattr(cj_client, "_client", _NoVariants())
+    cj_client._reset_token()
+
+    dry = seeded.post(f"/api/admin/orders/{order['id']}/supplier-preview")
+    real = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert dry.status_code == real.status_code == 409, (dry.text, real.text)
+    assert dry.json()["detail"] == real.json()["detail"]
+    cj_client._reset_token()
+
+
 def test_an_import_never_invents_a_discount(client, monkeypatch):
     """
     original_price was set to the supplier's cost. The product page renders

@@ -103,8 +103,26 @@ MAX_CONCURRENCY  = int(os.getenv("CJ_MAX_CONCURRENCY", "3"))  # توازي بح�
 TIMEOUT_SECONDS  = 40
 
 # Limiter + Semaphore (للسرعة الآمنة)
-_limiter = AsyncLimiter(REQUESTS_PER_SEC, time_period=1)
-_sem     = asyncio.Semaphore(MAX_CONCURRENCY)
+#
+# Built per running event loop, not once at import. asyncio primitives bind to
+# the loop that was current when they were created, and a limiter reused across
+# loops has undefined behaviour — aiolimiter says so itself in a warning. A
+# process with one loop never noticed; anything that runs the client from a
+# second loop got "attached to a different loop" and a 500.
+_loop_state: Dict[int, Dict[str, Any]] = {}
+
+
+def _state() -> Dict[str, Any]:
+    loop = asyncio.get_event_loop()
+    state = _loop_state.get(id(loop))
+    if state is None:
+        state = {
+            "limiter": AsyncLimiter(REQUESTS_PER_SEC, time_period=1),
+            "sem": asyncio.Semaphore(MAX_CONCURRENCY),
+            "token_lock": asyncio.Lock(),
+        }
+        _loop_state[id(loop)] = state
+    return state
 
 # عميل HTTP واحد
 _client = httpx.AsyncClient(timeout=TIMEOUT_SECONDS)
@@ -128,7 +146,6 @@ class CJError(Exception):
 
 _token: Optional[str] = None
 _token_expires_at: float = 0.0
-_token_lock = asyncio.Lock()
 # Which pair of environment variables produced the token in hand. Reported to
 # the admin screen so a deployment carrying duplicates can drop the unused one.
 _token_source: Optional[str] = None
@@ -160,7 +177,7 @@ async def _get_access_token(force: bool = False) -> str:
     import time
     global _token, _token_expires_at, _token_source
 
-    async with _token_lock:
+    async with _state()["token_lock"]:
         if not force and _token and time.time() < _token_expires_at - _TOKEN_SAFETY_MARGIN:
             return _token
 
@@ -256,8 +273,9 @@ async def _request_json(
 
     url = f"{CJ_BASE}{path}"
 
-    async with _sem:             # حد أقصى للتوازي
-        async with _limiter:     # حد أقصى للطلبات/الثانية
+    state = _state()
+    async with state["sem"]:             # حد أقصى للتوازي
+        async with state["limiter"]:     # حد أقصى للطلبات/الثانية
             logger.info(f"🌐 CJ API Request: {method} {path}")
 
             # Only send a body when there is one. `json={}` used to go out on

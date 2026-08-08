@@ -1568,35 +1568,28 @@ def _cj_shipping_from(address: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-@api_router.post("/admin/orders/{order_id}/send-to-supplier")
-async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_user)):
+async def _prepare_supplier_order(order: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Buy an approved order's items from CJ.
+    Everything needed to place an order at CJ, and nothing that changes
+    anything there.
 
-    Creates the order on CJ but does not pay it: payment is a separate call in
-    CJ's API, so a mistake caught here can still be cancelled in the CJ
-    dashboard before any money moves.
+    Shared by the dry run and the real send *on purpose*. A rehearsal that
+    walks a different code path is a rehearsal for a different play: it can
+    pass while the thing it stands in for fails. Every step below — the
+    address, the variant of every line, the freight options — is exactly what
+    the real send uses, so a green preview means the only untested step left is
+    the createOrder call itself.
     """
-    order = await db.orders.find_one({"id": order_id})
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    if order.get("supplier_order_id"):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Already sent to the supplier as {order['supplier_order_id']}",
-        )
+    from services import cj_client
 
     shipping = _cj_shipping_from(order.get("shipping_address") or {})
     if not (shipping["country_code"] and shipping["city"] and shipping["address"]
             and shipping["phone"] and shipping["name"]):
         raise HTTPException(status_code=400, detail="The order's address is not complete enough to ship")
 
-    from services import cj_client
-
-    # Resolve every line to a supplier variant before sending anything: a
-    # partially sent order is worse than one not sent at all.
-    lines = []
+    # Resolve every line before touching anything else: a partially sent order
+    # is worse than one not sent at all.
+    lines, described = [], []
     for item in order.get("items") or []:
         pid = item.get("supplier_product_id")
         if not pid:
@@ -1614,7 +1607,14 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
                 detail=(f"Could not tell which variant of "
                         f"{item.get('product_name') or pid} to ship — choose it in CJ"),
             )
-        lines.append({"vid": vid, "quantity": max(1, int(item.get("quantity") or 1))})
+        quantity = max(1, int(item.get("quantity") or 1))
+        lines.append({"vid": vid, "quantity": quantity})
+        described.append({
+            "product": item.get("product_name") or pid,
+            "supplier_product_id": pid,
+            "variant_id": vid,
+            "quantity": quantity,
+        })
 
     try:
         options = await cj_client.calculate_freight(
@@ -1623,14 +1623,78 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
             products=lines,
             zip_code=shipping["zip"],
         )
-        if not options:
-            raise HTTPException(status_code=409, detail="CJ offers no shipping method to this address")
+    except cj_client.CJError as e:
+        raise HTTPException(status_code=502, detail=f"CJ: {e}")
 
-        chosen = options[0]
+    if not options:
+        raise HTTPException(status_code=409, detail="CJ offers no shipping method to this address")
+
+    return {"shipping": shipping, "lines": lines, "described": described,
+            "options": options, "chosen": options[0]}
+
+
+@api_router.post("/admin/orders/{order_id}/supplier-preview")
+async def preview_order_at_supplier(order_id: str, admin: User = Depends(get_admin_user)):
+    """
+    Rehearse sending an order to CJ without creating anything there.
+
+    Authenticates, looks up the variant of every line, and asks CJ what it
+    would charge to ship — then stops and reports. Nothing is created, nothing
+    is reserved, nothing is charged. This is how to find out whether the
+    fulfilment path works before a real customer's order depends on it.
+    """
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    prepared = await _prepare_supplier_order(order)
+    chosen = prepared["chosen"]
+
+    return {
+        "ok": True,
+        "dry_run": True,
+        "message": "لم يُنشأ شيء لدى CJ — هذا فحص فقط.",
+        "order_number": order.get("order_number") or order_id,
+        "ship_to": {k: prepared["shipping"][k] for k in ("name", "city", "country_code", "zip")},
+        "items": prepared["described"],
+        "shipping_options": [
+            {"name": o.get("logisticName"), "price": o.get("logisticPrice"),
+             "days": o.get("logisticAging")}
+            for o in prepared["options"][:5]
+        ],
+        "would_use": {"name": chosen.get("logisticName"), "price": chosen.get("logisticPrice")},
+    }
+
+
+@api_router.post("/admin/orders/{order_id}/send-to-supplier")
+async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_user)):
+    """
+    Buy an approved order's items from CJ.
+
+    Creates the order on CJ but does not pay it: payment is a separate call in
+    CJ's API, so a mistake caught here can still be cancelled in the CJ
+    dashboard before any money moves.
+    """
+    from services import cj_client
+
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.get("supplier_order_id"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Already sent to the supplier as {order['supplier_order_id']}",
+        )
+
+    prepared = await _prepare_supplier_order(order)
+    chosen = prepared["chosen"]
+
+    try:
         result = await cj_client.create_order(
             order_number=order.get("order_number") or order_id,
-            shipping=shipping,
-            products=lines,
+            shipping=prepared["shipping"],
+            products=prepared["lines"],
             logistic_name=chosen.get("logisticName") or chosen.get("logisticAging") or "",
             from_country=os.getenv("CJ_FROM_COUNTRY", "CN"),
         )

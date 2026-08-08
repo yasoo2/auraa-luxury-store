@@ -85,6 +85,29 @@ const OrdersPage = () => {
     }
   };
 
+  const previewAtSupplier = async (orderId) => {
+    setSending(true);
+    setSupplierResult(null);
+    try {
+      const { data } = await axios.post(`${API}/admin/orders/${orderId}/supplier-preview`);
+      const opt = data.would_use || {};
+      setSupplierResult({
+        ok: true,
+        message: `${data.message} ${isRTL ? 'الشحن المقترح:' : 'Proposed shipping:'} `
+          + `${opt.name || '—'} (${opt.price ?? '—'}) — `
+          + `${data.items.length} ${isRTL ? 'سطر جاهز' : 'line(s) resolved'}`,
+      });
+    } catch (error) {
+      setSupplierResult({
+        ok: false,
+        message: error.response?.data?.detail
+          || (isRTL ? 'تعذّر الفحص' : 'The check failed'),
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   const sendToSupplier = async (orderId) => {
     setSending(true);
     setSupplierResult(null);
@@ -361,17 +384,30 @@ const OrdersPage = () => {
                         ? 'يُنشئ الطلب لدى CJ ولا يدفعه — الدفع يبقى بيدك من رصيدك هناك.'
                         : 'Creates the order on CJ without paying it — payment stays in your hands.'}
                     </p>
-                    <Button
-                      onClick={() => sendToSupplier(selectedOrder.id)}
-                      disabled={sending}
-                      data-testid="send-to-supplier"
-                      className="bg-amber-600 hover:bg-amber-700"
-                      size="sm"
-                    >
-                      {sending
-                        ? (isRTL ? 'جارٍ الإرسال…' : 'Sending…')
-                        : (isRTL ? 'أرسل إلى CJ' : 'Send to CJ')}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {/* Rehearse first. Runs the whole path — variants,
+                          freight, the lot — and creates nothing at CJ. */}
+                      <Button
+                        onClick={() => previewAtSupplier(selectedOrder.id)}
+                        disabled={sending}
+                        data-testid="preview-at-supplier"
+                        variant="outline"
+                        size="sm"
+                      >
+                        {isRTL ? 'فحص بلا إرسال' : 'Dry run'}
+                      </Button>
+                      <Button
+                        onClick={() => sendToSupplier(selectedOrder.id)}
+                        disabled={sending}
+                        data-testid="send-to-supplier"
+                        className="bg-amber-600 hover:bg-amber-700"
+                        size="sm"
+                      >
+                        {sending
+                          ? (isRTL ? 'جارٍ الإرسال…' : 'Sending…')
+                          : (isRTL ? 'أرسل إلى CJ' : 'Send to CJ')}
+                      </Button>
+                    </div>
                   </>
                 )}
                 {supplierResult && (

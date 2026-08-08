@@ -156,6 +156,19 @@ SHIPPING_REQUIRED = {
 }
 
 
+def notify_owner_of_new_order(order: Dict[str, Any]) -> None:
+    """Best-effort alert that an order is waiting for approval."""
+    try:
+        from services.email_service import send_order_awaiting_approval_email
+        if not send_order_awaiting_approval_email(order):
+            logger.error(
+                "Order %s is waiting for approval and the owner was not emailed",
+                order.get("order_number"),
+            )
+    except Exception as e:  # noqa: BLE001 — a customer's order outranks a mail
+        logger.error(f"Could not send the new-order alert: {e}")
+
+
 def missing_shipping_fields(address: Optional[Dict[str, Any]]) -> List[str]:
     """Which required address fields are absent or blank."""
     address = address or {}
@@ -1383,6 +1396,7 @@ async def remove_from_wishlist(
 @api_router.post("/orders", response_model=Order)
 async def create_order(
     order_data: OrderCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user)
 ):
     cart = await db.carts.find_one({"user_id": current_user.id})
@@ -1448,13 +1462,24 @@ async def create_order(
         payment_method=order_data.payment_method
     )
 
-    await db.orders.insert_one(order.model_dump())
+    doc = order.model_dump()
+    # Nothing is bought from the supplier until a human approves it, so the
+    # order says so explicitly rather than leaving "pending" to mean two
+    # different things at once.
+    doc["supplier_status"] = "awaiting_approval"
+    doc["supplier_order_id"] = None
+    await db.orders.insert_one(doc)
 
     # Empty the cart now that its contents belong to the order.
     await db.carts.update_one(
         {"user_id": current_user.id},
         {"$set": {"items": [], "total_amount": 0.0}}
     )
+
+    # Tell the owner. An order waiting on a human is only visible to a human
+    # who thinks to look — and a mail provider being down must never cost a
+    # customer their order, so this is best-effort and never raises.
+    background_tasks.add_task(notify_owner_of_new_order, doc)
 
     return order
 
@@ -1515,6 +1540,126 @@ async def track_order(search_param: str):
         "created_at": order.get("created_at"),
         "total_amount": order.get("total_amount", 0.0),
         "currency": order.get("currency", "SAR")
+    }
+
+
+# ---------------------------------------------------------------------------
+# Fulfilment — sending an approved order to the supplier
+#
+# Deliberately manual. Creating an order on CJ commits the shop to buying the
+# goods, so a human presses the button; nothing here runs on a timer or on the
+# customer's checkout.
+# ---------------------------------------------------------------------------
+
+def _cj_shipping_from(address: Dict[str, Any]) -> Dict[str, Any]:
+    """The address in the shape CJ's order API expects."""
+    name = " ".join(
+        str(address.get(k) or "") for k in ("firstName", "lastName")
+    ).strip() or str(address.get("fullName") or address.get("name") or "").strip()
+
+    return {
+        "name": name,
+        "phone": str(address.get("phone") or "").strip(),
+        "country_code": str(address.get("country") or address.get("countryCode") or "").strip().upper(),
+        "province": str(address.get("state") or address.get("province") or "").strip(),
+        "city": str(address.get("city") or "").strip(),
+        "address": str(address.get("street") or address.get("address") or "").strip(),
+        "zip": str(address.get("zipCode") or address.get("zip") or "").strip(),
+    }
+
+
+@api_router.post("/admin/orders/{order_id}/send-to-supplier")
+async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_user)):
+    """
+    Buy an approved order's items from CJ.
+
+    Creates the order on CJ but does not pay it: payment is a separate call in
+    CJ's API, so a mistake caught here can still be cancelled in the CJ
+    dashboard before any money moves.
+    """
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if order.get("supplier_order_id"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Already sent to the supplier as {order['supplier_order_id']}",
+        )
+
+    shipping = _cj_shipping_from(order.get("shipping_address") or {})
+    if not (shipping["country_code"] and shipping["city"] and shipping["address"]
+            and shipping["phone"] and shipping["name"]):
+        raise HTTPException(status_code=400, detail="The order's address is not complete enough to ship")
+
+    from services import cj_client
+
+    # Resolve every line to a supplier variant before sending anything: a
+    # partially sent order is worse than one not sent at all.
+    lines = []
+    for item in order.get("items") or []:
+        pid = item.get("supplier_product_id")
+        if not pid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No supplier reference for {item.get('product_name') or item.get('product_id')}",
+            )
+        try:
+            vid = await cj_client.default_variant_id(pid, item.get("supplier_sku") or "")
+        except cj_client.CJError as e:
+            raise HTTPException(status_code=502, detail=f"CJ: {e}")
+        if not vid:
+            raise HTTPException(
+                status_code=409,
+                detail=(f"Could not tell which variant of "
+                        f"{item.get('product_name') or pid} to ship — choose it in CJ"),
+            )
+        lines.append({"vid": vid, "quantity": max(1, int(item.get("quantity") or 1))})
+
+    try:
+        options = await cj_client.calculate_freight(
+            start_country=os.getenv("CJ_FROM_COUNTRY", "CN"),
+            end_country=shipping["country_code"],
+            products=lines,
+            zip_code=shipping["zip"],
+        )
+        if not options:
+            raise HTTPException(status_code=409, detail="CJ offers no shipping method to this address")
+
+        chosen = options[0]
+        result = await cj_client.create_order(
+            order_number=order.get("order_number") or order_id,
+            shipping=shipping,
+            products=lines,
+            logistic_name=chosen.get("logisticName") or chosen.get("logisticAging") or "",
+            from_country=os.getenv("CJ_FROM_COUNTRY", "CN"),
+        )
+    except cj_client.CJError as e:
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "supplier_status": "failed",
+            "supplier_error": str(e)[:500],
+        }})
+        raise HTTPException(status_code=502, detail=f"CJ refused the order: {e}")
+
+    supplier_order_id = result.get("orderId") or result.get("orderNum")
+    await db.orders.update_one({"id": order_id}, {"$set": {
+        "supplier_status": "sent",
+        "supplier_order_id": supplier_order_id,
+        "supplier_shipping_method": chosen.get("logisticName"),
+        "supplier_shipping_cost": chosen.get("logisticPrice"),
+        "supplier_error": None,
+        "sent_to_supplier_at": datetime.now(timezone.utc).isoformat(),
+        "sent_to_supplier_by": admin.email,
+        "status": OrderStatus.processing.value,
+    }})
+
+    return {
+        "success": True,
+        "supplier_order_id": supplier_order_id,
+        "shipping_method": chosen.get("logisticName"),
+        "shipping_cost": chosen.get("logisticPrice"),
+        # Said plainly so nobody assumes the goods are paid for.
+        "message": "Created on CJ. It is not paid yet — pay it from your CJ balance.",
     }
 
 

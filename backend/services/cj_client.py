@@ -363,3 +363,97 @@ def credentials_configured() -> bool:
     measures, by spending the token on a real call.
     """
     return next(_credential_pairs(), None) is not None
+
+
+# --- fulfilment --------------------------------------------------------------
+#
+# Placing an order on CJ takes three things this client did not have:
+#   1. a variant id (vid) per line — CJ ships variants, not products, and the
+#      importer stores only the product id (pid);
+#   2. a logistics option, from the freight calculator;
+#   3. the order itself.
+#
+# The variant is looked up when the order is approved rather than captured at
+# import: it costs one call per line only for products actually sold, instead
+# of one per product for a whole catalogue, and it reads the supplier's current
+# stock rather than whatever was true on import day.
+
+async def product_variants(pid: str) -> List[Dict[str, Any]]:
+    """The sellable variants of a CJ product."""
+    data = await _request_json("GET", "/v1/product/query", params={"pid": pid})
+    payload = data.get("data") or {}
+    variants = payload.get("variants")
+    return variants if isinstance(variants, list) else []
+
+
+async def default_variant_id(pid: str, sku: str = "") -> Optional[str]:
+    """
+    The variant to ship for a product.
+
+    Prefers the variant whose SKU matches the one recorded on the order line,
+    so a product with several variants ships the one that was actually sold.
+    Falls back to the only variant when there is just one; returns None rather
+    than guessing between several, because guessing here posts the wrong item
+    to a real customer.
+    """
+    variants = await product_variants(pid)
+    if not variants:
+        return None
+
+    if sku:
+        for variant in variants:
+            if str(variant.get("variantSku") or "").strip() == sku.strip():
+                return variant.get("vid")
+
+    if len(variants) == 1:
+        return variants[0].get("vid")
+    return None
+
+
+async def calculate_freight(
+    *,
+    start_country: str,
+    end_country: str,
+    products: List[Dict[str, Any]],
+    zip_code: str = "",
+) -> List[Dict[str, Any]]:
+    """Shipping options CJ offers for this parcel, cheapest first."""
+    data = await _request_json("POST", "/v1/logistic/freightCalculate", json={
+        "startCountryCode": start_country,
+        "endCountryCode": end_country,
+        "zip": zip_code,
+        "products": products,
+    })
+    options = data.get("data")
+    if not isinstance(options, list):
+        return []
+    return sorted(options, key=lambda o: float(o.get("logisticPrice") or 0))
+
+
+async def create_order(
+    *,
+    order_number: str,
+    shipping: Dict[str, Any],
+    products: List[Dict[str, Any]],
+    logistic_name: str,
+    from_country: str = "CN",
+) -> Dict[str, Any]:
+    """
+    Place the order with CJ. Money leaves the account when it is paid, which is
+    a separate call — this only creates it, so a mistake here can still be
+    cancelled in the CJ dashboard before anything is spent.
+    """
+    data = await _request_json("POST", "/v1/shopping/order/createOrder", json={
+        "orderNumber": order_number,
+        "shippingZip": shipping.get("zip") or "",
+        "shippingCountryCode": shipping["country_code"],
+        "shippingProvince": shipping.get("province") or "",
+        "shippingCity": shipping["city"],
+        "shippingAddress": shipping["address"],
+        "shippingCustomerName": shipping["name"],
+        "shippingPhone": shipping["phone"],
+        "logisticName": logistic_name,
+        "fromCountryCode": from_country,
+        "products": products,
+    })
+    return data.get("data") or {}

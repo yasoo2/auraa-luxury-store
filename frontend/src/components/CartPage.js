@@ -18,7 +18,7 @@ const CartPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { fetchCartCount } = useCart();
-  const { isRTL, currency } = useLanguage();
+  const { isRTL, currency, formatMoney } = useLanguage();
   const [cart, setCart] = useState(null);
   const [products, setProducts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -303,7 +303,7 @@ const CartPage = () => {
                     {isRTL ? 'المجموع الجزئي:' : 'Subtotal:'}
                   </span>
                   <span className="font-medium" data-testid="subtotal">
-                    {cart.total_amount.toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
+                    {formatMoney(cart.total_amount)}
                   </span>
                 </div>
                 

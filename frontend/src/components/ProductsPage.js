@@ -23,7 +23,7 @@ const API = `${BACKEND_URL}/api`;
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart } = useCart();
-  const { language } = useLanguage();
+  const { language, formatMoney } = useLanguage();
   const isRTL = language === 'ar' || language === 'he';
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -356,8 +356,8 @@ const ProductsPage = () => {
                         </div>
                         <div className={viewMode === 'grid' ? "flex items-center justify-between mb-4" : "flex items-center space-x-4 mb-4"}>
                           <div className="flex flex-col">
-                            <span className="price-highlight text-xl font-bold text-amber-600">{product.price} {isRTL ? 'ر.س' : 'SAR'}</span>
-                            {product.original_price && (<span className="text-sm text-gray-500 line-through">{product.original_price} {isRTL ? 'ر.س' : 'SAR'}</span>)}
+                            <span className="price-highlight text-xl font-bold text-amber-600">{formatMoney(product.price)}</span>
+                            {product.original_price > product.price && (<span className="text-sm text-gray-500 line-through">{formatMoney(product.original_price)}</span>)}
                           </div>
                         </div>
                       </div>

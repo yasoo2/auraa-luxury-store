@@ -19,7 +19,7 @@ const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { currency, language } = useLanguage();
+  const { currency, language, formatMoney } = useLanguage();
   const isRTL = language === 'ar' || language === 'he';
 
   const [product, setProduct] = useState(null);
@@ -253,10 +253,10 @@ const ProductDetailPage = () => {
                 <span className="text-lg text-gray-600 mr-3">({product.reviews_count} {isRTL ? 'تقييم' : 'reviews'})</span>
               </div>
               <div className="flex items-center space-x-4 mb-3">
-                <span className="price-highlight text-4xl font-bold text-amber-600" data-testid="product-price">{product.price} {isRTL ? 'ر.س' : 'SAR'}</span>
-                {product.original_price && (
+                <span className="price-highlight text-4xl font-bold text-amber-600" data-testid="product-price">{formatMoney(product.price)}</span>
+                {product.original_price > product.price && (
                   <div className="flex items-center space-x-2">
-                    <span className="text-2xl text-gray-500 line-through">{product.original_price} {isRTL ? 'ر.س' : 'SAR'}</span>
+                    <span className="text-2xl text-gray-500 line-through">{formatMoney(product.original_price)}</span>
                     <span className="bg-red-500 text-white px-2 py-1 rounded-full text-sm font-bold">{isRTL ? 'وفر' : 'Save'} {product.discount_percentage}%</span>
                   </div>
                 )}
@@ -271,8 +271,8 @@ const ProductDetailPage = () => {
                 ) : (
                   <span>
                     {shippingInfo.free
-                      ? (isRTL ? 'شحن مجاني — محتسب داخل السعر' : 'Free shipping — included in the price')
-                      : `${isRTL ? 'الشحن التقديري:' : 'Estimated shipping:'} ${shippingInfo.cost.toFixed(2)} ${isRTL ? 'ر.س' : 'SAR'}`}
+                      ? (isRTL ? 'شحن مجاني' : 'Free shipping')
+                      : `${isRTL ? 'الشحن التقديري:' : 'Estimated shipping:'} ${formatMoney(shippingInfo.cost)}`}
                     {shippingInfo.days ? ` • ${isRTL ? 'المدة' : 'ETA'}: ${shippingInfo.days} ${isRTL ? 'أيام' : 'days'}` : ''}
                   </span>
                 )}
@@ -368,14 +368,14 @@ const ProductDetailPage = () => {
                         <source srcSet={`${relatedProduct.images[0]}?format=webp`} type="image/webp" />
                         <img src={relatedProduct.images[0]} alt={getLocalizedName(relatedProduct)} className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500" />
                       </picture>
-                      {relatedProduct.discount_percentage && (
+                      {relatedProduct.discount_percentage > 0 && relatedProduct.original_price > relatedProduct.price && (
                         <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">-{relatedProduct.discount_percentage}%</div>
                       )}
                     </div>
                     <div className="p-4">
                       <h3 className="font-bold text-lg mb-2 text-gray-900 group-hover:text-amber-600 transition-colors line-clamp-2">{getLocalizedName(relatedProduct)}</h3>
                       <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-amber-600">{relatedProduct.price} {isRTL ? 'ر.س' : 'SAR'}</span>
+                        <span className="text-lg font-bold text-amber-600">{formatMoney(relatedProduct.price)}</span>
                         <div className="flex items-center">
                           <Star className="h-4 w-4 text-yellow-400 fill-current ml-1" />
                           <span className="text-sm text-gray-600">{relatedProduct.rating}</span>

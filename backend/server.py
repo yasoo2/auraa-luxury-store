@@ -706,8 +706,34 @@ async def publish_staging_products(
 # "staging" path keeps precedence over /products/{product_id}.
 # ============================================================================
 
+def _sane_reference_price(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Drop a "was" price that was never higher than the price being charged.
+
+    Early imports wrote original_price as the *supplier's cost*, so the product
+    page struck through 25 riyals beside a 175 riyal price and stamped a "Save"
+    badge on it — a discount running the wrong way, with the wholesale cost
+    printed underneath. Newer imports no longer write it, but rows already in
+    the database still carry it, and a crossed-out price that is not higher is
+    never right regardless of how it got there. Applied on read, so the
+    catalogue is corrected without a migration.
+    """
+    original = doc.get("original_price")
+    if original is None:
+        return doc
+    try:
+        if float(original) <= float(doc.get("price") or 0):
+            doc["original_price"] = None
+            doc["discount_percentage"] = None
+    except (TypeError, ValueError):
+        doc["original_price"] = None
+        doc["discount_percentage"] = None
+    return doc
+
+
 def _localize(doc: Dict[str, Any], language: Optional[str]) -> Dict[str, Any]:
     """Pick the localized name/description, falling back across languages."""
+    doc = _sane_reference_price(doc)
     if not language:
         return doc
 
@@ -1906,6 +1932,7 @@ async def admin_list_products(
         # means active, the same rule LIVE_ONLY applies when deciding what
         # shoppers see; state it here rather than leave the UI to guess.
         p.setdefault("is_active", True)
+        _sane_reference_price(p)
         # Flag rows the storefront will refuse to render, with the reason, so
         # a product that exists but is invisible to customers is visible here.
         try:

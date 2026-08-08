@@ -136,6 +136,26 @@ export const LanguageProvider = ({ children }) => {
    * catalogue showed every product at "$US 0.00". Callers must decide what to
    * show when the answer is unknown; they can no longer be handed a fiction.
    */
+  /**
+   * Render an amount stored in the store's base currency (SAR) for display.
+   *
+   * Every price on the storefront used to be printed as `{price} ر.س`, with
+   * the symbol hardcoded and no conversion at all — so the currency switcher
+   * in the header changed the symbol on nothing and moved no number. Prices
+   * are stored in SAR; this converts, and when the rate is unknown it says SAR
+   * rather than dressing a riyal figure up as dollars.
+   */
+  const formatMoney = (amountInSAR) => {
+    const sar = Number(amountInSAR);
+    if (!Number.isFinite(sar)) return '';
+    const value = currency === 'SAR' ? sar : convert(sar, 'SAR', currency);
+    const code = value === null ? 'SAR' : currency;
+    const shown = value === null ? sar : value;
+    const info = CURRENCIES[code] || CURRENCIES.SAR;
+    const decimals = info?.decimals ?? 2;
+    return `${shown.toFixed(decimals)} ${info?.symbol || code}`;
+  };
+
   const convert = (amount, fromCurrency, toCurrency) => {
     if (typeof amount !== 'number' || Number.isNaN(amount)) return null;
     if (fromCurrency === toCurrency) return amount;
@@ -171,6 +191,7 @@ export const LanguageProvider = ({ children }) => {
     currencies: CURRENCIES,
     exchangeRates,
     ratesReady,
+    formatMoney,
     isRTL: LANGUAGES[language]?.dir === 'rtl'
   };
 

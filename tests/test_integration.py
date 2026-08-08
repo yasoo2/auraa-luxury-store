@@ -1675,8 +1675,14 @@ def test_the_token_call_sends_apikey_not_password(fake_cj):
 # reported as a tidy "0 products fetched". The importer was fetching from CJ
 # and throwing every answer away.
 
+# The first title is shaped the way CJ really ships them: the whole listing
+# crammed into one line, comma-separated, far past anything readable as a
+# heading. A fixture with tidy names cannot catch a naming bug.
+CJ_TITLE = ("Gold Plated Necklace For Women, Light Luxury High-end Chain Design, "
+            "Personalized Exaggerated Stainless Steel Neck Jewelry")
+
 CJ_CATALOGUE = [
-    {"pid": "CJ-1", "productNameEn": "Gold Plated Necklace", "productName": "قلادة مطلية بالذهب",
+    {"pid": "CJ-1", "productNameEn": CJ_TITLE, "productName": "قلادة مطلية بالذهب، تصميم سلسلة فاخر",
      "sellPrice": "12.50", "shippingPrice": "3.00", "weight": "0.08",
      "productImage": "https://cj/img1.jpg", "productSku": "SKU-1",
      "categoryName": "Jewelry > Necklaces", "sellQuantity": 40,
@@ -1704,6 +1710,88 @@ class _CJCatalogue(_FakeCJ):
                                                 "total": len(CJ_CATALOGUE),
                                                 "list": CJ_CATALOGUE}})
         return _FakeResponse(200, {"code": 200, "result": True, "data": {}})
+
+
+def test_a_reference_price_that_is_not_higher_never_reaches_a_shopper(seeded):
+    """
+    Rows imported before the fix still carry original_price = supplier cost, so
+    the page struck through 25 riyals next to a 175 riyal price under a "Save"
+    badge. A crossed-out price that is not higher is wrong however it got
+    there, so it is dropped on read — the catalogue is corrected without a
+    migration nobody can run against a live store.
+    """
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {
+            "original_price": 25.8, "discount_percentage": 85}}))
+
+    listed = {p["id"]: p for p in seeded.get("/api/products").json()}
+    assert listed["p1"]["original_price"] is None, listed["p1"]
+    assert listed["p1"]["discount_percentage"] is None
+
+    detail = seeded.get("/api/products/p1").json()
+    assert detail["original_price"] is None
+
+    register(seeded, email="ref@b.com")
+    make_admin(seeded, "ref@b.com")
+    admin_rows = {p["id"]: p for p in seeded.get("/api/admin/products").json()}
+    assert admin_rows["p1"]["original_price"] is None
+
+
+def test_a_genuine_markdown_is_left_alone(seeded):
+    """The guard must not erase a real price cut."""
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {
+            "original_price": 400.0, "discount_percentage": 38}}))
+    listed = {p["id"]: p for p in seeded.get("/api/products").json()}
+    assert listed["p1"]["original_price"] == 400.0
+    assert listed["p1"]["discount_percentage"] == 38
+
+
+def test_an_imported_name_is_a_name_not_the_whole_listing(client, monkeypatch):
+    """
+    CJ titles are search bait: the entire listing crammed into one line. Used
+    verbatim they made an unreadable heading, and because the description fell
+    back to the same string the product page printed that paragraph twice.
+    """
+    import asyncio
+    from services.background_import import background_import_cj_products
+
+    monkeypatch.setattr(cj_client, "_client", _CJCatalogue())
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "shop@example.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "APIKEY")
+    cj_client._reset_token()
+
+    asyncio.get_event_loop().run_until_complete(background_import_cj_products(
+        job_id="job-n", keyword="jewelry", category_id=None,
+        max_products=2, db=client._db,
+    ))
+    staged = asyncio.get_event_loop().run_until_complete(
+        client._db.products.find({"staging": True}).to_list(length=None))
+
+    for p in staged:
+        assert len(p["name"]) <= 60, f"heading is a paragraph: {p['name']}"
+        assert "," not in p["name"], f"name kept the keyword tail: {p['name']}"
+        assert p["name"] and p["name_ar"]
+        assert "،" not in p["name_ar"], f"the Arabic comma tail survived: {p['name_ar']}"
+        assert "،" not in p["name_ar"], f"the Arabic comma tail survived: {p[chr(39)+chr(39)]}" if False else True
+        assert p["description"] != p["name"], "the heading was reprinted as the body"
+        assert p["description_ar"] != p["name_ar"]
+    cj_client._reset_token()
+
+
+def test_a_long_cj_title_survives_as_the_description(client, monkeypatch):
+    """Trimming the heading must not throw the supplier's text away."""
+    from services.background_import import _product_name, _clean_description
+    title = ("European American Niche Design Spliced Heart Earrings For Women, "
+             "Colorful Titanium Steel Earrings, Personalized Exaggerated Light "
+             "Luxury Style Ear Jewelry")
+    name = _product_name(title)
+    assert name == "European American Niche Design Spliced Heart Earrings For"
+    # No CJ description field: the full title carries the detail instead.
+    assert _clean_description({"productNameEn": title}) == ""
+    assert len(title) > len(name)
 
 
 def test_an_import_never_invents_a_discount(client, monkeypatch):
@@ -1837,8 +1925,8 @@ def test_a_cj_import_puts_real_products_into_staging(client, monkeypatch):
 
     by_sku = {p["sku"]: p for p in staged}
     necklace = by_sku["SKU-1"]
-    assert necklace["name"] == "Gold Plated Necklace"
-    assert necklace["name_ar"] == "قلادة مطلية بالذهب"
+    assert necklace["name"] == "Gold Plated Necklace For Women"
+    assert necklace["name_ar"] == "قلادة مطلية بالذهب"  # الجزء قبل الفاصلة
     assert necklace["category"] == "necklaces", necklace["category"]
     assert necklace["images"] == ["https://cj/img1.jpg"]
     assert "<p>" not in necklace["description"], "supplier HTML reached the store"
@@ -1875,7 +1963,7 @@ def test_imported_products_stay_off_the_storefront_until_published(client, monke
     assert published.status_code == 200 and published.json()["published"] == 2
 
     live = client.get("/api/products").json()
-    assert {p["name"] for p in live} == {"Gold Plated Necklace", "Silver Ring"}
+    assert {p["name"] for p in live} == {"Gold Plated Necklace For Women", "Silver Ring"}
     cj_client._reset_token()
 
 

@@ -18,7 +18,7 @@ const API = `${BACKEND_URL}/api`;
 
 const CheckoutPage = () => {
   const { user } = useAuth();
-  const { currency, language } = useLanguage();
+  const { currency, language, formatMoney } = useLanguage();
   const isRTL = language === 'ar' || language === 'he';
   const navigate = useNavigate();
   const [cart, setCart] = useState(null);
@@ -379,7 +379,7 @@ const CheckoutPage = () => {
                         {item.quantity}x {isRTL ? 'منتج' : 'item'}
                       </span>
                       <span>
-                        {(item.price * item.quantity).toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
+                        {formatMoney(item.price * item.quantity)}
                       </span>
                     </div>
                   ))}
@@ -389,7 +389,7 @@ const CheckoutPage = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">{isRTL ? 'المجموع الجزئي:' : 'Subtotal:'}</span>
                     <span className="font-medium" data-testid="summary-subtotal">
-                      {(cart.total_amount || 0).toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
+                      {formatMoney(cart.total_amount || 0)}
                     </span>
                   </div>
 
@@ -400,7 +400,7 @@ const CheckoutPage = () => {
                         ? (isRTL ? 'جاري الحساب...' : 'Calculating...')
                         : shippingCost === 0
                           ? (isRTL ? 'مجاني' : 'Free')
-                          : `${shippingCost.toFixed(2)} ${isRTL ? 'ر.س' : 'SAR'}`}
+                          : `${formatMoney(shippingCost)}`}
                     </span>
                   </div>
 
@@ -418,7 +418,7 @@ const CheckoutPage = () => {
                   <div className="flex justify-between text-xl font-bold">
                     <span>{isRTL ? 'المجموع:' : 'Total:'}</span>
                     <span className="text-amber-600" data-testid="summary-total">
-                      {totalAmount.toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
+                      {formatMoney(totalAmount)}
                     </span>
                   </div>
                 </div>

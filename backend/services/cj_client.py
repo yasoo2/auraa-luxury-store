@@ -351,3 +351,15 @@ async def close_client():
     """إغلاق الـ HTTP client"""
     await _client.aclose()
     logger.info("🔒 CJ Client closed")
+
+
+def credentials_configured() -> bool:
+    """
+    Whether this deployment has any (email, key) pair to try at all.
+
+    Answers without touching the network: CJ issues an access token once per
+    300 seconds, so a health check that authenticated would spend the store's
+    whole quota on polling. Reachability is what the Integrations screen
+    measures, by spending the token on a real call.
+    """
+    return next(_credential_pairs(), None) is not None

@@ -13,7 +13,7 @@ const API = `${BACKEND_URL}/api`;
 
 const OrderTrackingPage = () => {
   const { user } = useAuth();
-  const { language } = useLanguage();
+  const { language, formatMoney } = useLanguage();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [trackingSearch, setTrackingSearch] = useState('');
@@ -218,7 +218,7 @@ const OrderTrackingPage = () => {
                     </span>
                     <div className="text-right">
                       <div className="text-sm text-gray-600">{t.total}</div>
-                      <div className="font-bold text-lg">${order.total?.toFixed(2)}</div>
+                      <div className="font-bold text-lg">{formatMoney(order.total_amount)}</div>
                     </div>
                   </div>
                 </div>

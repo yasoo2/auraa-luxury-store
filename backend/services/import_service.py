@@ -9,6 +9,33 @@ logger = logging.getLogger(__name__)
 BATCH_SIZE = 50   # عدد العناصر في الدفعة (خفضناها من 100 لـ 50 لأمان أكثر)
 PAUSE_BETWEEN_BATCHES = 2  # ثواني راحة بين الدفعات
 
+
+def _products_from(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    The product list out of a CJ response.
+
+    CJ answers with:
+
+        {"code": 200, "result": true, "message": "...",
+         "data": {"pageNum": 1, "pageSize": 20, "total": 137, "list": [ ... ]}}
+
+    This used to read `response["result"]["data"]` — but `result` is a boolean,
+    so calling .get() on it raised AttributeError, which the surrounding
+    try/except swallowed as "batch failed". The fallback branch demanded that
+    `data` be a list, and it is a dict. Neither branch could ever produce a
+    product: the importer fetched from CJ and threw the answer away, reporting
+    a clean "0 products" every time.
+    """
+    data = response.get("data")
+    if isinstance(data, dict):
+        listing = data.get("list")
+        if isinstance(listing, list):
+            return listing
+    # Some CJ endpoints answer with the array directly.
+    if isinstance(data, list):
+        return data
+    return []
+
 async def chunked(lst: List[Any], size: int):
     """تقسيم القائمة إلى دفعات"""
     for i in range(0, len(lst), size):
@@ -63,12 +90,7 @@ async def bulk_import_products(
                 keyword=keyword
             )
             
-            # استخراج المنتجات من الاستجابة
-            batch_products = []
-            if response.get("result") and response["result"].get("data"):
-                batch_products = response["result"]["data"]
-            elif response.get("data") and isinstance(response["data"], list):
-                batch_products = response["data"]
+            batch_products = _products_from(response)
             
             # حد العدد المطلوب
             remaining = total_count - products_fetched

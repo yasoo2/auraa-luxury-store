@@ -39,13 +39,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize CJ service (for readiness check)
-try:
-    from services.cj_dropshipping import CJDropshippingService
-    cj_service = CJDropshippingService()
-except Exception as e:
-    logger.warning(f"CJ service initialization failed: {e}")
-    cj_service = None
+# There is one CJ client in this project: services/cj_client.py. There used to
+# be three — services/cj_dropshipping.py (unreachable: the package of the same
+# name shadowed it), the package itself, and cj_client. Each fix landed in one
+# of them, so the Integrations screen could report a healthy connection through
+# the repaired client while the import ran on a broken one. The duplicates are
+# gone; anything CJ goes through cj_client.
+from services.cj_client import credentials_configured as cj_credentials_configured
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -491,7 +491,6 @@ async def start_import_job(
             category_id=None,
             max_products=count,
             db=db,
-            cj_service=cj_service
         )
         
         return {
@@ -550,14 +549,14 @@ async def check_readiness():
         except:
             db_ok = False
         
-        # Check CJ Dropshipping service
-        vendors_ok = True
-        try:
-            # Quick check if CJ service is initialized
-            if not cj_service:
-                vendors_ok = False
-        except:
-            vendors_ok = False
+        # Vendor readiness means "credentials are configured", and says so.
+        # It used to mean "an object was constructed", which was true even when
+        # that object held no credentials at all — a green light backed by
+        # nothing. Reachability is not checked here on purpose: CJ issues an
+        # access token once per 300 seconds, so authenticating on every health
+        # poll would spend the store's whole quota. The Integrations screen is
+        # where the connection is actually exercised.
+        vendors_ok = cj_credentials_configured()
         
         overall_status = "ready" if (db_ok and vendors_ok) else "degraded"
         
@@ -2128,8 +2127,8 @@ async def auto_update_sync_products(
     admin: User = Depends(get_admin_user)
 ):
     """Kick off a supplier sync in the background and return immediately."""
-    if not cj_service:
-        raise HTTPException(status_code=503, detail="Supplier service unavailable")
+    if not cj_credentials_configured():
+        raise HTTPException(status_code=503, detail="CJ credentials are not configured")
 
     job_manager = ImportJobManager(db)
     job_id = await job_manager.create_job(
@@ -2139,7 +2138,7 @@ async def auto_update_sync_products(
     background_tasks.add_task(
         background_import_cj_products,
         job_id=job_id, keyword="luxury jewelry accessories",
-        category_id=None, max_products=50, db=db, cj_service=cj_service,
+        category_id=None, max_products=50, db=db,
     )
 
     return {"success": True, "jobId": job_id, "message": "Product sync started"}

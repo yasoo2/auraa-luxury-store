@@ -247,8 +247,11 @@ async def background_import_cj_products(
     category_id: Optional[str],
     max_products: int,
     db: AsyncIOMotorDatabase,
-    cj_service
 ):
+    # There was a `cj_service` parameter here that every caller dutifully passed
+    # and this function never read: the fetching happens inside
+    # bulk_import_products, which uses services/cj_client. Its only effect was
+    # to make a second, unrepaired CJ client look load-bearing.
     """
     Background task to import CJ products
     Uses new rate-limited import service with retry mechanism

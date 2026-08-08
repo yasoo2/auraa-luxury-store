@@ -1614,6 +1614,109 @@ def test_the_token_call_sends_apikey_not_password(fake_cj):
     assert any(p.endswith("/v1/authentication/getAccessToken") for p, _ in fake_cj.calls)
 
 
+# --- the import actually importing -----------------------------------------
+#
+# Every CJ test above proves the *client* talks to CJ. None of them proved that
+# a product ever reaches the store, and it did not: bulk_import_products read
+# the answer as response["result"]["data"], but CJ's "result" is a boolean, so
+# .get() on it raised AttributeError — swallowed by the batch try/except and
+# reported as a tidy "0 products fetched". The importer was fetching from CJ
+# and throwing every answer away.
+
+CJ_CATALOGUE = [
+    {"pid": "CJ-1", "productNameEn": "Gold Plated Necklace", "productName": "قلادة مطلية بالذهب",
+     "sellPrice": "12.50", "shippingPrice": "3.00", "weight": "0.08",
+     "productImage": "https://cj/img1.jpg", "productSku": "SKU-1",
+     "categoryName": "Jewelry > Necklaces", "sellQuantity": 40,
+     "description": "<p>A fine gold plated necklace for everyday elegance.</p>"},
+    {"pid": "CJ-2", "productNameEn": "Silver Ring", "productName": "خاتم فضّي",
+     "sellPrice": "8.00", "shippingPrice": "2.00", "weight": "0.03",
+     "productImage": "https://cj/img2.jpg", "productSku": "SKU-2",
+     "categoryName": "Jewelry > Rings", "sellQuantity": 12,
+     "description": "<p>A classic sterling silver ring, polished finish.</p>"},
+]
+
+
+class _CJCatalogue(_FakeCJ):
+    """Answers /product/list with CJ's real envelope: data.list, not data."""
+
+    async def request(self, method, url, json=None, params=None, headers=None):
+        self.calls.append((url.rsplit("/api2.0", 1)[-1], (headers or {}).get("CJ-Access-Token")))
+        self.requests.append({"method": method, "url": url, "json": json, "params": params})
+        if url.endswith("/v1/authentication/getAccessToken"):
+            return _FakeResponse(200, {"code": 200, "result": True, "data": {
+                "accessToken": REAL_TOKEN, "accessTokenExpiryDate": "2030-01-01T00:00:00"}})
+        if url.endswith("/v1/product/list"):
+            return _FakeResponse(200, {"code": 200, "result": True, "message": "Success",
+                                       "data": {"pageNum": 1, "pageSize": 50,
+                                                "total": len(CJ_CATALOGUE),
+                                                "list": CJ_CATALOGUE}})
+        return _FakeResponse(200, {"code": 200, "result": True, "data": {}})
+
+
+def test_a_cj_import_puts_real_products_into_staging(client, monkeypatch):
+    """The whole path: CJ answers, the importer writes, staging holds them."""
+    import asyncio
+    from services.background_import import background_import_cj_products
+
+    monkeypatch.setattr(cj_client, "_client", _CJCatalogue())
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "shop@example.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "APIKEY")
+    cj_client._reset_token()
+
+    asyncio.get_event_loop().run_until_complete(background_import_cj_products(
+        job_id="job-1", keyword="jewelry", category_id=None,
+        max_products=2, db=client._db,
+    ))
+
+    staged = asyncio.get_event_loop().run_until_complete(
+        client._db.products.find({"staging": True}).to_list(length=None))
+    assert len(staged) == 2, f"nothing was imported: {staged}"
+
+    by_sku = {p["sku"]: p for p in staged}
+    necklace = by_sku["SKU-1"]
+    assert necklace["name"] == "Gold Plated Necklace"
+    assert necklace["name_ar"] == "قلادة مطلية بالذهب"
+    assert necklace["category"] == "necklaces", necklace["category"]
+    assert necklace["images"] == ["https://cj/img1.jpg"]
+    assert "<p>" not in necklace["description"], "supplier HTML reached the store"
+    assert necklace["price"] > 12.50, "the sale price must exceed the supplier cost"
+    assert necklace["external_id"] == "CJ-1" and necklace["import_job_id"] == "job-1"
+
+    assert by_sku["SKU-2"]["category"] == "rings"
+    cj_client._reset_token()
+
+
+def test_imported_products_stay_off_the_storefront_until_published(client, monkeypatch):
+    import asyncio
+    from services.background_import import background_import_cj_products
+
+    monkeypatch.setattr(cj_client, "_client", _CJCatalogue())
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "shop@example.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "APIKEY")
+    cj_client._reset_token()
+
+    asyncio.get_event_loop().run_until_complete(background_import_cj_products(
+        job_id="job-2", keyword="jewelry", category_id=None,
+        max_products=2, db=client._db,
+    ))
+
+    assert client.get("/api/products").json() == [], "unreviewed imports reached shoppers"
+
+    register(client, email="owner@auraa.com")
+    make_admin(client, "owner@auraa.com")
+    staged = client.get("/api/products/staging?job_id=job-2").json()
+    assert len(staged) == 2
+
+    published = client.post("/api/products/publish-staging",
+                            json={"product_ids": [p["id"] for p in staged]})
+    assert published.status_code == 200 and published.json()["published"] == 2
+
+    live = client.get("/api/products").json()
+    assert {p["name"] for p in live} == {"Gold Plated Necklace", "Silver Ring"}
+    cj_client._reset_token()
+
+
 # --- several similarly named CJ variables ----------------------------------
 
 def _cj_env(monkeypatch, **vars):

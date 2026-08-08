@@ -1712,6 +1712,82 @@ class _CJCatalogue(_FakeCJ):
         return _FakeResponse(200, {"code": 200, "result": True, "data": {}})
 
 
+LONG_CJ_NAME = ("Ins Fashion Stainless Steel Petal Earrings 18K Gold Rotating Leaf "
+                "Versatile Titanium Steel Ear Studs With A Light Luxury And High-End Feel")
+
+
+def test_a_supplier_title_already_in_the_catalogue_is_shortened_on_read(seeded):
+    """
+    Fixing the importer did nothing for products already imported: their name
+    is still the whole CJ listing, and their description is the same sentence,
+    so the page prints that paragraph twice. There is no migration anyone can
+    safely run against a live store, so it is corrected on read.
+    """
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {
+            "source": "cj_dropshipping", "name": LONG_CJ_NAME,
+            "description": LONG_CJ_NAME}}))
+
+    detail = seeded.get("/api/products/p1").json()
+    assert len(detail["name"]) <= 60, detail["name"]
+    assert detail["name"] == "Ins Fashion Stainless Steel Petal Earrings 18K Gold Rotating"
+    assert detail["description"] == LONG_CJ_NAME, "the full title belongs in the body"
+    assert detail["description"] != detail["name"], "heading and body were identical"
+
+    listed = {p["id"]: p for p in seeded.get("/api/products").json()}
+    assert listed["p1"]["name"] == detail["name"]
+
+    register(seeded, email="nm@b.com")
+    make_admin(seeded, "nm@b.com")
+    rows = {p["id"]: p for p in seeded.get("/api/admin/products").json()}
+    assert rows["p1"]["name"] == detail["name"]
+
+
+def test_a_name_the_owner_wrote_is_never_rewritten(seeded):
+    """The correction is for supplier rows only, and only for overlong ones."""
+    import asyncio
+    owner_name = "A deliberately long product name the owner chose to write out"
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p2"}, {"$set": {
+            "source": "manual", "name": owner_name}}))
+    listed = {p["id"]: p for p in seeded.get("/api/products").json()}
+    assert listed["p2"]["name"] == owner_name
+
+    # A short supplier name is left alone too.
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {
+            "source": "cj_dropshipping", "name": "Gold Ring"}}))
+    listed = {p["id"]: p for p in seeded.get("/api/products").json()}
+    assert listed["p1"]["name"] == "Gold Ring"
+
+
+def test_rates_fall_back_to_real_numbers_instead_of_an_empty_table(monkeypatch):
+    """
+    With EXCHANGE_RATE_API_KEY set, any provider failure returned {} — an empty
+    table the frontend cannot convert with. Nothing looked broken; the currency
+    switcher simply moved no number, on every page of the store.
+    """
+    import asyncio
+    from services.currency_service import CurrencyService
+    from mongomock_motor import AsyncMongoMockClient
+
+    monkeypatch.setenv("EXCHANGE_RATE_API_KEY", "a-key-that-does-not-work")
+    service = CurrencyService(AsyncMongoMockClient()["t"])
+    rates = asyncio.get_event_loop().run_until_complete(service.get_latest_rates("USD"))
+
+    assert rates, "an empty rate table leaves every price stuck in one currency"
+    assert rates["SAR"] > 0, rates
+    assert rates["USD"] == 1.0
+    assert service.last_source == "fallback", "a stale table must not read as live"
+
+
+def test_the_rates_endpoint_says_whether_it_is_live(client):
+    body = client.get("/api/auto-update/currency-rates").json()
+    assert body["rates"].get("SAR"), body
+    assert body["source"] in ("live", "fallback"), body
+
+
 def test_a_reference_price_that_is_not_higher_never_reaches_a_shopper(seeded):
     """
     Rows imported before the fix still carry original_price = supplier cost, so

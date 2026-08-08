@@ -63,6 +63,11 @@ fi
 step "Currency conversion never invents a price" \
   node "$ROOT/scripts/verify-currency.mjs"
 
+# The shop has no payment provider. Until it has one it must not ask for a
+# card, because a card form that charges nothing tells the customer they paid.
+step "Checkout never asks for a card it cannot charge" \
+  node "$ROOT/scripts/verify-no-fake-payment.mjs"
+
 if [ -d "$ROOT/frontend/node_modules" ]; then
   step "Frontend build" \
     bash -c "cd '$ROOT/frontend' && CI=false npx craco build"

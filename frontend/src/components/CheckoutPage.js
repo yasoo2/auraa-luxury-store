@@ -36,11 +36,7 @@ const CheckoutPage = () => {
     zipCode: '',
     country: 'SA',
     // Payment
-    paymentMethod: 'card',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardName: ''
+    paymentMethod: 'on_confirmation',
   });
 
   const [shippingEstimate, setShippingEstimate] = useState({ loading: false, cost: 0, days: null, error: null });
@@ -338,31 +334,34 @@ const CheckoutPage = () => {
                   <h2 className="text-xl font-bold text-gray-900">{isRTL ? 'طريقة الدفع' : 'Payment Method'}</h2>
                 </div>
                 
+                {/*
+                  There used to be a card form here — cardholder, number,
+                  expiry, CVV, all required — and the store has no payment
+                  provider of any kind. The fields were never sent anywhere and
+                  nothing was ever charged, so every customer who filled them in
+                  read "order placed" and believed they had paid. Asking for a
+                  card and taking nothing is the worst thing this shop could
+                  tell someone.
+
+                  Until a real gateway is connected, the checkout says what
+                  actually happens: the order is placed, and payment is settled
+                  with the customer before it ships. That matches the flow the
+                  shop really runs, where the owner reviews every order by hand.
+                */}
                 <div className="space-y-4">
-                  <Select value={formData.paymentMethod || 'card'} onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}>
-                    <SelectTrigger data-testid="payment-method">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="card">💳 {isRTL ? 'بطاقة ائتمانية' : 'Credit Card'}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {formData.paymentMethod === 'card' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="md:col-span-2">
-                        <Input name="cardName" placeholder={isRTL ? 'اسم حامل البطاقة' : 'Cardholder Name'} value={formData.cardName} onChange={handleInputChange} required={formData.paymentMethod === 'card'} data-testid="card-name" />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Input name="cardNumber" placeholder={isRTL ? 'رقم البطاقة' : 'Card Number'} value={formData.cardNumber} onChange={handleInputChange} maxLength={19} required={formData.paymentMethod === 'card'} data-testid="card-number" />
-                      </div>
-                      <div>
-                        <Input name="expiryDate" placeholder="MM/YY" value={formData.expiryDate} onChange={handleInputChange} maxLength={5} required={formData.paymentMethod === 'card'} data-testid="card-expiry" />
-                      </div>
-                      <div>
-                        <Input name="cvv" placeholder="CVV" value={formData.cvv} onChange={handleInputChange} maxLength={4} required={formData.paymentMethod === 'card'} data-testid="card-cvv" />
-                      </div>
-                    </div>
-                  )}
+                  <div
+                    className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-gray-700"
+                    data-testid="payment-method"
+                  >
+                    <p className="font-semibold text-gray-900 mb-1">
+                      {isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation'}
+                    </p>
+                    <p>
+                      {isRTL
+                        ? 'نراجع طلبك ونتواصل معك لإتمام الدفع قبل الشحن. لن يُخصم منك شيء الآن.'
+                        : 'We review your order and contact you to settle payment before it ships. Nothing is charged now.'}
+                    </p>
+                  </div>
                 </div>
               </Card>
             </div>

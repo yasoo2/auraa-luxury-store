@@ -97,15 +97,12 @@ const TermsOfService = () => {
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">أوقات التسليم</h3>
                   <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
-                    <li>داخل الرياض: 1-2 يوم عمل</li>
-                    <li>باقي مدن السعودية: 2-4 أيام عمل</li>
-                    <li>دول الخليج: 3-7 أيام عمل</li>
+                    <li>جميع الطلبات: 5-15 يوم عمل</li>
                   </ul>
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">رسوم الشحن</h3>
                   <ul className="list-disc list-inside text-gray-600 space-y-2">
-                    <li>شحن مجاني للطلبات فوق 500 ريال داخل السعودية</li>
-                    <li>رسوم شحن ثابتة لدول الخليج</li>
+                    <li>الشحن مجاني على كل الطلبات، بلا حدّ أدنى</li>
                     <li>قد تخضع للجمارك والرسوم الحكومية</li>
                   </ul>
                 </section>
@@ -273,15 +270,12 @@ const TermsOfService = () => {
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">Delivery Times</h3>
                   <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
-                    <li>Riyadh: 1-2 business days</li>
-                    <li>Other Saudi cities: 2-4 business days</li>
-                    <li>GCC countries: 3-7 business days</li>
+                    <li>All orders: 5-15 business days</li>
                   </ul>
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">Shipping Costs</h3>
                   <ul className="list-disc list-inside text-gray-600 space-y-2">
-                    <li>Free shipping for orders over 500 SAR within Saudi</li>
-                    <li>Fixed shipping rates to GCC countries</li>
+                    <li>Shipping is free on every order, with no minimum</li>
                     <li>May be subject to customs and government fees</li>
                   </ul>
                 </section>

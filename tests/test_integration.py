@@ -1968,6 +1968,18 @@ def test_shipping_is_free_because_the_price_already_contains_it(seeded):
     assert body["shipping_included_in_price"] is True
 
 
+def test_the_delivery_window_is_the_one_the_shop_promises(seeded, monkeypatch):
+    """
+    No country configuration in this project ever set delivery_days, so the
+    window was whatever the literal default in the code happened to be — and
+    changing it meant editing and redeploying. One store-wide value, settable
+    without a deploy.
+    """
+    body = seeded.post("/api/shipping/estimate", json={
+        "country_code": "SA", "items": []}).json()
+    assert body["estimated_days"] == "5-15", body
+
+
 def test_the_delivery_window_is_a_readable_string(seeded):
     """
     The product page read estimated_days as {min, max} and printed a literal

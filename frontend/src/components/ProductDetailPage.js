@@ -318,12 +318,18 @@ const ProductDetailPage = () => {
                 <div>
                   <div className="font-medium text-gray-900">{isRTL ? 'توصيل سريع' : 'Fast Delivery'}</div>
                   <div className="text-sm text-gray-600">
+                    {/* The same {min,max} misreading as the shipping line above,
+                        in a second place in this same file — fixed there and
+                        missed here. And the "3-7 business days" fallback was a
+                        number nobody had promised: shown whenever the estimate
+                        had not arrived, and contradicting the real window when
+                        it did. Say nothing until the server answers. */}
                     {shippingInfo.days ? (
                       <span>
-                        {isRTL ? 'تقدير: ' : 'ETA: '} {shippingInfo.days.min ?? '?'} - {shippingInfo.days.max ?? '?'} {isRTL ? 'أيام' : 'days'}
+                        {isRTL ? 'تقدير: ' : 'ETA: '}{shippingInfo.days} {isRTL ? 'أيام' : 'days'}
                       </span>
                     ) : (
-                      <span>{isRTL ? '3-7 أيام عمل' : '3-7 business days'}</span>
+                      <span>{isRTL ? 'يُحتسب عند الطلب' : 'Calculated at checkout'}</span>
                     )}
                   </div>
                 </div>

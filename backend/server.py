@@ -731,9 +731,60 @@ def _sane_reference_price(doc: Dict[str, Any]) -> Dict[str, Any]:
     return doc
 
 
+def _readable_name(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Turn a supplier title back into a heading, for rows imported before the
+    importer learned to do it.
+
+    CJ titles are the whole listing on one line. Products already in the
+    database carry them verbatim as `name`, and their description carries the
+    same sentence — so the product page prints that paragraph twice, once bold
+    and once not. Fixing the importer did nothing for a catalogue already
+    imported, and there is no migration anyone can safely run against a live
+    store, so it is corrected on read.
+
+    Only supplier rows, and only when the stored name is longer than a heading
+    should be: a name the owner wrote stays exactly as the owner wrote it.
+    """
+    if not (doc.get("imported_from_cj") or doc.get("source") == "cj_dropshipping"):
+        return doc
+
+    for field in ("name", "name_ar"):
+        value = doc.get(field)
+        if isinstance(value, str) and len(value) > NAME_MAX:
+            short = _shorten_name(value)
+            if short:
+                doc[field] = short
+    return doc
+
+
+NAME_MAX = 60
+
+
+def _shorten_name(raw: str) -> str:
+    """The first clause of a supplier title, capped at a heading's length.
+
+    Kept in step with services/background_import._product_name — same rule,
+    applied to rows written before that function existed.
+    """
+    text = re.sub(r"\s+", " ", raw or "").strip()
+    if not text:
+        return ""
+    head = re.split(r"[,\u060c]", text)[0].strip()
+    if len(head) > NAME_MAX:
+        words, out = head.split(" "), []
+        for word in words:
+            if len(" ".join(out + [word])) > NAME_MAX:
+                break
+            out.append(word)
+        head = " ".join(out) or head[:NAME_MAX]
+    return head.rstrip(" -–—")
+
+
 def _localize(doc: Dict[str, Any], language: Optional[str]) -> Dict[str, Any]:
     """Pick the localized name/description, falling back across languages."""
     doc = _sane_reference_price(doc)
+    doc = _readable_name(doc)
     if not language:
         return doc
 
@@ -1933,6 +1984,7 @@ async def admin_list_products(
         # shoppers see; state it here rather than leave the UI to guess.
         p.setdefault("is_active", True)
         _sane_reference_price(p)
+        _readable_name(p)
         # Flag rows the storefront will refuse to render, with the reason, so
         # a product that exists but is invisible to customers is visible here.
         try:
@@ -2125,8 +2177,13 @@ async def auto_update_currency_rates():
     """
     try:
         from services.currency_service import get_currency_service
-        rates = await get_currency_service(db).get_latest_rates("USD")
+        service = get_currency_service(db)
+        rates = await service.get_latest_rates("USD")
         return {"base": "USD", "rates": rates,
+                # "live" or "fallback". The provider failing used to leave the
+                # store with an empty rate table and no sign of it: prices
+                # simply stopped following the currency switcher.
+                "source": getattr(service, "last_source", "unknown"),
                 "updated_at": datetime.now(timezone.utc).isoformat()}
     except Exception as e:
         logger.error(f"Could not load currency rates: {e}")

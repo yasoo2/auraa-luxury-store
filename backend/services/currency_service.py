@@ -23,6 +23,9 @@ class CurrencyService:
     def __init__(self, database: AsyncIOMotorDatabase):
         self.db = database
         self.api_key = os.environ.get("EXCHANGE_RATE_API_KEY", "free")  # Can use free tier for testing
+        # "live" or "fallback" — reported to the client so a stale table is
+        # never passed off as today's rate.
+        self.last_source: str = "unknown"
         self.base_url = f"https://v6.exchangerate-api.com/v6/{self.api_key}"
         self.supported_currencies = ["USD", "SAR", "AED", "QAR", "KWD", "BHD", "OMR"]
         self.cache_duration = timedelta(hours=1)  # Update rates every hour
@@ -65,6 +68,7 @@ class CurrencyService:
         # Use fallback static rates if API key is not set
         if self.api_key == "free":
             logger.info("Using static fallback exchange rates (no API key configured)")
+            self.last_source = "fallback"
             return await self._get_fallback_rates(base_currency)
         
         url = f"{self.base_url}/latest/{base_currency}"
@@ -77,18 +81,28 @@ class CurrencyService:
                         
                         if data.get("result") == "success":
                             rates = data.get("conversion_rates", {})
-                            logger.info(f"Successfully fetched {len(rates)} exchange rates for {base_currency}")
-                            return rates
+                            if rates:
+                                logger.info(f"Fetched {len(rates)} live exchange rates for {base_currency}")
+                                self.last_source = "live"
+                                return rates
+                            logger.error("Rate provider returned success with no rates")
                         else:
                             logger.error(f"API returned error: {data.get('error-type')}")
-                            return {}
                     else:
                         logger.error(f"HTTP error {response.status} when fetching rates")
-                        return {}
-                        
+
         except Exception as e:
             logger.error(f"Error fetching exchange rates: {str(e)}")
-            return {}
+
+        # Every failure above used to return {} — an empty table the frontend
+        # cannot convert with. The store kept working, so nothing looked broken,
+        # but the currency switcher moved no number: every price stayed in the
+        # base currency no matter what the shopper picked. Published exchange
+        # rates that are a few weeks stale are still real rates; an empty table
+        # is no rate at all. Fall back, and say in the response which it is.
+        logger.warning("Falling back to static exchange rates")
+        self.last_source = "fallback"
+        return await self._get_fallback_rates(base_currency)
     
     async def update_exchange_rates(self) -> bool:
         """

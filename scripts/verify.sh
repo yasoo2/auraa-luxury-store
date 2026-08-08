@@ -68,6 +68,11 @@ step "Currency conversion never invents a price" \
 step "Checkout never asks for a card it cannot charge" \
   node "$ROOT/scripts/verify-no-fake-payment.mjs"
 
+# Edge, Safari and private mode make localStorage *throw*, not return null. A
+# blocked read once took a successful sign-in down with it.
+step "The app survives a browser that blocks storage" \
+  node "$ROOT/scripts/verify-blocked-storage.mjs"
+
 if [ -d "$ROOT/frontend/node_modules" ]; then
   step "Frontend build" \
     bash -c "cd '$ROOT/frontend' && CI=false npx craco build"

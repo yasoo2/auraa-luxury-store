@@ -82,22 +82,33 @@ if [ -d "$ROOT/frontend/node_modules" ]; then
   step "Frontend build" \
     bash -c "cd '$ROOT/frontend' && CI=false npx craco build"
 
-  # The service worker sits between every visitor and every page, and nothing
-  # else here would notice it breaking: it once returned undefined from
-  # respondWith, which the browser reports as a hard network error on the page
-  # the shopper asked for. Needs the build above, and a real browser.
   if [ -d "$ROOT/frontend/build" ]; then
-    blue "→ Service worker survives going offline"
-    node "$ROOT/scripts/verify-sw.mjs" "$ROOT/frontend/build" > /tmp/verify-step.log 2>&1
-    case "$?" in
-      0) green "  ✓ Service worker survives going offline" ;;
-      # Exit 2 means the check could not run. Say so — a check that silently
-      # counts as a pass is worse than one that is missing.
-      2) red   "  ! skipped — $(tail -1 /tmp/verify-step.log)" ;;
-      *) red   "  ✗ Service worker survives going offline"
-         tail -25 /tmp/verify-step.log | sed 's/^/    /'
-         FAILED=1 ;;
-    esac
+    # Needs the build above, and a real browser. Exit 2 means the check could
+    # not run — say so, because a check that silently counts as a pass is worse
+    # than one that is missing.
+    browser_step() {
+      local name="$1" script="$2"
+      blue "→ $name"
+      node "$ROOT/scripts/$script" "$ROOT/frontend/build" > /tmp/verify-step.log 2>&1
+      case "$?" in
+        0) green "  ✓ $name" ;;
+        2) red   "  ! skipped — $(tail -1 /tmp/verify-step.log)" ;;
+        *) red   "  ✗ $name"
+           tail -25 /tmp/verify-step.log | sed 's/^/    /'
+           FAILED=1 ;;
+      esac
+    }
+
+    # The service worker sits between every visitor and every page, and nothing
+    # else here would notice it breaking: it once returned undefined from
+    # respondWith, which the browser reports as a hard network error on the
+    # page the shopper asked for.
+    browser_step "Service worker survives going offline" verify-sw.mjs
+
+    # The money path. The shop has no card gateway, so an order it cannot be
+    # paid for is the expensive failure — as is showing an account number that
+    # did not come from the server.
+    browser_step "Checkout can only place an order it can be paid for" verify-checkout-payment.mjs
   fi
 else
   red "  ! skipping frontend — run: cd frontend && npm install --legacy-peer-deps"

@@ -24,6 +24,7 @@ import OAuthCallback from './pages/OAuthCallback';
 import DeploymentSetup from './components/DeploymentSetup';
 import ProfilePage from './components/ProfilePage';
 import CheckoutPage from './components/CheckoutPage';
+import OrderPaymentPage from './components/OrderPaymentPage';
 import Footer from './components/Footer';
 
 // Admin Pages
@@ -92,6 +93,7 @@ function App() {
                     <Route path="/admin-setup" element={<AdminSetup />} />
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                     <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+                    <Route path="/order/:orderId/pay" element={<ProtectedRoute><OrderPaymentPage /></ProtectedRoute>} />
                     
                     {/* Legal and Info Pages */}
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />

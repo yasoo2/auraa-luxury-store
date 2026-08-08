@@ -359,6 +359,12 @@ class Order(BaseModel):
     order_number: Optional[str] = None
     shipping_address: Dict[str, Any]
     payment_method: str
+    # Whether the money has actually arrived. Nothing may be bought from the
+    # supplier while this says otherwise: a parcel sent for an unpaid order is
+    # a loss the shop has no way to recover.
+    payment_status: str = "awaiting_payment"
+    payment_reference: Optional[str] = None
+    payment_confirmed_at: Optional[str] = None
     status: OrderStatus = OrderStatus.pending
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     tracking_number: Optional[str] = None
@@ -1403,6 +1409,21 @@ async def create_order(
     if not cart or not cart.get("items"):
         raise HTTPException(status_code=400, detail="Cart is empty")
 
+    # An order placed by a method the shop does not offer is an order nobody
+    # can pay: the customer is told it went through and then hears nothing,
+    # because there is no account for the money to arrive in.
+    methods = await available_payment_methods()
+    if not methods:
+        raise HTTPException(
+            status_code=503,
+            detail="The store cannot take payment right now. Please try again shortly.",
+        )
+    if order_data.payment_method not in {m["id"] for m in methods}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown payment method: {order_data.payment_method}",
+        )
+
     # An address CJ cannot ship to is an order that can never be fulfilled.
     # Refuse it here, while the customer is still on the page and can fix it.
     missing = missing_shipping_fields(order_data.shipping_address)
@@ -1500,6 +1521,45 @@ async def get_orders(current_user: User = Depends(get_current_user)):
     return result
 
 
+@api_router.get("/orders/{order_id}/payment-instructions")
+async def get_payment_instructions(
+    order_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    How to pay for one of your own orders, and whether it is already settled.
+
+    Reachable after checkout, not only on the page that follows it: a customer
+    who closes the tab before writing the IBAN down has no other way back to
+    it, and asking them to email for their own bank details is a good way to
+    lose the sale.
+    """
+    order = await db.orders.find_one({"id": order_id, "user_id": current_user.id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    method_id = order.get("payment_method")
+    method = next(
+        (m for m in await available_payment_methods() if m["id"] == method_id),
+        # A method withdrawn since the order was placed still has to be shown,
+        # or the customer is left holding an invoice with no way to settle it.
+        {"id": method_id, "unavailable": True} if method_id else None,
+    )
+
+    return {
+        "order_id": order.get("id"),
+        "order_number": order.get("order_number"),
+        "amount": order.get("total_amount"),
+        "currency": order.get("currency", "SAR"),
+        "payment_status": order.get("payment_status", "awaiting_payment"),
+        "payment_reference": order.get("payment_reference"),
+        # What the customer must quote so the transfer can be matched to this
+        # order. Money arriving with no reference is money nobody can place.
+        "reference_to_quote": order.get("order_number") or order.get("id"),
+        "method": method,
+    }
+
+
 @api_router.get("/orders/my-orders")
 async def get_my_orders(current_user: User = Depends(get_current_user)):
     orders = await db.orders.find(
@@ -1515,7 +1575,11 @@ async def get_my_orders(current_user: User = Depends(get_current_user)):
             "created_at": o.get("created_at"),
             "total_amount": o.get("total_amount", 0.0),
             "currency": o.get("currency", "SAR"),
-            "shipping_address": o.get("shipping_address", {})
+            "shipping_address": o.get("shipping_address", {}),
+            # "بانتظار" meant nothing on its own — waiting for what? This is
+            # the half the customer can do something about.
+            "payment_status": o.get("payment_status", "awaiting_payment"),
+            "payment_method": o.get("payment_method"),
         }
         for o in orders
     ]}
@@ -1687,6 +1751,16 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
             detail=f"Already sent to the supplier as {order['supplier_order_id']}",
         )
 
+    # Buying the goods is the point of no return: CJ ships, the money is spent,
+    # and there is nobody to take it back from if the customer never paid.
+    # Confirming the payment is one click away in the same dialog — this asks
+    # for it, it does not prevent it.
+    if order.get("payment_status") != "paid":
+        raise HTTPException(
+            status_code=409,
+            detail="This order is not paid yet. Confirm the payment before buying the goods.",
+        )
+
     async def record_failure(reason: str) -> None:
         await db.orders.update_one({"id": order_id}, {"$set": {
             "supplier_status": "failed",
@@ -1740,6 +1814,56 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
         # Said plainly so nobody assumes the goods are paid for.
         "message": "Created on CJ. It is not paid yet — pay it from your CJ balance.",
     }
+
+
+class PaymentConfirmation(BaseModel):
+    reference: Optional[str] = None
+    paid: bool = True
+
+
+@api_router.post("/admin/orders/{order_id}/confirm-payment")
+async def confirm_order_payment(
+    order_id: str,
+    payload: PaymentConfirmation,
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Record that the customer's money arrived — or take that back.
+
+    There is no gateway to ask, so the only thing that knows whether a transfer
+    landed is the bank statement, and the only one reading it is the owner.
+    This is where what they saw there gets written down, with who said so and
+    when, because "paid" is the flag that unlocks spending money at CJ.
+    """
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if payload.paid:
+        updates = {
+            "payment_status": "paid",
+            "payment_reference": (payload.reference or "").strip() or None,
+            "payment_confirmed_at": datetime.now(timezone.utc).isoformat(),
+            "payment_confirmed_by": admin.email,
+        }
+    else:
+        # Marking it back is not tidying up after a mistake — an order already
+        # sent to CJ has had money spent against it, and clearing the flag
+        # would let it be sent again.
+        if order.get("supplier_order_id"):
+            raise HTTPException(
+                status_code=409,
+                detail="This order was already bought from the supplier; its payment cannot be un-confirmed.",
+            )
+        updates = {
+            "payment_status": "awaiting_payment",
+            "payment_reference": None,
+            "payment_confirmed_at": None,
+            "payment_confirmed_by": None,
+        }
+
+    await db.orders.update_one({"id": order_id}, {"$set": updates})
+    return {"success": True, "id": order_id, **updates}
 
 
 # ============================================================================
@@ -1944,6 +2068,123 @@ async def _put_singleton(doc_id: str, payload: Dict[str, Any]) -> Dict[str, Any]
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.site_config.update_one({"_id": doc_id}, {"$set": payload}, upsert=True)
     return payload
+
+
+# ---------------------------------------------------------------------------
+# How a customer pays
+# ---------------------------------------------------------------------------
+#
+# There is no card gateway, and there will not be one until the paperwork for a
+# merchant account exists. What the shop does have is a bank account, which is
+# a real way to be paid — so the checkout offers it, with the details the payer
+# actually needs and the order number to quote.
+#
+# The details are configuration, never code. An IBAN written into a source file
+# is one deploy away from sending a customer's money to the wrong account, and
+# a half-filled bank block is not a payment method — it is a transfer that
+# bounces. So a method is offered only when everything a payer needs is there.
+
+PAYMENT_DOC_ID = "store_payment"
+
+BANK_TRANSFER_REQUIRED = ("bank_name", "account_holder", "iban")
+
+# The fallback the shop already runs by hand: the order is placed, and the
+# owner arranges payment with the customer before anything ships. It is not
+# automated, but it is not fiction either — it describes what really happens.
+ON_CONFIRMATION = "on_confirmation"
+BANK_TRANSFER = "bank_transfer"
+
+
+def _bank_transfer_option(cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """The bank block as a customer should see it, or None if unusable."""
+    bank = (cfg or {}).get(BANK_TRANSFER) or {}
+    if not bank.get("enabled"):
+        return None
+    if any(not str(bank.get(field) or "").strip() for field in BANK_TRANSFER_REQUIRED):
+        return None
+    return {
+        "id": BANK_TRANSFER,
+        "bank_name": str(bank["bank_name"]).strip(),
+        "account_holder": str(bank["account_holder"]).strip(),
+        "iban": str(bank["iban"]).strip().replace(" ", "").upper(),
+        # Optional: a wire from abroad needs the SWIFT/BIC, a domestic one does not.
+        "swift": str(bank.get("swift") or "").strip() or None,
+        "account_currency": str(bank.get("account_currency") or "").strip() or None,
+        "instructions": str(bank.get("instructions") or "").strip() or None,
+    }
+
+
+async def available_payment_methods() -> List[Dict[str, Any]]:
+    """Every method a customer can actually use right now."""
+    cfg = await _get_singleton(PAYMENT_DOC_ID)
+    methods: List[Dict[str, Any]] = []
+
+    bank = _bank_transfer_option(cfg)
+    if bank:
+        methods.append(bank)
+
+    # Defaults to on, so configuring the bank block is an improvement rather
+    # than the moment the shop starts taking orders at all.
+    if (cfg.get(ON_CONFIRMATION) or {}).get("enabled", True):
+        methods.append({"id": ON_CONFIRMATION})
+
+    return methods
+
+
+@api_router.get("/payment-methods")
+async def get_payment_methods():
+    """
+    What the checkout may offer. Public on purpose: an IBAN is for giving to
+    the people who owe you money.
+    """
+    return {"methods": await available_payment_methods()}
+
+
+@api_router.get("/admin/payment-settings")
+async def admin_get_payment_settings(admin: User = Depends(get_admin_user)):
+    cfg = await _get_singleton(PAYMENT_DOC_ID)
+    return {
+        BANK_TRANSFER: cfg.get(BANK_TRANSFER) or {},
+        ON_CONFIRMATION: cfg.get(ON_CONFIRMATION) or {"enabled": True},
+        # So the screen can say plainly whether customers are being offered
+        # this, rather than leaving the owner to work it out from the fields.
+        "live_methods": [m["id"] for m in await available_payment_methods()],
+    }
+
+
+@api_router.put("/admin/payment-settings")
+async def admin_update_payment_settings(
+    payload: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
+    bank = payload.get(BANK_TRANSFER) or {}
+    updates: Dict[str, Any] = {
+        BANK_TRANSFER: {
+            "enabled": bool(bank.get("enabled")),
+            "bank_name": str(bank.get("bank_name") or "").strip(),
+            "account_holder": str(bank.get("account_holder") or "").strip(),
+            "iban": str(bank.get("iban") or "").strip().replace(" ", "").upper(),
+            "swift": str(bank.get("swift") or "").strip(),
+            "account_currency": str(bank.get("account_currency") or "").strip(),
+            "instructions": str(bank.get("instructions") or "").strip(),
+        },
+        ON_CONFIRMATION: {
+            "enabled": bool((payload.get(ON_CONFIRMATION) or {}).get("enabled", True)),
+        },
+    }
+
+    # Turning it on with a field missing would show customers a payment box
+    # they cannot pay into. Say which field, here, while it can still be typed.
+    if updates[BANK_TRANSFER]["enabled"]:
+        missing = [f for f in BANK_TRANSFER_REQUIRED if not updates[BANK_TRANSFER][f]]
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail="Bank transfer needs: " + ", ".join(f.replace("_", " ") for f in missing),
+            )
+
+    await _put_singleton(PAYMENT_DOC_ID, updates)
+    return {**updates, "live_methods": [m["id"] for m in await available_payment_methods()]}
 
 
 # ---------------------------------------------------------------------------

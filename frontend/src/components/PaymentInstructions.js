@@ -1,0 +1,147 @@
+import React, { useState } from 'react';
+import { Copy, Check, Building2, Info } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
+
+/**
+ * What a customer needs in order to actually send the money.
+ *
+ * The shop has no card gateway, so "pay" means a bank transfer the customer
+ * makes themselves. That only works if the details are in front of them,
+ * copyable, and carry the reference that lets the owner match the incoming
+ * money to this order — a transfer with no reference is money that arrives
+ * belonging to nobody.
+ *
+ * Every value here comes from the server. Nothing about a bank account may be
+ * guessed, defaulted or filled in from an example: the failure mode is a
+ * customer's money landing in a stranger's account.
+ */
+
+const CopyRow = ({ label, value, mono = true }) => {
+  const [copied, setCopied] = useState(false);
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      // Clipboard access is refused in plenty of ordinary situations — an
+      // insecure origin, a permission prompt declined. The value is on screen
+      // and can be selected by hand, so say nothing rather than claim a copy
+      // that did not happen.
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-2 border-b border-amber-100 last:border-0">
+      <span className="text-sm text-gray-600 shrink-0">{label}</span>
+      <div className="flex items-center gap-2 min-w-0">
+        <span
+          dir={mono ? 'ltr' : undefined}
+          className={`text-sm text-gray-900 truncate ${mono ? 'font-mono' : 'font-medium'}`}
+        >
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={isRTL ? `نسخ ${label}` : `Copy ${label}`}
+          className="p-1.5 rounded hover:bg-amber-100 text-amber-700 shrink-0"
+        >
+          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const PaymentInstructions = ({ method, amount, currency, reference, formatted }) => {
+  const { language } = useLanguage();
+  const isRTL = language === 'ar';
+
+  if (!method) return null;
+
+  if (method.id !== 'bank_transfer') {
+    return (
+      <div
+        className="border border-amber-200 bg-amber-50 rounded-lg p-4"
+        data-testid="pay-on-confirmation"
+      >
+        <p className="font-semibold text-gray-900 mb-1">
+          {isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation'}
+        </p>
+        <p className="text-sm text-gray-700">
+          {isRTL
+            ? 'نراجع طلبك ونتواصل معك لإتمام الدفع قبل الشحن. لن يُخصم منك شيء الآن.'
+            : 'We review your order and contact you to settle payment before it ships. Nothing is charged now.'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="border border-amber-200 bg-amber-50 rounded-lg p-4"
+      data-testid="bank-transfer-instructions"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <Building2 className="h-5 w-5 text-amber-700" />
+        <p className="font-semibold text-gray-900">
+          {isRTL ? 'حوالة بنكية' : 'Bank transfer'}
+        </p>
+      </div>
+
+      <div className="bg-white rounded-md px-3 py-1 mb-3">
+        <CopyRow
+          label={isRTL ? 'اسم البنك' : 'Bank'}
+          value={method.bank_name}
+          mono={false}
+        />
+        <CopyRow
+          label={isRTL ? 'اسم صاحب الحساب' : 'Account holder'}
+          value={method.account_holder}
+          mono={false}
+        />
+        <CopyRow label="IBAN" value={method.iban} />
+        {method.swift && <CopyRow label="SWIFT / BIC" value={method.swift} />}
+        {reference && (
+          <CopyRow
+            label={isRTL ? 'رقم الطلب (اكتبه في خانة البيان)' : 'Reference (put this in the note)'}
+            value={reference}
+          />
+        )}
+        {(formatted || amount != null) && (
+          <CopyRow
+            label={isRTL ? 'المبلغ' : 'Amount'}
+            value={formatted || `${amount} ${currency || ''}`.trim()}
+            mono={false}
+          />
+        )}
+      </div>
+
+      {method.account_currency && (
+        <p className="text-xs text-gray-600 flex items-start gap-1.5 mb-2">
+          <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          {isRTL
+            ? `الحساب يستقبل ${method.account_currency}. قد يطبّق بنكك سعر صرف ورسوم تحويل.`
+            : `The account receives ${method.account_currency}. Your bank may apply its own exchange rate and fees.`}
+        </p>
+      )}
+
+      {method.instructions && (
+        <p className="text-sm text-gray-700 whitespace-pre-line mb-2">{method.instructions}</p>
+      )}
+
+      <p className="text-sm text-gray-700">
+        {isRTL
+          ? 'بعد التحويل يصلنا إشعار، ونؤكّد استلام المبلغ ثم نبدأ التجهيز. اكتب رقم الطلب في بيان الحوالة حتى نتمكّن من مطابقتها.'
+          : 'Once the transfer arrives we confirm it and start preparing your order. Quote the order number on the transfer so we can match it.'}
+      </p>
+    </div>
+  );
+};
+
+export default PaymentInstructions;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { User, Package, MapPin, Settings, Eye } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -18,7 +18,7 @@ const API = `${BACKEND_URL}/api`;
 
 const ProfilePage = () => {
   const { user } = useAuth();
-  const { language } = useLanguage();
+  const { language, formatMoney } = useLanguage();
   const isRTL = language === 'ar';
   const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
@@ -83,15 +83,29 @@ const ProfilePage = () => {
   };
 
   // What happens next, in the customer's words.
-  const getStatusNote = (status) => {
+  //
+  // This used to depend on the order status alone, so a pending order always
+  // read "we will contact you to settle payment" — including for a customer
+  // who had chosen bank transfer and was waiting on nobody but themselves.
+  const getStatusNote = (order) => {
+    const status = order?.status;
+    if (status === 'pending' && order?.payment_status !== 'paid') {
+      return order?.payment_method === 'bank_transfer'
+        ? 'وصلنا طلبك وننتظر وصول الحوالة. اضغط «أكمِل الدفع» لتفاصيل الحساب ورقم الطلب.'
+        : 'وصلنا طلبك. نراجعه ونتواصل معك لإتمام الدفع قبل الشحن.';
+    }
     const notes = {
-      pending: 'وصلنا طلبك. نراجعه ونتواصل معك لإتمام الدفع قبل الشحن.',
+      pending: 'تم تأكيد استلام المبلغ. نجهّز طلبك للشحن.',
       processing: 'تم تأكيد طلبك ويجري تجهيزه للشحن.',
       shipped: 'طلبك في الطريق إليك.',
       cancelled: 'أُلغي هذا الطلب. تواصل معنا إن كان ذلك غير متوقّع.',
     };
     return notes[status] || '';
   };
+
+  const awaitingPayment = (order) =>
+    order?.payment_status !== 'paid'
+    && !['cancelled', 'delivered', 'shipped'].includes(order?.status);
 
   // A payment method the shop actually offers. Anything that was not 'card'
   // used to be labelled as an electronic payment — one that never happened,
@@ -272,20 +286,29 @@ const ProfilePage = () => {
                         </p>
                         {/* A one-word status leaves the customer guessing.
                             Say what is happening and what comes next. */}
-                        {getStatusNote(order.status) && (
+                        {getStatusNote(order) && (
                           <p className="text-sm text-amber-700 mt-2" data-testid="order-status-note">
-                            {getStatusNote(order.status)}
+                            {getStatusNote(order)}
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2 mt-4 md:mt-0">
+                      <div className="flex items-center gap-2 mt-4 md:mt-0">
                         <Badge className={getStatusColor(order.status)}>
                           {getStatusText(order.status)}
                         </Badge>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 ml-1" />
-                          عرض التفاصيل
-                        </Button>
+                        {/* There was a "عرض التفاصيل" button here with no
+                            onClick — it had never done anything since the day
+                            it was added. What a customer with an unpaid order
+                            actually needs is the account to pay into, so that
+                            is what this button is now. */}
+                        {awaitingPayment(order) && (
+                          <Link to={`/order/${order.id}/pay`} data-testid="complete-payment">
+                            <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                              <Eye className="h-4 w-4 ml-1" />
+                              أكمِل الدفع
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                     </div>
                     
@@ -297,7 +320,10 @@ const ProfilePage = () => {
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">المجموع:</p>
-                          <p className="font-medium text-amber-600">{order.total_amount} ر.س</p>
+                          {/* Printed "ر.س" after the number whatever currency
+                              the shopper had selected, so a total shown in
+                              dollars was labelled in riyals. */}
+                          <p className="font-medium text-amber-600">{formatMoney(order.total_amount)}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">طريقة الدفع:</p>

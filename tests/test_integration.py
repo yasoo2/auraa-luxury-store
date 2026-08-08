@@ -386,7 +386,7 @@ def test_order_flow_clears_cart_and_is_trackable(seeded):
     register(seeded, email="order@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=2")
 
-    r = seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "cod"})
+    r = seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "on_confirmation"})
     assert r.status_code == 200, r.text
     order = r.json()
     assert order["total_amount"] == 500.0
@@ -411,7 +411,7 @@ def test_an_address_a_supplier_cannot_ship_to_is_refused(seeded):
     seeded.post("/api/cart/add?product_id=p1&quantity=1")
 
     r = seeded.post("/api/orders", json={
-        "shipping_address": {"city": "Riyadh"}, "payment_method": "cod"})
+        "shipping_address": {"city": "Riyadh"}, "payment_method": "on_confirmation"})
     assert r.status_code == 400, r.text
     detail = r.json()["detail"]
     for label in ("recipient name", "phone number", "country", "street address"):
@@ -430,7 +430,7 @@ def test_the_address_the_checkout_page_sends_is_accepted(seeded):
     register(seeded, email="realaddr@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=1")
     r = seeded.post("/api/orders", json={
-        "shipping_address": SHIPPING, "payment_method": "cod"})
+        "shipping_address": SHIPPING, "payment_method": "on_confirmation"})
     assert r.status_code == 200, r.text
 
 
@@ -448,7 +448,7 @@ def test_an_order_is_priced_from_the_catalogue_not_the_cart(seeded):
         seeded._db.products.update_one({"id": "p1"}, {"$set": {"price": 300.0}}))
 
     order = seeded.post("/api/orders", json={
-        "shipping_address": SHIPPING, "payment_method": "cod"}).json()
+        "shipping_address": SHIPPING, "payment_method": "on_confirmation"}).json()
     assert order["total_amount"] == 600.0, order
     assert order["items"][0]["price"] == 300.0
 
@@ -463,7 +463,7 @@ def test_an_order_carries_what_the_supplier_needs_to_ship_it(seeded):
     seeded.post("/api/cart/add?product_id=p1&quantity=1")
 
     order = seeded.post("/api/orders", json={
-        "shipping_address": SHIPPING, "payment_method": "cod"}).json()
+        "shipping_address": SHIPPING, "payment_method": "on_confirmation"}).json()
     line = order["items"][0]
     assert line["supplier"] == "cj_dropshipping"
     assert line["supplier_product_id"] == "CJ-777"
@@ -481,7 +481,7 @@ def test_a_withdrawn_product_cannot_be_ordered_from_a_stale_cart(seeded):
         seeded._db.products.update_one({"id": "p1"}, {"$set": {"is_active": False}}))
 
     r = seeded.post("/api/orders", json={
-        "shipping_address": SHIPPING, "payment_method": "cod"})
+        "shipping_address": SHIPPING, "payment_method": "on_confirmation"})
     assert r.status_code == 409, r.text
 
 
@@ -494,7 +494,7 @@ def test_an_out_of_stock_product_cannot_be_ordered(seeded):
         seeded._db.products.update_one({"id": "p1"}, {"$set": {"in_stock": False}}))
 
     r = seeded.post("/api/orders", json={
-        "shipping_address": SHIPPING, "payment_method": "cod"})
+        "shipping_address": SHIPPING, "payment_method": "on_confirmation"})
     assert r.status_code == 409, r.text
     assert "stock" in r.json()["detail"].lower()
 
@@ -505,7 +505,15 @@ def _place_order(seeded, email="buyer@b.com"):
     register(seeded, email=email)
     seeded.post("/api/cart/add?product_id=p1&quantity=1")
     return seeded.post("/api/orders", json={
-        "shipping_address": SHIPPING, "payment_method": "cod"}).json()
+        "shipping_address": SHIPPING, "payment_method": "on_confirmation"}).json()
+
+
+def _confirm_payment(seeded, order_id, reference="TEST-REF"):
+    """Record that the money arrived. The caller must already be an admin."""
+    r = seeded.post(f"/api/admin/orders/{order_id}/confirm-payment",
+                    json={"paid": True, "reference": reference})
+    assert r.status_code == 200, r.text
+    return r.json()
 
 
 def test_a_new_order_emails_the_owner(seeded, monkeypatch):
@@ -573,15 +581,170 @@ def test_an_order_with_no_supplier_reference_is_not_sent(seeded):
     order = _place_order(seeded, "nosup@b.com")
     register(seeded, email="adm-ns@b.com")
     make_admin(seeded, "adm-ns@b.com")
+    _confirm_payment(seeded, order["id"])
 
     r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
     assert r.status_code == 400, r.text
     assert "supplier reference" in r.json()["detail"]
 
 
+def _set_bank(seeded, **overrides):
+    body = {
+        "bank_transfer": {
+            "enabled": True,
+            "bank_name": "VakifBank",
+            "account_holder": "Auraa Luxury",
+            "iban": "tr33 0006 1005 1978 6457 8413 26",
+            "swift": "TVBATR2A",
+            **overrides,
+        },
+    }
+    return seeded.put("/api/admin/payment-settings", json=body)
+
+
+def test_a_half_filled_bank_account_is_never_offered_to_a_customer(seeded):
+    """
+    A bank block with no IBAN is not a payment method, it is a dead end: the
+    customer reads "bank transfer", opens their banking app, and there is
+    nothing to type. Turning it on without one is refused, and the name of the
+    missing field is said out loud while it can still be typed.
+    """
+    register(seeded, email="adm-bank@b.com")
+    make_admin(seeded, "adm-bank@b.com")
+
+    bad = _set_bank(seeded, iban="")
+    assert bad.status_code == 400, bad.text
+    assert "iban" in bad.json()["detail"].lower()
+
+    offered = {m["id"] for m in seeded.get("/api/payment-methods").json()["methods"]}
+    assert "bank_transfer" not in offered, offered
+
+    # And again from the other side. Refusing to *write* an incomplete account
+    # is not the same guard as refusing to *offer* one: a document written
+    # before that check existed, or edited straight in the database, still has
+    # to be caught on the way out. Checking only the write leaves this test
+    # passing with the read-side guard deleted.
+    import asyncio
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.site_config.update_one(
+            {"_id": "store_payment"},
+            {"$set": {"bank_transfer": {"enabled": True, "bank_name": "VakifBank",
+                                        "account_holder": "Auraa Luxury", "iban": ""}}},
+            upsert=True,
+        ))
+    offered = {m["id"] for m in seeded.get("/api/payment-methods").json()["methods"]}
+    assert "bank_transfer" not in offered, "an account with no IBAN was offered to customers"
+
+
+def test_the_iban_a_customer_is_shown_is_the_one_that_was_saved(seeded):
+    register(seeded, email="adm-bank2@b.com")
+    make_admin(seeded, "adm-bank2@b.com")
+    assert _set_bank(seeded).status_code == 200
+
+    methods = seeded.get("/api/payment-methods").json()["methods"]
+    bank = next(m for m in methods if m["id"] == "bank_transfer")
+    # Stored the way a bank prints it, offered the way it must be typed.
+    assert bank["iban"] == "TR330006100519786457841326"
+    assert bank["bank_name"] == "VakifBank"
+    assert bank["swift"] == "TVBATR2A"
+
+
+def test_an_order_cannot_be_placed_by_a_method_the_shop_does_not_offer(seeded):
+    """
+    An order placed by a method nobody runs is an order nobody can pay: the
+    customer is told it went through and then hears nothing, because there is
+    no account for the money to arrive in.
+    """
+    register(seeded, email="ghostpay@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    r = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "bitcoin"})
+    assert r.status_code == 400, r.text
+    assert "bitcoin" in r.json()["detail"]
+    # And the cart is intact, so they can pick a real method and carry on.
+    assert seeded.get("/api/cart").json()["items"], "the cart was emptied by a rejected order"
+
+
+def test_a_customer_can_read_back_how_to_pay_for_their_own_order(seeded):
+    """
+    A customer who closes the tab after checkout has no other route back to the
+    account details, and asking them to email for them is a good way to lose
+    the sale.
+    """
+    register(seeded, email="adm-inst@b.com")
+    make_admin(seeded, "adm-inst@b.com")
+    assert _set_bank(seeded).status_code == 200
+
+    register(seeded, email="reader@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "bank_transfer"}).json()
+
+    info = seeded.get(f"/api/orders/{order['id']}/payment-instructions")
+    assert info.status_code == 200, info.text
+    body = info.json()
+    assert body["payment_status"] == "awaiting_payment"
+    assert body["method"]["iban"] == "TR330006100519786457841326"
+    # Without a reference the money arrives belonging to nobody.
+    assert body["reference_to_quote"] == order["order_number"]
+    assert body["amount"] == order["total_amount"]
+
+
+def test_one_customer_cannot_read_another_customers_payment_details(seeded):
+    order = _place_order(seeded, "victim@b.com")
+    register(seeded, email="snoop@b.com")
+    r = seeded.get(f"/api/orders/{order['id']}/payment-instructions")
+    assert r.status_code == 404, r.text
+
+
+def test_an_unpaid_order_is_never_bought_from_the_supplier(seeded):
+    """
+    Buying the goods is the point of no return: CJ ships, the money is spent,
+    and there is nobody to recover it from if the customer never paid. Until
+    this gate existed, "approve" was the only thing between an order arriving
+    and the shop spending its own money on it — and whether the customer had
+    actually paid was not recorded anywhere at all.
+    """
+    order = _place_order(seeded, "unpaid@b.com")
+    register(seeded, email="adm-up@b.com")
+    make_admin(seeded, "adm-up@b.com")
+
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 409, r.text
+    assert "not paid" in r.json()["detail"].lower()
+
+    # And the refusal is about payment, not about anything further down the
+    # path: nothing was written to the order, so it is not marked failed.
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["payment_status"] == "awaiting_payment", row
+    assert row.get("supplier_status") == "awaiting_approval", row
+
+
+def test_confirming_payment_records_who_said_so(seeded):
+    order = _place_order(seeded, "paid@b.com")
+    register(seeded, email="adm-pd@b.com")
+    make_admin(seeded, "adm-pd@b.com")
+
+    _confirm_payment(seeded, order["id"], reference="HAVALE-99")
+
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["payment_status"] == "paid"
+    assert row["payment_reference"] == "HAVALE-99"
+    assert row["payment_confirmed_by"] == "adm-pd@b.com"
+    assert row["payment_confirmed_at"]
+
+    # Confirmed by mistake — it can be taken back while nothing has been spent.
+    undo = seeded.post(f"/api/admin/orders/{order['id']}/confirm-payment",
+                       json={"paid": False})
+    assert undo.status_code == 200, undo.text
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["payment_status"] == "awaiting_payment"
+    assert row["payment_reference"] is None
+
+
 def test_order_with_empty_cart_is_400(seeded):
     register(seeded, email="empty@b.com")
-    r = seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "cod"})
+    r = seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "on_confirmation"})
     assert r.status_code == 400
 
 
@@ -798,7 +961,7 @@ def test_new_admin_endpoints_reject_normal_user(client, method, path):
 def test_admin_orders_list_includes_customer(seeded):
     register(seeded, email="buyer@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=1")
-    seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "cod"})
+    seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "on_confirmation"})
     seeded.cookies.clear()
 
     as_admin(seeded)
@@ -811,7 +974,7 @@ def test_admin_can_update_order_status(seeded):
     register(seeded, email="buyer2@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=1")
     order_id = seeded.post("/api/orders",
-                           json={"shipping_address": SHIPPING, "payment_method": "cod"}).json()["id"]
+                           json={"shipping_address": SHIPPING, "payment_method": "on_confirmation"}).json()["id"]
     seeded.cookies.clear()
 
     as_admin(seeded)
@@ -943,7 +1106,7 @@ def test_upload_filename_cannot_traverse_directories(client):
 def test_analytics_reflects_real_orders(seeded):
     register(seeded, email="an@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=2")   # 2 x 250 = 500
-    seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "cod"})
+    seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "on_confirmation"})
     seeded.cookies.clear()
 
     as_admin(seeded)
@@ -2095,6 +2258,9 @@ def _order_ready_for_cj(seeded, monkeypatch, email="ful@b.com"):
     order = _place_order(seeded, email)
     register(seeded, email="adm-f@b.com")
     make_admin(seeded, "adm-f@b.com")
+    # The shop is not allowed to spend money on an order it has not been paid
+    # for, so anything testing the send has to get past that gate first.
+    _confirm_payment(seeded, order["id"])
     return order
 
 
@@ -2122,6 +2288,28 @@ def test_a_dry_run_creates_nothing_at_the_supplier(seeded, monkeypatch):
     rows = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}
     assert rows[order["id"]]["supplier_order_id"] is None
     assert rows[order["id"]]["supplier_status"] == "awaiting_approval"
+    cj_client._reset_token()
+
+
+def test_a_dry_run_works_before_the_money_has_arrived(seeded, monkeypatch):
+    """
+    The rehearsal costs nothing and creates nothing, so waiting for payment to
+    run it would only mean finding out the address is unusable after the
+    customer has already sent their money.
+    """
+    order = _order_ready_for_cj(seeded, monkeypatch, "drynopay@b.com")
+    undo = seeded.post(f"/api/admin/orders/{order['id']}/confirm-payment",
+                       json={"paid": False})
+    assert undo.status_code == 200, undo.text
+
+    r = seeded.post(f"/api/admin/orders/{order['id']}/supplier-preview")
+    assert r.status_code == 200, r.text
+    assert r.json()["dry_run"] is True
+
+    # But buying the goods is still refused.
+    send = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert send.status_code == 409, send.text
+    assert "not paid" in send.json()["detail"].lower()
     cj_client._reset_token()
 
 

@@ -36,16 +36,20 @@ const CheckoutPage = () => {
     state: '',
     zipCode: '',
     country: 'SA',
-    // Payment
-    paymentMethod: 'on_confirmation',
+    // Payment. Left empty on purpose: which methods exist is the server's
+    // answer, and pre-selecting one here is how you end up posting a method
+    // the shop does not offer.
+    paymentMethod: '',
   });
 
   const countries = useMemo(() => countryOptions(language), [language]);
   const [shippingEstimate, setShippingEstimate] = useState({ loading: false, cost: 0, days: null, error: null });
+  const [paymentMethods, setPaymentMethods] = useState({ loading: true, methods: [], error: '' });
 
   useEffect(() => {
     fetchCart();
     detectCountry();
+    fetchPaymentMethods();
   }, []);
 
   useEffect(() => {
@@ -55,6 +59,29 @@ const CheckoutPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart, formData.country, currency]);
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const data = await apiGet('/api/payment-methods');
+      const methods = data?.methods || [];
+      setPaymentMethods({ loading: false, methods, error: '' });
+      // Whatever the server offers first, not a name hardcoded here.
+      setFormData((prev) => ({
+        ...prev,
+        paymentMethod: prev.paymentMethod || methods[0]?.id || '',
+      }));
+    } catch (err) {
+      // Guessing that bank transfer is available and showing an IBAN we do not
+      // have would be worse than saying the till is down.
+      setPaymentMethods({
+        loading: false,
+        methods: [],
+        error: isRTL
+          ? 'تعذّر تحميل طرق الدفع. حدِّث الصفحة أو تواصل معنا.'
+          : 'Could not load the payment methods. Refresh, or get in touch.',
+      });
+    }
+  };
 
   const detectCountry = async () => {
     try {
@@ -142,6 +169,10 @@ const CheckoutPage = () => {
       toast.error(isRTL ? 'لا يمكن إتمام الطلب: الشحن غير متاح' : 'Cannot place order: shipping unavailable');
       return;
     }
+    if (!formData.paymentMethod) {
+      toast.error(isRTL ? 'اختر طريقة الدفع أولاً' : 'Choose a payment method first');
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -177,11 +208,17 @@ const CheckoutPage = () => {
         currency: currency || 'SAR'
       });
       
-      toast.success(isRTL ? 'تم إنشاء الطلب بنجاح!' : 'Order created successfully!');
-      navigate('/profile?tab=orders');
+      toast.success(isRTL ? 'تم استلام طلبك' : 'Your order is in');
+      // Not the order list. The customer still has to pay, and the list said
+      // only "بانتظار" — waiting — without ever saying it was waiting on them.
+      navigate(`/order/${order.id}/pay`);
     } catch (error) {
+      // The server says which product went out of stock, which address field
+      // is missing, that the till is down. Replacing all of that with "فشل في
+      // إنشاء الطلب" left the customer with nothing to act on.
       console.error('Error creating order:', error);
-      toast.error(isRTL ? 'فشل في إنشاء الطلب' : 'Failed to create order');
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'فشل في إنشاء الطلب' : 'Failed to create order'));
     } finally {
       setSubmitting(false);
     }
@@ -368,19 +405,71 @@ const CheckoutPage = () => {
                         : 'International delivery: your country’s customs may charge import duty on arrival. It is payable by you and is not collected by the store.'}
                     </div>
                   )}
-                  <div
-                    className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-gray-700"
-                    data-testid="payment-method"
-                  >
-                    <p className="font-semibold text-gray-900 mb-1">
-                      {isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation'}
-                    </p>
-                    <p>
+                  {paymentMethods.loading ? (
+                    <div className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+                  ) : paymentMethods.error ? (
+                    <div
+                      role="alert"
+                      data-testid="payment-methods-error"
+                      className="border border-red-200 bg-red-50 text-red-800 rounded-lg p-4 text-sm"
+                    >
+                      {paymentMethods.error}
+                    </div>
+                  ) : paymentMethods.methods.length === 0 ? (
+                    <div
+                      role="alert"
+                      data-testid="no-payment-methods"
+                      className="border border-red-200 bg-red-50 text-red-800 rounded-lg p-4 text-sm"
+                    >
                       {isRTL
-                        ? 'نراجع طلبك ونتواصل معك لإتمام الدفع قبل الشحن. لن يُخصم منك شيء الآن.'
-                        : 'We review your order and contact you to settle payment before it ships. Nothing is charged now.'}
-                    </p>
-                  </div>
+                        ? 'لا توجد طريقة دفع متاحة حالياً، فلا يمكن إتمام الطلب. تواصل معنا.'
+                        : 'No payment method is available right now, so the order cannot be completed. Please get in touch.'}
+                    </div>
+                  ) : (
+                    <div className="space-y-3" data-testid="payment-method">
+                      {paymentMethods.methods.map((method) => {
+                        const selected = formData.paymentMethod === method.id;
+                        return (
+                          <label
+                            key={method.id}
+                            className={`block border rounded-lg p-4 cursor-pointer transition ${
+                              selected
+                                ? 'border-amber-400 bg-amber-50'
+                                : 'border-gray-200 hover:border-amber-200'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="radio"
+                                name="paymentMethod"
+                                value={method.id}
+                                checked={selected}
+                                onChange={handleInputChange}
+                                data-testid={`payment-method-${method.id}`}
+                                className="mt-1 accent-amber-600"
+                              />
+                              <div className="min-w-0">
+                                <p className="font-semibold text-gray-900">
+                                  {method.id === 'bank_transfer'
+                                    ? (isRTL ? 'حوالة بنكية' : 'Bank transfer')
+                                    : (isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation')}
+                                </p>
+                                <p className="text-sm text-gray-700">
+                                  {method.id === 'bank_transfer'
+                                    ? (isRTL
+                                      ? `حوّل المبلغ إلى حساب المتجر في ${method.bank_name}. تظهر تفاصيل الحساب بعد تأكيد الطلب.`
+                                      : `Transfer the amount to the store's account at ${method.bank_name}. The details appear once the order is placed.`)
+                                    : (isRTL
+                                      ? 'نراجع طلبك ونتواصل معك لإتمام الدفع قبل الشحن. لن يُخصم منك شيء الآن.'
+                                      : 'We review your order and contact you to settle payment before it ships. Nothing is charged now.')}
+                                </p>
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </Card>
             </div>
@@ -444,7 +533,11 @@ const CheckoutPage = () => {
                 <Button 
                   type="submit" 
                   className="btn-luxury w-full" 
-                  disabled={submitting || shippingEstimate.error === 'unavailable'}
+                  disabled={submitting
+                    || shippingEstimate.error === 'unavailable'
+                    // Placing an order the shop cannot be paid for is the one
+                    // outcome this page must not produce.
+                    || !formData.paymentMethod}
                   data-testid="place-order-button"
                 >
                   {submitting ? (

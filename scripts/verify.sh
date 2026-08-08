@@ -84,6 +84,11 @@ step "No screen reads a field the API does not send" \
 step "Every button does something when pressed" \
   node "$ROOT/scripts/verify-no-dead-buttons.mjs"
 
+# White text on a silver-to-gold gradient is about 2:1. The shop's primary
+# call to action was unreadable across half its own width.
+step "The primary button can be read" \
+  node "$ROOT/scripts/verify-contrast.mjs"
+
 if [ -d "$ROOT/frontend/node_modules" ]; then
   step "Frontend build" \
     bash -c "cd '$ROOT/frontend' && CI=false npx craco build"

@@ -473,10 +473,23 @@ body {
 }
 
 /* Button animations */
+/*
+ * The shop's primary call to action — "أضف إلى السلة".
+ *
+ * It was white text on a gradient running black → silver (#c0c0c0) → gold
+ * (#d6b651). White on that silver is a contrast ratio of about 1.9:1 and on
+ * the gold about 2.0:1, against the 4.5:1 that ordinary text needs. So the
+ * label was legible across the first third of the button and washed out over
+ * the rest, and the icon at the far end all but disappeared. The
+ * `text-shadow` under it was an attempt to rescue exactly that.
+ *
+ * Still a metal gradient, still gold-edged, but every stop is now dark enough
+ * for white to read on it end to end.
+ */
 .btn-luxury {
-  background: linear-gradient(135deg, #000000 0%, #c0c0c0 50%, #d6b651 100%);
+  background: linear-gradient(135deg, #17100a 0%, #4a3418 45%, #6b4d1d 100%);
   color: white;
-  border: 2px solid #c0c0c0;
+  border: 2px solid #d6b651;
   padding: 12px 32px;
   border-radius: 8px;
   font-weight: 700;

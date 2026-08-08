@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { safeLocal } from '../lib/safeStorage';
 import { API_BASE_URL } from '../api';
 
 const AuthContext = createContext();
@@ -25,17 +26,17 @@ export const useAuth = () => {
 const TOKEN_KEY = 'token';
 
 const storeToken = (token) => {
-  try {
-    if (token) {
-      localStorage.setItem(TOKEN_KEY, token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      localStorage.removeItem(TOKEN_KEY);
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  } catch (e) {
-    // Private browsing can throw on localStorage writes; cookies still work.
-    console.warn('Could not persist auth token:', e);
+  // The header first, persistence second. These used to be the other way
+  // round inside one try: a browser that throws on localStorage — Edge's
+  // Tracking Prevention, Safari's ITP, private mode — threw on the setItem
+  // and skipped the line below it, so the token was neither saved *nor*
+  // attached to requests. The catch made it look handled.
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    safeLocal.set(TOKEN_KEY, token);
+  } else {
+    delete axios.defaults.headers.common['Authorization'];
+    safeLocal.remove(TOKEN_KEY);
   }
 };
 
@@ -47,7 +48,7 @@ export const AuthProvider = ({ children }) => {
   // Check auth status on mount (cookie, or a stored token if one survives)
   const checkAuthStatus = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(TOKEN_KEY);
+      const stored = safeLocal.get(TOKEN_KEY);
       if (stored) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${stored}`;
       }

@@ -6,6 +6,7 @@ import { getAuthTranslation } from '../translations/auth';
 import axios from 'axios';
 import { API_BASE_URL } from '../api';
 import { clearOAuthStart, readOAuthStart } from '../lib/oauthState';
+import { safeLocal, safeSession } from '../lib/safeStorage';
 
 /**
  * Where Google sends the browser back to.
@@ -35,9 +36,11 @@ const OAuthCallback = () => {
 
     let cancelled = false;
 
+    // Whatever else goes wrong, the shopper must not be left watching a
+    // spinner. Every path out of this page ends here.
     const leave = () => {
-      const from = sessionStorage.getItem('auth_redirect') || '/';
-      sessionStorage.removeItem('auth_redirect');
+      const from = safeSession.get('auth_redirect') || '/';
+      safeSession.remove('auth_redirect');
       navigate(from, { replace: true });
     };
 
@@ -48,7 +51,7 @@ const OAuthCallback = () => {
       // single-use code and state already spent and would otherwise announce
       // "login failed" to somebody who is, in fact, signed in. If we already
       // hold a token, nothing is wrong: leave quietly.
-      if (localStorage.getItem('token')) {
+      if (safeLocal.get('token')) {
         leave();
         return;
       }
@@ -95,11 +98,11 @@ const OAuthCallback = () => {
         if (!access_token || !user) throw new Error('Invalid OAuth response from server');
         if (cancelled) return;
 
-        localStorage.setItem('token', access_token);
+        safeLocal.set('token', access_token);
         if (auth && typeof auth.setToken === 'function') auth.setToken(access_token);
         if (auth && typeof auth.setUser === 'function') auth.setUser(user);
 
-        sessionStorage.removeItem('oauth_provider');
+        safeSession.remove('oauth_provider');
 
         // replace, not push: the callback URL must not stay in history, or
         // pressing Back lands the user right back on a spent authorization
@@ -115,7 +118,13 @@ const OAuthCallback = () => {
       }
     };
 
-    processOAuthCallback();
+    // processOAuthCallback already catches its own failures; this catches the
+    // ones it cannot — a browser that throws on storage took the whole
+    // function down mid-flight, including the handler meant to recover from it.
+    processOAuthCallback().catch((err) => {
+      console.error('OAuth callback crashed:', err);
+      if (!cancelled) fail('oauth_session_invalid');
+    });
     return () => { cancelled = true; };
   }, [navigate, auth, language, BACKEND_URL]);
 

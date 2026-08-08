@@ -58,6 +58,11 @@ fi
 
 # --- Frontend --------------------------------------------------------------
 
+# Pure JavaScript, no browser and no node_modules: a price the store prints
+# must be one it computed. Runs even when the frontend is not installed.
+step "Currency conversion never invents a price" \
+  node "$ROOT/scripts/verify-currency.mjs"
+
 if [ -d "$ROOT/frontend/node_modules" ]; then
   step "Frontend build" \
     bash -c "cd '$ROOT/frontend' && CI=false npx craco build"

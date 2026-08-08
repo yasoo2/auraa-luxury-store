@@ -217,16 +217,25 @@ const EnhancedProductsPage = () => {
     }
   };
 
-  // Catalogue prices are stored in SAR. This used to stamp the *selected*
-  // currency's symbol onto that untouched number, so a 175 riyal product read
-  // as "$US 175" — the same figure, a different currency, and about four times
-  // the real amount. Convert first, then label.
+  // Catalogue prices are stored in SAR.
+  //
+  // First this stamped the selected currency's symbol onto the untouched
+  // number, so 175 riyals read as "$US 175". Then converting produced
+  // "$US 0.00", because convert() answered 0 whenever the rates had not
+  // arrived — a fabricated price that looks perfectly real.
+  //
+  // A price the owner cannot trust is worse than one in the wrong currency,
+  // so when the rate is unknown this shows the true amount in the currency it
+  // is actually stored in, and says which currency that is.
   const formatCurrency = (amount) => {
-    const value = currency === 'SAR' ? (amount || 0) : convert(amount || 0, 'SAR', currency);
+    const sar = Number(amount) || 0;
+    const converted = currency === 'SAR' ? sar : convert(sar, 'SAR', currency);
+    const display = converted === null ? sar : converted;
+    const shown = converted === null ? 'SAR' : currency;
     return new Intl.NumberFormat(isRTL ? 'ar-SA' : 'en-US', {
       style: 'currency',
-      currency: currency
-    }).format(value);
+      currency: shown,
+    }).format(display);
   };
 
   const formatDate = (dateString) => {

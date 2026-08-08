@@ -1900,6 +1900,12 @@ async def admin_list_products(
     products = await db.products.find(query).sort("created_at", -1).to_list(length=None)
     for p in products:
         p.pop("_id", None)
+        # Everything imported before is_active existed has no such key, and the
+        # admin catalogue reads a missing key as "inactive" — which is how every
+        # live, selling product came to wear a red "Inactive" badge. Absent
+        # means active, the same rule LIVE_ONLY applies when deciding what
+        # shoppers see; state it here rather than leave the UI to guess.
+        p.setdefault("is_active", True)
         # Flag rows the storefront will refuse to render, with the reason, so
         # a product that exists but is invisible to customers is visible here.
         try:

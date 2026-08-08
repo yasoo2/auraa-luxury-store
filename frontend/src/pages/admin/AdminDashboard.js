@@ -39,6 +39,31 @@ import {
   Shield
 } from 'lucide-react';
 
+const BuildStamp = ({ isRTL }) => {
+  const [info, setInfo] = useState(null);
+
+  useEffect(() => {
+    // cache: 'no-store' — the point of this is to report the *current* deploy,
+    // so it must not be answered from the very cache it exists to diagnose.
+    fetch('/build-info.json', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setInfo)
+      .catch(() => setInfo(null));
+  }, []);
+
+  if (!info) return null;
+
+  const built = new Date(info.builtAt);
+  return (
+    <div className="px-4 py-3 mt-4 border-t border-gray-200 text-xs text-gray-500" data-testid="build-stamp">
+      <div>{isRTL ? 'إصدار الواجهة' : 'Frontend build'}</div>
+      <div dir="ltr" className="font-mono">{info.commit}</div>
+      <div dir="ltr">{Number.isNaN(built.getTime()) ? info.builtAt : built.toLocaleString()}</div>
+    </div>
+  );
+};
+
+
 const AdminDashboard = () => {
   const { t, language } = useLanguage();
   const { user, isAuthenticated, loading } = useAuth();
@@ -213,6 +238,12 @@ const AdminDashboard = () => {
               );
             })}
           </nav>
+
+          {/* Which build is this?
+              Asked and unanswerable until now: a fix would be merged and
+              deployed, the browser would still be serving the previous bundle,
+              and there was no way to tell those apart from the screen. */}
+          <BuildStamp isRTL={isRTL} />
         </aside>
 
         {/* Main Content */}

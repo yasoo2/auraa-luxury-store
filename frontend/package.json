@@ -75,9 +75,8 @@
   },
   "scripts": {
     "start": "craco start",
-    "prebuild": "node -e \"const fs=require('fs');const t=Date.now();let c=fs.readFileSync('public/sw.js','utf8');c=c.replace(/const BUILD_TIMESTAMP = Date\\.now\\(\\);/,'const BUILD_TIMESTAMP = '+t+';');fs.writeFileSync('public/sw.js',c);console.log('✅ Cache timestamp updated:',t)\"",
+    "prebuild": "node scripts/build-info.js",
     "build": "cross-env CI=false craco build",
-    "postbuild": "echo '✅ Build complete with cache-busting enabled'",
     "test": "craco test",
     "eject": "react-scripts eject"
   },

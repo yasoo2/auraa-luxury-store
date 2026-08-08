@@ -75,14 +75,14 @@ const AnalyticsPage = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+    return new Date(dateString).toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
       month: 'short',
       day: 'numeric'
     });
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleString(isRTL ? 'ar-SA' : 'en-US', {
+    return new Date(dateString).toLocaleString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
       hour: '2-digit',
       minute: '2-digit',
       month: 'short',
@@ -155,7 +155,7 @@ const AnalyticsPage = () => {
               <p className="text-sm font-medium text-amber-600">{isRTL ? 'إجمالي المبيعات' : 'Total Revenue'}</p>
               <p className="text-2xl font-bold text-amber-900">{formatCurrency(overview.totalRevenue)}</p>
               <div className="flex items-center mt-1">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                <TrendingUp className="h-4 w-4 text-green-500 me-1" />
                 <span className="text-sm text-green-600">+{overview.revenueChange}%</span>
               </div>
             </div>
@@ -169,7 +169,7 @@ const AnalyticsPage = () => {
               <p className="text-sm font-medium text-blue-600">{isRTL ? 'إجمالي الطلبات' : 'Total Orders'}</p>
               <p className="text-2xl font-bold text-blue-900">{overview.totalOrders}</p>
               <div className="flex items-center mt-1">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                <TrendingUp className="h-4 w-4 text-green-500 me-1" />
                 <span className="text-sm text-green-600">+{overview.ordersChange}%</span>
               </div>
             </div>
@@ -183,7 +183,7 @@ const AnalyticsPage = () => {
               <p className="text-sm font-medium text-green-600">{isRTL ? 'إجمالي العملاء' : 'Total Customers'}</p>
               <p className="text-2xl font-bold text-green-900">{overview.totalCustomers}</p>
               <div className="flex items-center mt-1">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                <TrendingUp className="h-4 w-4 text-green-500 me-1" />
                 <span className="text-sm text-green-600">+{overview.customersChange}%</span>
               </div>
             </div>
@@ -197,7 +197,7 @@ const AnalyticsPage = () => {
               <p className="text-sm font-medium text-purple-600">{isRTL ? 'إجمالي المنتجات' : 'Total Products'}</p>
               <p className="text-2xl font-bold text-purple-900">{overview.totalProducts}</p>
               <div className="flex items-center mt-1">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                <TrendingUp className="h-4 w-4 text-green-500 me-1" />
                 <span className="text-sm text-green-600">+{overview.productsChange}%</span>
               </div>
             </div>
@@ -302,7 +302,7 @@ const AnalyticsPage = () => {
         {/* Geographic Distribution */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            <MapPin className="inline h-5 w-5 mr-2" />
+            <MapPin className="inline h-5 w-5 me-2" />
             {isRTL ? 'التوزيع الجغرافي' : 'Geographic Distribution'}
           </h3>
           <div className="space-y-3">
@@ -328,7 +328,7 @@ const AnalyticsPage = () => {
         {/* Recent Activity */}
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            <Clock className="inline h-5 w-5 mr-2" />
+            <Clock className="inline h-5 w-5 me-2" />
             {isRTL ? 'النشاط الأخير' : 'Recent Activity'}
           </h3>
           <div className="space-y-4">

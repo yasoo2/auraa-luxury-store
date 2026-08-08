@@ -108,13 +108,13 @@ const Footer = () => {
             <h3 className="text-lg font-bold mb-4 text-amber-400">تواصل معنا</h3>
             <ul className="space-y-3">
               <li className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-amber-400 ml-2" />
+                <Phone className="h-4 w-4 text-amber-400 me-2" />
                 <a href="tel:+905013715391" className="text-gray-300 hover:text-amber-400 transition-colors">
                   +90 501 371 5391
                 </a>
               </li>
               <li className="flex items-center space-x-2">
-                <MessageCircle className="h-4 w-4 text-amber-400 ml-2" />
+                <MessageCircle className="h-4 w-4 text-amber-400 me-2" />
                 <a 
                   href="https://wa.me/905013715391" 
                   target="_blank" 
@@ -125,11 +125,11 @@ const Footer = () => {
                 </a>
               </li>
               <li className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-amber-400 ml-2" />
+                <Mail className="h-4 w-4 text-amber-400 me-2" />
                 <span className="text-gray-300">info@auraaluxury.com</span>
               </li>
               <li className="flex items-start space-x-2">
-                <MapPin className="h-4 w-4 text-amber-400 ml-2 mt-1" />
+                <MapPin className="h-4 w-4 text-amber-400 me-2 mt-1" />
                 <span className="text-gray-300">
                   الرياض، المملكة العربية السعودية
                 </span>

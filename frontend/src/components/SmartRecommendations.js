@@ -223,7 +223,7 @@ const SmartRecommendations = ({
               {/* AI Recommendation Score */}
               <div className="absolute top-2 right-2">
                 <div className="flex items-center bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
-                  <Sparkles className="h-3 w-3 mr-1" />
+                  <Sparkles className="h-3 w-3 me-1" />
                   {Math.round(product.recommendation_score * 100)}%
                 </div>
               </div>
@@ -262,7 +262,7 @@ const SmartRecommendations = ({
               
               {/* AI Recommendation Reason */}
               <p className="text-xs text-purple-600 mb-2 flex items-center">
-                <Zap className="h-3 w-3 mr-1 flex-shrink-0" />
+                <Zap className="h-3 w-3 me-1 flex-shrink-0" />
                 {product.recommendation_reason}
               </p>
 
@@ -324,7 +324,7 @@ const SmartRecommendations = ({
             className="px-8 py-3"
           >
             {isRTL ? 'عرض المزيد من التوصيات' : 'View More Recommendations'}
-            <Sparkles className="h-4 w-4 ml-2" />
+            <Sparkles className="h-4 w-4 ms-2" />
           </Button>
         </div>
       )}

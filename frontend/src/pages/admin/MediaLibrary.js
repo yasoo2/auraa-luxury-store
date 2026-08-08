@@ -251,7 +251,7 @@ const MediaLibrary = () => {
         </div>
         <label htmlFor="file-upload">
           <Button className="btn-luxury" disabled={uploading} as="span">
-            <Upload className="h-4 w-4 mr-2" />
+            <Upload className="h-4 w-4 me-2" />
             {uploading 
               ? (isRTL ? 'جاري الرفع...' : 'Uploading...') 
               : (isRTL ? 'رفع ملفات' : 'Upload Files')}
@@ -282,7 +282,7 @@ const MediaLibrary = () => {
           {!searchQuery && (
             <label htmlFor="file-upload-empty">
               <Button className="btn-luxury" as="span">
-                <Upload className="h-4 w-4 mr-2" />
+                <Upload className="h-4 w-4 me-2" />
                 {isRTL ? 'رفع أول ملف' : 'Upload First File'}
               </Button>
               <input

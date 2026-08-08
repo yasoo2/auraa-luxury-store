@@ -391,7 +391,7 @@ const LiveChat = ({ userId = null, productId = null }) => {
               
               {message.type === 'audio' && (
                 <div className="flex items-center">
-                  <Mic className="h-4 w-4 mr-2" />
+                  <Mic className="h-4 w-4 me-2" />
                   <audio controls className="max-w-full">
                     <source src={message.url} type="audio/webm" />
                   </audio>
@@ -400,7 +400,7 @@ const LiveChat = ({ userId = null, productId = null }) => {
               
               {message.type === 'file' && (
                 <div className="flex items-center">
-                  <Paperclip className="h-4 w-4 mr-2" />
+                  <Paperclip className="h-4 w-4 me-2" />
                   <a 
                     href={message.fileUrl} 
                     download={message.fileName}

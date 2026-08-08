@@ -187,7 +187,7 @@ const CartPage = () => {
               <Link to="/products">
                 <Button className="btn-luxury" data-testid="continue-shopping-button">
                   تابع التسوق
-                  <ArrowLeft className="ml-2 h-5 w-5" />
+                  <ArrowLeft className="ms-2 h-5 w-5" />
                 </Button>
               </Link>
             </div>
@@ -353,7 +353,7 @@ const CartPage = () => {
                     disabled={shippingEstimate.error === 'unavailable'}
                   >
                     {isRTL ? 'إتمام الطلب' : 'Proceed to Checkout'}
-                    <ArrowLeft className="ml-2 h-5 w-5" />
+                    <ArrowLeft className="ms-2 h-5 w-5" />
                   </Button>
                 </Link>
                 {shippingEstimate.error === 'unavailable' && (

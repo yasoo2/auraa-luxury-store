@@ -97,7 +97,7 @@ const WishlistPage = () => {
               <ArrowLeft className={`h-5 w-5 text-gray-600 ${isRTL ? 'rotate-180' : ''}`} />
             </Link>
             <div className="flex items-center">
-              <Heart className="h-8 w-8 text-red-500 mr-3 fill-current" />
+              <Heart className="h-8 w-8 text-red-500 me-3 fill-current" />
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
                   {isRTL ? 'المفضلة' : 'My Wishlist'}
@@ -123,7 +123,7 @@ const WishlistPage = () => {
                 onClick={addAllToCart}
                 className="bg-amber-600 hover:bg-amber-700"
               >
-                <ShoppingCart className="h-4 w-4 mr-2" />
+                <ShoppingCart className="h-4 w-4 me-2" />
                 {isRTL ? 'أضف الكل للسلة' : 'Add All to Cart'}
               </Button>
               
@@ -131,7 +131,7 @@ const WishlistPage = () => {
                 onClick={shareWishlist}
                 variant="outline"
               >
-                <Share2 className="h-4 w-4 mr-2" />
+                <Share2 className="h-4 w-4 me-2" />
                 {isRTL ? 'مشاركة المفضلة' : 'Share Wishlist'}
               </Button>
               
@@ -140,7 +140,7 @@ const WishlistPage = () => {
                 variant="outline"
                 className="text-red-600 border-red-300 hover:bg-red-50"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
+                <Trash2 className="h-4 w-4 me-2" />
                 {isRTL ? 'مسح الكل' : 'Clear All'}
               </Button>
             </div>
@@ -201,7 +201,7 @@ const WishlistPage = () => {
                     <div className="flex gap-2">
                       <Button size="sm" asChild className="bg-white text-gray-900 hover:bg-gray-100">
                         <Link to={`/product/${item.id}`}>
-                          <Eye className="h-4 w-4 mr-1" />
+                          <Eye className="h-4 w-4 me-1" />
                           {isRTL ? 'عرض' : 'View'}
                         </Link>
                       </Button>
@@ -213,7 +213,7 @@ const WishlistPage = () => {
                         data-testid="wishlist-add-to-cart"
                         className="bg-amber-600 hover:bg-amber-700"
                       >
-                        <ShoppingCart className="h-4 w-4 mr-1" />
+                        <ShoppingCart className="h-4 w-4 me-1" />
                         {isRTL ? 'أضف' : 'Add'}
                       </Button>
                     </div>
@@ -266,7 +266,7 @@ const WishlistPage = () => {
                       className="flex-1 bg-amber-600 hover:bg-amber-700"
                       onClick={() => console.log('Add to cart:', item.id)}
                     >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      <ShoppingCart className="h-4 w-4 me-2" />
                       {isRTL ? 'أضف للسلة' : 'Add to Cart'}
                     </Button>
                     <Button
@@ -302,14 +302,14 @@ const WishlistPage = () => {
                   onClick={shareWishlist}
                   className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
                 >
-                  <Share2 className="h-4 w-4 mr-2" />
+                  <Share2 className="h-4 w-4 me-2" />
                   {isRTL ? 'مشاركة المفضلة' : 'Share Wishlist'}
                 </Button>
                 <Button 
                   onClick={addAllToCart}
                   className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
                 >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  <ShoppingCart className="h-4 w-4 me-2" />
                   {isRTL ? 'أضف الكل للسلة' : 'Add All to Cart'}
                 </Button>
               </div>

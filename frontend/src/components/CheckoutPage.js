@@ -254,7 +254,7 @@ const CheckoutPage = () => {
               {/* Shipping Address */}
               <Card className="luxury-card p-6">
                 <div className="flex items-center mb-6">
-                  <MapPin className="h-6 w-6 text-amber-600 ml-3" />
+                  <MapPin className="h-6 w-6 text-amber-600 me-3" />
                   <h2 className="text-xl font-bold text-gray-900">{isRTL ? 'عنوان الشحن' : 'Shipping Address'}</h2>
                 </div>
                 
@@ -374,7 +374,7 @@ const CheckoutPage = () => {
               {/* Payment Method */}
               <Card className="luxury-card p-6">
                 <div className="flex items-center mb-6">
-                  <CreditCard className="h-6 w-6 text-amber-600 ml-3" />
+                  <CreditCard className="h-6 w-6 text-amber-600 me-3" />
                   <h2 className="text-xl font-bold text-gray-900">{isRTL ? 'طريقة الدفع' : 'Payment Method'}</h2>
                 </div>
                 
@@ -541,7 +541,7 @@ const CheckoutPage = () => {
 
                   {shippingEstimate.days && (
                     <div className="flex items-center text-sm text-gray-600">
-                      <Truck className="h-4 w-4 ml-2 text-amber-600" />
+                      <Truck className="h-4 w-4 me-2 text-amber-600" />
                       <span>
                         {isRTL ? 'مدة التوصيل المتوقعة:' : 'Estimated delivery:'} {shippingEstimate.days} {isRTL ? 'أيام' : 'days'}
                       </span>

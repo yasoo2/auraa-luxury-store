@@ -191,7 +191,7 @@ const AutoUpdatePage = () => {
     if (!dateString) return isRTL ? 'غير متوفر' : 'Not available';
     
     const date = new Date(dateString);
-    return date.toLocaleString(isRTL ? 'ar-SA' : 'en-US', {
+    return date.toLocaleString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -349,9 +349,9 @@ const AutoUpdatePage = () => {
                   size="sm"
                 >
                   {refreshing ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    <RefreshCw className="h-4 w-4 animate-spin me-2" />
                   ) : (
-                    <DollarSign className="h-4 w-4 mr-2" />
+                    <DollarSign className="h-4 w-4 me-2" />
                   )}
                   {isRTL ? 'تحديث العملات' : 'Update Currency'}
                 </Button>
@@ -364,9 +364,9 @@ const AutoUpdatePage = () => {
                   size="sm"
                 >
                   {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    <RefreshCw className="h-4 w-4 animate-spin me-2" />
                   ) : (
-                    <Package className="h-4 w-4 mr-2" />
+                    <Package className="h-4 w-4 me-2" />
                   )}
                   {isRTL ? 'تحديث الأسعار' : 'Update Prices'}
                 </Button>
@@ -443,9 +443,9 @@ const AutoUpdatePage = () => {
                   className="w-full"
                 >
                   {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    <RefreshCw className="h-4 w-4 animate-spin me-2" />
                   ) : (
-                    <Package className="h-4 w-4 mr-2" />
+                    <Package className="h-4 w-4 me-2" />
                   )}
                   {isRTL ? 'مزامنة من AliExpress' : 'Sync from AliExpress'}
                 </Button>
@@ -457,9 +457,9 @@ const AutoUpdatePage = () => {
                   className="w-full"
                 >
                   {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    <RefreshCw className="h-4 w-4 animate-spin me-2" />
                   ) : (
-                    <Package className="h-4 w-4 mr-2" />
+                    <Package className="h-4 w-4 me-2" />
                   )}
                   {isRTL ? 'مزامنة من Amazon' : 'Sync from Amazon'}
                 </Button>

@@ -201,7 +201,7 @@ const ProfilePage = () => {
           <TabsContent value="profile">
             <Card className="luxury-card p-6">
               <div className="flex items-center mb-6">
-                <User className="h-6 w-6 text-amber-600 ml-3" />
+                <User className="h-6 w-6 text-amber-600 me-3" />
                 <h2 className="text-xl font-bold text-gray-900">بياناتي الشخصية</h2>
               </div>
               
@@ -306,7 +306,7 @@ const ProfilePage = () => {
                         {awaitingPayment(order) && (
                           <Link to={`/order/${order.id}/pay`} data-testid="complete-payment">
                             <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
-                              <Eye className="h-4 w-4 ml-1" />
+                              <Eye className="h-4 w-4 me-1" />
                               أكمِل الدفع
                             </Button>
                           </Link>
@@ -355,7 +355,7 @@ const ProfilePage = () => {
               <Card className="luxury-card p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center">
-                    <MapPin className="h-6 w-6 text-amber-600 ml-3" />
+                    <MapPin className="h-6 w-6 text-amber-600 me-3" />
                     <h3 className="text-xl font-bold text-gray-900">عنوان الشحن</h3>
                   </div>
                   <Button

@@ -274,7 +274,7 @@ const AboutUs = () => {
               href="/products"
               className="inline-flex items-center px-8 py-4 bg-white text-purple-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <Crown className="h-5 w-5 mr-2" />
+              <Crown className="h-5 w-5 me-2" />
               {isRTL ? 'تسوقي الآن' : 'Shop Now'}
             </a>
             <a 

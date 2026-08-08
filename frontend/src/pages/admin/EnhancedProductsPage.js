@@ -345,12 +345,12 @@ const EnhancedProductsPage = () => {
             onClick={() => setShowModal(true)}
             className="bg-amber-600 hover:bg-amber-700"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 me-2" />
             {isRTL ? 'إضافة منتج' : 'Add Product'}
           </Button>
           
           <Button variant="outline" onClick={exportCsv} data-testid="export-products">
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="h-4 w-4 me-2" />
             {isRTL ? 'تصدير' : 'Export'}
           </Button>
         </div>
@@ -627,7 +627,7 @@ const EnhancedProductsPage = () => {
                         size="sm"
                         onClick={() => handleEditProduct(product)}
                       >
-                        <Edit2 className="h-3 w-3 mr-1" />
+                        <Edit2 className="h-3 w-3 me-1" />
                         {isRTL ? 'تعديل' : 'Edit'}
                       </Button>
                       <Button 
@@ -777,7 +777,7 @@ const EnhancedProductsPage = () => {
             {isRTL ? 'ابدأ بإضافة منتجاتك الأولى' : 'Start by adding your first products'}
           </p>
           <Button onClick={() => setShowModal(true)} className="bg-amber-600 hover:bg-amber-700">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 me-2" />
             {isRTL ? 'إضافة منتج' : 'Add Product'}
           </Button>
         </div>

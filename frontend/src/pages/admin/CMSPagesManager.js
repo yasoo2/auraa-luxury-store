@@ -236,7 +236,7 @@ const CMSPagesManager = () => {
 
             <div className="flex gap-3 mt-6">
               <Button className="btn-luxury flex-1" onClick={() => onSave(formData)}>
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="h-4 w-4 me-2" />
                 {isRTL ? 'حفظ' : 'Save'}
               </Button>
               <Button variant="outline" onClick={onClose}>
@@ -278,7 +278,7 @@ const CMSPagesManager = () => {
             setShowModal(true);
           }}
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 me-2" />
           {isRTL ? 'صفحة جديدة' : 'New Page'}
         </Button>
       </div>
@@ -321,7 +321,7 @@ const CMSPagesManager = () => {
                     setShowModal(true);
                   }}
                 >
-                  <Edit2 className="h-4 w-4 mr-1" />
+                  <Edit2 className="h-4 w-4 me-1" />
                   {isRTL ? 'تعديل' : 'Edit'}
                 </Button>
                 <Button

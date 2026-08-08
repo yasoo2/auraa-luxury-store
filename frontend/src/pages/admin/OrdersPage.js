@@ -249,7 +249,7 @@ const OrdersPage = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+    return date.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -469,7 +469,7 @@ const OrdersPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
-                          <StatusIcon className="h-3 w-3 mr-1" />
+                          <StatusIcon className="h-3 w-3 me-1" />
                           {status.label}
                         </span>
                         {/* Whether the shop has been paid was not on this
@@ -543,7 +543,7 @@ const OrdersPage = () => {
                           size="sm"
                           className="text-amber-600 hover:text-amber-900"
                         >
-                          <Eye className="h-4 w-4 mr-1" />
+                          <Eye className="h-4 w-4 me-1" />
                           {isRTL ? 'عرض' : 'View'}
                         </Button>
                       </div>
@@ -764,7 +764,7 @@ const OrdersPage = () => {
                         size="sm"
                         className={selectedOrder.status === status ? "bg-amber-600 hover:bg-amber-700" : ""}
                       >
-                        <StatusIcon className="h-4 w-4 mr-1" />
+                        <StatusIcon className="h-4 w-4 me-1" />
                         {config.label}
                       </Button>
                     );

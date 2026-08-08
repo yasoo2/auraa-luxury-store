@@ -265,7 +265,7 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
         <div className={`${isModal ? 'p-6' : ''} border-b border-gray-200`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Scale className="h-8 w-8 text-amber-600 mr-3" />
+              <Scale className="h-8 w-8 text-amber-600 me-3" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
                   {isRTL ? 'مقارنة المنتجات' : 'Product Comparison'}
@@ -380,7 +380,7 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
                               onClick={() => addToCart(product.id, 1)}
                               data-testid="compare-add-to-cart"
                             >
-                              <ShoppingCart className="h-4 w-4 mr-1" />
+                              <ShoppingCart className="h-4 w-4 me-1" />
                               {isRTL ? 'أضف' : 'Add'}
                             </Button>
                             <Button
@@ -413,7 +413,7 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
                             className="p-4 bg-amber-50 border border-gray-200 font-semibold text-gray-900"
                           >
                             <div className="flex items-center">
-                              <SectionIcon className="h-5 w-5 text-amber-600 mr-2" />
+                              <SectionIcon className="h-5 w-5 text-amber-600 me-2" />
                               {section.title}
                             </div>
                           </td>
@@ -439,7 +439,7 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
                                   <div className="flex items-center justify-between">
                                     {formatValue(field, value, product.id)}
                                     {isHighlighted && (
-                                      <Check className="h-4 w-4 text-green-600 ml-2" />
+                                      <Check className="h-4 w-4 text-green-600 me-2" />
                                     )}
                                   </div>
                                 </td>

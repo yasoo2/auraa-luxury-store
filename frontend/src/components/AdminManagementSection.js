@@ -266,7 +266,7 @@ const AdminManagementSection = () => {
               className="text-xs"
               disabled={sendingCode}
             >
-              <ShieldCheck className="h-3 w-3 mr-1" />
+              <ShieldCheck className="h-3 w-3 me-1" />
               {isRTL ? 'ترقية لسوبر أدمن' : 'Make Super Admin'}
             </Button>
           )}
@@ -278,7 +278,7 @@ const AdminManagementSection = () => {
               className="text-xs"
               disabled={sendingCode}
             >
-              <Shield className="h-3 w-3 mr-1" />
+              <Shield className="h-3 w-3 me-1" />
               {isRTL ? 'تخفيض لأدمن' : 'Demote to Admin'}
             </Button>
           )}
@@ -290,7 +290,7 @@ const AdminManagementSection = () => {
               className="text-xs"
               disabled={sendingCode}
             >
-              <Shield className="h-3 w-3 mr-1" />
+              <Shield className="h-3 w-3 me-1" />
               {isRTL ? 'منح صلاحية أدمن' : 'Make Admin'}
             </Button>
           )}
@@ -303,7 +303,7 @@ const AdminManagementSection = () => {
             className="text-xs"
             disabled={sendingCode}
           >
-            <KeyRound className="h-3 w-3 mr-1" />
+            <KeyRound className="h-3 w-3 me-1" />
             {isRTL ? 'تغيير الباسورد' : 'Reset Password'}
           </Button>
           
@@ -315,7 +315,7 @@ const AdminManagementSection = () => {
             className="text-xs"
             disabled={sendingCode}
           >
-            <Trash2 className="h-3 w-3 mr-1" />
+            <Trash2 className="h-3 w-3 me-1" />
             {isRTL ? 'حذف' : 'Delete'}
           </Button>
         </div>
@@ -470,9 +470,9 @@ const AdminManagementSection = () => {
                 className="flex-1"
               >
                 {verifyingCode ? (
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  <RefreshCw className="h-4 w-4 animate-spin me-2" />
                 ) : (
-                  <Check className="h-4 w-4 mr-2" />
+                  <Check className="h-4 w-4 me-2" />
                 )}
                 {isRTL ? 'تأكيد' : 'Verify'}
               </Button>
@@ -484,7 +484,7 @@ const AdminManagementSection = () => {
                 }}
                 disabled={verifyingCode}
               >
-                <X className="h-4 w-4 mr-2" />
+                <X className="h-4 w-4 me-2" />
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </Button>
             </div>

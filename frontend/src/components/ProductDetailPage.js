@@ -265,7 +265,7 @@ const ProductDetailPage = () => {
               </div>
               {/* Shipping quick estimate */}
               <div className="flex items-center text-sm text-gray-700">
-                <Truck className="h-4 w-4 ml-2 text-amber-600" />
+                <Truck className="h-4 w-4 me-2 text-amber-600" />
                 {shippingInfo.loading ? (
                   <span>{isRTL ? 'حساب الشحن...' : 'Estimating shipping...'}</span>
                 ) : shippingInfo.error === 'unavailable' ? (
@@ -305,7 +305,7 @@ const ProductDetailPage = () => {
 
               <div className="flex space-x-4">
                 <Button onClick={handleAddToCart} className="btn-luxury flex-1" data-testid="add-to-cart-button">
-                  <ShoppingCart className="h-5 w-5 ml-2" />
+                  <ShoppingCart className="h-5 w-5 me-2" />
                   {isRTL ? 'أضف إلى السلة' : 'Add to Cart'}
                 </Button>
                 <Button onClick={buyNow} variant="outline" className="flex-1 border-amber-600 text-amber-600 hover:bg-amber-50" data-testid="buy-now-button">{isRTL ? 'اشتري الآن' : 'Buy Now'}</Button>
@@ -333,7 +333,7 @@ const ProductDetailPage = () => {
             {/* Features */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
-                <Truck className="h-6 w-6 text-amber-600 ml-3" />
+                <Truck className="h-6 w-6 text-amber-600 me-3" />
                 <div>
                   <div className="font-medium text-gray-900">{isRTL ? 'توصيل سريع' : 'Fast Delivery'}</div>
                   <div className="text-sm text-gray-600">
@@ -354,14 +354,14 @@ const ProductDetailPage = () => {
                 </div>
               </div>
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
-                <Shield className="h-6 w-6 text-amber-600 ml-3" />
+                <Shield className="h-6 w-6 text-amber-600 me-3" />
                 <div>
                   <div className="font-medium text-gray-900">{isRTL ? 'ضمان الجودة' : 'Quality Guarantee'}</div>
                   <div className="text-sm text-gray-600">{isRTL ? 'ضمان سنة كاملة' : '1-year full warranty'}</div>
                 </div>
               </div>
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
-                <RotateCcw className="h-6 w-6 text-amber-600 ml-3" />
+                <RotateCcw className="h-6 w-6 text-amber-600 me-3" />
                 <div>
                   <div className="font-medium text-gray-900">{isRTL ? 'سياسة الإرجاع' : 'Return Policy'}</div>
                   <div className="text-sm text-gray-600">{isRTL ? 'خلال 30 يوم' : 'Within 30 days'}</div>
@@ -402,7 +402,7 @@ const ProductDetailPage = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-lg font-bold text-amber-600">{formatMoney(relatedProduct.price)}</span>
                         <div className="flex items-center">
-                          <Star className="h-4 w-4 text-yellow-400 fill-current ml-1" />
+                          <Star className="h-4 w-4 text-yellow-400 fill-current me-1" />
                           <span className="text-sm text-gray-600">{relatedProduct.rating}</span>
                         </div>
                       </div>

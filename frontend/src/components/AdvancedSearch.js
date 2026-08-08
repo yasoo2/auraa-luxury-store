@@ -275,7 +275,7 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
             {aiSuggestions.length > 0 && (
               <div className="p-3 border-b border-gray-100">
                 <div className="flex items-center mb-2">
-                  <Zap className="h-4 w-4 text-amber-500 mr-2" />
+                  <Zap className="h-4 w-4 text-amber-500 me-2" />
                   <span className="text-sm font-medium text-gray-700">
                     {isRTL ? 'اقتراحات ذكية' : 'Smart Suggestions'}
                   </span>
@@ -301,7 +301,7 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
             {suggestions.length > 0 && (
               <div className="p-3">
                 <div className="flex items-center mb-2">
-                  <Search className="h-4 w-4 text-gray-400 mr-2" />
+                  <Search className="h-4 w-4 text-gray-400 me-2" />
                   <span className="text-sm font-medium text-gray-700">
                     {isRTL ? 'اقتراحات البحث' : 'Search Suggestions'}
                   </span>
@@ -329,7 +329,7 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
               {isRTL ? 'فلاتر متقدمة' : 'Advanced Filters'}
             </h3>
             <Button onClick={clearFilters} variant="ghost" size="sm">
-              <X className="h-4 w-4 mr-1" />
+              <X className="h-4 w-4 me-1" />
               {isRTL ? 'مسح الكل' : 'Clear All'}
             </Button>
           </div>

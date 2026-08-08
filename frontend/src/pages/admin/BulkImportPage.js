@@ -285,7 +285,7 @@ const BulkImportPage = () => {
                 onClick={() => fileInputRef.current?.click()}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                <Upload className="h-4 w-4 mr-2" />
+                <Upload className="h-4 w-4 me-2" />
                 {isRTL ? 'اختيار ملف CSV' : 'Choose CSV File'}
               </Button>
               
@@ -293,7 +293,7 @@ const BulkImportPage = () => {
                 variant="outline"
                 onClick={downloadTemplate}
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 me-2" />
                 {isRTL ? 'تحميل قالب CSV' : 'Download CSV Template'}
               </Button>
             </div>
@@ -308,7 +308,7 @@ const BulkImportPage = () => {
               <ul className="space-y-2">
                 {requiredFields.map(field => (
                   <li key={field.key} className="flex items-center text-sm text-gray-600">
-                    <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                    <CheckCircle className="h-4 w-4 text-green-500 me-2 flex-shrink-0" />
                     <code className="bg-gray-100 px-1 rounded text-xs mr-2">{field.key}</code>
                     <span>{field.label}</span>
                   </li>
@@ -323,7 +323,7 @@ const BulkImportPage = () => {
               <ul className="space-y-2">
                 {optionalFields.map(field => (
                   <li key={field.key} className="flex items-center text-sm text-gray-600">
-                    <AlertCircle className="h-4 w-4 text-yellow-500 mr-2 flex-shrink-0" />
+                    <AlertCircle className="h-4 w-4 text-yellow-500 me-2 flex-shrink-0" />
                     <code className="bg-gray-100 px-1 rounded text-xs mr-2">{field.key}</code>
                     <span>{field.label}</span>
                   </li>
@@ -408,7 +408,7 @@ const BulkImportPage = () => {
           {/* Actions */}
           <div className="flex gap-4">
             <Button variant="outline" onClick={resetImport}>
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4 me-2" />
               {isRTL ? 'إعادة تحميل' : 'Reset'}
             </Button>
             
@@ -417,7 +417,7 @@ const BulkImportPage = () => {
               disabled={validRowsCount === 0}
               className="bg-green-600 hover:bg-green-700"
             >
-              <Play className="h-4 w-4 mr-2" />
+              <Play className="h-4 w-4 me-2" />
               {isRTL ? `استيراد ${validRowsCount} منتج` : `Import ${validRowsCount} Products`}
             </Button>
           </div>
@@ -512,7 +512,7 @@ const BulkImportPage = () => {
           {/* Actions */}
           <div className="flex gap-4">
             <Button onClick={resetImport}>
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4 me-2" />
               {isRTL ? 'استيراد جديد' : 'New Import'}
             </Button>
           </div>

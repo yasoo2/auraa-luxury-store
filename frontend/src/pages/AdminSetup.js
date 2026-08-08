@@ -155,7 +155,7 @@ const AdminSetup = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start">
-                  <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 me-2 flex-shrink-0" />
                   <p className="text-sm text-red-800">{error}</p>
                 </div>
               )}

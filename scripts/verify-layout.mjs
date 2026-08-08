@@ -131,6 +131,44 @@ const brand = await page.evaluate(() => {
 check('شعار المتجر بحجمه المقصود على الهاتف', brand !== null && brand.size <= 24,
   brand ? `${brand.size}px` : 'not found');
 
+// Dates, asked of the browser rather than of Node: Node's ICU resolves
+// `ar-SA` to the Gregorian calendar and Chromium resolves it to
+// islamic-umalqura, so a unit test here would have reported the bug fixed
+// while every real visitor still saw ٢٥ صفر ١٤٤٨.
+//
+// The source scan is what catches a regression — this confirms the two
+// locales still mean what the scan assumes they mean.
+const calendars = await page.evaluate(() => ({
+  bare: new Intl.DateTimeFormat('ar-SA').resolvedOptions().calendar,
+  pinned: new Intl.DateTimeFormat('ar-SA-u-ca-gregory').resolvedOptions().calendar,
+}));
+check('التقويم الميلادي مثبَّت وليس افتراضياً',
+  calendars.pinned === 'gregory' && calendars.bare !== 'gregory',
+  `ar-SA=${calendars.bare}, pinned=${calendars.pinned}`);
+
+// Every date on every screen must use the pinned locale. This is the check
+// with teeth: revert one call site and it fails.
+const sources = [];
+const walkSrc = (dir) => {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) { if (e.name !== 'node_modules') walkSrc(full); }
+    else if (/\.jsx?$/.test(e.name)) sources.push(full);
+  }
+};
+walkSrc('frontend/src');
+const hijri = [];
+for (const file of sources) {
+  const text = fs.readFileSync(file, 'utf8');
+  for (const line of text.split('\n')) {
+    if (!/'ar-SA'/.test(line)) continue;
+    if (/toLocaleDateString|toLocaleString|DateTimeFormat/.test(line)) {
+      hijri.push(`${path.basename(file)}: ${line.trim().slice(0, 70)}`);
+    }
+  }
+}
+check('لا شاشة تعرض تاريخاً بالتقويم الهجري', hijri.length === 0, hijri.join(' | '));
+
 await browser.close();
 server.close();
 

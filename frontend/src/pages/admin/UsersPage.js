@@ -118,7 +118,7 @@ const UsersPage = () => {
   const formatDate = (dateString) => {
     if (!dateString) return isRTL ? 'لم يسجل دخول' : 'Never logged in';
     const date = new Date(dateString);
-    return date.toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+    return date.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -299,12 +299,12 @@ const UsersPage = () => {
                           {displayName(user)}
                         </div>
                         <div className="text-sm text-gray-500 flex items-center">
-                          <Mail className="h-3 w-3 mr-1" />
+                          <Mail className="h-3 w-3 me-1" />
                           {user.email}
                         </div>
                         {user.phone && (
                           <div className="text-sm text-gray-500 flex items-center">
-                            <Phone className="h-3 w-3 mr-1" />
+                            <Phone className="h-3 w-3 me-1" />
                             {user.phone}
                           </div>
                         )}
@@ -319,12 +319,12 @@ const UsersPage = () => {
                     }`}>
                       {user.is_admin ? (
                         <>
-                          <Shield className="h-3 w-3 mr-1" />
+                          <Shield className="h-3 w-3 me-1" />
                           {isRTL ? 'مدير' : 'Admin'}
                         </>
                       ) : (
                         <>
-                          <Users className="h-3 w-3 mr-1" />
+                          <Users className="h-3 w-3 me-1" />
                           {isRTL ? 'عميل' : 'Customer'}
                         </>
                       )}
@@ -338,12 +338,12 @@ const UsersPage = () => {
                     }`}>
                       {user.is_active ? (
                         <>
-                          <CheckCircle className="h-3 w-3 mr-1" />
+                          <CheckCircle className="h-3 w-3 me-1" />
                           {isRTL ? 'نشط' : 'Active'}
                         </>
                       ) : (
                         <>
-                          <Ban className="h-3 w-3 mr-1" />
+                          <Ban className="h-3 w-3 me-1" />
                           {isRTL ? 'معطل' : 'Inactive'}
                         </>
                       )}
@@ -368,7 +368,7 @@ const UsersPage = () => {
                       size="sm"
                       className="text-amber-600 hover:text-amber-900"
                     >
-                      <Eye className="h-4 w-4 mr-1" />
+                      <Eye className="h-4 w-4 me-1" />
                       {isRTL ? 'عرض' : 'View'}
                     </Button>
                   </td>
@@ -416,17 +416,17 @@ const UsersPage = () => {
                     <h4 className="font-semibold mb-2">{isRTL ? 'معلومات الاتصال' : 'Contact Information'}</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-2 text-gray-500" />
+                        <Mail className="h-4 w-4 me-2 text-gray-500" />
                         {selectedUser.email}
                       </div>
                       {selectedUser.phone && (
                         <div className="flex items-center">
-                          <Phone className="h-4 w-4 mr-2 text-gray-500" />
+                          <Phone className="h-4 w-4 me-2 text-gray-500" />
                           {selectedUser.phone}
                         </div>
                       )}
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                        <Calendar className="h-4 w-4 me-2 text-gray-500" />
                         {isRTL ? 'انضم في:' : 'Joined:'} {formatDate(selectedUser.created_at)}
                       </div>
                     </div>
@@ -455,12 +455,12 @@ const UsersPage = () => {
                   >
                     {selectedUser.is_active ? (
                       <>
-                        <Ban className="h-4 w-4 mr-1" />
+                        <Ban className="h-4 w-4 me-1" />
                         {isRTL ? 'تعطيل الحساب' : 'Deactivate Account'}
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="h-4 w-4 mr-1" />
+                        <CheckCircle className="h-4 w-4 me-1" />
                         {isRTL ? 'تفعيل الحساب' : 'Activate Account'}
                       </>
                     )}
@@ -473,7 +473,7 @@ const UsersPage = () => {
                       size="sm"
                       className="border-purple-300 text-purple-600 hover:bg-purple-50"
                     >
-                      <Shield className="h-4 w-4 mr-1" />
+                      <Shield className="h-4 w-4 me-1" />
                       {isRTL ? 'منح صلاحيات الإدارة' : 'Grant Admin Role'}
                     </Button>
                   )}
@@ -485,7 +485,7 @@ const UsersPage = () => {
                       size="sm"
                       className="border-gray-300 text-gray-600 hover:bg-gray-50"
                     >
-                      <Users className="h-4 w-4 mr-1" />
+                      <Users className="h-4 w-4 me-1" />
                       {isRTL ? 'إزالة صلاحيات الإدارة' : 'Remove Admin Role'}
                     </Button>
                   )}

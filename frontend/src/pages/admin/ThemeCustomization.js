@@ -269,11 +269,11 @@ const ThemeCustomization = () => {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleReset}>
-            <RotateCcw className="h-4 w-4 mr-2" />
+            <RotateCcw className="h-4 w-4 me-2" />
             {isRTL ? 'استعادة' : 'Reset'}
           </Button>
           <Button className="btn-luxury" onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="h-4 w-4 me-2" />
             {isRTL ? 'حفظ التصميم' : 'Save Theme'}
           </Button>
         </div>
@@ -361,7 +361,7 @@ const ThemeCustomization = () => {
               <div>
                 <label htmlFor="logo-upload">
                   <Button variant="outline" as="span">
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className="h-4 w-4 me-2" />
                     {isRTL ? 'رفع شعار' : 'Upload Logo'}
                   </Button>
                   <input

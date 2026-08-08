@@ -193,7 +193,7 @@ const OrderTracking = () => {
         {/* Tracking Search */}
         <Card className="p-6 mb-8">
           <div className="flex items-center mb-4">
-            <Search className="h-6 w-6 text-blue-600 mr-3" />
+            <Search className="h-6 w-6 text-blue-600 me-3" />
             <h2 className="text-xl font-semibold text-gray-900">
               {isRTL ? 'البحث عن الطلب' : 'Search for Order'}
             </h2>
@@ -235,7 +235,7 @@ const OrderTracking = () => {
                   </div>
                 ) : (
                   <>
-                    <Search className="h-4 w-4 mr-2" />
+                    <Search className="h-4 w-4 me-2" />
                     {isRTL ? 'تتبع' : 'Track'}
                   </>
                 )}
@@ -335,7 +335,7 @@ const OrderTracking = () => {
                         handleTrackByNumber();
                       }}
                     >
-                      <Eye className="h-4 w-4 mr-1" />
+                      <Eye className="h-4 w-4 me-1" />
                       {isRTL ? 'تتبع' : 'Track'}
                     </Button>
                   </div>

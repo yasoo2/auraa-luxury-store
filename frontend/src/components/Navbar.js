@@ -127,7 +127,7 @@ const Navbar = () => {
                 data-testid="categories-dropdown"
               >
                 {isRTL ? 'تسوق حسب الفئة' : 'Shop by Category'}
-                <ChevronDown className={`h-4 w-4 ml-1 transform transition-transform ${showCategories ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 ms-1 transform transition-transform ${showCategories ? 'rotate-180' : ''}`} />
               </button>
               {showCategories && (
                 <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
@@ -166,7 +166,7 @@ const Navbar = () => {
 
             {/* Track Order */}
             <Link to="/order-tracking" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm flex items-center">
-              <RouteIcon className="h-4 w-4 mr-1" /> {trackOrderLabel}
+              <RouteIcon className="h-4 w-4 me-1" /> {trackOrderLabel}
             </Link>
           </div>
 
@@ -287,11 +287,11 @@ const Navbar = () => {
               {user && (
                 <div className="sm:hidden pb-3 mb-3 border-b border-gray-100 space-y-2">
                   <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
-                    <User className="h-4 w-4 mr-2" />
+                    <User className="h-4 w-4 me-2" />
                     {isRTL ? 'الملف الشخصي' : 'Profile'}
                   </Link>
                   <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
-                    <LogOut className="h-4 w-4 mr-2" />
+                    <LogOut className="h-4 w-4 me-2" />
                     {isRTL ? 'تسجيل الخروج' : 'Logout'}
                   </button>
                 </div>

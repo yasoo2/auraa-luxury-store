@@ -373,7 +373,7 @@ const SettingsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Mail className="inline h-4 w-4 mr-1" />
+            <Mail className="inline h-4 w-4 me-1" />
             {isRTL ? 'البريد الإلكتروني' : 'Email Address'}
           </label>
           <Input
@@ -386,7 +386,7 @@ const SettingsPage = () => {
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Phone className="inline h-4 w-4 mr-1" />
+            <Phone className="inline h-4 w-4 me-1" />
             {isRTL ? 'رقم الهاتف' : 'Phone Number'}
           </label>
           <Input
@@ -410,7 +410,7 @@ const SettingsPage = () => {
 
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-gray-900">
-          <MapPin className="inline h-5 w-5 mr-2" />
+          <MapPin className="inline h-5 w-5 me-2" />
           {isRTL ? 'العنوان' : 'Address'}
         </h3>
         
@@ -694,7 +694,7 @@ const SettingsPage = () => {
           data-testid="save-payment"
           className="bg-amber-600 hover:bg-amber-700"
         >
-          <Save className="h-4 w-4 mr-2" />
+          <Save className="h-4 w-4 me-2" />
           {paymentSaving
             ? (isRTL ? 'جارٍ الحفظ…' : 'Saving…')
             : (isRTL ? 'حفظ طرق الدفع' : 'Save payment methods')}
@@ -934,9 +934,9 @@ const SettingsPage = () => {
           {loading ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
           ) : saved ? (
-            <Check className="h-4 w-4 mr-2" />
+            <Check className="h-4 w-4 me-2" />
           ) : (
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="h-4 w-4 me-2" />
           )}
           {saved ? (isRTL ? 'تم الحفظ' : 'Saved') : (isRTL ? 'حفظ التغييرات' : 'Save Changes')}
         </Button>

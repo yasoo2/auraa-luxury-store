@@ -134,6 +134,13 @@ from core.security import (
 # ---------------------------------------------------------------------------
 LIVE_ONLY: Dict[str, Any] = {"staging": {"$ne": True}, "is_active": {"$ne": False}}
 
+# How long the shop tells a customer to expect delivery, in days. A single
+# store-wide window: CJ publishes no lead time per product, and no country
+# configuration in this project has ever set one, so the old
+# `config.get("delivery_days", "5-10")` was a default nobody could change
+# without editing code.
+DELIVERY_DAYS = os.getenv("DELIVERY_DAYS", "5-15")
+
 
 async def live_product(product_id: str) -> Optional[Dict[str, Any]]:
     """A product a shopper is allowed to see, or None. Staging is invisible."""
@@ -2313,11 +2320,11 @@ async def shipping_estimate(payload: ShippingEstimateRequest):
         "free_shipping": True,
         "shipping_included_in_price": True,
         "qualifies_for_free_shipping": True,
-        # A string like "5-10", straight from the country configuration. It is
-        # the store's own delivery window, not a supplier promise — CJ's
-        # product listing carries no lead time, and inventing one would be
-        # telling a customer something nobody knows.
-        "estimated_days": config.get("delivery_days", "5-10"),
+        # The store's own delivery window, in days. Not a supplier promise:
+        # CJ's product listing carries no lead time, so this is what the shop
+        # commits to. One value for the whole catalogue unless a country
+        # configuration overrides it, and settable without a deploy.
+        "estimated_days": config.get("delivery_days") or DELIVERY_DAYS,
     }
 
 

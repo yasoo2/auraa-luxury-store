@@ -328,7 +328,7 @@ const CartPage = () => {
                         </span>
                         {shippingEstimate.days && (
                           <div className="text-xs text-gray-500 mt-1">
-                            {shippingEstimate.days.min}-{shippingEstimate.days.max} {isRTL ? 'أيام' : 'days'}
+                            {shippingEstimate.days} {isRTL ? 'أيام' : 'days'}
                           </div>
                         )}
                       </>

@@ -336,9 +336,16 @@ async def background_import_cj_products(
                     "name_ar": product.get('productName') or product.get('productNameEn', ''),
                     "description": _clean_description(product) or product.get('productNameEn', ''),
                     "description_ar": _clean_description(product) or product.get('productName', ''),
-                    "price": pricing['final_price_sar'],  # Auto-calculated price with profit + tax + shipping
-                    "original_price": pricing['breakdown']['base_cost_sar'],  # Original cost for reference
-                    "supplier_price": base_cost,  # CJ price
+                    "price": pricing['final_price_sar'],  # profit + tax + shipping included
+                    # Deliberately no "original_price". It used to be set to the
+                    # supplier's cost, which the product page renders struck
+                    # through next to a "Save %" badge — so every import claimed
+                    # a discount off a price that was *lower* than the one being
+                    # charged, and printed the wholesale cost for every shopper
+                    # to read. A crossed-out price means "this used to cost
+                    # more"; only the owner lowering a price can create one.
+                    "supplier_price": base_cost,  # CJ price, admin-only
+                    "is_active": True,
                     "supplier_shipping": shipping_cost,
                     "price_breakdown": pricing['breakdown'],  # Full pricing details
                     "images": _collect_images(product),

@@ -107,9 +107,16 @@ const CheckoutPage = () => {
         items: (cart?.items || []).map((it) => ({ product_id: it.product_id, quantity: it.quantity }))
       };
       const data = await apiPost('/api/shipping/estimate', payload);
-      const cost = data?.shipping_cost?.[currency] ?? 0;
+      // `shipping_cost` is a number and `estimated_days` a string like "5-10".
+      const cost = Number(data?.shipping_cost ?? 0);
       const days = data?.estimated_days || null;
-      setShippingEstimate({ loading: false, cost, days, error: null });
+      setShippingEstimate({
+        loading: false,
+        cost,
+        days,
+        free: Boolean(data?.free_shipping) || cost === 0,
+        error: null,
+      });
     } catch (e) {
       console.error('estimateShipping error', e);
       // Check if error is 400 (unavailable)
@@ -163,8 +170,10 @@ const CheckoutPage = () => {
       trackPurchase({
         id: order.id || order.order_id,
         items: cart.items,
-        total: (cart.total_amount || 0) + (shippingEstimate.cost || 15),
-        shipping: shippingEstimate.cost || 15,
+        // `|| 15` invented a shipping charge whenever the real one was zero —
+        // which, now that delivery is inside the price, is always.
+        total: (cart.total_amount || 0) + (shippingEstimate.cost || 0),
+        shipping: shippingEstimate.cost || 0,
         tax: 0,
         currency: currency || 'SAR'
       });
@@ -387,7 +396,11 @@ const CheckoutPage = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">{isRTL ? 'الشحن:' : 'Shipping:'}</span>
                     <span className="font-medium">
-                      {shippingEstimate.loading ? (isRTL ? 'جاري الحساب...' : 'Calculating...') : `${shippingCost.toFixed(2)} ${isRTL ? 'ر.س' : 'SAR'}`}
+                      {shippingEstimate.loading
+                        ? (isRTL ? 'جاري الحساب...' : 'Calculating...')
+                        : shippingCost === 0
+                          ? (isRTL ? 'مجاني' : 'Free')
+                          : `${shippingCost.toFixed(2)} ${isRTL ? 'ر.س' : 'SAR'}`}
                     </span>
                   </div>
 
@@ -395,7 +408,7 @@ const CheckoutPage = () => {
                     <div className="flex items-center text-sm text-gray-600">
                       <Truck className="h-4 w-4 ml-2 text-amber-600" />
                       <span>
-                        {isRTL ? 'مدة التوصيل المتوقعة:' : 'Estimated delivery:'} {shippingEstimate.days.min ?? '?'} - {shippingEstimate.days.max ?? '?'} {isRTL ? 'أيام' : 'days'}
+                        {isRTL ? 'مدة التوصيل المتوقعة:' : 'Estimated delivery:'} {shippingEstimate.days} {isRTL ? 'أيام' : 'days'}
                       </span>
                     </div>
                   )}

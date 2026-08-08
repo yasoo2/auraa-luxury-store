@@ -131,9 +131,19 @@ const ProductDetailPage = () => {
         items: [{ product_id: id, quantity: 1 }]
       };
       const data = await apiPost('/api/shipping/estimate', payload);
-      const cost = data?.shipping_cost?.[currency] ?? 0;
+      // The server sends `shipping_cost` as a number and `estimated_days` as a
+      // string like "5-10". This read the cost as a map keyed by currency and
+      // the days as {min,max}: both came back undefined, so the page printed a
+      // flat 0.00 whatever the answer was, and a literal "?-? days".
+      const cost = Number(data?.shipping_cost ?? 0);
       const days = data?.estimated_days || null;
-      setShippingInfo({ loading: false, cost, days, error: null });
+      setShippingInfo({
+        loading: false,
+        cost,
+        days,
+        free: Boolean(data?.free_shipping) || cost === 0,
+        error: null,
+      });
     } catch (e) {
       if (e.message && e.message.includes('400')) {
         setShippingInfo({ loading: false, cost: 0, days: null, error: 'unavailable' });
@@ -260,8 +270,10 @@ const ProductDetailPage = () => {
                   <span>{isRTL ? 'الشحن غير متاح لبلدك' : 'Shipping not available for your country'}</span>
                 ) : (
                   <span>
-                    {isRTL ? 'الشحن التقديري:' : 'Estimated shipping:'} {shippingInfo.cost.toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
-                    {shippingInfo.days ? ` • ${isRTL ? 'المدة' : 'ETA'}: ${shippingInfo.days.min ?? '?'}-${shippingInfo.days.max ?? '?'} ${isRTL ? 'أيام' : 'days'}` : ''}
+                    {shippingInfo.free
+                      ? (isRTL ? 'شحن مجاني — محتسب داخل السعر' : 'Free shipping — included in the price')
+                      : `${isRTL ? 'الشحن التقديري:' : 'Estimated shipping:'} ${shippingInfo.cost.toFixed(2)} ${isRTL ? 'ر.س' : 'SAR'}`}
+                    {shippingInfo.days ? ` • ${isRTL ? 'المدة' : 'ETA'}: ${shippingInfo.days} ${isRTL ? 'أيام' : 'days'}` : ''}
                   </span>
                 )}
               </div>

@@ -106,6 +106,21 @@ check('لا يُخزَّن أيّ ردّ من /api/ في الكاش', cachedApi.
 const reloads = await page.evaluate(() => performance.getEntriesByType('navigation').filter(n => n.type === 'reload').length);
 check('الزيارة الأولى لا تُعيد تحميل نفسها', reloads === 0, `reloads=${reloads}`);
 
+// 3b. A deep route while ONLINE must answer 200 — from the network or from the
+// cached shell, both of which render the app. What must never happen is the
+// 503 fallback, which is what a live store reported on /products.
+//
+// Deliberately not asserting "came from the network": serving the cached shell
+// is also correct, so an assertion that forbade it would fail on right
+// behaviour. The header names the cause whenever the fallback does fire.
+for (const route of ['/products', '/profile']) {
+  const res = await page.goto(`http://127.0.0.1:${PORT}${route}`, { waitUntil: 'domcontentloaded' });
+  const status = res?.status();
+  const why = res?.headers()['x-sw-fallback-reason'];
+  check(`${route} متّصلاً يُعطي الصفحة لا 503`, status === 200,
+    `status=${status}${why ? ` reason=${why}` : ''}`);
+}
+
 // 4. the reported bug, reproduced under the condition that actually causes it:
 //    the network is gone AND the offline page is not in the cache. Browsers
 //    evict Cache Storage under pressure, and a version bump deletes the old

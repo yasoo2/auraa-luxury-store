@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';
@@ -184,12 +185,15 @@ const FashionModelsCarousel = () => {
               : 'Discover our exclusive collection of luxury accessories designed for the modern woman'
             }
           </p>
-          {/* Luxury CTA Button - Enhanced with proper z-index and pointer events */}
-          <button className="bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 px-6 py-2 sm:px-8 sm:py-3 rounded-full text-white font-semibold animate-pulse-gold transition-all duration-500 hover:scale-105 shadow-xl text-sm sm:text-base z-20 relative pointer-events-auto">
-            <a href="/products" className="block w-full h-full text-white no-underline">
-              {isRTL ? 'تسوّق الآن' : 'Shop Now'}
-            </a>
-          </button>
+          {/* Luxury CTA. One element, not an <a> nested inside a <button> —
+              that nesting is invalid HTML, and the anchor reloaded the entire
+              app to reach a route the router already owns. */}
+          <Link
+            to="/products"
+            className="inline-block bg-gradient-to-r from-amber-600 to-yellow-500 hover:from-amber-500 hover:to-yellow-400 px-6 py-2 sm:px-8 sm:py-3 rounded-full text-white no-underline font-semibold animate-pulse-gold transition-all duration-500 hover:scale-105 shadow-xl text-sm sm:text-base z-20 relative pointer-events-auto"
+          >
+            {isRTL ? 'تسوّق الآن' : 'Shop Now'}
+          </Link>
         </div>
       </div>
 

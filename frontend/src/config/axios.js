@@ -62,13 +62,28 @@ const setupInterceptor = (instance) => {
 
         try {
           // Try to refresh token
-          await axios.post(`${BACKEND_URL}/api/auth/refresh`, {}, {
+          const { data } = await axios.post(`${BACKEND_URL}/api/auth/refresh`, {}, {
             withCredentials: true
           });
-          
+
+          // Adopt the new token everywhere the old one lives. Refreshing used
+          // to renew only the cookie, while AuthContext keeps a global
+          // Authorization header built from localStorage — so the retry below
+          // replayed the very token that had just expired, and the server
+          // (which reads the header first) rejected it again. The loop could
+          // not end: refresh succeeded every time and nothing ever changed.
+          if (data?.access_token) {
+            localStorage.setItem('token', data.access_token);
+            axios.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+            if (originalRequest.headers) {
+              originalRequest.headers['Authorization'] = `Bearer ${data.access_token}`;
+            }
+          }
+
           processQueue(null);
           isRefreshing = false;
-          
+
           // Retry original request
           return instance(originalRequest);
         } catch (refreshError) {

@@ -81,9 +81,12 @@ const CheckoutPage = () => {
       setLoading(false);
       
       // Track begin_checkout in GA4
+      // The cart's total is `total_amount` — the server has never had a
+      // `total_price`. Reading the missing name reported an undefined basket
+      // value to analytics, and below it turned the purchase total into NaN.
       trackBeginCheckout({
         items: response.data.items,
-        total: response.data.total_price,
+        total: response.data.total_amount,
         currency: currency || 'SAR'
       });
     } catch (error) {
@@ -160,7 +163,7 @@ const CheckoutPage = () => {
       trackPurchase({
         id: order.id || order.order_id,
         items: cart.items,
-        total: cart.total_price + (shippingEstimate.cost || 15),
+        total: (cart.total_amount || 0) + (shippingEstimate.cost || 15),
         shipping: shippingEstimate.cost || 15,
         tax: 0,
         currency: currency || 'SAR'
@@ -377,7 +380,7 @@ const CheckoutPage = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">{isRTL ? 'المجموع الجزئي:' : 'Subtotal:'}</span>
                     <span className="font-medium" data-testid="summary-subtotal">
-                      {cart.total_amount.toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
+                      {(cart.total_amount || 0).toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}
                     </span>
                   </div>
 

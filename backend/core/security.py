@@ -176,32 +176,60 @@ def clear_auth_cookies(response) -> None:
 # Dependencies
 # ---------------------------------------------------------------------------
 
-def extract_token(request: Request) -> Optional[str]:
+def candidate_tokens(request: Request) -> list:
     """
-    Resolve the access token from the Authorization header, falling back to
-    the access_token cookie.
+    Every access token this request offers, header first then cookie.
 
-    Both are needed: admin pages send `Authorization: Bearer <localStorage
-    token>`, while api.js sends cookies only.
+    Both must be *tried*, not merely both accepted. The header used to win
+    outright, and that locked admins out of the dashboard: AuthContext sets a
+    global Authorization header from localStorage, refreshing renews the
+    *cookie* and never touches localStorage, so once the stored token expired
+    every request presented the same dead header, the refresh quietly
+    succeeded, the retry presented that dead header again — and a valid cookie
+    sat unread through all of it. 401 forever, with no way back but a manual
+    re-login.
     """
+    tokens = []
+
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header[7:].strip()
         # Admin pages send the literal "null"/"undefined" when localStorage is
         # empty; treat that as absent so the cookie can still be used.
         if token and token not in ("null", "undefined"):
-            return token
+            tokens.append(token)
 
-    return request.cookies.get(ACCESS_COOKIE)
+    cookie = request.cookies.get(ACCESS_COOKIE)
+    if cookie and cookie not in tokens:
+        tokens.append(cookie)
+
+    return tokens
+
+
+def extract_token(request: Request) -> Optional[str]:
+    """The token a request leads with, or None. Kept for callers that only
+    need to know whether the request carries credentials at all."""
+    tokens = candidate_tokens(request)
+    return tokens[0] if tokens else None
 
 
 async def get_current_user_doc(request: Request) -> Dict[str, Any]:
     """Resolve the caller as a raw user document."""
-    token = extract_token(request)
-    if not token:
+    tokens = candidate_tokens(request)
+    if not tokens:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    payload = decode_token(token)
+    payload, last_error = None, None
+    for token in tokens:
+        try:
+            payload = decode_token(token)
+            break
+        except HTTPException as e:
+            # An expired header token must not bury a live cookie.
+            last_error = e
+    if payload is None:
+        raise last_error
+
     if payload.get("type") == "refresh":
         raise HTTPException(status_code=401, detail="Refresh token cannot be used for access")
 

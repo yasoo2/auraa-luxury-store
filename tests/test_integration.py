@@ -163,6 +163,58 @@ def test_bearer_null_falls_back_to_cookie(client):
     assert r.status_code == 200, r.text
 
 
+def _expired_bearer(email="stale@b.com"):
+    """A syntactically perfect access token that expired an hour ago."""
+    from datetime import timedelta
+    from core.security import create_access_token
+    return create_access_token({"sub": email, "user_id": "whoever"},
+                               expires_delta=timedelta(hours=-1))
+
+
+def test_an_expired_header_does_not_bury_a_live_cookie(client):
+    """
+    How an admin got locked out of the dashboard with a perfectly good session:
+
+    AuthContext sets a global Authorization header from localStorage. The
+    server read the header first and stopped there. Once the stored token
+    expired, every call 401'd; the axios interceptor refreshed — which renews
+    the *cookie* and never touches localStorage — and retried with the same
+    dead header. 401 again, forever, while a valid cookie sat unread.
+    """
+    register(client, email="locked@b.com")
+    make_admin(client, "locked@b.com")
+
+    r = client.get("/api/admin/products",
+                   headers={"Authorization": f"Bearer {_expired_bearer()}"})
+    assert r.status_code == 200, f"a live cookie was ignored: {r.text}"
+
+
+def test_a_malformed_header_does_not_bury_a_live_cookie(client):
+    register(client, email="garbled@b.com")
+    r = client.get("/api/auth/me", headers={"Authorization": "Bearer not-a-jwt"})
+    assert r.status_code == 200, r.text
+
+
+def test_an_expired_header_with_no_cookie_is_still_rejected(client):
+    """The fallback must not become a way in for anyone without credentials."""
+    register(client, email="nocookie@b.com")
+    client.cookies.clear()
+    r = client.get("/api/auth/me",
+                   headers={"Authorization": f"Bearer {_expired_bearer()}"})
+    assert r.status_code == 401, r.text
+    assert "expired" in r.json()["detail"].lower(), r.json()
+
+
+def test_refresh_hands_back_a_token_the_client_can_store(client):
+    """
+    The interceptor now writes this into localStorage and the default header;
+    without it in the body there is nothing to replace the stale token with.
+    """
+    register(client, email="tok@b.com")
+    body = client.post("/api/auth/refresh").json()
+    assert body.get("access_token"), body
+
+
 def test_refresh_rotates_and_revokes_old_token(client):
     register(client, email="rot@b.com")
     old_refresh = client.cookies.get("refresh_token")

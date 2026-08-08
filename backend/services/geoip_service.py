@@ -8,6 +8,11 @@ from typing import Dict, Optional
 from fastapi import Request
 
 
+def _is_country_code(value) -> bool:
+    """A plausible ISO 3166-1 alpha-2 code."""
+    return bool(value) and len(str(value)) == 2 and str(value).isalpha()
+
+
 class GeoIPService:
     """
     Service for detecting user location and providing country-specific data.
@@ -113,23 +118,28 @@ class GeoIPService:
         Returns:
             Country code
         """
-        # Priority 1: Query parameter (user override)
+        # The shop sells worldwide. Any ISO country code is accepted; the six
+        # with their own configuration are not the six it will ship to. This
+        # used to require membership of `gcc_countries`, so a customer saying
+        # "France" was overruled and served as Saudi Arabia — wrong currency,
+        # wrong tax, and a shipping estimate for the wrong continent.
         country = request.query_params.get('country')
-        if country and country.upper() in self.gcc_countries:
+        if _is_country_code(country):
             return country.upper()
-        
-        # Priority 2: Custom header (from frontend)
+
         country = request.headers.get('X-User-Country')
-        if country and country.upper() in self.gcc_countries:
+        if _is_country_code(country):
             return country.upper()
-        
-        # Priority 3: Accept-Language header
+
+        # Accept-Language names a language, not a residence: `ar-SA` on a phone
+        # bought in Riyadh says nothing about where its owner is standing. Used
+        # only as a last hint, and only for the region it actually carries.
         accept_lang = request.headers.get('Accept-Language', '')
-        if 'ar-SA' in accept_lang or 'ar_SA' in accept_lang:
-            return 'SA'
-        elif 'ar-AE' in accept_lang:
-            return 'AE'
-        
+        for tag in accept_lang.split(','):
+            parts = tag.strip().replace('_', '-').split('-')
+            if len(parts) >= 2 and _is_country_code(parts[1]):
+                return parts[1].upper()
+
         return self.default_country
     
     def get_country_config(self, country_code: str) -> Dict:
@@ -142,10 +152,25 @@ class GeoIPService:
         Returns:
             Country configuration dict
         """
-        return self.gcc_countries.get(
-            country_code.upper(),
-            self.gcc_countries[self.default_country]
-        )
+        code = (country_code or '').upper()
+        if code in self.gcc_countries:
+            return self.gcc_countries[code]
+
+        # Anywhere else. This used to return the *Saudi* configuration, so a
+        # customer in Germany was quoted in riyals and charged 15% Saudi VAT —
+        # a tax their country never levied and this shop cannot remit on their
+        # behalf. A Saudi seller's exports are zero-rated; what the buyer may
+        # owe is import duty at their own border, which is theirs to pay and
+        # ours to say out loud rather than quietly add to the bill.
+        return {
+            'name_en': code or 'International',
+            'name_ar': 'دولية',
+            'currency': 'USD',
+            'vat_rate': 0.0,
+            'currency_symbol': '$',
+            'language_default': 'en',
+            'import_duty_may_apply': True,
+        }
     
     def get_vat_rate(self, country_code: str) -> float:
         """Get VAT rate for country."""

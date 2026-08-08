@@ -46,10 +46,15 @@ COUNTRY_CONFIGS = {
         "shipping_base": 4.0,  # OMR
         "currency": "OMR"
     },
+    # Everywhere else. Was 15% — the Saudi rate — applied to every country on
+    # earth. A Saudi seller's exports are zero-rated, and what a foreign buyer
+    # owes is import duty at their own border: theirs to pay, and ours to state
+    # rather than quietly add.
     "default": {
-        "tax_rate": 0.15,
+        "tax_rate": 0.0,
         "shipping_base": 25.0,
-        "currency": "SAR"
+        "currency": "USD",
+        "import_duty_may_apply": True,
     }
 }
 

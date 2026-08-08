@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, MapPin, User, Phone, Mail, Truck } from 'lucide-react';
 import { Button } from './ui/button';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import { countryOptions } from '../data/countries';
 import axios from 'axios';
 import { trackBeginCheckout, trackPurchase } from '../utils/analytics';
 import { apiGet, apiPost } from '../api';
@@ -39,6 +40,7 @@ const CheckoutPage = () => {
     paymentMethod: 'on_confirmation',
   });
 
+  const countries = useMemo(() => countryOptions(language), [language]);
   const [shippingEstimate, setShippingEstimate] = useState({ loading: false, cost: 0, days: null, error: null });
 
   useEffect(() => {
@@ -111,6 +113,7 @@ const CheckoutPage = () => {
         cost,
         days,
         free: Boolean(data?.free_shipping) || cost === 0,
+        importDuty: Boolean(data?.import_duty_may_apply),
         error: null,
       });
     } catch (e) {
@@ -314,13 +317,17 @@ const CheckoutPage = () => {
                       <SelectTrigger data-testid="shipping-country">
                         <SelectValue placeholder={isRTL ? 'اختر الدولة' : 'Select Country'} />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="SA">{isRTL ? 'المملكة العربية السعودية' : 'Saudi Arabia'}</SelectItem>
-                        <SelectItem value="AE">{isRTL ? 'الإمارات العربية المتحدة' : 'United Arab Emirates'}</SelectItem>
-                        <SelectItem value="KW">{isRTL ? 'الكويت' : 'Kuwait'}</SelectItem>
-                        <SelectItem value="QA">{isRTL ? 'قطر' : 'Qatar'}</SelectItem>
-                        <SelectItem value="BH">{isRTL ? 'البحرين' : 'Bahrain'}</SelectItem>
-                        <SelectItem value="OM">{isRTL ? 'عُمان' : 'Oman'}</SelectItem>
+                      {/* Six countries used to be listed here. The shop sells
+                          worldwide, so a shopper anywhere else could not say
+                          where they live. */}
+                      <SelectContent className="max-h-72">
+                        {countries.priority.map(({ code, name }) => (
+                          <SelectItem key={code} value={code}>{name}</SelectItem>
+                        ))}
+                        <div className="my-1 border-t border-gray-200" />
+                        {countries.rest.map(({ code, name }) => (
+                          <SelectItem key={code} value={code}>{name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -349,6 +356,18 @@ const CheckoutPage = () => {
                   shop really runs, where the owner reviews every order by hand.
                 */}
                 <div className="space-y-4">
+                  {/* Said before they order, not after customs holds the
+                      parcel. */}
+                  {shippingEstimate.importDuty && (
+                    <div
+                      className="border border-gray-200 bg-gray-50 rounded-lg p-4 text-sm text-gray-700 mb-4"
+                      data-testid="import-duty-notice"
+                    >
+                      {isRTL
+                        ? 'الشحن الدولي: قد تفرض جماركُ بلدك رسوماً عند الاستلام، وهي على المشتري ولا يحصّلها المتجر.'
+                        : 'International delivery: your country’s customs may charge import duty on arrival. It is payable by you and is not collected by the store.'}
+                    </div>
+                  )}
                   <div
                     className="border border-amber-200 bg-amber-50 rounded-lg p-4 text-sm text-gray-700"
                     data-testid="payment-method"

@@ -1706,6 +1706,87 @@ class _CJCatalogue(_FakeCJ):
         return _FakeResponse(200, {"code": 200, "result": True, "data": {}})
 
 
+def test_an_import_never_invents_a_discount(client, monkeypatch):
+    """
+    original_price was set to the supplier's cost. The product page renders
+    that struck through beside a "Save %" badge — so every import advertised a
+    saving off a price *lower* than the one being charged, and printed the
+    wholesale cost for every shopper to read.
+    """
+    import asyncio
+    from services.background_import import background_import_cj_products
+
+    monkeypatch.setattr(cj_client, "_client", _CJCatalogue())
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "shop@example.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "APIKEY")
+    cj_client._reset_token()
+
+    asyncio.get_event_loop().run_until_complete(background_import_cj_products(
+        job_id="job-d", keyword="jewelry", category_id=None,
+        max_products=2, db=client._db,
+    ))
+    staged = asyncio.get_event_loop().run_until_complete(
+        client._db.products.find({"staging": True}).to_list(length=None))
+
+    for p in staged:
+        assert not p.get("original_price"), \
+            f"a crossed-out price was invented: {p.get('original_price')} vs {p['price']}"
+        assert not p.get("discount_percentage")
+        assert p["is_active"] is True, "imports arrived flagged inactive"
+    cj_client._reset_token()
+
+
+def test_a_hidden_product_leaves_the_storefront(seeded):
+    """
+    The admin catalogue drew a red "Inactive" badge from a field the Product
+    model never had, so every product read as inactive while being live and
+    sellable. The field is real now, and hiding one has to actually hide it.
+    """
+    import asyncio
+    assert "p1" in [p["id"] for p in seeded.get("/api/products").json()]
+
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {"is_active": False}}))
+
+    assert "p1" not in [p["id"] for p in seeded.get("/api/products").json()]
+    assert seeded.get("/api/products/p1").status_code == 404
+    assert seeded.get("/sitemap.xml").text.count("/product/p1") == 0
+
+
+def test_a_product_with_no_is_active_field_is_still_sold(seeded):
+    """Everything imported before this field existed must stay on sale."""
+    ids = [p["id"] for p in seeded.get("/api/products").json()]
+    assert "p1" in ids and "p2" in ids
+
+
+def test_shipping_is_free_because_the_price_already_contains_it(seeded):
+    """
+    pricing_service builds every sale price as
+    base_cost + supplier_shipping + local_shipping + profit + tax.
+    Charging a separate shipping line at checkout billed the customer for
+    delivery twice.
+    """
+    r = seeded.post("/api/shipping/estimate", json={
+        "country_code": "SA", "items": [{"product_id": "p1", "quantity": 1}]})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["shipping_cost"] == 0.0, body
+    assert body["free_shipping"] is True
+    assert body["shipping_included_in_price"] is True
+
+
+def test_the_delivery_window_is_a_readable_string(seeded):
+    """
+    The product page read estimated_days as {min, max} and printed a literal
+    "?-? days" because the server sends a string like "5-10".
+    """
+    body = seeded.post("/api/shipping/estimate", json={
+        "country_code": "SA", "items": []}).json()
+    days = body["estimated_days"]
+    assert isinstance(days, str) and days.strip(), body
+    assert "?" not in days
+
+
 def test_a_cj_import_puts_real_products_into_staging(client, monkeypatch):
     """The whole path: CJ answers, the importer writes, staging holds them."""
     import asyncio

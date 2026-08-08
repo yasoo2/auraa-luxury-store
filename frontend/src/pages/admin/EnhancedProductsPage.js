@@ -37,7 +37,7 @@ import { Input } from '../../components/ui/input';
 import { API_BASE_URL } from '../../api';
 
 const EnhancedProductsPage = () => {
-  const { language, currency } = useLanguage();
+  const { language, currency, convert } = useLanguage();
   const API_URL = API_BASE_URL;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -217,11 +217,16 @@ const EnhancedProductsPage = () => {
     }
   };
 
+  // Catalogue prices are stored in SAR. This used to stamp the *selected*
+  // currency's symbol onto that untouched number, so a 175 riyal product read
+  // as "$US 175" — the same figure, a different currency, and about four times
+  // the real amount. Convert first, then label.
   const formatCurrency = (amount) => {
+    const value = currency === 'SAR' ? (amount || 0) : convert(amount || 0, 'SAR', currency);
     return new Intl.NumberFormat(isRTL ? 'ar-SA' : 'en-US', {
       style: 'currency',
       currency: currency
-    }).format(amount);
+    }).format(value);
   };
 
   const formatDate = (dateString) => {

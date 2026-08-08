@@ -132,7 +132,7 @@ from core.security import (
 # One rule, one name. A new query that forgets it is a leak, so anything
 # touching db.products for a shopper goes through LIVE_ONLY or live_product().
 # ---------------------------------------------------------------------------
-LIVE_ONLY: Dict[str, Any] = {"staging": {"$ne": True}}
+LIVE_ONLY: Dict[str, Any] = {"staging": {"$ne": True}, "is_active": {"$ne": False}}
 
 
 async def live_product(product_id: str) -> Optional[Dict[str, Any]]:
@@ -254,6 +254,12 @@ class Product(BaseModel):
     rating: float = 0.0
     reviews_count: int = 0
     external_url: Optional[str] = None
+    # The admin catalogue has always drawn a red "Inactive" badge from this
+    # field. It did not exist on the model, so it read as undefined on every
+    # product and every single one was labelled inactive — a status with
+    # nothing behind it, on products that were live and selling. Now it is
+    # real: default on, and the storefront respects it.
+    is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -729,8 +735,11 @@ async def get_products(
     limit: int = 20,
     language: Optional[str] = Query(None, description="Preferred language (ar|en)")
 ):
-    """List live products. Staging products are excluded from the storefront."""
-    query: Dict[str, Any] = {"staging": {"$ne": True}}
+    """List live products: nothing in staging, nothing switched off."""
+    # Built from LIVE_ONLY rather than repeating its terms. The listing carried
+    # its own copy of the rule and so missed is_active the moment that field
+    # became real — the exact drift LIVE_ONLY exists to prevent.
+    query: Dict[str, Any] = dict(LIVE_ONLY)
 
     if category:
         query["category"] = category
@@ -2201,17 +2210,23 @@ async def shipping_estimate(payload: ShippingEstimateRequest):
         if product:
             subtotal += (product.get("price") or 0) * max(1, item.quantity)
 
-    free_threshold = float(config.get("free_shipping_threshold", 200))
-    base_cost = float(config.get("shipping_cost", 25))
-    cost = 0.0 if subtotal >= free_threshold else base_cost
-
+    # Shipping is free because it is already paid for. Every imported product's
+    # sale price is built by pricing_service as
+    #     base_cost + supplier_shipping + local_shipping + profit + tax
+    # so the delivery is inside the price the shopper already sees. Adding a
+    # separate shipping line at checkout charged them for it a second time.
     return {
         "country_code": payload.country_code,
         "currency": config.get("currency", "SAR"),
         "subtotal": round(subtotal, 2),
-        "shipping_cost": round(cost, 2),
-        "free_shipping_threshold": free_threshold,
-        "qualifies_for_free_shipping": cost == 0,
+        "shipping_cost": 0.0,
+        "free_shipping": True,
+        "shipping_included_in_price": True,
+        "qualifies_for_free_shipping": True,
+        # A string like "5-10", straight from the country configuration. It is
+        # the store's own delivery window, not a supplier promise — CJ's
+        # product listing carries no lead time, and inventing one would be
+        # telling a customer something nobody knows.
         "estimated_days": config.get("delivery_days", "5-10"),
     }
 

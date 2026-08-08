@@ -79,6 +79,8 @@ export const LanguageProvider = ({ children }) => {
   });
 
   const [exchangeRates, setExchangeRates] = useState({ USD: 1 });
+  // Distinguishes "the rates have not arrived" from "the rate is zero".
+  const [ratesReady, setRatesReady] = useState(false);
 
   // Fetch exchange rates from backend API (server-based as requested)
   useEffect(() => {
@@ -88,6 +90,7 @@ export const LanguageProvider = ({ children }) => {
         const data = await apiGet('/api/auto-update/currency-rates');
         const rates = data?.rates || {};
         setExchangeRates({ USD: 1, ...rates });
+        setRatesReady(Boolean(rates && Object.keys(rates).length));
       } catch (error) {
         console.error('Failed to fetch currency rates from server:', error);
         // keep previous rates; backend job will refresh later
@@ -116,19 +119,32 @@ export const LanguageProvider = ({ children }) => {
 
   // Convert from USD to selected currency for display
   const formatPriceFromUSD = (priceInUSD) => {
-    if (!priceInUSD || !exchangeRates[currency]) return `0 ${CURRENCIES[currency]?.symbol || ''}`;
+    // Same rule as convert(): never print a zero we did not compute.
+    if (typeof priceInUSD !== 'number' || !exchangeRates[currency]) return null;
     const currencyInfo = CURRENCIES[currency];
     const convertedPrice = priceInUSD * exchangeRates[currency];
     const formattedPrice = convertedPrice.toFixed(currencyInfo.decimals);
     return `${formattedPrice} ${currencyInfo.symbol}`;
   };
 
+  /**
+   * Convert between currencies, or return null when it cannot be done.
+   *
+   * This used to return 0 whenever a rate was missing — before the rates
+   * finished loading, or when the endpoint failed. A price of zero is not a
+   * missing price, it is a wrong one, and it looks entirely real: the admin
+   * catalogue showed every product at "$US 0.00". Callers must decide what to
+   * show when the answer is unknown; they can no longer be handed a fiction.
+   */
   const convert = (amount, fromCurrency, toCurrency) => {
-    if (!amount || !exchangeRates[fromCurrency] || !exchangeRates[toCurrency]) return 0;
-    // amount is in fromCurrency relative to USD rates table
-    const amountInUSD = fromCurrency === 'USD' ? amount : (amount / exchangeRates[fromCurrency]);
-    const result = toCurrency === 'USD' ? amountInUSD : (amountInUSD * exchangeRates[toCurrency]);
-    return result;
+    if (typeof amount !== 'number' || Number.isNaN(amount)) return null;
+    if (fromCurrency === toCurrency) return amount;
+    const from = exchangeRates[fromCurrency];
+    const to = exchangeRates[toCurrency];
+    if (!from || !to) return null;
+    // Rates are quoted against USD.
+    const amountInUSD = fromCurrency === 'USD' ? amount : amount / from;
+    return toCurrency === 'USD' ? amountInUSD : amountInUSD * to;
   };
 
   const switchLanguage = (newLanguage) => {
@@ -154,6 +170,7 @@ export const LanguageProvider = ({ children }) => {
     languages: LANGUAGES,
     currencies: CURRENCIES,
     exchangeRates,
+    ratesReady,
     isRTL: LANGUAGES[language]?.dir === 'rtl'
   };
 

@@ -1736,6 +1736,35 @@ def test_an_import_never_invents_a_discount(client, monkeypatch):
     cj_client._reset_token()
 
 
+def test_products_imported_before_the_field_existed_are_not_labelled_inactive(seeded):
+    """
+    The admin catalogue draws its red "Inactive" badge from `is_active`, and
+    this endpoint returns raw documents — so the model default never applied
+    and every product stored before the field existed came back without it.
+    A missing key is not "switched off"; it is "nobody ever switched it".
+    """
+    register(seeded, email="badge@b.com")
+    make_admin(seeded, "badge@b.com")
+
+    rows = seeded.get("/api/admin/products").json()
+    assert rows, "no products returned"
+    for row in rows:
+        assert row["is_active"] is True, f"{row['id']} came back flagged inactive"
+
+
+def test_a_product_switched_off_still_reads_as_off_in_the_admin_list(seeded):
+    """The default must not paper over a real choice to hide something."""
+    import asyncio
+    register(seeded, email="badge2@b.com")
+    make_admin(seeded, "badge2@b.com")
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {"is_active": False}}))
+
+    rows = {r["id"]: r for r in seeded.get("/api/admin/products").json()}
+    assert rows["p1"]["is_active"] is False
+    assert rows["p2"]["is_active"] is True
+
+
 def test_a_hidden_product_leaves_the_storefront(seeded):
     """
     The admin catalogue drew a red "Inactive" badge from a field the Product

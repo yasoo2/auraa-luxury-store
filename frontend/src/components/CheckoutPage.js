@@ -465,19 +465,32 @@ const CheckoutPage = () => {
                               />
                               <div className="min-w-0">
                                 <p className="font-semibold text-gray-900">
-                                  {method.id === 'bank_transfer'
-                                    ? (isRTL ? 'حوالة بنكية' : 'Bank transfer')
-                                    : (isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation')}
+                                  {method.id === 'card'
+                                    ? (isRTL ? 'بطاقة ائتمانية أو مدى' : 'Credit or debit card')
+                                    : method.id === 'bank_transfer'
+                                      ? (isRTL ? 'حوالة بنكية' : 'Bank transfer')
+                                      : (isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation')}
                                 </p>
                                 <p className="text-sm text-gray-700">
-                                  {method.id === 'bank_transfer'
+                                  {method.id === 'card'
                                     ? (isRTL
-                                      ? `حوّل المبلغ إلى حساب المتجر في ${method.bank_name}. تظهر تفاصيل الحساب بعد تأكيد الطلب.`
-                                      : `Transfer the amount to the store's account at ${method.bank_name}. The details appear once the order is placed.`)
-                                    : (isRTL
-                                      ? 'نراجع طلبك ونتواصل معك لإتمام الدفع قبل الشحن. لن يُخصم منك شيء الآن.'
-                                      : 'We review your order and contact you to settle payment before it ships. Nothing is charged now.')}
+                                      ? 'Visa و Mastercard و American Express من أي بلد، عبر صفحة iyzico المؤمّنة مع 3D Secure. لا يمرّ رقم بطاقتك بخوادمنا.'
+                                      : 'Visa, Mastercard and American Express from any country, through iyzico’s secured page with 3D Secure. Your card number never touches our servers.')
+                                    : method.id === 'bank_transfer'
+                                      ? (isRTL
+                                        ? `حوّل المبلغ إلى حساب المتجر في ${method.bank_name}. تظهر تفاصيل الحساب بعد تأكيد الطلب.`
+                                        : `Transfer the amount to the store's account at ${method.bank_name}. The details appear once the order is placed.`)
+                                      : (isRTL
+                                        ? 'نراجع طلبك ونتواصل معك لإتمام الدفع قبل الشحن. لن يُخصم منك شيء الآن.'
+                                        : 'We review your order and contact you to settle payment before it ships. Nothing is charged now.')}
                                 </p>
+                                {method.sandbox && (
+                                  <p role="alert" className="mt-1 text-xs text-red-700 font-semibold">
+                                    {isRTL
+                                      ? '⚠️ وضع الاختبار مفعّل — لن يُخصم مال حقيقي.'
+                                      : '⚠️ Sandbox mode is on — no real money will move.'}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </label>

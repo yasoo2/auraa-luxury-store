@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Building2, Info } from 'lucide-react';
+import { Copy, Check, Building2, Info, CreditCard } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 /**
@@ -58,11 +58,68 @@ const CopyRow = ({ label, value, mono = true }) => {
   );
 };
 
-const PaymentInstructions = ({ method, amount, currency, reference, formatted }) => {
+const PaymentInstructions = ({ method, amount, currency, reference, formatted, onPayByCard, paying, payError }) => {
   const { language } = useLanguage();
   const isRTL = language === 'ar';
 
   if (!method) return null;
+
+  if (method.id === 'card') {
+    return (
+      <div
+        className="border border-amber-200 bg-amber-50 rounded-lg p-4"
+        data-testid="card-payment"
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <CreditCard className="h-5 w-5 text-amber-700" />
+          <p className="font-semibold text-gray-900">
+            {isRTL ? 'الدفع بالبطاقة' : 'Pay by card'}
+          </p>
+        </div>
+        <p className="text-sm text-gray-700 mb-3">
+          {isRTL
+            ? 'Visa أو Mastercard أو American Express، من أي بلد. تتم العملية على صفحة iyzico المؤمّنة مع تحقّق 3D Secure، ولا يمرّ رقم بطاقتك بخوادمنا إطلاقاً.'
+            : 'Visa, Mastercard or American Express, from any country. The payment happens on iyzico’s secured page with 3D Secure — your card number never touches our servers.'}
+        </p>
+
+        {/* The provider does not settle SAR, so the card is charged in another
+            currency. Said here, before they leave, rather than discovered on
+            a statement. */}
+        {method.charged && (
+          <p className="text-sm text-gray-800 bg-white rounded px-3 py-2 mb-3" data-testid="charged-amount">
+            {isRTL ? 'سيُخصم من بطاقتك: ' : 'Your card will be charged: '}
+            <strong dir="ltr">{method.charged}</strong>
+          </p>
+        )}
+
+        {method.sandbox && (
+          <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded px-3 py-2 mb-3">
+            {isRTL
+              ? '⚠️ وضع الاختبار مفعّل — لن يُخصم مال حقيقي.'
+              : '⚠️ Sandbox mode is on — no real money will move.'}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={onPayByCard}
+          disabled={paying}
+          data-testid="pay-by-card"
+          className="w-full sm:w-auto px-6 py-3 rounded-lg bg-amber-600 text-white font-semibold hover:bg-amber-700 disabled:opacity-60"
+        >
+          {paying
+            ? (isRTL ? 'جارٍ التحويل إلى صفحة الدفع…' : 'Taking you to the payment page…')
+            : (isRTL ? 'ادفع بالبطاقة الآن' : 'Pay by card now')}
+        </button>
+
+        {payError && (
+          <p role="alert" data-testid="pay-error" className="mt-3 text-sm text-red-700">
+            {payError}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   if (method.id !== 'bank_transfer') {
     return (

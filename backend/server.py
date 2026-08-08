@@ -1521,6 +1521,212 @@ async def get_orders(current_user: User = Depends(get_current_user)):
     return result
 
 
+def _iyzico_basket(order: Dict[str, Any], total: float) -> List[Dict[str, Any]]:
+    """
+    The order's lines as iyzico wants them.
+
+    iyzico rejects a basket whose item prices do not add up to the price being
+    charged. Converting each line separately and rounding each one is exactly
+    how you end up a cent out on an order of three, so the lines are scaled to
+    the charged total and the rounding remainder is put on the last line.
+    """
+    items = order.get("items") or []
+    subtotal = sum(float(i.get("price") or 0) * max(1, int(i.get("quantity") or 1)) for i in items)
+    lines: List[Dict[str, Any]] = []
+    running = 0.0
+
+    for index, item in enumerate(items):
+        quantity = max(1, int(item.get("quantity") or 1))
+        share = (float(item.get("price") or 0) * quantity / subtotal) if subtotal else 0.0
+        price = round(total * share, 2) if index < len(items) - 1 else round(total - running, 2)
+        running = round(running + price, 2)
+        lines.append({
+            "id": str(item.get("product_id") or f"line-{index}"),
+            "name": (item.get("product_name") or "Item")[:120],
+            "category1": item.get("category") or "Accessories",
+            "itemType": "PHYSICAL",
+            "price": f"{max(price, 0.0):.2f}",
+        })
+
+    if not lines:
+        raise HTTPException(status_code=409, detail="This order has no items to pay for")
+    return lines
+
+
+def _iyzico_parties(order: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
+    address = order.get("shipping_address") or {}
+    name = (str(address.get("firstName") or "").strip()
+            or str(address.get("fullName") or "").strip()
+            or str(user.get("first_name") or "").strip() or "Customer")
+    surname = (str(address.get("lastName") or "").strip()
+               or str(user.get("last_name") or "").strip() or "-")
+    street = str(address.get("street") or address.get("address") or "").strip()
+    city = str(address.get("city") or "").strip()
+    country = str(address.get("country") or "").strip()
+
+    return {
+        "buyer": {
+            "id": str(order.get("user_id") or "guest"),
+            "name": name,
+            "surname": surname,
+            "gsmNumber": str(address.get("phone") or "").strip(),
+            "email": str(address.get("email") or user.get("email") or "").strip(),
+            "identityNumber": "11111111111",   # required by iyzico; not collected
+            "registrationAddress": street or city or country,
+            "city": city,
+            "country": country,
+            "zipCode": str(address.get("zipCode") or "").strip(),
+            "ip": str(order.get("client_ip") or "0.0.0.0"),
+        },
+        "address": {
+            "contactName": f"{name} {surname}".strip(),
+            "city": city,
+            "country": country,
+            "address": street or city or country,
+            "zipCode": str(address.get("zipCode") or "").strip(),
+        },
+    }
+
+
+@api_router.post("/orders/{order_id}/pay-session")
+async def start_card_payment(
+    order_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Open a card payment for one of your own orders.
+
+    Returns the hosted page to go to. Nothing here marks anything paid — that
+    decision belongs to the callback, and only after iyzico has been asked
+    directly and its answer has been checked against our secret key.
+    """
+    from services import iyzico_client
+
+    if not iyzico_client.is_configured():
+        raise HTTPException(status_code=503, detail="Card payment is not configured")
+
+    order = await db.orders.find_one({"id": order_id, "user_id": current_user.id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.get("payment_status") == "paid":
+        raise HTTPException(status_code=409, detail="This order is already paid")
+
+    # The catalogue is priced in SAR and iyzico does not settle SAR. An
+    # unknown rate means the only honest amount to charge is none: guessing
+    # one charges a real card a made-up number.
+    from services.currency_service import get_currency_service
+    service = get_currency_service(db)
+    total_sar = float(order.get("total_amount") or 0)
+    amount = await service.convert_currency(total_sar, "SAR", iyzico_client.CURRENCY)
+    if amount is None or amount <= 0:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Cannot price this order in {iyzico_client.CURRENCY} right now. Please try again shortly.",
+        )
+
+    parties = _iyzico_parties(order, current_user.model_dump())
+    try:
+        session = await iyzico_client.create_checkout_form(
+            conversation_id=order_id,
+            basket_id=str(order.get("order_number") or order_id),
+            amount=amount,
+            callback_url=f"{PUBLIC_API_URL}/api/payments/iyzico/callback",
+            buyer=parties["buyer"],
+            address=parties["address"],
+            basket_items=_iyzico_basket(order, amount),
+        )
+    except iyzico_client.IyzicoError as e:
+        logger.error("iyzico refused to open a payment for %s: %s", order_id, e)
+        raise HTTPException(status_code=502, detail=f"Card payment could not be started: {e}")
+
+    await db.orders.update_one({"id": order_id}, {"$set": {
+        "payment_token": session["token"],
+        "payment_provider": "iyzico",
+        "payment_amount_charged": amount,
+        "payment_currency_charged": iyzico_client.CURRENCY,
+        "payment_started_at": datetime.now(timezone.utc).isoformat(),
+    }})
+
+    return {
+        "payment_page_url": session["payment_page_url"],
+        # Said before the customer leaves, not discovered on their statement.
+        "amount": amount,
+        "currency": iyzico_client.CURRENCY,
+        "original_amount": round(total_sar, 2),
+        "original_currency": order.get("currency", "SAR"),
+        "sandbox": iyzico_client.SANDBOX,
+    }
+
+
+@api_router.post("/payments/iyzico/callback")
+async def iyzico_callback(request: Request):
+    """
+    Where iyzico's hosted page sends the customer's browser back.
+
+    Deliberately unauthenticated: this arrives as a cross-site form POST, so
+    the session cookie is not sent with it. Authentication is not what makes
+    it safe — the token is looked up against an order we opened ourselves,
+    and the payment is confirmed by asking iyzico over our own connection and
+    verifying the signature on its reply. The browser's claim is worth
+    nothing on its own.
+    """
+    from services import iyzico_client
+
+    form = await request.form()
+    token = str(form.get("token") or "").strip()
+    landing = f"{PUBLIC_SITE_URL}/profile?tab=orders"
+
+    if not token:
+        return RedirectResponse(landing, status_code=303)
+
+    order = await db.orders.find_one({"payment_token": token})
+    if not order:
+        logger.warning("iyzico called back with a token matching no order")
+        return RedirectResponse(landing, status_code=303)
+
+    order_id = order["id"]
+    landing = f"{PUBLIC_SITE_URL}/order/{order_id}/pay"
+
+    try:
+        result = await iyzico_client.retrieve_checkout_form(
+            token=token, conversation_id=order_id
+        )
+    except iyzico_client.IyzicoError as e:
+        logger.error("Could not confirm iyzico payment for %s: %s", order_id, e)
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "payment_error": str(e)[:500],
+        }})
+        return RedirectResponse(landing, status_code=303)
+
+    if not result["paid"]:
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "payment_error": result.get("error_message") or result.get("payment_status") or "not completed",
+        }})
+        return RedirectResponse(landing, status_code=303)
+
+    # Paid less than we asked is not paid. iyzico is told the amount by us, so
+    # a mismatch means something in between changed it.
+    expected = float(order.get("payment_amount_charged") or 0)
+    charged = float(result.get("paid_price") or 0)
+    if expected and charged + 0.01 < expected:
+        logger.error("iyzico reports %.2f for order %s, expected %.2f", charged, order_id, expected)
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "payment_error": f"Amount mismatch: charged {charged}, expected {expected}",
+        }})
+        return RedirectResponse(landing, status_code=303)
+
+    await db.orders.update_one({"id": order_id}, {"$set": {
+        "payment_status": "paid",
+        "payment_reference": str(result.get("payment_id") or ""),
+        "payment_confirmed_at": datetime.now(timezone.utc).isoformat(),
+        "payment_confirmed_by": "iyzico",
+        "payment_error": None,
+    }})
+    logger.info("Order %s paid via iyzico (%s)", order_id, result.get("payment_id"))
+    return RedirectResponse(landing, status_code=303)
+
+
 @api_router.get("/orders/{order_id}/payment-instructions")
 async def get_payment_instructions(
     order_id: str,
@@ -1539,12 +1745,27 @@ async def get_payment_instructions(
         raise HTTPException(status_code=404, detail="Order not found")
 
     method_id = order.get("payment_method")
+    live = await available_payment_methods()
     method = next(
-        (m for m in await available_payment_methods() if m["id"] == method_id),
+        (dict(m) for m in live if m["id"] == method_id),
         # A method withdrawn since the order was placed still has to be shown,
         # or the customer is left holding an invoice with no way to settle it.
         {"id": method_id, "unavailable": True} if method_id else None,
     )
+
+    # What the card will actually be charged, in the currency it will be
+    # charged in. Shown before the customer leaves for the payment page, so
+    # the figure on their statement is never the first time they see it.
+    if method and method.get("id") == CARD:
+        from services import iyzico_client
+        from services.currency_service import get_currency_service
+
+        charged = await get_currency_service(db).convert_currency(
+            float(order.get("total_amount") or 0), "SAR", iyzico_client.CURRENCY
+        )
+        method["charged"] = (
+            f"{charged:.2f} {iyzico_client.CURRENCY}" if charged is not None else None
+        )
 
     return {
         "order_id": order.get("id"),
@@ -1553,6 +1774,9 @@ async def get_payment_instructions(
         "currency": order.get("currency", "SAR"),
         "payment_status": order.get("payment_status", "awaiting_payment"),
         "payment_reference": order.get("payment_reference"),
+        # A card that was declined, or a payment abandoned halfway, left the
+        # page looking identical to one never attempted.
+        "payment_error": order.get("payment_error"),
         # What the customer must quote so the transfer can be matched to this
         # order. Money arriving with no reference is money nobody can place.
         "reference_to_quote": order.get("order_number") or order.get("id"),
@@ -2086,6 +2310,13 @@ async def _put_singleton(doc_id: str, payload: Dict[str, Any]) -> Dict[str, Any]
 
 PAYMENT_DOC_ID = "store_payment"
 
+# Where iyzico sends the customer back to, and where the shop lives. These
+# leave our own process and are typed into a payment provider's records, so
+# they cannot be guessed from the incoming request's Host header — that header
+# is whatever the caller wrote in it.
+PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", "https://auraa-luxury-api.onrender.com").rstrip("/")
+PUBLIC_SITE_URL = os.getenv("PUBLIC_SITE_URL", "https://auraaluxury.com").rstrip("/")
+
 BANK_TRANSFER_REQUIRED = ("bank_name", "account_holder", "iban")
 
 # The fallback the shop already runs by hand: the order is placed, and the
@@ -2093,6 +2324,7 @@ BANK_TRANSFER_REQUIRED = ("bank_name", "account_holder", "iban")
 # automated, but it is not fiction either — it describes what really happens.
 ON_CONFIRMATION = "on_confirmation"
 BANK_TRANSFER = "bank_transfer"
+CARD = "card"
 
 
 def _bank_transfer_option(cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -2116,16 +2348,36 @@ def _bank_transfer_option(cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 async def available_payment_methods() -> List[Dict[str, Any]]:
     """Every method a customer can actually use right now."""
+    from services import iyzico_client
+
     cfg = await _get_singleton(PAYMENT_DOC_ID)
     methods: List[Dict[str, Any]] = []
 
+    # A card, on the site, from any country — what every shop in the world
+    # offers, and the only one of these three a stranger in another hemisphere
+    # will actually go through with. First in the list because it is the one
+    # customers expect.
+    card_live = iyzico_client.is_configured()
+    if card_live:
+        methods.append({
+            "id": CARD,
+            "provider": "iyzico",
+            "currency": iyzico_client.CURRENCY,
+            # Surfaced so the shop can never quietly run a rehearsal in front
+            # of paying customers: sandbox marks orders paid without money.
+            "sandbox": iyzico_client.SANDBOX,
+        })
+
+    # A wire transfer to a Turkish account is a real way to be paid and a poor
+    # way to be bought from. It stays available while there is no card option,
+    # and steps aside once there is.
     bank = _bank_transfer_option(cfg)
-    if bank:
+    if bank and not card_live:
         methods.append(bank)
 
-    # Defaults to on, so configuring the bank block is an improvement rather
+    # Defaults to on, so configuring anything else is an improvement rather
     # than the moment the shop starts taking orders at all.
-    if (cfg.get(ON_CONFIRMATION) or {}).get("enabled", True):
+    if (cfg.get(ON_CONFIRMATION) or {}).get("enabled", True) and not card_live:
         methods.append({"id": ON_CONFIRMATION})
 
     return methods
@@ -2142,10 +2394,22 @@ async def get_payment_methods():
 
 @api_router.get("/admin/payment-settings")
 async def admin_get_payment_settings(admin: User = Depends(get_admin_user)):
+    from services import iyzico_client
+
     cfg = await _get_singleton(PAYMENT_DOC_ID)
     return {
         BANK_TRANSFER: cfg.get(BANK_TRANSFER) or {},
         ON_CONFIRMATION: cfg.get(ON_CONFIRMATION) or {"enabled": True},
+        # The card gateway is configured through the host's environment, not
+        # this document — an API secret in the database is an API secret in
+        # every backup of it. Reported read-only so the screen can say whether
+        # it is on without ever being able to print the key.
+        CARD: {
+            "configured": iyzico_client.is_configured(),
+            "provider": "iyzico",
+            "mode": iyzico_client.mode(),
+            "currency": iyzico_client.CURRENCY,
+        },
         # So the screen can say plainly whether customers are being offered
         # this, rather than leaving the owner to work it out from the fields.
         "live_methods": [m["id"] for m in await available_payment_methods()],

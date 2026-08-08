@@ -135,6 +135,7 @@ const SettingsPage = () => {
       swift: '', account_currency: '', instructions: '',
     },
     on_confirmation: { enabled: true },
+    card: {},
     live_methods: [],
   });
   const [paymentSaving, setPaymentSaving] = useState(false);
@@ -161,6 +162,7 @@ const SettingsPage = () => {
         ...prev,
         bank_transfer: { ...prev.bank_transfer, ...(data.bank_transfer || {}) },
         on_confirmation: { ...prev.on_confirmation, ...(data.on_confirmation || {}) },
+        card: data.card || {},
         live_methods: data.live_methods || [],
       }));
     } catch (error) {
@@ -486,6 +488,7 @@ const SettingsPage = () => {
    */
   const renderPaymentTab = () => {
     const bank = payment.bank_transfer;
+    const card = payment.card || {};
     const live = payment.live_methods || [];
 
     return (
@@ -507,10 +510,64 @@ const SettingsPage = () => {
           </p>
           {live.length > 0 && (
             <p className="text-sm mt-1 text-gray-700">
-              {live.map((id) => (id === 'bank_transfer'
-                ? (isRTL ? 'حوالة بنكية' : 'Bank transfer')
-                : (isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation'))).join('، ')}
+              {live.map((id) => (id === 'card'
+                ? (isRTL ? 'بطاقة ائتمانية' : 'Card')
+                : id === 'bank_transfer'
+                  ? (isRTL ? 'حوالة بنكية' : 'Bank transfer')
+                  : (isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation'))).join('، ')}
             </p>
+          )}
+        </div>
+
+        {/* The card gateway. Read-only here on purpose: its keys live in the
+            host's environment variables, because a payment secret stored in
+            the database is a payment secret in every backup of it. */}
+        <div
+          className={`border rounded-lg p-4 ${card.configured ? 'border-green-200' : 'border-gray-200'}`}
+          data-testid="card-gateway"
+        >
+          <div className="flex flex-wrap items-center gap-3 mb-2">
+            <span className="font-semibold text-gray-900">
+              {isRTL ? 'الدفع بالبطاقة (iyzico)' : 'Card payment (iyzico)'}
+            </span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+              card.configured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+            }`}>
+              {card.configured
+                ? (isRTL ? 'مُفعّل' : 'Configured')
+                : (isRTL ? 'غير مُفعّل' : 'Not configured')}
+            </span>
+            {card.configured && card.mode === 'sandbox' && (
+              <span
+                role="alert"
+                className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800"
+                data-testid="card-sandbox-warning"
+              >
+                {isRTL ? '⚠️ وضع اختبار — لا يُخصم مال حقيقي' : '⚠️ Sandbox — no real money moves'}
+              </span>
+            )}
+          </div>
+
+          {card.configured ? (
+            <p className="text-sm text-gray-600">
+              {isRTL
+                ? `يُخصم من العميل بعملة ${card.currency}. تفعيل البطاقة يُخفي الحوالة البنكية والدفع عند التأكيد تلقائياً.`
+                : `Customers are charged in ${card.currency}. Turning the card on hides bank transfer and payment-on-confirmation automatically.`}
+            </p>
+          ) : (
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>
+                {isRTL
+                  ? 'افتح حساباً في iyzico، ثم ضع المفتاحين في متغيّرات البيئة على Render:'
+                  : 'Open an iyzico account, then put the two keys in Render’s environment variables:'}
+              </p>
+              <ul className="list-disc ms-5 font-mono text-xs text-gray-700">
+                <li>IYZICO_API_KEY</li>
+                <li>IYZICO_SECRET_KEY</li>
+                <li>IYZICO_CURRENCY {isRTL ? '(اختياري، الافتراضي USD)' : '(optional, default USD)'}</li>
+                <li>IYZICO_SANDBOX=true {isRTL ? '(للتجربة فقط)' : '(testing only)'}</li>
+              </ul>
+            </div>
           )}
         </div>
 

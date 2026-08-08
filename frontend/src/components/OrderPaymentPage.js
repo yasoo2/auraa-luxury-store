@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { apiGet } from '../api';
+import { apiGet, apiPost } from '../api';
 import PaymentInstructions from './PaymentInstructions';
 
 /**
@@ -21,6 +21,26 @@ const OrderPaymentPage = () => {
   const [info, setInfo] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState('');
+
+  const payByCard = async () => {
+    setPaying(true);
+    setPayError('');
+    try {
+      const data = await apiPost(`/api/orders/${orderId}/pay-session`, {});
+      if (!data?.payment_page_url) {
+        throw new Error('no payment page');
+      }
+      window.location.assign(data.payment_page_url);
+    } catch (err) {
+      // Staying put and saying why beats a blank redirect: the customer still
+      // has an unpaid order and needs to know it is still unpaid.
+      setPayError(err?.message
+        || (isRTL ? 'تعذّر فتح صفحة الدفع. حاول مرة أخرى.' : 'Could not open the payment page. Try again.'));
+      setPaying(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -118,6 +138,9 @@ const OrderPaymentPage = () => {
                     currency={info.currency}
                     reference={info.reference_to_quote}
                     formatted={formatMoney(info.amount)}
+                    onPayByCard={payByCard}
+                    paying={paying}
+                    payError={payError || info.payment_error}
                   />
                   {info.method?.unavailable && (
                     <p

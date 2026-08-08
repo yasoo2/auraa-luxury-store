@@ -697,6 +697,229 @@ def test_one_customer_cannot_read_another_customers_payment_details(seeded):
     assert r.status_code == 404, r.text
 
 
+# --- the card gateway ------------------------------------------------------
+#
+# The dangerous half of a payment integration is not taking the money, it is
+# deciding an order is paid. The browser comes back from the provider carrying
+# a token, and anyone can type a URL — so the only thing these tests really
+# guard is that nothing but a signed answer from iyzico, fetched over our own
+# connection, is ever allowed to flip that flag.
+
+def _iyzico_signature(secret, fields):
+    import hashlib
+    import hmac
+    return hmac.new(secret.encode(), ":".join(fields).encode(), hashlib.sha256).hexdigest()
+
+
+class _FakeIyzico:
+    """Stands in for iyzico's HTTP API, signing exactly as iyzico does."""
+
+    SECRET = "sandbox-secret"
+
+    def __init__(self, paid=True, paid_price="24.85", sign=True):
+        self.paid, self.paid_price, self.sign = paid, paid_price, sign
+        self.calls = []
+
+    async def post(self, path, payload):
+        self.calls.append((path, payload))
+        if path.endswith("/initialize/ecom"):
+            body = {"status": "success", "conversationId": payload["conversationId"],
+                    "token": "TOK-1", "paymentPageUrl": "https://sandbox-cpp.iyzipay.com/TOK-1"}
+            body["signature"] = _iyzico_signature(
+                self.SECRET, [body["conversationId"], body["token"]])
+            return body
+
+        body = {
+            "status": "success",
+            "paymentStatus": "SUCCESS" if self.paid else "FAILURE",
+            "paymentId": "PAY-1",
+            "currency": "USD",
+            "basketId": "AUR-TEST",
+            "conversationId": payload["conversationId"],
+            "paidPrice": self.paid_price,
+            "price": self.paid_price,
+            "errorMessage": None if self.paid else "Card declined",
+        }
+        fields = [body["paymentStatus"], body["paymentId"], body["currency"],
+                  body["basketId"], body["conversationId"],
+                  str(body["paidPrice"]), str(body["price"]), payload["token"]]
+        body["signature"] = _iyzico_signature(self.SECRET, fields) if self.sign else "deadbeef"
+        return body
+
+
+@pytest.fixture
+def card_shop(seeded, monkeypatch):
+    """A shop with the card gateway switched on and a rate SAR->USD known."""
+    from services import iyzico_client
+
+    fake = _FakeIyzico()
+    monkeypatch.setattr(iyzico_client, "API_KEY", "sandbox-key")
+    monkeypatch.setattr(iyzico_client, "SECRET_KEY", _FakeIyzico.SECRET)
+    monkeypatch.setattr(iyzico_client, "CURRENCY", "USD")
+    monkeypatch.setattr(iyzico_client, "_post", fake.post)
+
+    import services.currency_service as currency_service
+
+    class _Rates:
+        async def convert_currency(self, amount, frm, to):
+            return round(amount * 0.2665, 2) if (frm, to) == ("SAR", "USD") else None
+
+    monkeypatch.setattr(currency_service, "get_currency_service", lambda db: _Rates())
+    return fake
+
+
+def test_a_configured_card_gateway_is_the_only_method_offered(seeded, card_shop):
+    """
+    A wire transfer to a Turkish account is a real way to be paid and a poor
+    way to be bought from — nobody abroad completes one for a pair of
+    earrings. Once cards work it steps aside rather than sitting there as a
+    worse choice next to a better one.
+    """
+    register(seeded, email="adm-card@b.com")
+    make_admin(seeded, "adm-card@b.com")
+    assert _set_bank(seeded).status_code == 200
+
+    offered = [m["id"] for m in seeded.get("/api/payment-methods").json()["methods"]]
+    assert offered == ["card"], offered
+
+
+def test_paying_by_card_never_marks_the_order_paid_on_its_own(seeded, card_shop):
+    """
+    Opening a payment session is not payment. Until iyzico says otherwise the
+    order is unpaid, and the gate on buying from the supplier holds.
+    """
+    register(seeded, email="cardbuyer@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+
+    r = seeded.post(f"/api/orders/{order['id']}/pay-session")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["payment_page_url"].startswith("https://")
+    # 250 SAR at the fixture's rate (250 * 0.2665 = 66.625, rounded down).
+    assert body["amount"] == 66.62, body
+    assert body["currency"] == "USD"
+
+    info = seeded.get(f"/api/orders/{order['id']}/payment-instructions").json()
+    assert info["payment_status"] == "awaiting_payment", info
+
+
+def test_a_callback_with_a_made_up_token_pays_for_nothing(seeded, card_shop):
+    """The token arrives in a browser, and a browser is not a witness."""
+    register(seeded, email="forger@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    seeded.post(f"/api/orders/{order['id']}/pay-session")
+
+    seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-WHATEVER"},
+                follow_redirects=False)
+
+    info = seeded.get(f"/api/orders/{order['id']}/payment-instructions").json()
+    assert info["payment_status"] == "awaiting_payment", info
+
+
+def test_a_callback_whose_signature_does_not_verify_pays_for_nothing(seeded, card_shop):
+    """
+    The reply carries iyzico's own HMAC over its contents. Without checking
+    it, anyone who could answer in iyzico's place — or replay a stale body —
+    could hand this shop a free order.
+    """
+    register(seeded, email="unsigned@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    seeded.post(f"/api/orders/{order['id']}/pay-session")
+
+    card_shop.sign = False      # same SUCCESS body, signature no longer iyzico's
+    seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-1"},
+                follow_redirects=False)
+
+    info = seeded.get(f"/api/orders/{order['id']}/payment-instructions").json()
+    assert info["payment_status"] == "awaiting_payment", info
+    assert "signature" in (info["payment_error"] or "").lower(), info
+
+
+def test_a_signed_success_pays_the_order_and_opens_the_supplier_gate(seeded, card_shop):
+    register(seeded, email="realpay@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    started = seeded.post(f"/api/orders/{order['id']}/pay-session").json()
+    card_shop.paid_price = f"{started['amount']:.2f}"
+
+    r = seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-1"},
+                    follow_redirects=False)
+    assert r.status_code == 303, r.text
+    assert f"/order/{order['id']}/pay" in r.headers["location"]
+
+    info = seeded.get(f"/api/orders/{order['id']}/payment-instructions").json()
+    assert info["payment_status"] == "paid", info
+    assert info["payment_reference"] == "PAY-1"
+
+
+def test_a_declined_card_says_so_and_leaves_the_order_unpaid(seeded, card_shop):
+    register(seeded, email="declined@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    seeded.post(f"/api/orders/{order['id']}/pay-session")
+
+    card_shop.paid = False
+    seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-1"},
+                follow_redirects=False)
+
+    info = seeded.get(f"/api/orders/{order['id']}/payment-instructions").json()
+    assert info["payment_status"] == "awaiting_payment", info
+    # An abandoned payment and a refused card looked identical: both silent.
+    assert "declined" in (info["payment_error"] or "").lower(), info
+
+
+def test_paying_less_than_the_order_is_not_paying_the_order(seeded, card_shop):
+    """
+    The amount is ours to set, so iyzico reporting a smaller one means
+    something in between changed it. Shipping the goods anyway is how a shop
+    sells at whatever price a stranger chooses.
+    """
+    register(seeded, email="short@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    seeded.post(f"/api/orders/{order['id']}/pay-session")
+
+    card_shop.paid_price = "1.00"
+    seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-1"},
+                follow_redirects=False)
+
+    info = seeded.get(f"/api/orders/{order['id']}/payment-instructions").json()
+    assert info["payment_status"] == "awaiting_payment", info
+    assert "mismatch" in (info["payment_error"] or "").lower(), info
+
+
+def test_an_order_is_never_priced_by_guesswork_when_the_rate_is_unknown(seeded, card_shop, monkeypatch):
+    """
+    The catalogue is in SAR and iyzico does not settle SAR. With no rate, the
+    only honest amount to charge a real card is none at all.
+    """
+    import services.currency_service as currency_service
+
+    class _NoRates:
+        async def convert_currency(self, amount, frm, to):
+            return None
+
+    monkeypatch.setattr(currency_service, "get_currency_service", lambda db: _NoRates())
+
+    register(seeded, email="norate@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+
+    r = seeded.post(f"/api/orders/{order['id']}/pay-session")
+    assert r.status_code == 503, r.text
+    assert "USD" in r.json()["detail"]
+
+
 def test_an_unpaid_order_is_never_bought_from_the_supplier(seeded):
     """
     Buying the goods is the point of no return: CJ ships, the money is spent,

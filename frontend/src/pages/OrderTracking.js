@@ -91,7 +91,7 @@ const OrderTracking = () => {
 
   const statusTexts = {
     ar: {
-      pending: 'في انتظار المعالجة',
+      pending: 'بانتظار التأكيد',
       processing: 'قيد المعالجة',
       shipped: 'تم الشحن',
       in_transit: 'في الطريق',

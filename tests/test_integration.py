@@ -2171,6 +2171,46 @@ def test_a_dry_run_reports_the_same_refusal_the_real_send_would(seeded, monkeypa
     cj_client._reset_token()
 
 
+def test_a_send_that_fails_before_cj_is_still_recorded_as_failed(seeded, monkeypatch):
+    """
+    Only a refusal from createOrder itself was written to the order. Every
+    earlier way a send can fail — a variant that cannot be resolved, an address
+    CJ will not accept, no shipping method to that country — raised and left
+    supplier_status on "awaiting_approval".
+
+    So the owner pressed approve, the send broke, and the order went back to
+    sitting in the approval queue looking like nobody had touched it yet. The
+    admin screen had no way to tell "not yet approved" from "approved, and the
+    purchase failed".
+    """
+    class _NoVariants(_FulfilmentCJ):
+        async def request(self, method, url, json=None, params=None, headers=None):
+            if url.endswith("/v1/product/query"):
+                self.calls.append((url.rsplit("/api2.0", 1)[-1], None))
+                return _FakeResponse(200, {"code": 200, "result": True, "data": {"variants": []}})
+            return await super().request(method, url, json, params, headers)
+
+    order = _order_ready_for_cj(seeded, monkeypatch, "failrec@b.com")
+    monkeypatch.setattr(cj_client, "_client", _NoVariants())
+    cj_client._reset_token()
+
+    # The rehearsal changes nothing, including this.
+    assert seeded.post(f"/api/admin/orders/{order['id']}/supplier-preview").status_code == 409
+    after_dry = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert after_dry["supplier_status"] == "awaiting_approval", after_dry
+
+    assert seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier").status_code == 409
+
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["supplier_status"] == "failed", row
+    assert row["supplier_order_id"] is None
+    # The reason has to survive to the screen, or the owner presses the same
+    # button again and learns nothing.
+    assert "variant" in (row["supplier_error"] or "").lower(), row
+    assert row.get("supplier_failed_at")
+    cj_client._reset_token()
+
+
 def test_an_import_never_invents_a_discount(client, monkeypatch):
     """
     original_price was set to the supplier's cost. The product page renders

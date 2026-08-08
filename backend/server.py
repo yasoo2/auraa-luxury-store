@@ -1687,7 +1687,24 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
             detail=f"Already sent to the supplier as {order['supplier_order_id']}",
         )
 
-    prepared = await _prepare_supplier_order(order)
+    async def record_failure(reason: str) -> None:
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "supplier_status": "failed",
+            "supplier_error": reason[:500],
+            "supplier_failed_at": datetime.now(timezone.utc).isoformat(),
+        }})
+
+    # Only the createOrder call used to be recorded as a failure. Everything
+    # before it — an address CJ cannot use, a line whose variant cannot be
+    # resolved, no shipping method to that country — raised and left the order
+    # sitting in the queue marked "waiting for your approval", which is a lie:
+    # the owner already approved and the send is what broke.
+    try:
+        prepared = await _prepare_supplier_order(order)
+    except HTTPException as e:
+        await record_failure(str(e.detail))
+        raise
+
     chosen = prepared["chosen"]
 
     try:
@@ -1699,10 +1716,7 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
             from_country=os.getenv("CJ_FROM_COUNTRY", "CN"),
         )
     except cj_client.CJError as e:
-        await db.orders.update_one({"id": order_id}, {"$set": {
-            "supplier_status": "failed",
-            "supplier_error": str(e)[:500],
-        }})
+        await record_failure(f"CJ refused the order: {e}")
         raise HTTPException(status_code=502, detail=f"CJ refused the order: {e}")
 
     supplier_order_id = result.get("orderId") or result.get("orderNum")
@@ -1712,6 +1726,7 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
         "supplier_shipping_method": chosen.get("logisticName"),
         "supplier_shipping_cost": chosen.get("logisticPrice"),
         "supplier_error": None,
+        "supplier_failed_at": None,
         "sent_to_supplier_at": datetime.now(timezone.utc).isoformat(),
         "sent_to_supplier_by": admin.email,
         "status": OrderStatus.processing.value,

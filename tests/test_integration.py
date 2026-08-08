@@ -76,6 +76,15 @@ def seeded(client):
     return client
 
 
+# The payload CheckoutPage actually posts. Pinning the tests to it means a
+# validator that would reject a real customer fails here first.
+SHIPPING = {
+    "firstName": "Younes", "lastName": "S", "email": "c@x.com",
+    "phone": "+966500000000", "street": "King Fahd Rd 12",
+    "city": "Riyadh", "state": "Riyadh", "zipCode": "11564", "country": "SA",
+}
+
+
 def register(client, email="user@example.com", password="pw123456", **extra):
     return client.post("/api/auth/register",
                        json={"email": email, "password": password, "name": "User", **extra})
@@ -377,8 +386,7 @@ def test_order_flow_clears_cart_and_is_trackable(seeded):
     register(seeded, email="order@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=2")
 
-    r = seeded.post("/api/orders", json={"shipping_address": {"city": "Riyadh"},
-                                         "payment_method": "cod"})
+    r = seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "cod"})
     assert r.status_code == 200, r.text
     order = r.json()
     assert order["total_amount"] == 500.0
@@ -386,12 +394,114 @@ def test_order_flow_clears_cart_and_is_trackable(seeded):
     assert seeded.get("/api/cart").json()["total_amount"] == 0.0
     assert len(seeded.get("/api/orders").json()) == 1
     assert len(seeded.get("/api/orders/my-orders").json()["orders"]) == 1
-    assert seeded.get(f"/api/orders/track/{order['tracking_number']}").status_code == 200
+    # No tracking number is minted at checkout any more; the order number is
+    # what the customer is given, and it has to work.
+    assert order["tracking_number"] is None, "a tracking number was invented"
+    assert seeded.get(f"/api/orders/track/{order['order_number']}").status_code == 200
+
+
+def test_an_address_a_supplier_cannot_ship_to_is_refused(seeded):
+    """
+    shipping_address arrived as a free Dict[str, Any] that nothing looked
+    inside. An order with no phone number or no country was accepted, the cart
+    emptied, and the customer told it was placed — while no dropshipper on
+    earth could move the parcel. Refuse it while they can still fix it.
+    """
+    register(seeded, email="addr@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+
+    r = seeded.post("/api/orders", json={
+        "shipping_address": {"city": "Riyadh"}, "payment_method": "cod"})
+    assert r.status_code == 400, r.text
+    detail = r.json()["detail"]
+    for label in ("recipient name", "phone number", "country", "street address"):
+        assert label in detail, detail
+
+    # And the cart is untouched, so nothing is lost by the refusal.
+    assert seeded.get("/api/cart").json()["items"], "the cart was emptied by a refused order"
+
+
+def test_the_address_the_checkout_page_sends_is_accepted(seeded):
+    """
+    The validator must speak the checkout page's field names. It posts
+    firstName/lastName and `street`; demanding fullName/address would have
+    turned away every real customer.
+    """
+    register(seeded, email="realaddr@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    r = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "cod"})
+    assert r.status_code == 200, r.text
+
+
+def test_an_order_is_priced_from_the_catalogue_not_the_cart(seeded):
+    """
+    The cart stores the price captured when the item went in, and nothing
+    checked it again — so a supplier price sync between browsing and checkout
+    sold at whatever the cart happened to remember.
+    """
+    import asyncio
+    register(seeded, email="price@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=2")   # 250 each
+
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {"price": 300.0}}))
+
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "cod"}).json()
+    assert order["total_amount"] == 600.0, order
+    assert order["items"][0]["price"] == 300.0
+
+
+def test_an_order_carries_what_the_supplier_needs_to_ship_it(seeded):
+    """A line that outlives the product document it came from."""
+    import asyncio
+    register(seeded, email="supl@b.com")
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {
+            "source": "cj_dropshipping", "external_id": "CJ-777", "sku": "SKU-777"}}))
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "cod"}).json()
+    line = order["items"][0]
+    assert line["supplier"] == "cj_dropshipping"
+    assert line["supplier_product_id"] == "CJ-777"
+    assert line["supplier_sku"] == "SKU-777"
+    assert line["product_name"]
+
+
+def test_a_withdrawn_product_cannot_be_ordered_from_a_stale_cart(seeded):
+    """Added while on sale, pulled before checkout: the order must not go through."""
+    import asyncio
+    register(seeded, email="gone@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {"is_active": False}}))
+
+    r = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "cod"})
+    assert r.status_code == 409, r.text
+
+
+def test_an_out_of_stock_product_cannot_be_ordered(seeded):
+    import asyncio
+    register(seeded, email="oos@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {"in_stock": False}}))
+
+    r = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "cod"})
+    assert r.status_code == 409, r.text
+    assert "stock" in r.json()["detail"].lower()
 
 
 def test_order_with_empty_cart_is_400(seeded):
     register(seeded, email="empty@b.com")
-    r = seeded.post("/api/orders", json={"shipping_address": {}, "payment_method": "cod"})
+    r = seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "cod"})
     assert r.status_code == 400
 
 
@@ -608,7 +718,7 @@ def test_new_admin_endpoints_reject_normal_user(client, method, path):
 def test_admin_orders_list_includes_customer(seeded):
     register(seeded, email="buyer@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=1")
-    seeded.post("/api/orders", json={"shipping_address": {}, "payment_method": "cod"})
+    seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "cod"})
     seeded.cookies.clear()
 
     as_admin(seeded)
@@ -621,7 +731,7 @@ def test_admin_can_update_order_status(seeded):
     register(seeded, email="buyer2@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=1")
     order_id = seeded.post("/api/orders",
-                           json={"shipping_address": {}, "payment_method": "cod"}).json()["id"]
+                           json={"shipping_address": SHIPPING, "payment_method": "cod"}).json()["id"]
     seeded.cookies.clear()
 
     as_admin(seeded)
@@ -753,7 +863,7 @@ def test_upload_filename_cannot_traverse_directories(client):
 def test_analytics_reflects_real_orders(seeded):
     register(seeded, email="an@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=2")   # 2 x 250 = 500
-    seeded.post("/api/orders", json={"shipping_address": {}, "payment_method": "cod"})
+    seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "cod"})
     seeded.cookies.clear()
 
     as_admin(seeded)

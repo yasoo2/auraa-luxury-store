@@ -142,6 +142,40 @@ LIVE_ONLY: Dict[str, Any] = {"staging": {"$ne": True}, "is_active": {"$ne": Fals
 DELIVERY_DAYS = os.getenv("DELIVERY_DAYS", "5-15")
 
 
+# What a dropshipping supplier needs before a parcel can move. CJ rejects an
+# order missing any of these, and the shipping address arrived here as a free
+# Dict[str, Any] that nothing ever looked inside — so an order with no phone
+# number, or no country, was accepted, charged to the customer's expectations,
+# and could never be fulfilled.
+SHIPPING_REQUIRED = {
+    "fullName": "recipient name",
+    "phone": "phone number",
+    "country": "country",
+    "city": "city",
+    "address": "street address",
+}
+
+
+def missing_shipping_fields(address: Optional[Dict[str, Any]]) -> List[str]:
+    """Which required address fields are absent or blank."""
+    address = address or {}
+    # The names the checkout page actually sends lead each list. It posts
+    # firstName/lastName and `street`; a validator that demanded `fullName` and
+    # `address` would have rejected every real order at the till.
+    aliases = {
+        "fullName": ("firstName", "lastName", "fullName", "full_name", "name", "recipient"),
+        "phone": ("phone", "phone_number", "mobile"),
+        "country": ("country", "country_code", "countryCode"),
+        "city": ("city", "town"),
+        "address": ("street", "address", "address_line_1", "addressLine1"),
+    }
+    missing = []
+    for field, label in SHIPPING_REQUIRED.items():
+        if not any(str(address.get(key) or "").strip() for key in aliases[field]):
+            missing.append(label)
+    return missing
+
+
 async def live_product(product_id: str) -> Optional[Dict[str, Any]]:
     """A product a shopper is allowed to see, or None. Staging is invisible."""
     return await db.products.find_one({"id": product_id, **LIVE_ONLY})
@@ -286,6 +320,13 @@ class CartItem(BaseModel):
     product_id: str
     quantity: int
     price: float
+    # Carried on order lines so fulfilment does not depend on the product
+    # document still existing, or still saying the same thing, weeks later.
+    # Optional because a cart line has none of it — only orders do.
+    product_name: Optional[str] = None
+    supplier: Optional[str] = None
+    supplier_product_id: Optional[str] = None
+    supplier_sku: Optional[str] = None
 
 
 class Cart(BaseModel):
@@ -1348,13 +1389,61 @@ async def create_order(
     if not cart or not cart.get("items"):
         raise HTTPException(status_code=400, detail="Cart is empty")
 
+    # An address CJ cannot ship to is an order that can never be fulfilled.
+    # Refuse it here, while the customer is still on the page and can fix it.
+    missing = missing_shipping_fields(order_data.shipping_address)
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Shipping address is incomplete: {', '.join(missing)}",
+        )
+
+    # Re-read every line from the catalogue. The cart stores the price captured
+    # when the item was added, and nothing checked it again: a product withdrawn
+    # from sale, sold out, or repriced by the supplier sync still went through
+    # at whatever the cart happened to remember.
+    items, total = [], 0.0
+    for line in cart["items"]:
+        product = await live_product(line["product_id"])
+        if not product:
+            raise HTTPException(
+                status_code=409,
+                detail=f"A product in your cart is no longer available: {line['product_id']}",
+            )
+        if product.get("in_stock") is False:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Out of stock: {product.get('name') or line['product_id']}",
+            )
+        quantity = max(1, int(line.get("quantity") or 1))
+        price = float(product.get("price") or 0)
+        total += price * quantity
+        items.append({
+            "product_id": line["product_id"],
+            "quantity": quantity,
+            "price": price,
+            # What the supplier needs to identify the item. Kept on the order so
+            # fulfilment does not depend on the product document surviving
+            # unchanged, and so an order can be traced back to what was bought.
+            "product_name": product.get("name"),
+            "supplier": product.get("source"),
+            "supplier_product_id": product.get("external_id"),
+            "supplier_sku": product.get("sku"),
+        })
+
     order = Order(
         user_id=current_user.id,
-        items=cart["items"],
-        total_amount=cart["total_amount"],
+        items=items,
+        total_amount=round(total, 2),
         currency="SAR",
         order_number=f"AUR-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}",
-        tracking_number=f"TRK-{str(uuid.uuid4())[:10].upper()}",
+        # No tracking number. There used to be one — "TRK-" and ten random
+        # characters, minted at checkout — handed to the customer before
+        # anything had shipped and before any carrier had ever seen the parcel.
+        # A tracking number the customer can type into a courier's website and
+        # get nothing back is worse than none at all. It stays empty until a
+        # carrier issues a real one.
+        tracking_number=None,
         shipping_address=order_data.shipping_address,
         payment_method=order_data.payment_method
     )

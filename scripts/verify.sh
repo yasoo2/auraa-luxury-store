@@ -73,6 +73,11 @@ step "Checkout never asks for a card it cannot charge" \
 step "The app survives a browser that blocks storage" \
   node "$ROOT/scripts/verify-blocked-storage.mjs"
 
+# A screen reading a field the API never sends renders `undefined` at best and
+# takes the whole page down at worst — which is what `order.total` did.
+step "No screen reads a field the API does not send" \
+  node "$ROOT/scripts/verify-no-phantom-fields.mjs"
+
 if [ -d "$ROOT/frontend/node_modules" ]; then
   step "Frontend build" \
     bash -c "cd '$ROOT/frontend' && CI=false npx craco build"

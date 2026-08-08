@@ -21,7 +21,7 @@ const BACKEND_URL = API_BASE_URL;
 const API = `${BACKEND_URL}/api`;
 
 const OrdersPage = () => {
-  const { t, language } = useLanguage();
+  const { t, language, formatMoney } = useLanguage();
   const isRTL = language === 'ar';
   
   const [orders, setOrders] = useState([]);
@@ -166,9 +166,11 @@ const OrdersPage = () => {
       : statusFilter === 'awaiting_approval'
         ? isAwaitingApproval(order)
         : order.status === statusFilter;
-    const matchesSearch = order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         order.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         order.id.toLowerCase().includes(searchQuery.toLowerCase());
+    // A deleted user leaves customer_name null, and .toLowerCase() on null
+    // takes the whole page down the moment anyone types in the search box.
+    const haystack = [order.customer_name, order.customer_email, order.id, order.order_number]
+      .filter(Boolean).join(' ').toLowerCase();
+    const matchesSearch = haystack.includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -324,7 +326,7 @@ const OrdersPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${order.total.toFixed(2)}
+                      {formatMoney(order.total_amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
@@ -409,14 +411,14 @@ const OrdersPage = () => {
                         <p className="font-medium">{item.product_name}</p>
                         <p className="text-sm text-gray-500">{isRTL ? `الكمية: ${item.quantity}` : `Quantity: ${item.quantity}`}</p>
                       </div>
-                      <p className="font-semibold">${item.price.toFixed(2)}</p>
+                      <p className="font-semibold">{formatMoney(item.price)}</p>
                     </div>
                   ))}
                 </div>
                 <div className="border-t pt-3 mt-3">
                   <div className="flex justify-between items-center text-lg font-bold">
                     <span>{isRTL ? 'الإجمالي:' : 'Total:'}</span>
-                    <span>${selectedOrder.total.toFixed(2)}</span>
+                    <span>{formatMoney(selectedOrder.total_amount)}</span>
                   </div>
                 </div>
               </div>

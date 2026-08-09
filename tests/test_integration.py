@@ -2703,6 +2703,98 @@ def test_a_send_that_fails_before_cj_is_still_recorded_as_failed(seeded, monkeyp
     cj_client._reset_token()
 
 
+def test_reimporting_the_same_catalogue_does_not_duplicate_products(client, monkeypatch):
+    """
+    The importer's existence check filtered on `import_job_id == this job`,
+    which no earlier import can ever match — so every run re-created the whole
+    catalogue under fresh ids. The owner pressed "استيراد سريع" twice and the
+    storefront sold every product twice.
+
+    A supplier item's identity is (source, external_id); an import that finds
+    it already in the shop reports "already there", not a fresh copy and not
+    a failure.
+    """
+    import asyncio
+    from services.background_import import ImportJobManager, background_import_cj_products
+
+    monkeypatch.setattr(cj_client, "_client", _CJCatalogue())
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "shop@example.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "APIKEY")
+    cj_client._reset_token()
+    loop = asyncio.get_event_loop()
+    manager = ImportJobManager(client._db)
+
+    def run_import():
+        job_id = loop.run_until_complete(manager.create_job(
+            job_type="import", supplier="cj", params={"max_products": 5}))
+        loop.run_until_complete(background_import_cj_products(
+            job_id=job_id, keyword="jewelry", category_id=None,
+            max_products=5, db=client._db))
+        return loop.run_until_complete(
+            client._db.import_jobs.find_one({"job_id": job_id}))
+
+    run_import()
+    first = loop.run_until_complete(
+        client._db.products.count_documents({"source": "cj_dropshipping"}))
+    assert first > 0
+
+    second_job = run_import()
+    second = loop.run_until_complete(
+        client._db.products.count_documents({"source": "cj_dropshipping"}))
+    assert second == first, f"re-import grew the catalogue from {first} to {second}"
+
+    # And the job says so out loud instead of counting the skips as failures.
+    assert second_job["result"]["skipped_existing"] == first, second_job["result"]
+    assert second_job["result"]["failed"] == 0, second_job["result"]
+
+
+def test_dedupe_keeps_the_copy_the_order_history_points_at(seeded):
+    """
+    Collapsing duplicates must not orphan what was sold or empty anyone's
+    cart. The survivor is the copy an order references — even a staging one —
+    and carts pointing at a removed copy are re-pointed, because the product
+    is still on sale and "no longer available" about it would be a lie.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+
+    common = {"source": "cj_dropshipping", "external_id": "CJ-DUP-1",
+              "name": "خاتم مكرّر", "price": 120.0, "is_active": True, "in_stock": True}
+    loop.run_until_complete(seeded._db.products.insert_many([
+        {**common, "id": "dupA", "staging": True, "created_at": "2026-01-01T00:00:00"},
+        {**common, "id": "dupB", "staging": False, "created_at": "2026-02-01T00:00:00"},
+        {**common, "id": "dupC", "staging": False, "created_at": "2026-03-01T00:00:00"},
+    ]))
+    # An old order bought the oldest, staging copy…
+    loop.run_until_complete(seeded._db.orders.insert_one({
+        "id": "ord-dup", "user_id": "u-x", "status": "delivered",
+        "items": [{"product_id": "dupA", "quantity": 1, "price": 120.0}],
+    }))
+    # …and a live cart holds one of the copies about to be removed.
+    loop.run_until_complete(seeded._db.carts.insert_one({
+        "user_id": "u-cart",
+        "items": [{"product_id": "dupC", "quantity": 2, "price": 120.0}],
+    }))
+
+    register(seeded, email="adm-dup@b.com")
+    make_admin(seeded, "adm-dup@b.com")
+
+    report = seeded.get("/api/admin/products/duplicates").json()
+    assert report["duplicates"] == 2, report
+
+    r = seeded.post("/api/admin/products/dedupe")
+    assert r.status_code == 200, r.text
+    assert r.json()["removed"] == 2, r.json()
+
+    left = loop.run_until_complete(
+        seeded._db.products.find({"external_id": "CJ-DUP-1"}).to_list(length=None))
+    assert [p["id"] for p in left] == ["dupA"], left
+
+    cart = loop.run_until_complete(seeded._db.carts.find_one({"user_id": "u-cart"}))
+    assert cart["items"][0]["product_id"] == "dupA", cart["items"]
+    assert cart["items"][0]["quantity"] == 2, cart["items"]
+
+
 def test_an_import_never_invents_a_discount(client, monkeypatch):
     """
     original_price was set to the supplier's cost. The product page renders

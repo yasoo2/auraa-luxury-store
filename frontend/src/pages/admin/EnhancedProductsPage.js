@@ -238,6 +238,34 @@ const EnhancedProductsPage = () => {
     }
   };
 
+  // The importer used to re-create the whole catalogue on every run, so a
+  // shop whose owner pressed "استيراد سريع" twice sells every product twice.
+  // The server keeps the copy order history points at, then live over
+  // staging, then the oldest — and re-points carts and wishlists at it.
+  const removeDuplicates = async () => {
+    try {
+      const { data } = await axios.get(`${API_URL}/api/admin/products/duplicates`);
+      if (!data.duplicates) {
+        toast.success(isRTL ? 'لا توجد منتجات مكرّرة' : 'No duplicate products');
+        return;
+      }
+      // eslint-disable-next-line no-restricted-globals
+      if (!confirm(isRTL
+        ? `وُجدت ${data.duplicates} نسخة مكرّرة من ${data.groups.length} منتجاً. تُحذف النسخ الزائدة ويبقى من كل منتج نسخة واحدة. متابعة؟`
+        : `Found ${data.duplicates} duplicate copies across ${data.groups.length} products. Extra copies will be deleted, one of each kept. Continue?`)) {
+        return;
+      }
+      const res = await axios.post(`${API_URL}/api/admin/products/dedupe`);
+      toast.success(isRTL
+        ? `حُذفت ${res.data.removed} نسخة مكرّرة`
+        : `Removed ${res.data.removed} duplicate copies`);
+      fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّرت إزالة المكرّرات — لم يُحذف شيء' : 'Could not remove duplicates — nothing was deleted'));
+    }
+  };
+
   // Export writes what is on screen, from what the page already holds. No
   // endpoint is invented for it, and it never claims rows it does not have.
   const exportCsv = () => {
@@ -352,6 +380,11 @@ const EnhancedProductsPage = () => {
           <Button variant="outline" onClick={exportCsv} data-testid="export-products">
             <Download className="h-4 w-4 me-2" />
             {isRTL ? 'تصدير' : 'Export'}
+          </Button>
+
+          <Button variant="outline" onClick={removeDuplicates} data-testid="remove-duplicates">
+            <Trash2 className="h-4 w-4 me-2" />
+            {isRTL ? 'إزالة المكرّرات' : 'Remove duplicates'}
           </Button>
         </div>
       </div>

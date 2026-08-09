@@ -2899,6 +2899,120 @@ async def admin_list_products(
     return products
 
 
+async def _duplicate_product_groups() -> List[List[Dict[str, Any]]]:
+    """
+    Products that are the same supplier item living under different ids.
+
+    Identity is (source, external_id) and nothing looser: name-matching would
+    be guesswork, and this shop does not guess. Products with no external_id —
+    ones the owner typed in by hand — can never be called duplicates here.
+    """
+    docs = await db.products.find({"external_id": {"$exists": True}}).to_list(length=None)
+    groups: Dict[Any, List[Dict[str, Any]]] = {}
+    for doc in docs:
+        doc.pop("_id", None)
+        if not doc.get("external_id") or not doc.get("id"):
+            continue
+        key = (doc.get("source") or "", str(doc["external_id"]))
+        groups.setdefault(key, []).append(doc)
+    return [group for group in groups.values() if len(group) > 1]
+
+
+async def _order_referenced_product_ids() -> set:
+    ids = set()
+    orders = await db.orders.find({}, {"items.product_id": 1}).to_list(length=None)
+    for order in orders:
+        for item in order.get("items") or []:
+            if item.get("product_id"):
+                ids.add(item["product_id"])
+    return ids
+
+
+@api_router.get("/admin/products/duplicates")
+async def admin_find_duplicate_products(admin: User = Depends(get_admin_user)):
+    """
+    How many copies the catalogue holds of the same supplier item.
+
+    The importer used to re-create every product on every run — its existence
+    check filtered on the current job id, which no earlier import can match —
+    so a shop whose owner pressed "استيراد سريع" twice holds its whole
+    catalogue twice. This reports the damage; the POST below repairs it.
+    """
+    groups = await _duplicate_product_groups()
+    return {
+        "groups": [{
+            "source": group[0].get("source"),
+            "external_id": group[0].get("external_id"),
+            "name": group[0].get("name"),
+            "count": len(group),
+        } for group in groups],
+        "duplicates": sum(len(group) - 1 for group in groups),
+    }
+
+
+@api_router.post("/admin/products/dedupe")
+async def admin_dedupe_products(admin: User = Depends(get_admin_user)):
+    """
+    Collapse each group of copies down to one product.
+
+    Which copy survives is not arbitrary:
+      1. one an order's history points at — deleting it would orphan the very
+         records that prove what was sold;
+      2. else a live one over a staging one — the storefront must not blink;
+      3. else the oldest, so running this twice picks the same survivor.
+
+    Carts and wishlists pointing at a removed copy are re-pointed at the
+    survivor: the product is still on sale, and a checkout that answers
+    "no longer available" about it would be a lie.
+    """
+    groups = await _duplicate_product_groups()
+    referenced = await _order_referenced_product_ids()
+
+    def keep_rank(doc: Dict[str, Any]):
+        return (
+            0 if doc["id"] in referenced else 1,
+            0 if not doc.get("staging") else 1,
+            str(doc.get("created_at") or ""),
+            str(doc["id"]),
+        )
+
+    removed_ids: List[str] = []
+    for group in groups:
+        keeper = sorted(group, key=keep_rank)[0]
+        losers = [doc["id"] for doc in group if doc["id"] != keeper["id"]]
+        removed_ids.extend(losers)
+
+        carts = await db.carts.find({"items.product_id": {"$in": losers}}).to_list(length=None)
+        for cart in carts:
+            merged: Dict[str, Dict[str, Any]] = {}
+            for item in cart.get("items") or []:
+                pid = keeper["id"] if item.get("product_id") in losers else item.get("product_id")
+                if pid in merged:
+                    merged[pid]["quantity"] = (int(merged[pid].get("quantity") or 1)
+                                               + int(item.get("quantity") or 1))
+                else:
+                    merged[pid] = {**item, "product_id": pid}
+            await db.carts.update_one(
+                {"user_id": cart["user_id"]}, {"$set": {"items": list(merged.values())}})
+
+        wishlists = await db.wishlists.find({"product_ids": {"$in": losers}}).to_list(length=None)
+        for wishlist in wishlists:
+            pointed = [keeper["id"] if pid in losers else pid
+                       for pid in wishlist.get("product_ids") or []]
+            deduped: List[str] = []
+            for pid in pointed:
+                if pid not in deduped:
+                    deduped.append(pid)
+            await db.wishlists.update_one(
+                {"user_id": wishlist["user_id"]}, {"$set": {"product_ids": deduped}})
+
+    if removed_ids:
+        await db.products.delete_many({"id": {"$in": removed_ids}})
+        logger.info(f"🧹 {admin.email} removed {len(removed_ids)} duplicate products")
+
+    return {"success": True, "groups": len(groups), "removed": len(removed_ids)}
+
+
 @api_router.post("/admin/products/bulk-delete")
 async def admin_bulk_delete_products(
     payload: BulkIdsRequest,

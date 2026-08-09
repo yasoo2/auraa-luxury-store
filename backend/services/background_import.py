@@ -308,6 +308,7 @@ async def background_import_cj_products(
         total = len(products)
         imported_count = 0
         failed_count = 0
+        skipped_existing = 0
         imported_products = []
         
         logger.info(f"📦 Fetched {total} products from CJ (requested {max_products})")
@@ -334,17 +335,23 @@ async def background_import_cj_products(
                     failed_count += 1
                     continue
                 
-                # Check if already exists IN STAGING for this job (allow re-import to live store)
+                # Skip anything this shop already has — staging or live, from
+                # any job. The old check filtered on `import_job_id == this
+                # job`, which no earlier import can ever match, so every
+                # re-import re-created the whole catalogue under fresh ids:
+                # press "استيراد سريع" twice and every product exists twice.
+                # A supplier item's identity is (source, external_id), nothing
+                # narrower.
                 existing = await db.products.find_one({
                     "source": "cj_dropshipping",
                     "external_id": product_id,
-                    "staging": True,  # Only check staging area
-                    "import_job_id": job_id  # Only check current job
                 })
-                
+
                 if existing:
-                    logger.debug(f"Product {product_id} already exists in current staging job, skipping")
-                    failed_count += 1
+                    # Not a failure: the product is in the shop, which is what
+                    # importing it asks for. Counted separately so the job
+                    # report says "already there", not "broke".
+                    skipped_existing += 1
                     continue
                 
                 # Calculate pricing with automatic markup (200% profit + taxes + shipping)
@@ -432,10 +439,11 @@ async def background_import_cj_products(
         result = {
             "total_found": total,
             "imported": imported_count,
+            "skipped_existing": skipped_existing,
             "failed": failed_count,
             "sample_products": imported_products[:5]
         }
-        
+
         await job_manager.update_job_status(
             job_id,
             "completed",
@@ -443,6 +451,7 @@ async def background_import_cj_products(
                 "total": total,
                 "processed": total,
                 "imported": imported_count,
+                "skipped_existing": skipped_existing,
                 "failed": failed_count,
                 "percent": 100
             },

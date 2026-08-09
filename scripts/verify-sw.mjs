@@ -121,6 +121,25 @@ for (const route of ['/products', '/profile']) {
     `status=${status}${why ? ` reason=${why}` : ''}`);
 }
 
+// 3c. This server answers missing paths with index.html at 200 — exactly what
+// the production _redirects fallback does. The worker must refuse to cache
+// that impostor under an asset's URL: on the live store it got cached AS the
+// stylesheet during a deploy window, and every page after that rendered raw
+// unstyled HTML.
+const poisoned = await page.evaluate(async () => {
+  const path = '/static/css/missing-on-purpose.css';
+  const r = await fetch(path);
+  const type = r.headers.get('content-type') || '';
+  let cachedAs = null;
+  for (const name of await caches.keys()) {
+    const hit = await (await caches.open(name)).match(path);
+    if (hit) cachedAs = hit.headers.get('content-type') || 'unknown';
+  }
+  return { status: r.status, type, cachedAs };
+});
+check('ردّ HTML مكان ملف أنماط مفقود لا يدخل الكاش أبداً', poisoned.cachedAs === null,
+  `cached as ${poisoned.cachedAs ?? '—'} (network gave ${poisoned.status} ${poisoned.type})`);
+
 // 4. the reported bug, reproduced under the condition that actually causes it:
 //    the network is gone AND the offline page is not in the cache. Browsers
 //    evict Cache Storage under pressure, and a version bump deletes the old

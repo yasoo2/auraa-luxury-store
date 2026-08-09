@@ -1,4 +1,13 @@
 # Cloudflare Pages Redirects
-# All routes should serve index.html for client-side routing
+#
+# Static assets that do not exist must say so with a 404 — never the SPA
+# shell at 200. During a deploy window the shell-as-200 answer was cached
+# under the stylesheet's URL (browsers honour the year-long immutable
+# header, and the service worker trusts response.ok), and the store then
+# served HTML as its CSS: a completely unstyled page. Existing files are
+# served before these rules run, so the 404 line only fires for assets
+# that genuinely do not exist.
+/static/* /index.html 404
 
+# All other routes serve index.html for client-side routing
 /* /index.html 200

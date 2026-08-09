@@ -12,6 +12,7 @@ import { WishlistProvider } from './context/WishlistContext';
 import { CartProvider } from './context/CartContext';
 
 // Components
+import ScrollToTop from './components/ScrollToTop';
 import Navbar from './components/Navbar';
 import CookieConsent from './components/CookieConsent';
 import HomePage from './components/HomePage';
@@ -42,8 +43,6 @@ import AboutUs from './pages/AboutUs';
 import OrderTracking from './pages/OrderTracking';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import DateTestPage from './pages/DateTestPage';
-import DateConversionTest from './pages/DateConversionTest';
 
 // UI Components
 import { Toaster } from './components/ui/sonner';
@@ -59,6 +58,7 @@ function App() {
           <WishlistProvider>
             <CartProvider>
             <Router>
+              <ScrollToTop />
               {/* Direction is set on <html> by LanguageContext. dir="auto" here overrode
               that inherited value and resolved from the first strong character in the
               whole subtree, so Arabic text rendered inside an LTR paragraph and
@@ -110,10 +110,6 @@ function App() {
                     {/* Admin Routes */}
                     <Route path="/admin/*" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
                     <Route path="/admin-management" element={<ProtectedRoute requireSuperAdmin><AdminManagement /></ProtectedRoute>} />
-                    
-                    {/* Date Test Page (for testing Hijri conversion) */}
-                    <Route path="/date-test" element={<DateTestPage />} />
-                    <Route path="/date-conversion-test" element={<DateConversionTest />} />
                     
                     {/* Redirect unknown routes to home */}
                     <Route path="*" element={<Navigate to="/" replace />} />

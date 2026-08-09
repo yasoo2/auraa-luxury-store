@@ -188,6 +188,23 @@ const lira = await page.evaluate(() => {
   return { ok: true, why: '' };
 });
 check('الليرة التركية قابلة للوصول والنقر في قائمة العملات', lira.ok, lira.why);
+
+// Opening a page must start it from the top. Client-side navigation keeps
+// the previous page's scroll position, so a shopper who reached the bottom
+// of one page opened every next page already scrolled to its bottom — the
+// owner's exact report: «عند فتح اي صفحة فان النظام ينتقل الى اسفل الصفحة».
+// preScroll > 0 keeps the check honest: a home page too short to scroll
+// would otherwise pass this with the bug present.
+await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(700);
+const preScroll = await page.evaluate(() => { window.scrollTo(0, 800); return window.scrollY; });
+await page.locator('a[href="/products"]:visible').first().click();
+await page.waitForURL('**/products', { timeout: 5000 });
+await page.waitForTimeout(500);
+const postScroll = await page.evaluate(() => window.scrollY);
+check('كل صفحة تُفتح من أعلاها لا من حيث تُرك التمرير',
+  preScroll > 0 && postScroll === 0,
+  `قبل الانتقال ${preScroll}px، بعده ${postScroll}px`);
 await page.setViewportSize({ width: 390, height: 844 });
 
 // The wordmark, at the width where it broke.

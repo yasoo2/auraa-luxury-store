@@ -32,20 +32,24 @@ class CurrencyService:
     
     async def _get_fallback_rates(self, base_currency: str = "USD") -> Dict[str, float]:
         """
-        Fallback static exchange rates when API is unavailable
-        Approximate rates as of October 2025
+        Fallback static exchange rates when API is unavailable.
+        Approximate rates as of August 2026. The Gulf currencies are pegged to
+        the dollar and barely move; the floating ones (EUR, GBP, TRY) drift,
+        and TRY drifts fast — when refreshing this table, refresh it from a
+        published source, because these numbers can end up pricing a real
+        card charge.
         """
         static_rates = {
             "USD": 1.0,
-            "SAR": 3.75,      # Saudi Riyal
-            "AED": 3.67,      # UAE Dirham
-            "QAR": 3.64,      # Qatari Riyal
+            "SAR": 3.75,      # Saudi Riyal (pegged)
+            "AED": 3.67,      # UAE Dirham (pegged)
+            "QAR": 3.64,      # Qatari Riyal (pegged)
             "KWD": 0.31,      # Kuwaiti Dinar
-            "BHD": 0.38,      # Bahraini Dinar
-            "OMR": 0.38,      # Omani Rial
-            "EUR": 0.92,      # Euro
-            "GBP": 0.79,      # British Pound
-            "TRY": 34.0,      # Turkish Lira
+            "BHD": 0.38,      # Bahraini Dinar (pegged)
+            "OMR": 0.38,      # Omani Rial (pegged)
+            "EUR": 0.87,      # Euro
+            "GBP": 0.74,      # British Pound
+            "TRY": 47.7,      # Turkish Lira
         }
         
         if base_currency == "USD":
@@ -118,24 +122,28 @@ class CurrencyService:
                 logger.warning("No exchange rate data received")
                 return False
             
-            # Store rates in database
+            # Store every rate the provider returns. This used to filter
+            # through a seven-currency Gulf list, so the storefront happily
+            # displayed prices in TRY (and EUR, GBP, ...) from the unfiltered
+            # /auto-update/currency-rates response while the charge path —
+            # which reads this table — could not price those same currencies
+            # and refused every card session with a 503. Anything the shop
+            # can display, this table must be able to price.
             updated_count = 0
             for currency_code, rate in rates_data.items():
-                if currency_code in self.supported_currencies:
-                    exchange_rate = ExchangeRate(
-                        base_currency="USD",
-                        target_currency=currency_code,
-                        rate=rate,
-                        updated_at=datetime.utcnow()
-                    )
-                    
-                    # Upsert the rate
-                    await self.db.exchange_rates.update_one(
-                        {"base_currency": "USD", "target_currency": currency_code},
-                        {"$set": exchange_rate.dict()},
-                        upsert=True
-                    )
-                    updated_count += 1
+                exchange_rate = ExchangeRate(
+                    base_currency="USD",
+                    target_currency=currency_code,
+                    rate=rate,
+                    updated_at=datetime.utcnow()
+                )
+
+                await self.db.exchange_rates.update_one(
+                    {"base_currency": "USD", "target_currency": currency_code},
+                    {"$set": exchange_rate.model_dump()},
+                    upsert=True
+                )
+                updated_count += 1
             
             logger.info(f"Updated {updated_count} exchange rates in database")
             return True

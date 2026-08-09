@@ -920,6 +920,45 @@ def test_an_order_is_never_priced_by_guesswork_when_the_rate_is_unknown(seeded, 
     assert "USD" in r.json()["detail"]
 
 
+def test_the_charge_path_prices_every_currency_the_shop_displays(seeded, monkeypatch):
+    """
+    The storefront showed prices in TRY from the unfiltered rates endpoint
+    while the charge path stored rates through a seven-currency Gulf filter —
+    so a lira-configured gateway answered every card session with 503. This
+    drives the real CurrencyService (no stub) with the gateway set to TRY:
+    the same table that lets the shop display a currency must price it.
+    """
+    from services import iyzico_client
+    import services.currency_service as currency_service
+
+    fake = _FakeIyzico()
+    monkeypatch.setattr(iyzico_client, "API_KEY", "sandbox-key")
+    monkeypatch.setattr(iyzico_client, "SECRET_KEY", _FakeIyzico.SECRET)
+    monkeypatch.setattr(iyzico_client, "CURRENCY", "TRY")
+    monkeypatch.setattr(iyzico_client, "_post", fake.post)
+
+    # A fresh real service with no provider key: rates come from the same
+    # fallback table the storefront display path serves.
+    monkeypatch.delenv("EXCHANGE_RATE_API_KEY", raising=False)
+    monkeypatch.setattr(currency_service, "currency_service", None)
+
+    register(seeded, email="tr-buyer@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+
+    r = seeded.post(f"/api/orders/{order['id']}/pay-session")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["currency"] == "TRY"
+
+    # Expected amount from the very endpoint the storefront displays with:
+    # the charge must equal what the shopper was shown, not a private table.
+    shown = seeded.get("/api/auto-update/currency-rates").json()["rates"]
+    expected = round(250 * (shown["TRY"] / shown["SAR"]), 2)
+    assert body["amount"] == expected, body
+
+
 def test_a_card_payment_sends_the_order_to_cj_by_itself(seeded, card_shop, monkeypatch):
     """
     The whole point of a dropshipping shop: the customer pays and the goods

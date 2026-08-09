@@ -23,12 +23,23 @@ const OAuthCallback = () => {
   const { language } = useLanguage();
   const [status, setStatus] = useState('processing');
   const [error, setError] = useState('');
+  // After a quiet stretch the wait gets an explanation. The backend host puts
+  // an idle service to sleep and boots it on the first request — which is
+  // often this very sign-in, since the storefront itself is served by the CDN.
+  // A spinner that says nothing for a minute reads as "broken"; one that says
+  // why reads as "starting".
+  const [slow, setSlow] = useState(false);
   const BACKEND_URL = API_BASE_URL;
   // `auth` is the context object, and this effect calls auth.setUser(), which
   // re-creates it — so the effect re-ran, found the state it had already
   // consumed missing, and reported a state mismatch over a sign-in that had
   // just succeeded. The code is single-use anyway: run this exactly once.
   const ran = useRef(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 7000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (ran.current) return undefined;
@@ -91,7 +102,11 @@ const OAuthCallback = () => {
         const response = await axios.post(
           `${BACKEND_URL}/api/auth/oauth/google/callback`,
           { code, redirect_uri: redirectUri, provider: 'google' },
-          { withCredentials: true }
+          // axios's default timeout is none at all: a hung connection meant a
+          // spinner that never ends. 90s is long enough to survive the host
+          // booting a slept server, and finite enough that a real hang shows
+          // the error screen instead of eternity.
+          { withCredentials: true, timeout: 90000 }
         );
 
         const { access_token, user, needs_phone } = response.data;
@@ -138,7 +153,11 @@ const OAuthCallback = () => {
               {language === 'ar' ? 'جاري تسجيل الدخول...' : 'Signing you in...'}
             </h2>
             <p className="text-gray-600">
-              {language === 'ar' ? 'يرجى الانتظار' : 'Please wait'}
+              {slow
+                ? (language === 'ar'
+                  ? 'يبدو أن الخادم كان خاملاً ويستيقظ الآن — قد يستغرق ذلك حتى دقيقة في المرة الأولى، ثم يصبح الدخول فورياً.'
+                  : 'The server seems to have been asleep and is waking up — the first sign-in can take up to a minute, then it is instant.')
+                : (language === 'ar' ? 'يرجى الانتظار' : 'Please wait')}
             </p>
           </>
         )}

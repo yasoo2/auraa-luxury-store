@@ -89,18 +89,25 @@ const LanguageCurrencySelector = () => {
             setShowCurrencies(!showCurrencies);
             setShowLanguages(false); // Close language dropdown when opening currency
           }}
+          data-testid="currency-toggle"
           className="flex items-center space-x-1 hover:bg-gray-100"
         >
           <DollarSign className="h-4 w-4" />
-          <span className="text-sm font-medium">{currentCurrency?.symbol}</span>
+          <span data-testid="currency-toggle-symbol" className="text-sm font-medium">{currentCurrency?.symbol}</span>
           <ChevronDown className="h-3 w-3" />
         </Button>
         
         {showCurrencies && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px]" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
+          /* max-h + overflow, same as the language list above. This one was
+             missing both: 22 currencies rendered as an unscrollable column
+             running past the bottom of the screen, so everything below the
+             fold — including the lira the shop's own owner went hunting for —
+             could not be reached at all. */
+          <div data-testid="currency-menu" className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px] max-h-[300px] overflow-y-auto" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
             {currenciesList.map((curr) => (
               <button
                 key={curr.code}
+                data-testid={`currency-option-${curr.code}`}
                 onClick={() => {
                   switchCurrency(curr.code);
                   setShowCurrencies(false);

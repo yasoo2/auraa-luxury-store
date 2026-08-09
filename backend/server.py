@@ -2391,7 +2391,12 @@ PAYMENT_DOC_ID = "store_payment"
 # leave our own process and are typed into a payment provider's records, so
 # they cannot be guessed from the incoming request's Host header — that header
 # is whatever the caller wrote in it.
-PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", "https://auraa-luxury-api.onrender.com").rstrip("/")
+# The frontend's own canonical constant (frontend/src/api.js PRODUCTION_API_URL)
+# — the address the live store actually calls. The first version of this line
+# guessed an onrender.com hostname instead; iyzico accepted it at session
+# creation and then sent the customer's browser to a dead host at the exact
+# moment their payment completed. A callback URL is not a place to guess.
+PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", "https://api.auraaluxury.com").rstrip("/")
 PUBLIC_SITE_URL = os.getenv("PUBLIC_SITE_URL", "https://auraaluxury.com").rstrip("/")
 
 BANK_TRANSFER_REQUIRED = ("bank_name", "account_holder", "iban")

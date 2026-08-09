@@ -570,7 +570,7 @@ const OrdersPage = () => {
                           <span
                             className="text-xs text-red-700 max-w-[18rem] truncate"
                             dir="ltr"
-                            title={order.supplier_error}
+                            title={`${order.supplier_failed_at ? formatDate(order.supplier_failed_at) + ' — ' : ''}${order.supplier_error}`}
                             data-testid="row-supplier-error"
                           >
                             {order.supplier_error}
@@ -764,13 +764,23 @@ const OrdersPage = () => {
                     {/* The reason the last attempt failed was written to the
                         order and never shown to anyone. Without it the owner
                         presses the same button again and gets the same
-                        silence. */}
+                        silence.
+
+                        The timestamp is not decoration: this line shows the
+                        SAVED error of the last attempt, and without a time on
+                        it the owner read an old failure as the result of a
+                        retry they had not actually run yet. */}
                     {selectedOrder.supplier_status === 'failed' && selectedOrder.supplier_error && (
                       <p
                         className="text-sm text-red-700 mb-3 bg-red-50 border border-red-200 rounded p-2"
                         data-testid="supplier-last-error"
                       >
-                        <strong>{isRTL ? 'فشلت آخر محاولة إرسال: ' : 'Last send attempt failed: '}</strong>
+                        <strong>
+                          {isRTL ? 'فشلت آخر محاولة إرسال' : 'Last send attempt failed'}
+                          {selectedOrder.supplier_failed_at
+                            ? ` (${formatDate(selectedOrder.supplier_failed_at)})` : ''}
+                          {': '}
+                        </strong>
                         <span dir="ltr">{selectedOrder.supplier_error}</span>
                       </p>
                     )}

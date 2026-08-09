@@ -239,6 +239,12 @@ async def _health_payload():
     payload = {
         "status": "ok",
         "db": db_ok,
+        # Which backend is actually answering. Render exports the deployed
+        # commit as RENDER_GIT_COMMIT; without it on the endpoint, "did the
+        # fix reach production yet?" had no answer anyone could check — a fix
+        # would merge, Render would still be building, and a retry against
+        # the old code looked like the fix failing.
+        "version": os.getenv("RENDER_GIT_COMMIT", "")[:7] or "dev",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
     if db_error:

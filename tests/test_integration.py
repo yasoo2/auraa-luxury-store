@@ -109,7 +109,12 @@ def test_health_endpoints_exist(client, path):
     """render.yaml healthCheckPath pointed at a route that did not exist."""
     r = client.get(path)
     assert r.status_code == 200
-    assert r.json()["status"] == "ok"
+    body = r.json()
+    assert body["status"] == "ok"
+    # Which code is answering. Without this on the endpoint, "did the fix
+    # reach production yet?" was unanswerable, and a retry against the old
+    # deploy looked like the fix failing.
+    assert body["version"], body
 
 
 # ---------------------------------------------------------------------------

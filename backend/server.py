@@ -1497,10 +1497,14 @@ async def create_order(
         {"$set": {"items": [], "total_amount": 0.0}}
     )
 
-    # Tell the owner. An order waiting on a human is only visible to a human
-    # who thinks to look — and a mail provider being down must never cost a
-    # customer their order, so this is best-effort and never raises.
-    background_tasks.add_task(notify_owner_of_new_order, doc)
+    # Tell the owner — except for card orders. A card order at this moment is
+    # a customer mid-payment: they are on their way to the gateway, and an
+    # abandoned checkout is not something the owner needs email about. The
+    # card alert fires when the money actually lands, with the CJ outcome in
+    # it. (Best-effort either way: a mail provider being down must never cost
+    # a customer their order.)
+    if order_data.payment_method != CARD:
+        background_tasks.add_task(notify_owner_of_new_order, doc)
 
     return order
 
@@ -1660,7 +1664,7 @@ async def start_card_payment(
 
 
 @api_router.post("/payments/iyzico/callback")
-async def iyzico_callback(request: Request):
+async def iyzico_callback(request: Request, background_tasks: BackgroundTasks):
     """
     Where iyzico's hosted page sends the customer's browser back.
 
@@ -1724,6 +1728,12 @@ async def iyzico_callback(request: Request):
         "payment_error": None,
     }})
     logger.info("Order %s paid via iyzico (%s)", order_id, result.get("payment_id"))
+
+    # Paid → bought, immediately, with no human in between. In the background
+    # so the customer's redirect is instant: CJ's variant lookups and freight
+    # call take seconds they should not spend staring at a spinner.
+    background_tasks.add_task(_auto_fulfil_paid_order, order_id)
+
     return RedirectResponse(landing, status_code=303)
 
 
@@ -1954,20 +1964,21 @@ async def preview_order_at_supplier(order_id: str, admin: User = Depends(get_adm
     }
 
 
-@api_router.post("/admin/orders/{order_id}/send-to-supplier")
-async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_user)):
+async def _buy_from_supplier(order: Dict[str, Any], actor: str) -> Dict[str, Any]:
     """
-    Buy an approved order's items from CJ.
+    Buy a paid order's items from CJ and record the outcome on the order.
 
     Creates the order on CJ but does not pay it: payment is a separate call in
     CJ's API, so a mistake caught here can still be cancelled in the CJ
     dashboard before any money moves.
+
+    Shared by the admin's button and the automatic send that follows a card
+    payment, on purpose — two code paths to the supplier means two ways to be
+    wrong about what was bought.
     """
     from services import cj_client
 
-    order = await db.orders.find_one({"id": order_id})
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+    order_id = order["id"]
 
     if order.get("supplier_order_id"):
         raise HTTPException(
@@ -1977,12 +1988,24 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
 
     # Buying the goods is the point of no return: CJ ships, the money is spent,
     # and there is nobody to take it back from if the customer never paid.
-    # Confirming the payment is one click away in the same dialog — this asks
-    # for it, it does not prevent it.
     if order.get("payment_status") != "paid":
         raise HTTPException(
             status_code=409,
             detail="This order is not paid yet. Confirm the payment before buying the goods.",
+        )
+
+    # One buyer at a time. iyzico can deliver its callback more than once, and
+    # an admin can press the button while the automatic send is still running —
+    # without an atomic claim, each of them buys the goods and the shop pays
+    # for the same parcel twice.
+    claim = await db.orders.update_one(
+        {"id": order_id, "supplier_order_id": None, "supplier_status": {"$ne": "sending"}},
+        {"$set": {"supplier_status": "sending"}},
+    )
+    if claim.modified_count == 0:
+        raise HTTPException(
+            status_code=409,
+            detail="This order is already on its way to the supplier",
         )
 
     async def record_failure(reason: str) -> None:
@@ -2026,7 +2049,7 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
         "supplier_error": None,
         "supplier_failed_at": None,
         "sent_to_supplier_at": datetime.now(timezone.utc).isoformat(),
-        "sent_to_supplier_by": admin.email,
+        "sent_to_supplier_by": actor,
         "status": OrderStatus.processing.value,
     }})
 
@@ -2038,6 +2061,60 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
         # Said plainly so nobody assumes the goods are paid for.
         "message": "Created on CJ. It is not paid yet — pay it from your CJ balance.",
     }
+
+
+async def _auto_fulfil_paid_order(order_id: str) -> None:
+    """
+    Money in → order out, with nobody pressing anything in between.
+
+    This is what a dropshipping shop *is*: the customer's card is charged and
+    the goods get bought, immediately, automatically. The owner's only
+    remaining job is topping up the CJ balance.
+
+    Best-effort by design. The payment is already recorded before this runs,
+    and a CJ failure — no variant, an address CJ refuses, CJ itself down —
+    must never look like a payment failure. It lands the order in the admin
+    screen's red "failed" queue with its reason, and the owner is emailed
+    either way.
+    """
+    order = await db.orders.find_one({"id": order_id})
+    if not order or order.get("supplier_order_id"):
+        return
+
+    error: Optional[str] = None
+    try:
+        result = await _buy_from_supplier(order, actor="auto — paid card order")
+        logger.info("Order %s auto-sent to CJ as %s", order_id, result.get("supplier_order_id"))
+    except HTTPException as e:
+        error = str(e.detail)
+        logger.error("Order %s is paid but could not be auto-sent to CJ: %s", order_id, error)
+    except Exception as e:  # noqa: BLE001 — an unexpected crash must still be recorded
+        error = str(e)
+        logger.error("Order %s auto-send crashed: %s", order_id, error)
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "supplier_status": "failed",
+            "supplier_error": error[:500],
+            "supplier_failed_at": datetime.now(timezone.utc).isoformat(),
+        }})
+
+    # Tell the owner what actually happened — the one time the send failed is
+    # the one time they have to act.
+    try:
+        from services.email_service import send_order_paid_email
+        fresh = await db.orders.find_one({"id": order_id})
+        if fresh:
+            send_order_paid_email(fresh, error=error)
+    except Exception as e:  # noqa: BLE001 — mail is never allowed to break fulfilment
+        logger.error("Could not send the paid-order alert for %s: %s", order_id, e)
+
+
+@api_router.post("/admin/orders/{order_id}/send-to-supplier")
+async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_user)):
+    """The manual door to the same path: retries after a failed auto-send."""
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return await _buy_from_supplier(order, actor=admin.email)
 
 
 class PaymentConfirmation(BaseModel):

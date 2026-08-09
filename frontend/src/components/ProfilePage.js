@@ -69,17 +69,25 @@ const ProfilePage = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  // "في الانتظار" told the customer nothing: waiting for what, by whom, for
-  // how long? Each label now names what is actually happening to their order.
-  const getStatusText = (status) => {
+  // "في الانتظار" told the customer nothing, and its replacement "بانتظار
+  // التأكيد" was worse: it told a paying customer their order sat waiting for
+  // somebody's blessing. Nothing on a dropshipping shop waits for a human —
+  // the only thing an order can be waiting for is the customer's own payment,
+  // so that is the only wait the screen is allowed to name.
+  const getStatusText = (order) => {
+    if (order?.status === 'pending' && order?.payment_status !== 'paid') {
+      return 'بانتظار الدفع';
+    }
     const statusTexts = {
-      pending: 'بانتظار التأكيد',
+      // Paid and pending = the seconds between payment and the automatic
+      // send to the supplier. To the customer that is simply "being prepared".
+      pending: 'قيد التجهيز',
       processing: 'قيد التجهيز',
       shipped: 'تم الشحن',
       delivered: 'تم التسليم',
       cancelled: 'ملغي'
     };
-    return statusTexts[status] || status;
+    return statusTexts[order?.status] || order?.status;
   };
 
   // What happens next, in the customer's words.
@@ -90,9 +98,13 @@ const ProfilePage = () => {
   const getStatusNote = (order) => {
     const status = order?.status;
     if (status === 'pending' && order?.payment_status !== 'paid') {
-      return order?.payment_method === 'bank_transfer'
-        ? 'وصلنا طلبك وننتظر وصول الحوالة. اضغط «أكمِل الدفع» لتفاصيل الحساب ورقم الطلب.'
-        : 'وصلنا طلبك. نراجعه ونتواصل معك لإتمام الدفع قبل الشحن.';
+      if (order?.payment_method === 'bank_transfer') {
+        return 'وصلنا طلبك وننتظر وصول الحوالة. اضغط «أكمِل الدفع» لتفاصيل الحساب ورقم الطلب.';
+      }
+      if (order?.payment_method === 'card') {
+        return 'لم يكتمل الدفع بالبطاقة. اضغط «أكمِل الدفع» لإتمامه — يبدأ تجهيز الطلب فور نجاحه.';
+      }
+      return 'وصلنا طلبك. نراجعه ونتواصل معك لإتمام الدفع قبل الشحن.';
     }
     const notes = {
       pending: 'تم تأكيد استلام المبلغ. نجهّز طلبك للشحن.',
@@ -296,7 +308,7 @@ const ProfilePage = () => {
                       </div>
                       <div className="flex items-center gap-2 mt-4 md:mt-0">
                         <Badge className={getStatusColor(order.status)}>
-                          {getStatusText(order.status)}
+                          {getStatusText(order)}
                         </Badge>
                         {/* There was a "عرض التفاصيل" button here with no
                             onClick — it had never done anything since the day

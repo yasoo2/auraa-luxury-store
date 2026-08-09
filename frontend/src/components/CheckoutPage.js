@@ -208,6 +208,23 @@ const CheckoutPage = () => {
         currency: currency || 'SAR'
       });
       
+      if (formData.paymentMethod === 'card') {
+        // Like every shop on earth: address in, card next — straight to the
+        // gateway's page, with no intermediate screen asking the customer to
+        // press "pay" a second time. The order already exists, so if they
+        // abandon here nothing is lost and /order/:id/pay is the way back.
+        try {
+          const session = await apiPost(`/api/orders/${order.id}/pay-session`, {});
+          if (!session?.payment_page_url) throw new Error('no payment page');
+          window.location.assign(session.payment_page_url);
+          return;
+        } catch (err) {
+          console.error('Could not open the payment page:', err);
+          navigate(`/order/${order.id}/pay`);
+          return;
+        }
+      }
+
       toast.success(isRTL ? 'تم استلام طلبك' : 'Your order is in');
       // Not the order list. The customer still has to pay, and the list said
       // only "بانتظار" — waiting — without ever saying it was waiting on them.
@@ -571,10 +588,19 @@ const CheckoutPage = () => {
                   {submitting ? (
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      <span className="ml-2">{isRTL ? 'جاري الطلب...' : 'Placing order...'}</span>
+                      <span className="ms-2">
+                        {formData.paymentMethod === 'card'
+                          ? (isRTL ? 'جارٍ فتح صفحة الدفع…' : 'Opening the payment page…')
+                          : (isRTL ? 'جاري الطلب...' : 'Placing order...')}
+                      </span>
                     </div>
                   ) : (
-                    isRTL ? 'تأكيد الطلب' : 'Place Order'
+                    // The button says what pressing it does. With a card
+                    // selected it starts a payment, and calling that "تأكيد
+                    // الطلب" is how customers end up not knowing they paid.
+                    formData.paymentMethod === 'card'
+                      ? (isRTL ? 'ادفع الآن' : 'Pay now')
+                      : (isRTL ? 'تأكيد الطلب' : 'Place Order')
                   )}
                 </Button>
                 

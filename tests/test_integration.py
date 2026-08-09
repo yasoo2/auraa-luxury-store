@@ -920,6 +920,87 @@ def test_an_order_is_never_priced_by_guesswork_when_the_rate_is_unknown(seeded, 
     assert "USD" in r.json()["detail"]
 
 
+def test_a_card_payment_sends_the_order_to_cj_by_itself(seeded, card_shop, monkeypatch):
+    """
+    The whole point of a dropshipping shop: the customer pays and the goods
+    get bought, with nobody pressing anything in between. Before this, a paid
+    order sat in the admin queue waiting for the owner to notice it — which
+    is a flow no shop in the world runs.
+    """
+    import asyncio
+
+    monkeypatch.setattr(cj_client, "_client", _FulfilmentCJ())
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "shop@example.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "APIKEY")
+    cj_client._reset_token()
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {
+            "source": "cj_dropshipping", "external_id": "CJ-777", "sku": "SKU-777"}}))
+
+    # And the owner hears about it — once, with the outcome, not at checkout.
+    import services.email_service as email_service
+    sent_mail = []
+    monkeypatch.setattr(email_service, "SENDGRID_API_KEY", "sg-test-key")
+    monkeypatch.setattr(email_service, "send_email",
+                        lambda **kw: sent_mail.append(kw) or True)
+
+    register(seeded, email="autocj@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    assert sent_mail == [], "a card order emailed the owner before any money moved"
+
+    started = seeded.post(f"/api/orders/{order['id']}/pay-session").json()
+    card_shop.paid_price = f"{started['amount']:.2f}"
+
+    r = seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-1"},
+                    follow_redirects=False)
+    assert r.status_code == 303, r.text
+
+    register(seeded, email="adm-auto@b.com")
+    make_admin(seeded, "adm-auto@b.com")
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["payment_status"] == "paid", row
+    assert row["supplier_status"] == "sent", row
+    assert row["supplier_order_id"] == "CJ-ORDER-1", row
+    assert row["status"] == "processing", row
+    assert "auto" in (row["sent_to_supplier_by"] or ""), row
+
+    paths = [p for p, _ in cj_client._client.calls]
+    assert "/v1/shopping/order/createOrder" in paths
+
+    assert len(sent_mail) == 1, sent_mail
+    assert "CJ-ORDER-1" in sent_mail[0]["html_content"]
+    cj_client._reset_token()
+
+
+def test_a_paid_order_cj_cannot_fulfil_fails_loudly_not_silently(seeded, card_shop):
+    """
+    Auto-send is best-effort on purpose: whether the customer paid must never
+    depend on whether CJ is healthy. A line CJ cannot identify leaves the
+    payment recorded and the failure — with its reason — where the owner
+    already looks for failures.
+    """
+    register(seeded, email="autofail@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    # p1 carries no supplier reference here, so the send cannot succeed.
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    started = seeded.post(f"/api/orders/{order['id']}/pay-session").json()
+    card_shop.paid_price = f"{started['amount']:.2f}"
+
+    seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-1"},
+                follow_redirects=False)
+
+    register(seeded, email="adm-af@b.com")
+    make_admin(seeded, "adm-af@b.com")
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["payment_status"] == "paid", row
+    assert row["supplier_order_id"] is None, row
+    assert row["supplier_status"] == "failed", row
+    assert "supplier reference" in (row["supplier_error"] or ""), row
+
+
 def test_an_unpaid_order_is_never_bought_from_the_supplier(seeded):
     """
     Buying the goods is the point of no return: CJ ships, the money is spent,

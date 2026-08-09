@@ -113,6 +113,12 @@ await ctx.route('**/api/**', async (route) => {
     placedOrder = JSON.parse(req.postData() || '{}');
     return reply({ id: 'o1', order_number: 'AUR-TEST-1', total_amount: 93.11 });
   }
+  if (p.endsWith('/api/orders/o1/pay-session')) {
+    return reply({
+      payment_page_url: `http://127.0.0.1:${PORT}/fake-iyzico-page`,
+      amount: 24.85, currency: 'USD',
+    });
+  }
   if (p.endsWith('/api/orders/o1/payment-instructions')) {
     return reply({
       order_id: 'o1', order_number: 'AUR-TEST-1', amount: 93.11, currency: 'SAR',
@@ -198,8 +204,40 @@ await page.waitForURL(/\/order\/o1\/pay/, { timeout: 15000 });
 check('ما اختاره العميل هو ما وصل الخادم',
   placedOrder?.payment_method === 'on_confirmation', JSON.stringify(placedOrder?.payment_method));
 
+// --- 3b. Card: no second screen between the till and the card page ---------
+// The flow every shop in the world runs: address in, "ادفع الآن", gateway.
+// There used to be an intermediate page asking the customer to press "pay"
+// again — a step nobody expects, on the click that earns the money.
+methods = [{ id: 'card', provider: 'iyzico', currency: 'USD' }];
+await gotoCheckout();
+for (const [name, value] of Object.entries({
+  firstName: 'Younes', lastName: 'S', email: 'buyer@x.com', phone: '+905000000000',
+  street: 'Bagdat Cad 12', city: 'Istanbul', state: 'Istanbul', zipCode: '34000',
+})) {
+  await page.fill(`[name="${name}"]`, value);
+}
+const payNow = await page.locator('button[type="submit"]').innerText();
+check('الزرّ يسمّي فعله: «ادفع الآن»', /ادفع الآن|Pay now/.test(payNow), payNow.trim());
+
+placedOrder = null;
+let reachedGateway = true;
+await page.locator('button[type="submit"]').click();
+try {
+  await page.waitForURL(/fake-iyzico-page/, { timeout: 15000 });
+} catch {
+  reachedGateway = false;
+}
+check('البطاقة: من «ادفع الآن» إلى صفحة الدفع مباشرة بلا محطة وسيطة',
+  reachedGateway, reachedGateway ? '' : `stuck at ${page.url()}`);
+check('البطاقة: الطريقة المرسلة للخادم صحيحة',
+  placedOrder?.payment_method === 'card', JSON.stringify(placedOrder?.payment_method));
+
 // --- 4. The account shown is the account the server holds ------------------
-methods = [methods[0], methods[1]];   // bank transfer first again
+methods = [
+  { id: 'bank_transfer', bank_name: 'VakifBank', account_holder: 'Auraa Luxury',
+    iban: IBAN, swift: 'TVBATR2A', account_currency: 'TRY' },
+  { id: 'on_confirmation' },
+];
 await page.goto(`${base}/order/o1/pay`, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('[data-testid="bank-transfer-instructions"]', { timeout: 15000 });
 const shown = await page.locator('[data-testid="bank-transfer-instructions"]').innerText();

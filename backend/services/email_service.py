@@ -365,3 +365,67 @@ def send_order_awaiting_approval_email(order: dict) -> bool:
         subject=f"{headline} #{number}",
         html_content=html_content,
     )
+
+
+def send_order_paid_email(order: dict, error: str | None = None) -> bool:
+    """
+    The alert that matters on a card shop: the money arrived.
+
+    Says in the subject line whether the order also reached CJ on its own,
+    because the one time it did not is the one time the owner has to act —
+    and an inbox where success and failure look alike gets skimmed.
+    """
+    if not email_is_configured():
+        logger.error(
+            "SENDGRID_API_KEY is not set — nobody was told that order "
+            f"{order.get('order_number')} was paid"
+        )
+        return False
+
+    number = order.get("order_number") or order.get("id")
+    total = order.get("total_amount", 0)
+    supplier_id = order.get("supplier_order_id")
+
+    if error is None and supplier_id:
+        headline = "طلب مدفوع وأُرسل إلى CJ تلقائياً"
+        sub = (f"رقمه لدى CJ: {supplier_id} — يتبقّى دفعه من رصيدك هناك، "
+               "ولا شيء غير ذلك.")
+        color = "#166534"
+    else:
+        headline = "⚠️ طلب مدفوع وتعذّر إرساله إلى CJ"
+        sub = error or order.get("supplier_error") or "سبب غير معروف"
+        color = "#b91c1c"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family:system-ui,Arial,sans-serif;background:#faf7f2;padding:24px">
+      <div style="max-width:640px;margin:auto;background:#fff;border-radius:12px;padding:24px">
+        <h2 style="color:{color};margin:0 0 4px">{headline}</h2>
+        <p style="color:#666;margin:0 0 20px">{sub}</p>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+          <tr><td style="padding:6px 0;color:#666">رقم الطلب</td>
+              <td style="padding:6px 0;font-weight:bold" dir="ltr">{number}</td></tr>
+          <tr><td style="padding:6px 0;color:#666">الإجمالي</td>
+              <td style="padding:6px 0;font-weight:bold" dir="ltr">{total} SAR</td></tr>
+          <tr><td style="padding:6px 0;color:#666">مرجع الدفع</td>
+              <td style="padding:6px 0" dir="ltr">{order.get('payment_reference') or '—'}</td></tr>
+        </table>
+
+        <a href="{STORE_ADMIN_URL}"
+           style="display:inline-block;background:{color};color:#fff;text-decoration:none;
+                  padding:12px 24px;border-radius:8px;font-weight:bold">
+          فتح الطلب
+        </a>
+      </div>
+    </body>
+    </html>
+    """
+
+    return send_email(
+        to_email=ORDER_NOTIFY_EMAIL,
+        subject=f"{headline} #{number}",
+        html_content=html_content,
+    )

@@ -165,6 +165,31 @@ for (const [name, route, selector] of TOUCH) {
     box ? `${box.w}×${box.h}` : `${selector} not found`);
 }
 
+// Every currency the shop knows must be reachable in its picker. The list
+// rendered 22 rows with no scroll of its own: on a sticky navbar everything
+// below the viewport's edge — including the lira the shop's own owner went
+// hunting for — could not be reached by any means. The check scrolls INSIDE
+// the menu and demands the page itself never move: reaching an option by
+// scrolling the whole page away is not a working dropdown.
+await page.setViewportSize({ width: 1280, height: 700 });
+await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(700);
+await page.click('[data-testid="currency-toggle"]');
+await page.waitForSelector('[data-testid="currency-menu"]', { timeout: 5000 });
+const lira = await page.evaluate(() => {
+  const el = document.querySelector('[data-testid="currency-option-TRY"]');
+  if (!el) return { ok: false, why: 'TRY not in the menu' };
+  el.scrollIntoView({ block: 'nearest' });
+  const r = el.getBoundingClientRect();
+  const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  const hit = el === top || el.contains(top) || (top && top.contains(el));
+  if (!hit) return { ok: false, why: `covered by ${top ? top.tagName : 'nothing'}` };
+  if (window.scrollY !== 0) return { ok: false, why: `page scrolled ${window.scrollY}px to reach it` };
+  return { ok: true, why: '' };
+});
+check('الليرة التركية قابلة للوصول والنقر في قائمة العملات', lira.ok, lira.why);
+await page.setViewportSize({ width: 390, height: 844 });
+
 // The wordmark, at the width where it broke.
 await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(700);

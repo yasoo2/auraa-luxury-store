@@ -80,6 +80,25 @@ await ctx.route('**/api/**', (route) => {
   const p = new URL(route.request().url()).pathname;
   const reply = (b) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
   if (p.endsWith('/api/auth/me')) return reply({ id: 'u1', email: 'b@x.com', first_name: 'يونس', is_admin: true });
+  if (p.endsWith('/api/admin/orders')) {
+    // The shape that actually broke the admin: a long English CJ error, long
+    // emails, and enough nowrap columns to force the table wider than any
+    // screen. The page must scroll the table, not hang off the edge.
+    const err = "CJ refused the order: CJ error 400: {'code': 1600300, 'result': False, "
+      + "'message': 'shippingCountry must be not empty', 'requestId': 'de3bef4aab5f4ceb9c8b17892c8aad73'}";
+    return reply([
+      { id: '0d4bef52-61eb-498b-bd89-0327be6db222', order_number: 'AUR-20260809-890981CC',
+        customer_name: 'Halaa feakom Gggg', customer_email: 'halaafeakomgggg@gmail.com',
+        total_amount: 325.59, status: 'pending', payment_status: 'paid', payment_method: 'card',
+        supplier_status: 'failed', supplier_error: err, supplier_order_id: null,
+        created_at: '2026-08-09T20:28:00Z', items: [{ product_name: 'طقم أقراط فاخر', quantity: 1, price: 325.59 }] },
+      { id: 'c37d2d86-0a25-4f26-8fcb-9cffeca55601', order_number: 'AUR-20260808-84A7FAA1',
+        customer_name: 'Younes Sowady', customer_email: 'ysowady@gmail.com',
+        total_amount: 121.96, status: 'pending', payment_status: 'awaiting_payment', payment_method: 'card',
+        supplier_status: null, supplier_error: null, supplier_order_id: null,
+        created_at: '2026-08-08T10:17:00Z', items: [] },
+    ]);
+  }
   if (/\/api\/products\/p\d/.test(p)) return reply(products[0]);
   if (p.includes('/api/products')) return reply(products);
   if (p.endsWith('/api/cart')) {
@@ -97,7 +116,7 @@ const PAGES = [['الرئيسية', '/'], ['المنتجات', '/products'], ['�
                ['السلة', '/cart'], ['السداد', '/checkout'], ['المفضّلة', '/wishlist'],
                ['الدخول', '/auth'], ['تتبّع الطلب', '/order-tracking'],
                ['حسابي', '/profile?tab=orders'], ['سياسة الإرجاع', '/return-policy'],
-               ['اتصل بنا', '/contact']];
+               ['اتصل بنا', '/contact'], ['إدارة الطلبات', '/admin/orders']];
 
 for (const [name, route] of PAGES) {
   await page.goto(`${base}${route}`, { waitUntil: 'domcontentloaded' });
@@ -117,6 +136,22 @@ for (const [name, route] of PAGES) {
         .filter((n) => n.nodeType === 3 && n.textContent.trim())
         .map((n) => n.textContent.trim()).join(' ');
       if (!ownText) continue;
+
+      // Text inside a WORKING horizontal scroller is reachable — the reader
+      // scrolls the container, like the admin orders table. It only counts
+      // as working when the scroller itself sits fully on screen; a scroller
+      // that has itself been pushed off the edge (the flex min-width bug
+      // this check caught) rescues nothing. body{overflow-x:hidden} clips
+      // rather than scrolls, and never qualifies.
+      let scrolled = false;
+      for (let a = el.parentElement; a && a !== document.body; a = a.parentElement) {
+        const ox = getComputedStyle(a).overflowX;
+        if ((ox === 'auto' || ox === 'scroll') && a.scrollWidth > a.clientWidth + 1) {
+          const ar = a.getBoundingClientRect();
+          if (ar.left >= -4 && ar.right <= vw + 4) { scrolled = true; break; }
+        }
+      }
+      if (scrolled) continue;
 
       // A few pixels of rounding is not a broken page; a whole element
       // hanging off the side is.

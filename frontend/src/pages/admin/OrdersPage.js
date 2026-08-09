@@ -11,7 +11,8 @@ import {
   AlertCircle,
   RefreshCw,
   Search,
-  Filter
+  Filter,
+  Trash2
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -55,10 +56,13 @@ const OrdersPage = () => {
   };
 
   const orderStatuses = {
-    pending: { 
-      label: isRTL ? 'قيد المراجعة' : 'Pending', 
+    // "قيد المراجعة" was the approval era talking: nothing is reviewed any
+    // more — a pending order is simply new, and the payment pill next to it
+    // says what it is actually waiting for.
+    pending: {
+      label: isRTL ? 'جديد' : 'New',
       color: 'bg-yellow-100 text-yellow-800',
-      icon: Clock 
+      icon: Clock
     },
     processing: { 
       label: isRTL ? 'قيد المعالجة' : 'Processing', 
@@ -128,6 +132,19 @@ const OrdersPage = () => {
   };
 
   const isPaid = (order) => order?.payment_status === 'paid';
+  const isCard = (order) => order?.payment_method === 'card';
+
+  // Deleting is for records that never cost anybody money: unpaid tests and
+  // cancelled orders. Anything bought at CJ, and any paid order that was not
+  // cancelled first, is refused by the server — mirrored here so the button
+  // only appears where pressing it can succeed.
+  const deletable = (order) =>
+    !order.supplier_order_id && (!isPaid(order) || order.status === 'cancelled');
+
+  // Every order carries a readable number like AUR-20260809-XXXX; the raw
+  // UUID went on screen anyway, and nobody can tell two UUIDs apart at a
+  // glance or read one over the phone.
+  const orderLabel = (order) => order.order_number || `#${(order.id || '').slice(0, 8)}`;
 
   // There is no gateway to ask whether the money arrived — the bank statement
   // is the only source of truth, and the owner is the only one reading it.
@@ -158,6 +175,30 @@ const OrdersPage = () => {
       // record it: that flag is what unlocks spending at CJ.
       setActionError(error.response?.data?.detail
         || (isRTL ? 'تعذّر حفظ حالة الدفع — لم يتغيّر شيء' : 'Could not save the payment status — nothing changed'));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const deleteOrder = async (order) => {
+    const ok = window.confirm(isRTL
+      ? `يُحذف سجلّ الطلب ${orderLabel(order)} نهائياً ولا يمكن استرجاعه. متأكد؟`
+      : `The record of order ${orderLabel(order)} will be permanently deleted. Sure?`);
+    if (!ok) return;
+    setSending(true);
+    try {
+      await axios.delete(`${API}/admin/orders/${order.id}`);
+      // Remove the row only after the server says it is gone — a row that
+      // vanishes while the record survives is the same lie as a fake success.
+      setOrders(prev => prev.filter(o => o.id !== order.id));
+      if (selectedOrder && selectedOrder.id === order.id) {
+        setSelectedOrder(null);
+        setShowOrderModal(false);
+      }
+      setActionError('');
+    } catch (error) {
+      setActionError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر حذف الطلب — لم يتغيّر شيء' : 'Could not delete the order — nothing changed'));
     } finally {
       setSending(false);
     }
@@ -225,8 +266,12 @@ const OrdersPage = () => {
   const failedAtSupplier = orders.filter(
     (order) => !order.supplier_order_id && order.supplier_status === 'failed'
   );
+  // Only manual methods belong in the "check your bank statement" queue. An
+  // unpaid card order has no statement to check — the customer simply never
+  // finished iyzico's page — and counting them here sent the owner hunting
+  // through a bank account for money nobody claimed to have sent.
   const unpaid = orders.filter(
-    (order) => !isPaid(order) && !['cancelled'].includes(order.status)
+    (order) => !isPaid(order) && !isCard(order) && !['cancelled'].includes(order.status)
   );
 
   const filteredOrders = orders.filter(order => {
@@ -237,8 +282,10 @@ const OrdersPage = () => {
         : statusFilter === 'supplier_failed'
           ? !order.supplier_order_id && order.supplier_status === 'failed'
           : statusFilter === 'unpaid'
-            ? !isPaid(order) && order.status !== 'cancelled'
-            : order.status === statusFilter;
+            ? !isPaid(order) && !isCard(order) && order.status !== 'cancelled'
+            : statusFilter === 'card_incomplete'
+              ? isCard(order) && !isPaid(order) && order.status !== 'cancelled'
+              : order.status === statusFilter;
     // A deleted user leaves customer_name null, and .toLowerCase() on null
     // takes the whole page down the moment anyone types in the search box.
     const haystack = [order.customer_name, order.customer_email, order.id, order.order_number]
@@ -406,7 +453,10 @@ const OrdersPage = () => {
             >
               <option value="all">{isRTL ? 'جميع الحالات' : 'All Statuses'}</option>
               <option value="unpaid">
-                {isRTL ? 'لم يصل مبلغه' : 'Not paid yet'}
+                {isRTL ? 'حوالة لم يصل مبلغها' : 'Transfer not received'}
+              </option>
+              <option value="card_incomplete">
+                {isRTL ? 'بطاقة لم يكتمل دفعها' : 'Card not completed'}
               </option>
               <option value="awaiting_approval">
                 {isRTL ? 'بانتظار موافقتي' : 'Needs my approval'}
@@ -455,7 +505,7 @@ const OrdersPage = () => {
                 return (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      #{order.id}
+                      <span title={order.id} dir="ltr">{orderLabel(order)}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
@@ -483,7 +533,9 @@ const OrdersPage = () => {
                         >
                           {isPaid(order)
                             ? (isRTL ? 'مدفوع' : 'Paid')
-                            : (isRTL ? 'غير مدفوع' : 'Unpaid')}
+                            : isCard(order)
+                              ? (isRTL ? 'بطاقة — لم يكتمل الدفع' : 'Card — not completed')
+                              : (isRTL ? 'غير مدفوع' : 'Unpaid')}
                         </span>
                         {isAwaitingApproval(order) ? (
                           <span
@@ -508,6 +560,22 @@ const OrdersPage = () => {
                             {isRTL ? 'فشل الإرسال إلى CJ' : 'Send to CJ failed'}
                           </span>
                         ) : null}
+                        {/* The reason lived only deep inside the details
+                            dialog; the owner stared at the badge and had to
+                            go digging for the one line that says what to
+                            fix. It belongs next to the badge. */}
+                        {!order.supplier_order_id
+                          && order.supplier_status === 'failed'
+                          && order.supplier_error && (
+                          <span
+                            className="text-xs text-red-700 max-w-[18rem] truncate"
+                            dir="ltr"
+                            title={order.supplier_error}
+                            data-testid="row-supplier-error"
+                          >
+                            {order.supplier_error}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -518,8 +586,14 @@ const OrdersPage = () => {
                         {/* The approval action used to live only at the bottom of
                             the details modal, below two sections that need
                             scrolling past. The one person who has to press it
-                            could not find it. It gets a door of its own here. */}
-                        {!order.supplier_order_id && (
+                            could not find it. It gets a door of its own here.
+
+                            An unpaid CARD order gets no green button at all:
+                            "confirm payment" is a bank-transfer action, the
+                            server refuses it for cards, and a button that only
+                            exists to be refused teaches the owner to distrust
+                            every button on the page. */}
+                        {!order.supplier_order_id && !(isCard(order) && !isPaid(order)) && (
                           <Button
                             onClick={() => openOrder(order)}
                             data-testid="row-review-and-send"
@@ -546,6 +620,19 @@ const OrdersPage = () => {
                           <Eye className="h-4 w-4 me-1" />
                           {isRTL ? 'عرض' : 'View'}
                         </Button>
+                        {deletable(order) && (
+                          <Button
+                            onClick={() => deleteOrder(order)}
+                            disabled={sending}
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                            data-testid="row-delete-order"
+                          >
+                            <Trash2 className="h-4 w-4 me-1" />
+                            {isRTL ? 'حذف' : 'Delete'}
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -563,7 +650,8 @@ const OrdersPage = () => {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {isRTL ? `تفاصيل الطلب #${selectedOrder.id}` : `Order Details #${selectedOrder.id}`}
+                  {isRTL ? 'تفاصيل الطلب ' : 'Order Details '}
+                  <span dir="ltr" title={selectedOrder.id}>{orderLabel(selectedOrder)}</span>
                 </h2>
                 <Button
                   onClick={() => setShowOrderModal(false)}
@@ -590,18 +678,29 @@ const OrdersPage = () => {
                     <h3 className="text-lg font-semibold">
                       {isPaid(selectedOrder)
                         ? (isRTL ? 'الدفع مؤكَّد' : 'Payment confirmed')
-                        : (isRTL ? 'لم يصل المبلغ بعد' : 'Not paid yet')}
+                        : isCard(selectedOrder)
+                          ? (isRTL ? 'لم يكتمل الدفع بالبطاقة' : 'Card payment not completed')
+                          : (isRTL ? 'لم يصل المبلغ بعد' : 'Not paid yet')}
                     </h3>
                     <p className="text-sm text-gray-700">
                       {isRTL ? 'طريقة الدفع: ' : 'Method: '}
-                      {selectedOrder.payment_method === 'bank_transfer'
-                        ? (isRTL ? 'حوالة بنكية' : 'Bank transfer')
-                        : (isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation')}
+                      {isCard(selectedOrder)
+                        ? (isRTL ? 'بطاقة عبر iyzico' : 'Card via iyzico')
+                        : selectedOrder.payment_method === 'bank_transfer'
+                          ? (isRTL ? 'حوالة بنكية' : 'Bank transfer')
+                          : (isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation')}
+                      {isCard(selectedOrder) && selectedOrder.payment_amount_charged
+                        ? ` — ${selectedOrder.payment_amount_charged} ${selectedOrder.payment_currency_charged || ''}`
+                        : ''}
                       {selectedOrder.payment_reference
                         ? ` — ${selectedOrder.payment_reference}` : ''}
                     </p>
                   </div>
-                  {isPaid(selectedOrder) ? (
+                  {/* The confirm/undo pair is for money a human saw land in a
+                      bank account. A card's truth comes from iyzico's signed
+                      answer and from nowhere else, so for card orders the
+                      buttons do not exist — the server refuses them anyway. */}
+                  {!isCard(selectedOrder) && (isPaid(selectedOrder) ? (
                     <Button
                       onClick={() => confirmPayment(selectedOrder.id, false)}
                       disabled={sending || !!selectedOrder.supplier_order_id}
@@ -620,13 +719,22 @@ const OrdersPage = () => {
                     >
                       {isRTL ? 'أكّد استلام المبلغ' : 'Confirm payment received'}
                     </Button>
-                  )}
+                  ))}
                 </div>
+                {isCard(selectedOrder) && !isPaid(selectedOrder) && selectedOrder.payment_error && (
+                  <p className="mt-2 text-xs text-red-700" dir="ltr" data-testid="modal-payment-error">
+                    {selectedOrder.payment_error}
+                  </p>
+                )}
                 {!isPaid(selectedOrder) && (
                   <p className="mt-2 text-xs text-gray-600">
-                    {isRTL
-                      ? 'راجع كشف حسابك أولاً. لا تُشترى البضاعة من CJ قبل هذا التأكيد.'
-                      : 'Check your bank statement first. Nothing is bought from CJ before this is confirmed.'}
+                    {isCard(selectedOrder)
+                      ? (isRTL
+                        ? 'العميل لم يُكمل صفحة دفع iyzico. دفع البطاقة لا يُؤكَّد يدوياً أبداً — وإن كان طلباً تجريبياً فاحذفه من القائمة.'
+                        : 'The customer never finished iyzico’s payment page. Card payments are never confirmed by hand — if this was a test order, delete it from the list.')
+                      : (isRTL
+                        ? 'راجع كشف حسابك أولاً. لا تُشترى البضاعة من CJ قبل هذا التأكيد.'
+                        : 'Check your bank statement first. Nothing is bought from CJ before this is confirmed.')}
                   </p>
                 )}
               </div>

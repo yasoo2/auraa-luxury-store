@@ -1040,6 +1040,107 @@ def test_a_paid_order_cj_cannot_fulfil_fails_loudly_not_silently(seeded, card_sh
     assert "supplier reference" in (row["supplier_error"] or ""), row
 
 
+def test_a_card_payment_cannot_be_confirmed_by_hand(seeded, card_shop):
+    """
+    The confirm button exists because a bank statement has a human reader.
+    A card has no statement to read — iyzico's signed answer is the only
+    witness — and the admin page offered the same green button on abandoned
+    card sessions, one click away from spending CJ money against a payment
+    that never happened.
+    """
+    register(seeded, email="handpay@b.com")
+    make_admin(seeded, "handpay@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+
+    r = seeded.post(f"/api/admin/orders/{order['id']}/confirm-payment",
+                    json={"paid": True, "reference": "wishful thinking"})
+    assert r.status_code == 409, r.text
+
+    info = seeded.get(f"/api/orders/{order['id']}/payment-instructions").json()
+    assert info["payment_status"] == "awaiting_payment", info
+
+
+def test_an_abandoned_card_order_can_be_swept_away(seeded, card_shop):
+    """Unpaid test orders are clutter, and clutter hides the rows that matter."""
+    register(seeded, email="sweeper@b.com")
+    make_admin(seeded, "sweeper@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+
+    r = seeded.delete(f"/api/admin/orders/{order['id']}")
+    assert r.status_code == 200, r.text
+    ids = [o["id"] for o in seeded.get("/api/admin/orders").json()]
+    assert order["id"] not in ids
+
+
+def test_a_paid_order_refuses_deletion_until_cancelled(seeded, card_shop):
+    """
+    A paid record is money the books point at; it does not vanish on one
+    click. Cancelling first is the deliberate second step.
+    """
+    register(seeded, email="paidsweep@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    # p1 has no supplier reference, so the auto-send fails and the order
+    # stays paid with nothing bought — the exact shape of a paid test order.
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    started = seeded.post(f"/api/orders/{order['id']}/pay-session").json()
+    card_shop.paid_price = f"{started['amount']:.2f}"
+    seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-1"},
+                follow_redirects=False)
+
+    register(seeded, email="adm-sweep@b.com")
+    make_admin(seeded, "adm-sweep@b.com")
+
+    r = seeded.delete(f"/api/admin/orders/{order['id']}")
+    assert r.status_code == 409, r.text
+
+    assert seeded.put(f"/api/admin/orders/{order['id']}",
+                      json={"status": "cancelled"}).status_code == 200
+    r = seeded.delete(f"/api/admin/orders/{order['id']}")
+    assert r.status_code == 200, r.text
+    ids = [o["id"] for o in seeded.get("/api/admin/orders").json()]
+    assert order["id"] not in ids
+
+
+def test_an_order_bought_at_cj_keeps_its_record(seeded, card_shop, monkeypatch):
+    """
+    Deleting a record does not un-buy the goods: CJ still has the order and
+    the shop still owes it an explanation. The record stays, full stop.
+    """
+    import asyncio
+
+    monkeypatch.setattr(cj_client, "_client", _FulfilmentCJ())
+    monkeypatch.setattr(cj_client, "CJ_EMAIL", "shop@example.com")
+    monkeypatch.setattr(cj_client, "CJ_API_KEY", "APIKEY")
+    cj_client._reset_token()
+    asyncio.get_event_loop().run_until_complete(
+        seeded._db.products.update_one({"id": "p1"}, {"$set": {
+            "source": "cj_dropshipping", "external_id": "CJ-777", "sku": "SKU-777"}}))
+
+    register(seeded, email="cjkeeper@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    started = seeded.post(f"/api/orders/{order['id']}/pay-session").json()
+    card_shop.paid_price = f"{started['amount']:.2f}"
+    seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-1"},
+                follow_redirects=False)
+
+    register(seeded, email="adm-keeper@b.com")
+    make_admin(seeded, "adm-keeper@b.com")
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["supplier_order_id"] == "CJ-ORDER-1", row
+
+    r = seeded.delete(f"/api/admin/orders/{order['id']}")
+    assert r.status_code == 409, r.text
+    assert order["id"] in [o["id"] for o in seeded.get("/api/admin/orders").json()]
+    cj_client._reset_token()
+
+
 def test_an_unpaid_order_is_never_bought_from_the_supplier(seeded):
     """
     Buying the goods is the point of no return: CJ ships, the money is spent,

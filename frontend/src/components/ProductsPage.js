@@ -185,16 +185,16 @@ const ProductsPage = () => {
               variant="outline"
               className="w-full mb-4"
             >
-              <Filter className="h-4 w-4 mr-2" />
+              <Filter className="h-4 w-4 me-2" />
               {isRTL ? 'المرشحات' : 'Filters'}
-              {showMobileFilters ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
+              {showMobileFilters ? <ChevronUp className="h-4 w-4 me-2" /> : <ChevronDown className="h-4 w-4 me-2" />}
             </Button>
           </div>
 
           <div className={`lg:w-1/4 ${showMobileFilters || 'hidden'} lg:block`}>
             <Card className="luxury-card p-4 sm:p-6 sticky top-24">
               <div className="flex items-center mb-4">
-                <SlidersHorizontal className="h-5 w-5 ml-2 text-amber-600" />
+                <SlidersHorizontal className="h-5 w-5 me-2 text-amber-600" />
                 <h2 className="text-base sm:text-lg font-bold text-gray-900">{isRTL ? 'تصفية النتائج' : 'Filter Results'}</h2>
               </div>
               <div className="mb-6">
@@ -322,7 +322,7 @@ const ProductsPage = () => {
                       </div>
                       <div className="quick-add bg-white/90 backdrop-blur-sm p-3">
                         <Button onClick={() => handleAddToCart(product.id)} className="w-full">
-                          <ShoppingCart className="h-4 w-4 ml-2" />
+                          <ShoppingCart className="h-4 w-4 me-2" />
                           {isRTL ? 'إضافة سريعة' : 'Quick add'}
                         </Button>
                       </div>
@@ -363,7 +363,7 @@ const ProductsPage = () => {
                       </div>
                       <div className={viewMode === 'grid' ? "flex space-x-2" : "flex space-x-2 mt-4"}>
                         <Button onClick={() => handleAddToCart(product.id)} className="btn-luxury flex-1" data-testid={`add-to-cart-${product.id}`}>
-                          <ShoppingCart className="h-4 w-4 ml-2" />
+                          <ShoppingCart className="h-4 w-4 me-2" />
                           {isRTL ? 'أضف للسلة' : 'Add to Cart'}
                         </Button>
                         <Button 

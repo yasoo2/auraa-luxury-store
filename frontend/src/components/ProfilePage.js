@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { User, Package, MapPin, Settings, Eye } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -18,7 +18,7 @@ const API = `${BACKEND_URL}/api`;
 
 const ProfilePage = () => {
   const { user } = useAuth();
-  const { language } = useLanguage();
+  const { language, formatMoney } = useLanguage();
   const isRTL = language === 'ar';
   const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
@@ -69,29 +69,55 @@ const ProfilePage = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  // "في الانتظار" told the customer nothing: waiting for what, by whom, for
-  // how long? Each label now names what is actually happening to their order.
-  const getStatusText = (status) => {
+  // "في الانتظار" told the customer nothing, and its replacement "بانتظار
+  // التأكيد" was worse: it told a paying customer their order sat waiting for
+  // somebody's blessing. Nothing on a dropshipping shop waits for a human —
+  // the only thing an order can be waiting for is the customer's own payment,
+  // so that is the only wait the screen is allowed to name.
+  const getStatusText = (order) => {
+    if (order?.status === 'pending' && order?.payment_status !== 'paid') {
+      return 'بانتظار الدفع';
+    }
     const statusTexts = {
-      pending: 'بانتظار التأكيد',
+      // Paid and pending = the seconds between payment and the automatic
+      // send to the supplier. To the customer that is simply "being prepared".
+      pending: 'قيد التجهيز',
       processing: 'قيد التجهيز',
       shipped: 'تم الشحن',
       delivered: 'تم التسليم',
       cancelled: 'ملغي'
     };
-    return statusTexts[status] || status;
+    return statusTexts[order?.status] || order?.status;
   };
 
   // What happens next, in the customer's words.
-  const getStatusNote = (status) => {
+  //
+  // This used to depend on the order status alone, so a pending order always
+  // read "we will contact you to settle payment" — including for a customer
+  // who had chosen bank transfer and was waiting on nobody but themselves.
+  const getStatusNote = (order) => {
+    const status = order?.status;
+    if (status === 'pending' && order?.payment_status !== 'paid') {
+      if (order?.payment_method === 'bank_transfer') {
+        return 'وصلنا طلبك وننتظر وصول الحوالة. اضغط «أكمِل الدفع» لتفاصيل الحساب ورقم الطلب.';
+      }
+      if (order?.payment_method === 'card') {
+        return 'لم يكتمل الدفع بالبطاقة. اضغط «أكمِل الدفع» لإتمامه — يبدأ تجهيز الطلب فور نجاحه.';
+      }
+      return 'وصلنا طلبك. نراجعه ونتواصل معك لإتمام الدفع قبل الشحن.';
+    }
     const notes = {
-      pending: 'وصلنا طلبك. نراجعه ونتواصل معك لإتمام الدفع قبل الشحن.',
+      pending: 'تم تأكيد استلام المبلغ. نجهّز طلبك للشحن.',
       processing: 'تم تأكيد طلبك ويجري تجهيزه للشحن.',
       shipped: 'طلبك في الطريق إليك.',
       cancelled: 'أُلغي هذا الطلب. تواصل معنا إن كان ذلك غير متوقّع.',
     };
     return notes[status] || '';
   };
+
+  const awaitingPayment = (order) =>
+    order?.payment_status !== 'paid'
+    && !['cancelled', 'delivered', 'shipped'].includes(order?.status);
 
   // A payment method the shop actually offers. Anything that was not 'card'
   // used to be labelled as an electronic payment — one that never happened,
@@ -187,7 +213,7 @@ const ProfilePage = () => {
           <TabsContent value="profile">
             <Card className="luxury-card p-6">
               <div className="flex items-center mb-6">
-                <User className="h-6 w-6 text-amber-600 ml-3" />
+                <User className="h-6 w-6 text-amber-600 me-3" />
                 <h2 className="text-xl font-bold text-gray-900">بياناتي الشخصية</h2>
               </div>
               
@@ -254,9 +280,11 @@ const ProfilePage = () => {
                   <p className="text-gray-600 mb-4">
                     لم تقم بأي طلبات بعد
                   </p>
-                  <Button className="btn-luxury">
-                    تابع التسوق
-                  </Button>
+                  <Link to="/products">
+                    <Button className="btn-luxury">
+                      تابع التسوق
+                    </Button>
+                  </Link>
                 </Card>
               ) : (
                 orders.map((order) => (
@@ -272,20 +300,29 @@ const ProfilePage = () => {
                         </p>
                         {/* A one-word status leaves the customer guessing.
                             Say what is happening and what comes next. */}
-                        {getStatusNote(order.status) && (
+                        {getStatusNote(order) && (
                           <p className="text-sm text-amber-700 mt-2" data-testid="order-status-note">
-                            {getStatusNote(order.status)}
+                            {getStatusNote(order)}
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2 mt-4 md:mt-0">
+                      <div className="flex items-center gap-2 mt-4 md:mt-0">
                         <Badge className={getStatusColor(order.status)}>
-                          {getStatusText(order.status)}
+                          {getStatusText(order)}
                         </Badge>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 ml-1" />
-                          عرض التفاصيل
-                        </Button>
+                        {/* There was a "عرض التفاصيل" button here with no
+                            onClick — it had never done anything since the day
+                            it was added. What a customer with an unpaid order
+                            actually needs is the account to pay into, so that
+                            is what this button is now. */}
+                        {awaitingPayment(order) && (
+                          <Link to={`/order/${order.id}/pay`} data-testid="complete-payment">
+                            <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                              <Eye className="h-4 w-4 me-1" />
+                              أكمِل الدفع
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                     </div>
                     
@@ -297,7 +334,10 @@ const ProfilePage = () => {
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">المجموع:</p>
-                          <p className="font-medium text-amber-600">{order.total_amount} ر.س</p>
+                          {/* Printed "ر.س" after the number whatever currency
+                              the shopper had selected, so a total shown in
+                              dollars was labelled in riyals. */}
+                          <p className="font-medium text-amber-600">{formatMoney(order.total_amount)}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">طريقة الدفع:</p>
@@ -327,7 +367,7 @@ const ProfilePage = () => {
               <Card className="luxury-card p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center">
-                    <MapPin className="h-6 w-6 text-amber-600 ml-3" />
+                    <MapPin className="h-6 w-6 text-amber-600 me-3" />
                     <h3 className="text-xl font-bold text-gray-900">عنوان الشحن</h3>
                   </div>
                   <Button

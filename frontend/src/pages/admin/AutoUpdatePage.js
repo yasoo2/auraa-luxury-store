@@ -191,7 +191,7 @@ const AutoUpdatePage = () => {
     if (!dateString) return isRTL ? 'غير متوفر' : 'Not available';
     
     const date = new Date(dateString);
-    return date.toLocaleString(isRTL ? 'ar-SA' : 'en-US', {
+    return date.toLocaleString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -349,9 +349,9 @@ const AutoUpdatePage = () => {
                   size="sm"
                 >
                   {refreshing ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    <RefreshCw className="h-4 w-4 animate-spin me-2" />
                   ) : (
-                    <DollarSign className="h-4 w-4 mr-2" />
+                    <DollarSign className="h-4 w-4 me-2" />
                   )}
                   {isRTL ? 'تحديث العملات' : 'Update Currency'}
                 </Button>
@@ -364,9 +364,9 @@ const AutoUpdatePage = () => {
                   size="sm"
                 >
                   {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    <RefreshCw className="h-4 w-4 animate-spin me-2" />
                   ) : (
-                    <Package className="h-4 w-4 mr-2" />
+                    <Package className="h-4 w-4 me-2" />
                   )}
                   {isRTL ? 'تحديث الأسعار' : 'Update Prices'}
                 </Button>
@@ -443,9 +443,9 @@ const AutoUpdatePage = () => {
                   className="w-full"
                 >
                   {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    <RefreshCw className="h-4 w-4 animate-spin me-2" />
                   ) : (
-                    <Package className="h-4 w-4 mr-2" />
+                    <Package className="h-4 w-4 me-2" />
                   )}
                   {isRTL ? 'مزامنة من AliExpress' : 'Sync from AliExpress'}
                 </Button>
@@ -457,36 +457,35 @@ const AutoUpdatePage = () => {
                   className="w-full"
                 >
                   {loading ? (
-                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                    <RefreshCw className="h-4 w-4 animate-spin me-2" />
                   ) : (
-                    <Package className="h-4 w-4 mr-2" />
+                    <Package className="h-4 w-4 me-2" />
                   )}
                   {isRTL ? 'مزامنة من Amazon' : 'Sync from Amazon'}
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Bulk Import */}
+            {/* Recent import jobs.
+                There was a drag-and-drop CSV/Excel box above this list, with a
+                "Choose File" button. No upload route has ever existed on the
+                server — not one — so the box accepted nothing, the button did
+                nothing, and the card advertised a feature the shop does not
+                have. The job list underneath is real: those are the supplier
+                imports. */}
             <Card>
               <CardHeader>
-                <CardTitle>{isRTL ? 'الاستيراد المجمع' : 'Bulk Import'}</CardTitle>
+                <CardTitle>{isRTL ? 'مهام الاستيراد' : 'Import jobs'}</CardTitle>
                 <CardDescription>
-                  {isRTL ? 'استيراد المنتجات من ملفات CSV أو Excel' : 'Import products from CSV or Excel files'}
+                  {isRTL ? 'آخر عمليات الاستيراد من المورّد' : 'The most recent supplier imports'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600 mb-2">
-                    {isRTL ? 'اسحب وأفلت ملف CSV أو Excel هنا' : 'Drag and drop CSV or Excel file here'}
+                {bulkImportTasks.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    {isRTL ? 'لا توجد مهام بعد.' : 'No jobs yet.'}
                   </p>
-                  <Button variant="outline" size="sm">
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isRTL ? 'اختر ملف' : 'Choose File'}
-                  </Button>
-                </div>
-                
-                {bulkImportTasks.length > 0 && (
+                ) : (
                   <div className="space-y-2">
                     <h4 className="font-medium">{isRTL ? 'المهام الأخيرة:' : 'Recent Tasks:'}</h4>
                     {bulkImportTasks.slice(0, 3).map((task, index) => (

@@ -15,7 +15,7 @@ const BACKEND_URL = API_BASE_URL;
 const API = `${BACKEND_URL}/api`;
 
 const HomePage = () => {
-  const { language } = useLanguage();
+  const { language, formatMoney } = useLanguage();
   const isRTL = language === 'ar';
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,19 +125,25 @@ const HomePage = () => {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex flex-col">
                           <span className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
-                            {p.price} ر.س
+                            {formatMoney(p.price)}
                           </span>
                           {p.original_price && (
-                            <span className="text-sm text-gray-500 line-through">{p.original_price} ر.س</span>
+                            <span className="text-sm text-gray-500 line-through">{formatMoney(p.original_price)}</span>
                           )}
                         </div>
                       </div>
 
-                      <button className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 animate-pulse-gold shadow-lg">
-                        <Link to={`/product/${p.id}`} className="block w-full h-full text-white no-underline">
-                          {isRTL ? 'اكتشف المنتج' : 'Discover Product'}
-                        </Link>
-                      </button>
+                      {/* Was a <button> with a <Link> inside it: a control
+                          with no handler wrapped around the thing that
+                          actually navigated. Interactive inside interactive
+                          is invalid HTML, and screen readers announce it as a
+                          button that does nothing. It is the link. */}
+                      <Link
+                        to={`/product/${p.id}`}
+                        className="block w-full text-center bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 animate-pulse-gold shadow-lg no-underline"
+                      >
+                        {isRTL ? 'اكتشف المنتج' : 'Discover Product'}
+                      </Link>
                     </div>
                   </div>
                 </div>

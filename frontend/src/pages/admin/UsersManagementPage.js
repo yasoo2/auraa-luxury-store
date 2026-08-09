@@ -224,7 +224,7 @@ const UsersManagementPage = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-300 text-sm">
-                      {u.last_activity ? new Date(u.last_activity).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : (language === 'ar' ? 'لم ينشط بعد' : 'No activity')}
+                      {u.last_activity ? new Date(u.last_activity).toLocaleDateString(language === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : (language === 'ar' ? 'لم ينشط بعد' : 'No activity')}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${

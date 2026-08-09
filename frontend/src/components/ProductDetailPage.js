@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { setSEO } from '../utils/seo';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { useLanguage } from '../context/LanguageContext';
 import { trackViewItem, trackAddToCart } from '../utils/analytics';
 import { apiGet, apiPost } from '../api';
@@ -19,6 +20,7 @@ const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const { currency, language, formatMoney } = useLanguage();
   const isRTL = language === 'ar' || language === 'he';
 
@@ -263,7 +265,7 @@ const ProductDetailPage = () => {
               </div>
               {/* Shipping quick estimate */}
               <div className="flex items-center text-sm text-gray-700">
-                <Truck className="h-4 w-4 ml-2 text-amber-600" />
+                <Truck className="h-4 w-4 me-2 text-amber-600" />
                 {shippingInfo.loading ? (
                   <span>{isRTL ? 'حساب الشحن...' : 'Estimating shipping...'}</span>
                 ) : shippingInfo.error === 'unavailable' ? (
@@ -303,18 +305,35 @@ const ProductDetailPage = () => {
 
               <div className="flex space-x-4">
                 <Button onClick={handleAddToCart} className="btn-luxury flex-1" data-testid="add-to-cart-button">
-                  <ShoppingCart className="h-5 w-5 ml-2" />
+                  <ShoppingCart className="h-5 w-5 me-2" />
                   {isRTL ? 'أضف إلى السلة' : 'Add to Cart'}
                 </Button>
                 <Button onClick={buyNow} variant="outline" className="flex-1 border-amber-600 text-amber-600 hover:bg-amber-50" data-testid="buy-now-button">{isRTL ? 'اشتري الآن' : 'Buy Now'}</Button>
-                <Button variant="outline" size="icon" className="border-gray-300"><Heart className="h-5 w-5" /></Button>
+                {/* The heart on the product page had no onClick from the day
+                    it was drawn. Every shopper who pressed it got nothing, on
+                    the one screen where saving an item matters most. */}
+                <Button
+                  onClick={() => toggleWishlist(product)}
+                  variant="outline"
+                  size="icon"
+                  data-testid="wishlist-toggle"
+                  aria-pressed={isInWishlist(product.id)}
+                  aria-label={isInWishlist(product.id)
+                    ? (isRTL ? 'إزالة من المفضّلة' : 'Remove from wishlist')
+                    : (isRTL ? 'أضف إلى المفضّلة' : 'Add to wishlist')}
+                  className={isInWishlist(product.id)
+                    ? 'border-red-300 text-red-600 hover:bg-red-50'
+                    : 'border-gray-300'}
+                >
+                  <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                </Button>
               </div>
             </div>
 
             {/* Features */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
-                <Truck className="h-6 w-6 text-amber-600 ml-3" />
+                <Truck className="h-6 w-6 text-amber-600 me-3" />
                 <div>
                   <div className="font-medium text-gray-900">{isRTL ? 'توصيل سريع' : 'Fast Delivery'}</div>
                   <div className="text-sm text-gray-600">
@@ -335,14 +354,14 @@ const ProductDetailPage = () => {
                 </div>
               </div>
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
-                <Shield className="h-6 w-6 text-amber-600 ml-3" />
+                <Shield className="h-6 w-6 text-amber-600 me-3" />
                 <div>
                   <div className="font-medium text-gray-900">{isRTL ? 'ضمان الجودة' : 'Quality Guarantee'}</div>
                   <div className="text-sm text-gray-600">{isRTL ? 'ضمان سنة كاملة' : '1-year full warranty'}</div>
                 </div>
               </div>
               <div className="flex items-center p-4 bg-white rounded-lg border border-gray-200">
-                <RotateCcw className="h-6 w-6 text-amber-600 ml-3" />
+                <RotateCcw className="h-6 w-6 text-amber-600 me-3" />
                 <div>
                   <div className="font-medium text-gray-900">{isRTL ? 'سياسة الإرجاع' : 'Return Policy'}</div>
                   <div className="text-sm text-gray-600">{isRTL ? 'خلال 30 يوم' : 'Within 30 days'}</div>
@@ -383,7 +402,7 @@ const ProductDetailPage = () => {
                       <div className="flex items-center justify-between">
                         <span className="text-lg font-bold text-amber-600">{formatMoney(relatedProduct.price)}</span>
                         <div className="flex items-center">
-                          <Star className="h-4 w-4 text-yellow-400 fill-current ml-1" />
+                          <Star className="h-4 w-4 text-yellow-400 fill-current me-1" />
                           <span className="text-sm text-gray-600">{relatedProduct.rating}</span>
                         </div>
                       </div>

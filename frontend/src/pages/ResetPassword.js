@@ -138,7 +138,7 @@ const ResetPassword = () => {
       <Card className="w-full max-w-md p-8">
         <div className="mb-8">
           <Link to="/auth" className="flex items-center text-amber-600 hover:text-amber-700 mb-4">
-            <ArrowLeft className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+            <ArrowLeft className={`h-4 w-4 ${isRTL ? 'me-2' : 'me-2'}`} />
             {isRTL ? 'العودة' : 'Back'}
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

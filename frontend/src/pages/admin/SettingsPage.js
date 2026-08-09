@@ -100,10 +100,15 @@ const SettingsPage = () => {
       name: isRTL ? 'معلومات الاتصال' : 'Contact Info', 
       icon: Mail 
     },
-    { 
-      id: 'business', 
-      name: isRTL ? 'إعدادات الأعمال' : 'Business Settings', 
-      icon: CreditCard 
+    {
+      id: 'payment',
+      name: isRTL ? 'طرق الدفع' : 'Payment',
+      icon: CreditCard
+    },
+    {
+      id: 'business',
+      name: isRTL ? 'إعدادات الأعمال' : 'Business Settings',
+      icon: Store
     },
     { 
       id: 'shipping', 
@@ -122,8 +127,22 @@ const SettingsPage = () => {
     }
   ];
 
+  // Payment lives behind its own endpoint, not in the settings blob: an IBAN
+  // is not a preference, and the server refuses to publish a half-filled one.
+  const [payment, setPayment] = useState({
+    bank_transfer: {
+      enabled: false, bank_name: '', account_holder: '', iban: '',
+      swift: '', account_currency: '', instructions: '',
+    },
+    on_confirmation: { enabled: true },
+    card: {},
+    live_methods: [],
+  });
+  const [paymentSaving, setPaymentSaving] = useState(false);
+
   useEffect(() => {
     fetchSettings();
+    fetchPayment();
   }, []);
 
   const fetchSettings = async () => {
@@ -132,7 +151,50 @@ const SettingsPage = () => {
       setSettings(prev => ({ ...prev, ...response.data }));
     } catch (error) {
       console.error('Error fetching settings:', error);
+      toast.error(isRTL ? 'تعذّر تحميل الإعدادات' : 'Could not load the settings');
     }
+  };
+
+  const fetchPayment = async () => {
+    try {
+      const { data } = await axios.get(`${API}/admin/payment-settings`);
+      setPayment(prev => ({
+        ...prev,
+        bank_transfer: { ...prev.bank_transfer, ...(data.bank_transfer || {}) },
+        on_confirmation: { ...prev.on_confirmation, ...(data.on_confirmation || {}) },
+        card: data.card || {},
+        live_methods: data.live_methods || [],
+      }));
+    } catch (error) {
+      console.error('Error fetching payment settings:', error);
+      toast.error(isRTL ? 'تعذّر تحميل طرق الدفع' : 'Could not load the payment methods');
+    }
+  };
+
+  const savePayment = async () => {
+    try {
+      setPaymentSaving(true);
+      const { data } = await axios.put(`${API}/admin/payment-settings`, {
+        bank_transfer: payment.bank_transfer,
+        on_confirmation: payment.on_confirmation,
+      });
+      setPayment(prev => ({ ...prev, live_methods: data.live_methods || [] }));
+      toast.success(isRTL ? 'حُفظت طرق الدفع' : 'Payment methods saved');
+    } catch (error) {
+      // The server names the missing field. Repeating "failed" over the top of
+      // that would leave the owner guessing which box is empty.
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر حفظ طرق الدفع' : 'Could not save the payment methods'));
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
+
+  const updateBank = (key, value) => {
+    setPayment(prev => ({
+      ...prev,
+      bank_transfer: { ...prev.bank_transfer, [key]: value },
+    }));
   };
 
   const saveSettings = async () => {
@@ -142,7 +204,11 @@ const SettingsPage = () => {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
+      // Failing in the console alone left the owner watching a button that
+      // never turned into "تم الحفظ" with nothing telling them why.
       console.error('Error saving settings:', error);
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر حفظ الإعدادات — لم يتغيّر شيء' : 'Could not save the settings — nothing changed'));
     } finally {
       setLoading(false);
     }
@@ -307,7 +373,7 @@ const SettingsPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Mail className="inline h-4 w-4 mr-1" />
+            <Mail className="inline h-4 w-4 me-1" />
             {isRTL ? 'البريد الإلكتروني' : 'Email Address'}
           </label>
           <Input
@@ -320,7 +386,7 @@ const SettingsPage = () => {
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Phone className="inline h-4 w-4 mr-1" />
+            <Phone className="inline h-4 w-4 me-1" />
             {isRTL ? 'رقم الهاتف' : 'Phone Number'}
           </label>
           <Input
@@ -344,7 +410,7 @@ const SettingsPage = () => {
 
       <div className="space-y-4">
         <h3 className="text-lg font-medium text-gray-900">
-          <MapPin className="inline h-5 w-5 mr-2" />
+          <MapPin className="inline h-5 w-5 me-2" />
           {isRTL ? 'العنوان' : 'Address'}
         </h3>
         
@@ -410,6 +476,232 @@ const SettingsPage = () => {
       </div>
     </div>
   );
+
+  /**
+   * The only screen that decides whether a customer can pay at all.
+   *
+   * The shop has no card gateway and no merchant account, so the bank account
+   * is the payment method. Nothing here has a default value on purpose — an
+   * example IBAN left in a placeholder is a customer's money in a stranger's
+   * account, and the server refuses to publish the method until every field a
+   * payer needs is filled in.
+   */
+  const renderPaymentTab = () => {
+    const bank = payment.bank_transfer;
+    const card = payment.card || {};
+    const live = payment.live_methods || [];
+
+    return (
+      <div className="space-y-6">
+        <div
+          className={`rounded-lg border p-4 ${
+            live.length ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+          }`}
+          data-testid="payment-live-status"
+        >
+          <p className={`font-semibold ${live.length ? 'text-green-900' : 'text-red-900'}`}>
+            {live.length
+              ? (isRTL
+                ? `المتاح للعملاء الآن: ${live.length} طريقة`
+                : `Live for customers: ${live.length} method(s)`)
+              : (isRTL
+                ? 'لا توجد طريقة دفع متاحة — لا يستطيع أحد إتمام طلب.'
+                : 'No payment method is live — nobody can complete an order.')}
+          </p>
+          {live.length > 0 && (
+            <p className="text-sm mt-1 text-gray-700">
+              {live.map((id) => (id === 'card'
+                ? (isRTL ? 'بطاقة ائتمانية' : 'Card')
+                : id === 'bank_transfer'
+                  ? (isRTL ? 'حوالة بنكية' : 'Bank transfer')
+                  : (isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation'))).join('، ')}
+            </p>
+          )}
+        </div>
+
+        {/* The card gateway. Read-only here on purpose: its keys live in the
+            host's environment variables, because a payment secret stored in
+            the database is a payment secret in every backup of it. */}
+        <div
+          className={`border rounded-lg p-4 ${card.configured ? 'border-green-200' : 'border-gray-200'}`}
+          data-testid="card-gateway"
+        >
+          <div className="flex flex-wrap items-center gap-3 mb-2">
+            <span className="font-semibold text-gray-900">
+              {isRTL ? 'الدفع بالبطاقة (iyzico)' : 'Card payment (iyzico)'}
+            </span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+              card.configured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+            }`}>
+              {card.configured
+                ? (isRTL ? 'مُفعّل' : 'Configured')
+                : (isRTL ? 'غير مُفعّل' : 'Not configured')}
+            </span>
+            {card.configured && card.mode === 'sandbox' && (
+              <span
+                role="alert"
+                className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800"
+                data-testid="card-sandbox-warning"
+              >
+                {isRTL ? '⚠️ وضع اختبار — لا يُخصم مال حقيقي' : '⚠️ Sandbox — no real money moves'}
+              </span>
+            )}
+          </div>
+
+          {card.configured ? (
+            <p className="text-sm text-gray-600">
+              {isRTL
+                ? `يُخصم من العميل بعملة ${card.currency}. تفعيل البطاقة يُخفي الحوالة البنكية والدفع عند التأكيد تلقائياً.`
+                : `Customers are charged in ${card.currency}. Turning the card on hides bank transfer and payment-on-confirmation automatically.`}
+            </p>
+          ) : (
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>
+                {isRTL
+                  ? 'افتح حساباً في iyzico، ثم ضع المفتاحين في متغيّرات البيئة على Render:'
+                  : 'Open an iyzico account, then put the two keys in Render’s environment variables:'}
+              </p>
+              <ul className="list-disc ms-5 font-mono text-xs text-gray-700">
+                <li>IYZICO_API_KEY</li>
+                <li>IYZICO_SECRET_KEY</li>
+                <li>IYZICO_CURRENCY {isRTL ? '(اختياري، الافتراضي USD)' : '(optional, default USD)'}</li>
+                <li>IYZICO_SANDBOX=true {isRTL ? '(للتجربة فقط)' : '(testing only)'}</li>
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="border border-gray-200 rounded-lg p-4">
+          <label className="flex items-center gap-3 mb-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!bank.enabled}
+              onChange={(e) => updateBank('enabled', e.target.checked)}
+              data-testid="bank-transfer-enabled"
+              className="h-4 w-4 accent-amber-600"
+            />
+            <span className="font-semibold text-gray-900">
+              {isRTL ? 'حوالة بنكية' : 'Bank transfer'}
+            </span>
+          </label>
+
+          <p className="text-sm text-gray-600 mb-4">
+            {isRTL
+              ? 'يرى العميل هذه البيانات بعد تأكيد الطلب مع رقم الطلب ليكتبه في بيان الحوالة. راجع الأرقام حرفاً بحرف قبل الحفظ.'
+              : 'The customer sees these details after placing the order, with the order number to quote. Check every character before saving.'}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {isRTL ? 'اسم البنك *' : 'Bank name *'}
+              </label>
+              <Input
+                value={bank.bank_name || ''}
+                onChange={(e) => updateBank('bank_name', e.target.value)}
+                data-testid="bank-name"
+                placeholder={isRTL ? 'مثال: VakıfBank' : 'e.g. VakıfBank'}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {isRTL ? 'اسم صاحب الحساب *' : 'Account holder *'}
+              </label>
+              <Input
+                value={bank.account_holder || ''}
+                onChange={(e) => updateBank('account_holder', e.target.value)}
+                data-testid="account-holder"
+                placeholder={isRTL ? 'كما هو مكتوب في البنك بالضبط' : 'Exactly as the bank has it'}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">IBAN *</label>
+              <Input
+                value={bank.iban || ''}
+                onChange={(e) => updateBank('iban', e.target.value)}
+                data-testid="iban"
+                dir="ltr"
+                className="font-mono"
+                placeholder="TR00 0000 0000 0000 0000 0000 00"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                SWIFT / BIC {isRTL ? '(للحوالات من خارج البلد)' : '(for transfers from abroad)'}
+              </label>
+              <Input
+                value={bank.swift || ''}
+                onChange={(e) => updateBank('swift', e.target.value)}
+                data-testid="swift"
+                dir="ltr"
+                className="font-mono"
+                placeholder="TVBATR2A"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {isRTL ? 'عملة الحساب' : 'Account currency'}
+              </label>
+              <Input
+                value={bank.account_currency || ''}
+                onChange={(e) => updateBank('account_currency', e.target.value)}
+                data-testid="account-currency"
+                dir="ltr"
+                placeholder="TRY"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {isRTL ? 'ملاحظات للعميل (اختياري)' : 'Note to the customer (optional)'}
+              </label>
+              <textarea
+                value={bank.instructions || ''}
+                onChange={(e) => updateBank('instructions', e.target.value)}
+                data-testid="bank-instructions"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="border border-gray-200 rounded-lg p-4">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!payment.on_confirmation.enabled}
+              onChange={(e) => setPayment(prev => ({
+                ...prev,
+                on_confirmation: { enabled: e.target.checked },
+              }))}
+              data-testid="on-confirmation-enabled"
+              className="h-4 w-4 accent-amber-600"
+            />
+            <span className="font-semibold text-gray-900">
+              {isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation'}
+            </span>
+          </label>
+          <p className="text-sm text-gray-600 mt-2">
+            {isRTL
+              ? 'يُسجَّل الطلب وتتواصل أنت مع العميل لتحصيل المبلغ. أبقِه مفعّلاً حتى تتأكّد أن الحوالة البنكية تعمل.'
+              : 'The order is recorded and you contact the customer to collect payment. Keep it on until bank transfer is proven.'}
+          </p>
+        </div>
+
+        <Button
+          onClick={savePayment}
+          disabled={paymentSaving}
+          data-testid="save-payment"
+          className="bg-amber-600 hover:bg-amber-700"
+        >
+          <Save className="h-4 w-4 me-2" />
+          {paymentSaving
+            ? (isRTL ? 'جارٍ الحفظ…' : 'Saving…')
+            : (isRTL ? 'حفظ طرق الدفع' : 'Save payment methods')}
+        </Button>
+      </div>
+    );
+  };
 
   const renderBusinessTab = () => (
     <div className="space-y-6">
@@ -642,9 +934,9 @@ const SettingsPage = () => {
           {loading ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
           ) : saved ? (
-            <Check className="h-4 w-4 mr-2" />
+            <Check className="h-4 w-4 me-2" />
           ) : (
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="h-4 w-4 me-2" />
           )}
           {saved ? (isRTL ? 'تم الحفظ' : 'Saved') : (isRTL ? 'حفظ التغييرات' : 'Save Changes')}
         </Button>
@@ -678,6 +970,7 @@ const SettingsPage = () => {
         <div className="p-6">
           {activeTab === 'general' && renderGeneralTab()}
           {activeTab === 'contact' && renderContactTab()}
+          {activeTab === 'payment' && renderPaymentTab()}
           {activeTab === 'business' && renderBusinessTab()}
           {activeTab === 'shipping' && renderShippingTab()}
           {activeTab === 'notifications' && renderNotificationsTab()}

@@ -260,14 +260,34 @@ body {
 }
 
 /* Enhanced luxury text for carousel */
+/*
+ * The shop's name, on a gold bar, on every page.
+ *
+ * The old gradient ran gold → white → silver → gold → black → gold and
+ * animated across the text every four seconds. On the amber header that meant
+ * the letters faded to invisible and back twice a cycle: whenever a gold or
+ * white stop sat over a gold background there was nothing to read. A wordmark
+ * that disappears is not a style, it is a broken logo.
+ *
+ * Kept metallic, kept moving, but every stop is now dark enough to read
+ * against the header it sits on.
+ */
 .carousel-luxury-text {
-  background: linear-gradient(135deg, #ffd700 0%, #ffffff 20%, #c0c0c0 40%, #ffd700 60%, #000000 80%, #ffd700 100%);
+  background: linear-gradient(135deg, #3f2d10 0%, #6b4f1d 18%, #241a08 42%, #7a5c22 62%, #2c2009 84%, #3f2d10 100%);
   background-size: 400% 400%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: luxuryShimmer 4s ease-in-out infinite;
-  filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+  animation: luxuryShimmer 6s ease-in-out infinite;
+  /* A 2px shadow under 8px letters is most of the letter. */
+  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.35));
+}
+
+/* Motion is decoration; some people get sick from it. */
+@media (prefers-reduced-motion: reduce) {
+  .carousel-luxury-text {
+    animation: none;
+  }
 }
 
 @keyframes luxuryShimmer {
@@ -453,10 +473,23 @@ body {
 }
 
 /* Button animations */
+/*
+ * The shop's primary call to action — "أضف إلى السلة".
+ *
+ * It was white text on a gradient running black → silver (#c0c0c0) → gold
+ * (#d6b651). White on that silver is a contrast ratio of about 1.9:1 and on
+ * the gold about 2.0:1, against the 4.5:1 that ordinary text needs. So the
+ * label was legible across the first third of the button and washed out over
+ * the rest, and the icon at the far end all but disappeared. The
+ * `text-shadow` under it was an attempt to rescue exactly that.
+ *
+ * Still a metal gradient, still gold-edged, but every stop is now dark enough
+ * for white to read on it end to end.
+ */
 .btn-luxury {
-  background: linear-gradient(135deg, #000000 0%, #c0c0c0 50%, #d6b651 100%);
+  background: linear-gradient(135deg, #17100a 0%, #4a3418 45%, #6b4d1d 100%);
   color: white;
-  border: 2px solid #c0c0c0;
+  border: 2px solid #d6b651;
   padding: 12px 32px;
   border-radius: 8px;
   font-weight: 700;
@@ -659,10 +692,11 @@ body {
 
 /* Responsive carousel for mobile */
 @media (max-width: 640px) {
-  .carousel-luxury-text {
-    font-size: clamp(2rem, 8vw, 3rem);
-  }
-  
+  /* There used to be a `.carousel-luxury-text { font-size: clamp(2rem, 8vw,
+     3rem) }` here. The carousel it was written for no longer uses that class
+     — only the navbar wordmark and the admin heading do — so on every phone
+     it silently blew the logo up from 20px to 32px and squeezed the header
+     around it. Sizing belongs to the element, not to the paint. */
   .carousel-slide-content {
     padding: 1rem;
   }

@@ -272,7 +272,13 @@ def email_is_configured() -> bool:
 
 def send_order_awaiting_approval_email(order: dict) -> bool:
     """
-    Tell the owner a paid order is waiting for them to send it to the supplier.
+    Tell the owner an order has come in and what it is waiting for.
+
+    The subject used to say "waiting for your approval" whatever the order was
+    actually waiting for. An order paid by bank transfer is waiting for money
+    to land in an account, which is a different job, done somewhere else, and
+    the owner should not have to open the panel to find out which of the two
+    this is.
 
     Returns False rather than raising: a customer's order must not fail because
     the shop's mail provider is down. The caller logs it.
@@ -290,6 +296,20 @@ def send_order_awaiting_approval_email(order: dict) -> bool:
     recipient = " ".join(str(address.get(k) or "") for k in ("firstName", "lastName")).strip() \
         or address.get("fullName") or address.get("name") or "—"
 
+    # What this order is actually waiting for, which is not the same thing for
+    # every payment method.
+    if order.get("payment_status") == "paid":
+        headline = "طلب مدفوع بانتظار موافقتك"
+        sub = "المبلغ مؤكَّد. لن يُشترى شيء من المورّد حتى تضغط «أرسل إلى CJ»."
+    elif order.get("payment_method") == "bank_transfer":
+        headline = "طلب جديد بانتظار وصول الحوالة"
+        sub = ("راجع حسابك البنكي بحثاً عن حوالة بهذا الرقم، ثم أكّد استلام المبلغ "
+               "في لوحة التحكم — عندها فقط يمكن إرساله إلى CJ.")
+    else:
+        headline = "طلب جديد بانتظار إتمام الدفع"
+        sub = ("تواصل مع العميل لإتمام الدفع، ثم أكّد استلام المبلغ في لوحة التحكم — "
+               "عندها فقط يمكن إرساله إلى CJ.")
+
     rows = "".join(
         f"<tr><td style='padding:6px 10px;border-bottom:1px solid #eee'>{item.get('product_name') or item.get('product_id')}</td>"
         f"<td style='padding:6px 10px;border-bottom:1px solid #eee;text-align:center'>{item.get('quantity')}</td>"
@@ -303,14 +323,16 @@ def send_order_awaiting_approval_email(order: dict) -> bool:
     <head><meta charset="UTF-8"></head>
     <body style="font-family:system-ui,Arial,sans-serif;background:#faf7f2;padding:24px">
       <div style="max-width:640px;margin:auto;background:#fff;border-radius:12px;padding:24px">
-        <h2 style="color:#b45309;margin:0 0 4px">طلب جديد بانتظار موافقتك</h2>
-        <p style="color:#666;margin:0 0 20px">لن يُشترى شيء من المورّد حتى تضغط «أرسل إلى CJ».</p>
+        <h2 style="color:#b45309;margin:0 0 4px">{headline}</h2>
+        <p style="color:#666;margin:0 0 20px">{sub}</p>
 
         <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
           <tr><td style="padding:6px 0;color:#666">رقم الطلب</td>
               <td style="padding:6px 0;font-weight:bold" dir="ltr">{number}</td></tr>
           <tr><td style="padding:6px 0;color:#666">الإجمالي</td>
               <td style="padding:6px 0;font-weight:bold" dir="ltr">{total} SAR</td></tr>
+          <tr><td style="padding:6px 0;color:#666">طريقة الدفع</td>
+              <td style="padding:6px 0">{'حوالة بنكية' if order.get('payment_method') == 'bank_transfer' else 'الدفع عند تأكيد الطلب'}</td></tr>
           <tr><td style="padding:6px 0;color:#666">المستلِم</td>
               <td style="padding:6px 0">{recipient}</td></tr>
           <tr><td style="padding:6px 0;color:#666">المدينة</td>
@@ -340,6 +362,70 @@ def send_order_awaiting_approval_email(order: dict) -> bool:
 
     return send_email(
         to_email=ORDER_NOTIFY_EMAIL,
-        subject=f"طلب جديد بانتظار موافقتك #{number}",
+        subject=f"{headline} #{number}",
+        html_content=html_content,
+    )
+
+
+def send_order_paid_email(order: dict, error: str | None = None) -> bool:
+    """
+    The alert that matters on a card shop: the money arrived.
+
+    Says in the subject line whether the order also reached CJ on its own,
+    because the one time it did not is the one time the owner has to act —
+    and an inbox where success and failure look alike gets skimmed.
+    """
+    if not email_is_configured():
+        logger.error(
+            "SENDGRID_API_KEY is not set — nobody was told that order "
+            f"{order.get('order_number')} was paid"
+        )
+        return False
+
+    number = order.get("order_number") or order.get("id")
+    total = order.get("total_amount", 0)
+    supplier_id = order.get("supplier_order_id")
+
+    if error is None and supplier_id:
+        headline = "طلب مدفوع وأُرسل إلى CJ تلقائياً"
+        sub = (f"رقمه لدى CJ: {supplier_id} — يتبقّى دفعه من رصيدك هناك، "
+               "ولا شيء غير ذلك.")
+        color = "#166534"
+    else:
+        headline = "⚠️ طلب مدفوع وتعذّر إرساله إلى CJ"
+        sub = error or order.get("supplier_error") or "سبب غير معروف"
+        color = "#b91c1c"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family:system-ui,Arial,sans-serif;background:#faf7f2;padding:24px">
+      <div style="max-width:640px;margin:auto;background:#fff;border-radius:12px;padding:24px">
+        <h2 style="color:{color};margin:0 0 4px">{headline}</h2>
+        <p style="color:#666;margin:0 0 20px">{sub}</p>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+          <tr><td style="padding:6px 0;color:#666">رقم الطلب</td>
+              <td style="padding:6px 0;font-weight:bold" dir="ltr">{number}</td></tr>
+          <tr><td style="padding:6px 0;color:#666">الإجمالي</td>
+              <td style="padding:6px 0;font-weight:bold" dir="ltr">{total} SAR</td></tr>
+          <tr><td style="padding:6px 0;color:#666">مرجع الدفع</td>
+              <td style="padding:6px 0" dir="ltr">{order.get('payment_reference') or '—'}</td></tr>
+        </table>
+
+        <a href="{STORE_ADMIN_URL}"
+           style="display:inline-block;background:{color};color:#fff;text-decoration:none;
+                  padding:12px 24px;border-radius:8px;font-weight:bold">
+          فتح الطلب
+        </a>
+      </div>
+    </body>
+    </html>
+    """
+
+    return send_email(
+        to_email=ORDER_NOTIFY_EMAIL,
+        subject=f"{headline} #{number}",
         html_content=html_content,
     )

@@ -138,7 +138,7 @@ const OrderTrackingPage = () => {
   
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', {
+    return date.toLocaleDateString(language === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'

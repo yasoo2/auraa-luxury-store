@@ -259,7 +259,7 @@ const ProductFormModal = ({
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Package className="h-5 w-5 mr-2" />
+                <Package className="h-5 w-5 me-2" />
                 {isRTL ? 'المعلومات الأساسية' : 'Basic Information'}
               </h3>
               
@@ -358,7 +358,7 @@ const ProductFormModal = ({
             {/* Pricing */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <DollarSign className="h-5 w-5 mr-2" />
+                <DollarSign className="h-5 w-5 me-2" />
                 {isRTL ? 'الأسعار والمخزون' : 'Pricing & Inventory'}
               </h3>
               
@@ -415,7 +415,7 @@ const ProductFormModal = ({
             {/* Images */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <ImageIcon className="h-5 w-5 mr-2" />
+                <ImageIcon className="h-5 w-5 me-2" />
                 {isRTL ? 'صور المنتج *' : 'Product Images *'}
               </h3>
               
@@ -473,7 +473,7 @@ const ProductFormModal = ({
                     variant="outline"
                     size="sm"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 me-2" />
                     {isRTL ? 'إضافة صورة' : 'Add Image'}
                   </Button>
                 )}
@@ -485,7 +485,7 @@ const ProductFormModal = ({
             {/* Product Specifications */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Tag className="h-5 w-5 mr-2" />
+                <Tag className="h-5 w-5 me-2" />
                 {isRTL ? 'المواصفات' : 'Specifications'}
               </h3>
               
@@ -564,7 +564,7 @@ const ProductFormModal = ({
             {/* Settings */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Star className="h-5 w-5 mr-2" />
+                <Star className="h-5 w-5 me-2" />
                 {isRTL ? 'إعدادات المنتج' : 'Product Settings'}
               </h3>
               
@@ -603,7 +603,7 @@ const ProductFormModal = ({
                 variant="ghost"
                 className="mb-4"
               >
-                {showAdvanced ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                {showAdvanced ? <EyeOff className="h-4 w-4 me-2" /> : <Eye className="h-4 w-4 me-2" />}
                 {isRTL ? 'إعدادات SEO المتقدمة' : 'Advanced SEO Settings'}
               </Button>
 
@@ -662,12 +662,12 @@ const ProductFormModal = ({
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 me-2 animate-spin" />
                   {isRTL ? 'جاري الحفظ...' : 'Saving...'}
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="h-4 w-4 me-2" />
                   {isEdit 
                     ? (isRTL ? 'تحديث المنتج' : 'Update Product')
                     : (isRTL ? 'إضافة المنتج' : 'Add Product')

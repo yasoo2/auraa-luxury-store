@@ -79,9 +79,9 @@ const DeploymentSetup = () => {
                 className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400"
               >
                 {loading ? (
-                  <Loader className="h-4 w-4 animate-spin mr-2" />
+                  <Loader className="h-4 w-4 animate-spin me-2" />
                 ) : (
-                  <Settings className="h-4 w-4 mr-2" />
+                  <Settings className="h-4 w-4 me-2" />
                 )}
                 تشغيل إعداد النشر
               </Button>

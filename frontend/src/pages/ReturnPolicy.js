@@ -21,7 +21,7 @@ const ReturnPolicy = () => {
                 <section>
                   <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
                     <div className="flex items-center">
-                      <CheckCircle className="h-6 w-6 text-blue-400 ml-3" />
+                      <CheckCircle className="h-6 w-6 text-blue-400 me-3" />
                       <p className="text-blue-800 font-medium">
                         نضمن لك تجربة شراء مريحة مع إمكانية الإرجاع لمدة 14 يوماً
                       </p>
@@ -31,7 +31,7 @@ const ReturnPolicy = () => {
 
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <Clock className="h-6 w-6 text-amber-500 ml-2" />
+                    <Clock className="h-6 w-6 text-amber-500 me-2" />
                     فترة الإرجاع
                   </h2>
                   <div className="bg-gray-50 p-4 rounded-lg">
@@ -46,7 +46,7 @@ const ReturnPolicy = () => {
 
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <CheckCircle className="h-6 w-6 text-green-500 ml-2" />
+                    <CheckCircle className="h-6 w-6 text-green-500 me-2" />
                     شروط الإرجاع المقبول
                   </h2>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -75,7 +75,7 @@ const ReturnPolicy = () => {
 
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <RefreshCw className="h-6 w-6 text-blue-500 ml-2" />
+                    <RefreshCw className="h-6 w-6 text-blue-500 me-2" />
                     إجراءات الإرجاع
                   </h2>
                   
@@ -154,7 +154,7 @@ const ReturnPolicy = () => {
 
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <AlertTriangle className="h-6 w-6 text-red-500 ml-2" />
+                    <AlertTriangle className="h-6 w-6 text-red-500 me-2" />
                     حالات خاصة
                   </h2>
 
@@ -230,7 +230,7 @@ const ReturnPolicy = () => {
                 <section>
                   <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
                     <div className="flex items-center">
-                      <CheckCircle className="h-6 w-6 text-blue-400 mr-3" />
+                      <CheckCircle className="h-6 w-6 text-blue-400 me-3" />
                       <p className="text-blue-800 font-medium">
                         We guarantee a comfortable shopping experience with 14-day returns
                       </p>
@@ -240,7 +240,7 @@ const ReturnPolicy = () => {
 
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <Clock className="h-6 w-6 text-amber-500 mr-2" />
+                    <Clock className="h-6 w-6 text-amber-500 me-2" />
                     Return Period
                   </h2>
                   <div className="bg-gray-50 p-4 rounded-lg">
@@ -255,7 +255,7 @@ const ReturnPolicy = () => {
 
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <CheckCircle className="h-6 w-6 text-green-500 mr-2" />
+                    <CheckCircle className="h-6 w-6 text-green-500 me-2" />
                     Acceptable Return Conditions
                   </h2>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -284,7 +284,7 @@ const ReturnPolicy = () => {
 
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <RefreshCw className="h-6 w-6 text-blue-500 mr-2" />
+                    <RefreshCw className="h-6 w-6 text-blue-500 me-2" />
                     Return Process
                   </h2>
                   
@@ -363,7 +363,7 @@ const ReturnPolicy = () => {
 
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                    <AlertTriangle className="h-6 w-6 text-red-500 mr-2" />
+                    <AlertTriangle className="h-6 w-6 text-red-500 me-2" />
                     Special Cases
                   </h2>
 

@@ -220,7 +220,7 @@ const ContactUs = () => {
               ) : (
                 <>
                   <div className="flex items-center mb-6">
-                    <MessageSquare className="h-6 w-6 text-blue-600 mr-3" />
+                    <MessageSquare className="h-6 w-6 text-blue-600 me-3" />
                     <h2 className="text-2xl font-bold text-gray-900">
                       {isRTL ? 'أرسل لنا رسالة' : 'Send us a Message'}
                     </h2>
@@ -365,7 +365,7 @@ const ContactUs = () => {
                           </div>
                         ) : (
                           <div className="flex items-center justify-center">
-                            <Send className="h-5 w-5 mr-2" />
+                            <Send className="h-5 w-5 me-2" />
                             {isRTL ? 'إرسال الرسالة' : 'Send Message'}
                           </div>
                         )}

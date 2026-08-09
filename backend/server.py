@@ -359,6 +359,12 @@ class Order(BaseModel):
     order_number: Optional[str] = None
     shipping_address: Dict[str, Any]
     payment_method: str
+    # Whether the money has actually arrived. Nothing may be bought from the
+    # supplier while this says otherwise: a parcel sent for an unpaid order is
+    # a loss the shop has no way to recover.
+    payment_status: str = "awaiting_payment"
+    payment_reference: Optional[str] = None
+    payment_confirmed_at: Optional[str] = None
     status: OrderStatus = OrderStatus.pending
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     tracking_number: Optional[str] = None
@@ -1403,6 +1409,21 @@ async def create_order(
     if not cart or not cart.get("items"):
         raise HTTPException(status_code=400, detail="Cart is empty")
 
+    # An order placed by a method the shop does not offer is an order nobody
+    # can pay: the customer is told it went through and then hears nothing,
+    # because there is no account for the money to arrive in.
+    methods = await available_payment_methods()
+    if not methods:
+        raise HTTPException(
+            status_code=503,
+            detail="The store cannot take payment right now. Please try again shortly.",
+        )
+    if order_data.payment_method not in {m["id"] for m in methods}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown payment method: {order_data.payment_method}",
+        )
+
     # An address CJ cannot ship to is an order that can never be fulfilled.
     # Refuse it here, while the customer is still on the page and can fix it.
     missing = missing_shipping_fields(order_data.shipping_address)
@@ -1476,10 +1497,14 @@ async def create_order(
         {"$set": {"items": [], "total_amount": 0.0}}
     )
 
-    # Tell the owner. An order waiting on a human is only visible to a human
-    # who thinks to look — and a mail provider being down must never cost a
-    # customer their order, so this is best-effort and never raises.
-    background_tasks.add_task(notify_owner_of_new_order, doc)
+    # Tell the owner — except for card orders. A card order at this moment is
+    # a customer mid-payment: they are on their way to the gateway, and an
+    # abandoned checkout is not something the owner needs email about. The
+    # card alert fires when the money actually lands, with the CJ outcome in
+    # it. (Best-effort either way: a mail provider being down must never cost
+    # a customer their order.)
+    if order_data.payment_method != CARD:
+        background_tasks.add_task(notify_owner_of_new_order, doc)
 
     return order
 
@@ -1500,6 +1525,275 @@ async def get_orders(current_user: User = Depends(get_current_user)):
     return result
 
 
+def _iyzico_basket(order: Dict[str, Any], total: float) -> List[Dict[str, Any]]:
+    """
+    The order's lines as iyzico wants them.
+
+    iyzico rejects a basket whose item prices do not add up to the price being
+    charged. Converting each line separately and rounding each one is exactly
+    how you end up a cent out on an order of three, so the lines are scaled to
+    the charged total and the rounding remainder is put on the last line.
+    """
+    items = order.get("items") or []
+    subtotal = sum(float(i.get("price") or 0) * max(1, int(i.get("quantity") or 1)) for i in items)
+    lines: List[Dict[str, Any]] = []
+    running = 0.0
+
+    for index, item in enumerate(items):
+        quantity = max(1, int(item.get("quantity") or 1))
+        share = (float(item.get("price") or 0) * quantity / subtotal) if subtotal else 0.0
+        price = round(total * share, 2) if index < len(items) - 1 else round(total - running, 2)
+        running = round(running + price, 2)
+        lines.append({
+            "id": str(item.get("product_id") or f"line-{index}"),
+            "name": (item.get("product_name") or "Item")[:120],
+            "category1": item.get("category") or "Accessories",
+            "itemType": "PHYSICAL",
+            "price": f"{max(price, 0.0):.2f}",
+        })
+
+    if not lines:
+        raise HTTPException(status_code=409, detail="This order has no items to pay for")
+    return lines
+
+
+def _iyzico_parties(order: Dict[str, Any], user: Dict[str, Any]) -> Dict[str, Any]:
+    address = order.get("shipping_address") or {}
+    name = (str(address.get("firstName") or "").strip()
+            or str(address.get("fullName") or "").strip()
+            or str(user.get("first_name") or "").strip() or "Customer")
+    surname = (str(address.get("lastName") or "").strip()
+               or str(user.get("last_name") or "").strip() or "-")
+    street = str(address.get("street") or address.get("address") or "").strip()
+    city = str(address.get("city") or "").strip()
+    country = str(address.get("country") or "").strip()
+
+    return {
+        "buyer": {
+            "id": str(order.get("user_id") or "guest"),
+            "name": name,
+            "surname": surname,
+            "gsmNumber": str(address.get("phone") or "").strip(),
+            "email": str(address.get("email") or user.get("email") or "").strip(),
+            "identityNumber": "11111111111",   # required by iyzico; not collected
+            "registrationAddress": street or city or country,
+            "city": city,
+            "country": country,
+            "zipCode": str(address.get("zipCode") or "").strip(),
+            "ip": str(order.get("client_ip") or "0.0.0.0"),
+        },
+        "address": {
+            "contactName": f"{name} {surname}".strip(),
+            "city": city,
+            "country": country,
+            "address": street or city or country,
+            "zipCode": str(address.get("zipCode") or "").strip(),
+        },
+    }
+
+
+@api_router.post("/orders/{order_id}/pay-session")
+async def start_card_payment(
+    order_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Open a card payment for one of your own orders.
+
+    Returns the hosted page to go to. Nothing here marks anything paid — that
+    decision belongs to the callback, and only after iyzico has been asked
+    directly and its answer has been checked against our secret key.
+    """
+    from services import iyzico_client
+
+    if not iyzico_client.is_configured():
+        raise HTTPException(status_code=503, detail="Card payment is not configured")
+
+    order = await db.orders.find_one({"id": order_id, "user_id": current_user.id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.get("payment_status") == "paid":
+        raise HTTPException(status_code=409, detail="This order is already paid")
+
+    # The catalogue is priced in SAR and iyzico does not settle SAR. An
+    # unknown rate means the only honest amount to charge is none: guessing
+    # one charges a real card a made-up number.
+    from services.currency_service import get_currency_service
+    service = get_currency_service(db)
+    total_sar = float(order.get("total_amount") or 0)
+    amount = await service.convert_currency(total_sar, "SAR", iyzico_client.CURRENCY)
+    if amount is None or amount <= 0:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Cannot price this order in {iyzico_client.CURRENCY} right now. Please try again shortly.",
+        )
+
+    parties = _iyzico_parties(order, current_user.model_dump())
+    try:
+        session = await iyzico_client.create_checkout_form(
+            conversation_id=order_id,
+            basket_id=str(order.get("order_number") or order_id),
+            amount=amount,
+            callback_url=f"{PUBLIC_API_URL}/api/payments/iyzico/callback",
+            buyer=parties["buyer"],
+            address=parties["address"],
+            basket_items=_iyzico_basket(order, amount),
+        )
+    except iyzico_client.IyzicoError as e:
+        logger.error("iyzico refused to open a payment for %s: %s", order_id, e)
+        raise HTTPException(status_code=502, detail=f"Card payment could not be started: {e}")
+
+    await db.orders.update_one({"id": order_id}, {"$set": {
+        "payment_token": session["token"],
+        "payment_provider": "iyzico",
+        "payment_amount_charged": amount,
+        "payment_currency_charged": iyzico_client.CURRENCY,
+        "payment_started_at": datetime.now(timezone.utc).isoformat(),
+    }})
+
+    return {
+        "payment_page_url": session["payment_page_url"],
+        # Said before the customer leaves, not discovered on their statement.
+        "amount": amount,
+        "currency": iyzico_client.CURRENCY,
+        "original_amount": round(total_sar, 2),
+        "original_currency": order.get("currency", "SAR"),
+        "sandbox": iyzico_client.SANDBOX,
+    }
+
+
+@api_router.post("/payments/iyzico/callback")
+async def iyzico_callback(request: Request, background_tasks: BackgroundTasks):
+    """
+    Where iyzico's hosted page sends the customer's browser back.
+
+    Deliberately unauthenticated: this arrives as a cross-site form POST, so
+    the session cookie is not sent with it. Authentication is not what makes
+    it safe — the token is looked up against an order we opened ourselves,
+    and the payment is confirmed by asking iyzico over our own connection and
+    verifying the signature on its reply. The browser's claim is worth
+    nothing on its own.
+    """
+    from services import iyzico_client
+
+    form = await request.form()
+    token = str(form.get("token") or "").strip()
+    landing = f"{PUBLIC_SITE_URL}/profile?tab=orders"
+
+    if not token:
+        return RedirectResponse(landing, status_code=303)
+
+    order = await db.orders.find_one({"payment_token": token})
+    if not order:
+        logger.warning("iyzico called back with a token matching no order")
+        return RedirectResponse(landing, status_code=303)
+
+    order_id = order["id"]
+    landing = f"{PUBLIC_SITE_URL}/order/{order_id}/pay"
+
+    try:
+        result = await iyzico_client.retrieve_checkout_form(
+            token=token, conversation_id=order_id
+        )
+    except iyzico_client.IyzicoError as e:
+        logger.error("Could not confirm iyzico payment for %s: %s", order_id, e)
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "payment_error": str(e)[:500],
+        }})
+        return RedirectResponse(landing, status_code=303)
+
+    if not result["paid"]:
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "payment_error": result.get("error_message") or result.get("payment_status") or "not completed",
+        }})
+        return RedirectResponse(landing, status_code=303)
+
+    # Paid less than we asked is not paid. iyzico is told the amount by us, so
+    # a mismatch means something in between changed it.
+    expected = float(order.get("payment_amount_charged") or 0)
+    charged = float(result.get("paid_price") or 0)
+    if expected and charged + 0.01 < expected:
+        logger.error("iyzico reports %.2f for order %s, expected %.2f", charged, order_id, expected)
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "payment_error": f"Amount mismatch: charged {charged}, expected {expected}",
+        }})
+        return RedirectResponse(landing, status_code=303)
+
+    await db.orders.update_one({"id": order_id}, {"$set": {
+        "payment_status": "paid",
+        "payment_reference": str(result.get("payment_id") or ""),
+        "payment_confirmed_at": datetime.now(timezone.utc).isoformat(),
+        "payment_confirmed_by": "iyzico",
+        "payment_error": None,
+    }})
+    logger.info("Order %s paid via iyzico (%s)", order_id, result.get("payment_id"))
+
+    # Paid → bought, immediately, with no human in between. In the background
+    # so the customer's redirect is instant: CJ's variant lookups and freight
+    # call take seconds they should not spend staring at a spinner.
+    background_tasks.add_task(_auto_fulfil_paid_order, order_id)
+
+    return RedirectResponse(landing, status_code=303)
+
+
+@api_router.get("/orders/{order_id}/payment-instructions")
+async def get_payment_instructions(
+    order_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    How to pay for one of your own orders, and whether it is already settled.
+
+    Reachable after checkout, not only on the page that follows it: a customer
+    who closes the tab before writing the IBAN down has no other way back to
+    it, and asking them to email for their own bank details is a good way to
+    lose the sale.
+    """
+    order = await db.orders.find_one({"id": order_id, "user_id": current_user.id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    method_id = order.get("payment_method")
+    live = await available_payment_methods()
+    method = next(
+        (dict(m) for m in live if m["id"] == method_id),
+        # A method withdrawn since the order was placed still has to be shown,
+        # or the customer is left holding an invoice with no way to settle it.
+        {"id": method_id, "unavailable": True} if method_id else None,
+    )
+
+    # What the card will actually be charged, in the currency it will be
+    # charged in. Shown before the customer leaves for the payment page, so
+    # the figure on their statement is never the first time they see it.
+    if method and method.get("id") == CARD:
+        from services import iyzico_client
+        from services.currency_service import get_currency_service
+
+        charged = await get_currency_service(db).convert_currency(
+            float(order.get("total_amount") or 0), "SAR", iyzico_client.CURRENCY
+        )
+        method["charged"] = (
+            f"{charged:.2f} {iyzico_client.CURRENCY}" if charged is not None else None
+        )
+
+    return {
+        "order_id": order.get("id"),
+        "order_number": order.get("order_number"),
+        "amount": order.get("total_amount"),
+        "currency": order.get("currency", "SAR"),
+        "payment_status": order.get("payment_status", "awaiting_payment"),
+        "payment_reference": order.get("payment_reference"),
+        # A card that was declined, or a payment abandoned halfway, left the
+        # page looking identical to one never attempted.
+        "payment_error": order.get("payment_error"),
+        # What the customer must quote so the transfer can be matched to this
+        # order. Money arriving with no reference is money nobody can place.
+        "reference_to_quote": order.get("order_number") or order.get("id"),
+        "method": method,
+    }
+
+
 @api_router.get("/orders/my-orders")
 async def get_my_orders(current_user: User = Depends(get_current_user)):
     orders = await db.orders.find(
@@ -1515,7 +1809,11 @@ async def get_my_orders(current_user: User = Depends(get_current_user)):
             "created_at": o.get("created_at"),
             "total_amount": o.get("total_amount", 0.0),
             "currency": o.get("currency", "SAR"),
-            "shipping_address": o.get("shipping_address", {})
+            "shipping_address": o.get("shipping_address", {}),
+            # "بانتظار" meant nothing on its own — waiting for what? This is
+            # the half the customer can do something about.
+            "payment_status": o.get("payment_status", "awaiting_payment"),
+            "payment_method": o.get("payment_method"),
         }
         for o in orders
     ]}
@@ -1666,20 +1964,21 @@ async def preview_order_at_supplier(order_id: str, admin: User = Depends(get_adm
     }
 
 
-@api_router.post("/admin/orders/{order_id}/send-to-supplier")
-async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_user)):
+async def _buy_from_supplier(order: Dict[str, Any], actor: str) -> Dict[str, Any]:
     """
-    Buy an approved order's items from CJ.
+    Buy a paid order's items from CJ and record the outcome on the order.
 
     Creates the order on CJ but does not pay it: payment is a separate call in
     CJ's API, so a mistake caught here can still be cancelled in the CJ
     dashboard before any money moves.
+
+    Shared by the admin's button and the automatic send that follows a card
+    payment, on purpose — two code paths to the supplier means two ways to be
+    wrong about what was bought.
     """
     from services import cj_client
 
-    order = await db.orders.find_one({"id": order_id})
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+    order_id = order["id"]
 
     if order.get("supplier_order_id"):
         raise HTTPException(
@@ -1687,7 +1986,46 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
             detail=f"Already sent to the supplier as {order['supplier_order_id']}",
         )
 
-    prepared = await _prepare_supplier_order(order)
+    # Buying the goods is the point of no return: CJ ships, the money is spent,
+    # and there is nobody to take it back from if the customer never paid.
+    if order.get("payment_status") != "paid":
+        raise HTTPException(
+            status_code=409,
+            detail="This order is not paid yet. Confirm the payment before buying the goods.",
+        )
+
+    # One buyer at a time. iyzico can deliver its callback more than once, and
+    # an admin can press the button while the automatic send is still running —
+    # without an atomic claim, each of them buys the goods and the shop pays
+    # for the same parcel twice.
+    claim = await db.orders.update_one(
+        {"id": order_id, "supplier_order_id": None, "supplier_status": {"$ne": "sending"}},
+        {"$set": {"supplier_status": "sending"}},
+    )
+    if claim.modified_count == 0:
+        raise HTTPException(
+            status_code=409,
+            detail="This order is already on its way to the supplier",
+        )
+
+    async def record_failure(reason: str) -> None:
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "supplier_status": "failed",
+            "supplier_error": reason[:500],
+            "supplier_failed_at": datetime.now(timezone.utc).isoformat(),
+        }})
+
+    # Only the createOrder call used to be recorded as a failure. Everything
+    # before it — an address CJ cannot use, a line whose variant cannot be
+    # resolved, no shipping method to that country — raised and left the order
+    # sitting in the queue marked "waiting for your approval", which is a lie:
+    # the owner already approved and the send is what broke.
+    try:
+        prepared = await _prepare_supplier_order(order)
+    except HTTPException as e:
+        await record_failure(str(e.detail))
+        raise
+
     chosen = prepared["chosen"]
 
     try:
@@ -1699,10 +2037,7 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
             from_country=os.getenv("CJ_FROM_COUNTRY", "CN"),
         )
     except cj_client.CJError as e:
-        await db.orders.update_one({"id": order_id}, {"$set": {
-            "supplier_status": "failed",
-            "supplier_error": str(e)[:500],
-        }})
+        await record_failure(f"CJ refused the order: {e}")
         raise HTTPException(status_code=502, detail=f"CJ refused the order: {e}")
 
     supplier_order_id = result.get("orderId") or result.get("orderNum")
@@ -1712,8 +2047,9 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
         "supplier_shipping_method": chosen.get("logisticName"),
         "supplier_shipping_cost": chosen.get("logisticPrice"),
         "supplier_error": None,
+        "supplier_failed_at": None,
         "sent_to_supplier_at": datetime.now(timezone.utc).isoformat(),
-        "sent_to_supplier_by": admin.email,
+        "sent_to_supplier_by": actor,
         "status": OrderStatus.processing.value,
     }})
 
@@ -1725,6 +2061,110 @@ async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_
         # Said plainly so nobody assumes the goods are paid for.
         "message": "Created on CJ. It is not paid yet — pay it from your CJ balance.",
     }
+
+
+async def _auto_fulfil_paid_order(order_id: str) -> None:
+    """
+    Money in → order out, with nobody pressing anything in between.
+
+    This is what a dropshipping shop *is*: the customer's card is charged and
+    the goods get bought, immediately, automatically. The owner's only
+    remaining job is topping up the CJ balance.
+
+    Best-effort by design. The payment is already recorded before this runs,
+    and a CJ failure — no variant, an address CJ refuses, CJ itself down —
+    must never look like a payment failure. It lands the order in the admin
+    screen's red "failed" queue with its reason, and the owner is emailed
+    either way.
+    """
+    order = await db.orders.find_one({"id": order_id})
+    if not order or order.get("supplier_order_id"):
+        return
+
+    error: Optional[str] = None
+    try:
+        result = await _buy_from_supplier(order, actor="auto — paid card order")
+        logger.info("Order %s auto-sent to CJ as %s", order_id, result.get("supplier_order_id"))
+    except HTTPException as e:
+        error = str(e.detail)
+        logger.error("Order %s is paid but could not be auto-sent to CJ: %s", order_id, error)
+    except Exception as e:  # noqa: BLE001 — an unexpected crash must still be recorded
+        error = str(e)
+        logger.error("Order %s auto-send crashed: %s", order_id, error)
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "supplier_status": "failed",
+            "supplier_error": error[:500],
+            "supplier_failed_at": datetime.now(timezone.utc).isoformat(),
+        }})
+
+    # Tell the owner what actually happened — the one time the send failed is
+    # the one time they have to act.
+    try:
+        from services.email_service import send_order_paid_email
+        fresh = await db.orders.find_one({"id": order_id})
+        if fresh:
+            send_order_paid_email(fresh, error=error)
+    except Exception as e:  # noqa: BLE001 — mail is never allowed to break fulfilment
+        logger.error("Could not send the paid-order alert for %s: %s", order_id, e)
+
+
+@api_router.post("/admin/orders/{order_id}/send-to-supplier")
+async def send_order_to_supplier(order_id: str, admin: User = Depends(get_admin_user)):
+    """The manual door to the same path: retries after a failed auto-send."""
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return await _buy_from_supplier(order, actor=admin.email)
+
+
+class PaymentConfirmation(BaseModel):
+    reference: Optional[str] = None
+    paid: bool = True
+
+
+@api_router.post("/admin/orders/{order_id}/confirm-payment")
+async def confirm_order_payment(
+    order_id: str,
+    payload: PaymentConfirmation,
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Record that the customer's money arrived — or take that back.
+
+    There is no gateway to ask, so the only thing that knows whether a transfer
+    landed is the bank statement, and the only one reading it is the owner.
+    This is where what they saw there gets written down, with who said so and
+    when, because "paid" is the flag that unlocks spending money at CJ.
+    """
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    if payload.paid:
+        updates = {
+            "payment_status": "paid",
+            "payment_reference": (payload.reference or "").strip() or None,
+            "payment_confirmed_at": datetime.now(timezone.utc).isoformat(),
+            "payment_confirmed_by": admin.email,
+        }
+    else:
+        # Marking it back is not tidying up after a mistake — an order already
+        # sent to CJ has had money spent against it, and clearing the flag
+        # would let it be sent again.
+        if order.get("supplier_order_id"):
+            raise HTTPException(
+                status_code=409,
+                detail="This order was already bought from the supplier; its payment cannot be un-confirmed.",
+            )
+        updates = {
+            "payment_status": "awaiting_payment",
+            "payment_reference": None,
+            "payment_confirmed_at": None,
+            "payment_confirmed_by": None,
+        }
+
+    await db.orders.update_one({"id": order_id}, {"$set": updates})
+    return {"success": True, "id": order_id, **updates}
 
 
 # ============================================================================
@@ -1929,6 +2369,163 @@ async def _put_singleton(doc_id: str, payload: Dict[str, Any]) -> Dict[str, Any]
     payload["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.site_config.update_one({"_id": doc_id}, {"$set": payload}, upsert=True)
     return payload
+
+
+# ---------------------------------------------------------------------------
+# How a customer pays
+# ---------------------------------------------------------------------------
+#
+# There is no card gateway, and there will not be one until the paperwork for a
+# merchant account exists. What the shop does have is a bank account, which is
+# a real way to be paid — so the checkout offers it, with the details the payer
+# actually needs and the order number to quote.
+#
+# The details are configuration, never code. An IBAN written into a source file
+# is one deploy away from sending a customer's money to the wrong account, and
+# a half-filled bank block is not a payment method — it is a transfer that
+# bounces. So a method is offered only when everything a payer needs is there.
+
+PAYMENT_DOC_ID = "store_payment"
+
+# Where iyzico sends the customer back to, and where the shop lives. These
+# leave our own process and are typed into a payment provider's records, so
+# they cannot be guessed from the incoming request's Host header — that header
+# is whatever the caller wrote in it.
+PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", "https://auraa-luxury-api.onrender.com").rstrip("/")
+PUBLIC_SITE_URL = os.getenv("PUBLIC_SITE_URL", "https://auraaluxury.com").rstrip("/")
+
+BANK_TRANSFER_REQUIRED = ("bank_name", "account_holder", "iban")
+
+# The fallback the shop already runs by hand: the order is placed, and the
+# owner arranges payment with the customer before anything ships. It is not
+# automated, but it is not fiction either — it describes what really happens.
+ON_CONFIRMATION = "on_confirmation"
+BANK_TRANSFER = "bank_transfer"
+CARD = "card"
+
+
+def _bank_transfer_option(cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """The bank block as a customer should see it, or None if unusable."""
+    bank = (cfg or {}).get(BANK_TRANSFER) or {}
+    if not bank.get("enabled"):
+        return None
+    if any(not str(bank.get(field) or "").strip() for field in BANK_TRANSFER_REQUIRED):
+        return None
+    return {
+        "id": BANK_TRANSFER,
+        "bank_name": str(bank["bank_name"]).strip(),
+        "account_holder": str(bank["account_holder"]).strip(),
+        "iban": str(bank["iban"]).strip().replace(" ", "").upper(),
+        # Optional: a wire from abroad needs the SWIFT/BIC, a domestic one does not.
+        "swift": str(bank.get("swift") or "").strip() or None,
+        "account_currency": str(bank.get("account_currency") or "").strip() or None,
+        "instructions": str(bank.get("instructions") or "").strip() or None,
+    }
+
+
+async def available_payment_methods() -> List[Dict[str, Any]]:
+    """Every method a customer can actually use right now."""
+    from services import iyzico_client
+
+    cfg = await _get_singleton(PAYMENT_DOC_ID)
+    methods: List[Dict[str, Any]] = []
+
+    # A card, on the site, from any country — what every shop in the world
+    # offers, and the only one of these three a stranger in another hemisphere
+    # will actually go through with. First in the list because it is the one
+    # customers expect.
+    card_live = iyzico_client.is_configured()
+    if card_live:
+        methods.append({
+            "id": CARD,
+            "provider": "iyzico",
+            "currency": iyzico_client.CURRENCY,
+            # Surfaced so the shop can never quietly run a rehearsal in front
+            # of paying customers: sandbox marks orders paid without money.
+            "sandbox": iyzico_client.SANDBOX,
+        })
+
+    # A wire transfer to a Turkish account is a real way to be paid and a poor
+    # way to be bought from. It stays available while there is no card option,
+    # and steps aside once there is.
+    bank = _bank_transfer_option(cfg)
+    if bank and not card_live:
+        methods.append(bank)
+
+    # Defaults to on, so configuring anything else is an improvement rather
+    # than the moment the shop starts taking orders at all.
+    if (cfg.get(ON_CONFIRMATION) or {}).get("enabled", True) and not card_live:
+        methods.append({"id": ON_CONFIRMATION})
+
+    return methods
+
+
+@api_router.get("/payment-methods")
+async def get_payment_methods():
+    """
+    What the checkout may offer. Public on purpose: an IBAN is for giving to
+    the people who owe you money.
+    """
+    return {"methods": await available_payment_methods()}
+
+
+@api_router.get("/admin/payment-settings")
+async def admin_get_payment_settings(admin: User = Depends(get_admin_user)):
+    from services import iyzico_client
+
+    cfg = await _get_singleton(PAYMENT_DOC_ID)
+    return {
+        BANK_TRANSFER: cfg.get(BANK_TRANSFER) or {},
+        ON_CONFIRMATION: cfg.get(ON_CONFIRMATION) or {"enabled": True},
+        # The card gateway is configured through the host's environment, not
+        # this document — an API secret in the database is an API secret in
+        # every backup of it. Reported read-only so the screen can say whether
+        # it is on without ever being able to print the key.
+        CARD: {
+            "configured": iyzico_client.is_configured(),
+            "provider": "iyzico",
+            "mode": iyzico_client.mode(),
+            "currency": iyzico_client.CURRENCY,
+        },
+        # So the screen can say plainly whether customers are being offered
+        # this, rather than leaving the owner to work it out from the fields.
+        "live_methods": [m["id"] for m in await available_payment_methods()],
+    }
+
+
+@api_router.put("/admin/payment-settings")
+async def admin_update_payment_settings(
+    payload: Dict[str, Any],
+    admin: User = Depends(get_admin_user)
+):
+    bank = payload.get(BANK_TRANSFER) or {}
+    updates: Dict[str, Any] = {
+        BANK_TRANSFER: {
+            "enabled": bool(bank.get("enabled")),
+            "bank_name": str(bank.get("bank_name") or "").strip(),
+            "account_holder": str(bank.get("account_holder") or "").strip(),
+            "iban": str(bank.get("iban") or "").strip().replace(" ", "").upper(),
+            "swift": str(bank.get("swift") or "").strip(),
+            "account_currency": str(bank.get("account_currency") or "").strip(),
+            "instructions": str(bank.get("instructions") or "").strip(),
+        },
+        ON_CONFIRMATION: {
+            "enabled": bool((payload.get(ON_CONFIRMATION) or {}).get("enabled", True)),
+        },
+    }
+
+    # Turning it on with a field missing would show customers a payment box
+    # they cannot pay into. Say which field, here, while it can still be typed.
+    if updates[BANK_TRANSFER]["enabled"]:
+        missing = [f for f in BANK_TRANSFER_REQUIRED if not updates[BANK_TRANSFER][f]]
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail="Bank transfer needs: " + ", ".join(f.replace("_", " ") for f in missing),
+            )
+
+    await _put_singleton(PAYMENT_DOC_ID, updates)
+    return {**updates, "live_methods": [m["id"] for m in await available_payment_methods()]}
 
 
 # ---------------------------------------------------------------------------
@@ -2300,6 +2897,120 @@ async def admin_list_products(
             p["storefront_visible"] = False
             p["storefront_issue"] = str(e).split("\n")[1].strip() if "\n" in str(e) else str(e)
     return products
+
+
+async def _duplicate_product_groups() -> List[List[Dict[str, Any]]]:
+    """
+    Products that are the same supplier item living under different ids.
+
+    Identity is (source, external_id) and nothing looser: name-matching would
+    be guesswork, and this shop does not guess. Products with no external_id —
+    ones the owner typed in by hand — can never be called duplicates here.
+    """
+    docs = await db.products.find({"external_id": {"$exists": True}}).to_list(length=None)
+    groups: Dict[Any, List[Dict[str, Any]]] = {}
+    for doc in docs:
+        doc.pop("_id", None)
+        if not doc.get("external_id") or not doc.get("id"):
+            continue
+        key = (doc.get("source") or "", str(doc["external_id"]))
+        groups.setdefault(key, []).append(doc)
+    return [group for group in groups.values() if len(group) > 1]
+
+
+async def _order_referenced_product_ids() -> set:
+    ids = set()
+    orders = await db.orders.find({}, {"items.product_id": 1}).to_list(length=None)
+    for order in orders:
+        for item in order.get("items") or []:
+            if item.get("product_id"):
+                ids.add(item["product_id"])
+    return ids
+
+
+@api_router.get("/admin/products/duplicates")
+async def admin_find_duplicate_products(admin: User = Depends(get_admin_user)):
+    """
+    How many copies the catalogue holds of the same supplier item.
+
+    The importer used to re-create every product on every run — its existence
+    check filtered on the current job id, which no earlier import can match —
+    so a shop whose owner pressed "استيراد سريع" twice holds its whole
+    catalogue twice. This reports the damage; the POST below repairs it.
+    """
+    groups = await _duplicate_product_groups()
+    return {
+        "groups": [{
+            "source": group[0].get("source"),
+            "external_id": group[0].get("external_id"),
+            "name": group[0].get("name"),
+            "count": len(group),
+        } for group in groups],
+        "duplicates": sum(len(group) - 1 for group in groups),
+    }
+
+
+@api_router.post("/admin/products/dedupe")
+async def admin_dedupe_products(admin: User = Depends(get_admin_user)):
+    """
+    Collapse each group of copies down to one product.
+
+    Which copy survives is not arbitrary:
+      1. one an order's history points at — deleting it would orphan the very
+         records that prove what was sold;
+      2. else a live one over a staging one — the storefront must not blink;
+      3. else the oldest, so running this twice picks the same survivor.
+
+    Carts and wishlists pointing at a removed copy are re-pointed at the
+    survivor: the product is still on sale, and a checkout that answers
+    "no longer available" about it would be a lie.
+    """
+    groups = await _duplicate_product_groups()
+    referenced = await _order_referenced_product_ids()
+
+    def keep_rank(doc: Dict[str, Any]):
+        return (
+            0 if doc["id"] in referenced else 1,
+            0 if not doc.get("staging") else 1,
+            str(doc.get("created_at") or ""),
+            str(doc["id"]),
+        )
+
+    removed_ids: List[str] = []
+    for group in groups:
+        keeper = sorted(group, key=keep_rank)[0]
+        losers = [doc["id"] for doc in group if doc["id"] != keeper["id"]]
+        removed_ids.extend(losers)
+
+        carts = await db.carts.find({"items.product_id": {"$in": losers}}).to_list(length=None)
+        for cart in carts:
+            merged: Dict[str, Dict[str, Any]] = {}
+            for item in cart.get("items") or []:
+                pid = keeper["id"] if item.get("product_id") in losers else item.get("product_id")
+                if pid in merged:
+                    merged[pid]["quantity"] = (int(merged[pid].get("quantity") or 1)
+                                               + int(item.get("quantity") or 1))
+                else:
+                    merged[pid] = {**item, "product_id": pid}
+            await db.carts.update_one(
+                {"user_id": cart["user_id"]}, {"$set": {"items": list(merged.values())}})
+
+        wishlists = await db.wishlists.find({"product_ids": {"$in": losers}}).to_list(length=None)
+        for wishlist in wishlists:
+            pointed = [keeper["id"] if pid in losers else pid
+                       for pid in wishlist.get("product_ids") or []]
+            deduped: List[str] = []
+            for pid in pointed:
+                if pid not in deduped:
+                    deduped.append(pid)
+            await db.wishlists.update_one(
+                {"user_id": wishlist["user_id"]}, {"$set": {"product_ids": deduped}})
+
+    if removed_ids:
+        await db.products.delete_many({"id": {"$in": removed_ids}})
+        logger.info(f"🧹 {admin.email} removed {len(removed_ids)} duplicate products")
+
+    return {"success": True, "groups": len(groups), "removed": len(removed_ids)}
 
 
 @api_router.post("/admin/products/bulk-delete")

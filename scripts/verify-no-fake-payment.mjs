@@ -12,8 +12,11 @@ const checks = [
   // electronic payment, on a shop that has never taken one.
   ['لا يدّعي أنّ دفعاً إلكترونياً حدث', !/دفع إلكتروني/.test(profile)],
   ['يسمّي طريقة الدفع الحقيقية', /الدفع عند تأكيد الطلب/.test(profile)],
-  // "في الانتظار" told the customer nothing: waiting for what, by whom?
-  ['حالة الطلب تقول ما يحدث', /بانتظار التأكيد/.test(profile)],
+  // "في الانتظار" told the customer nothing, and "بانتظار التأكيد" told them
+  // their order waited for someone's blessing. The only wait a dropshipping
+  // shop is allowed to show is the customer's own payment.
+  ['حالة الطلب تقول ما يحدث', /بانتظار الدفع/.test(profile)],
+  ['ولا تدّعي انتظار موافقة أحد', !/بانتظار التأكيد/.test(profile)],
   ['ويشرح ما سيحدث بعدها', /نتواصل معك لإتمام الدفع/.test(profile)],
   ['لا حقل رقم بطاقة',      !/name="cardNumber"/.test(src)],
   ['لا حقل CVV',            !/name="cvv"/.test(src)],

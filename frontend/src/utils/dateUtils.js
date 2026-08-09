@@ -37,7 +37,13 @@ export const formatDate = (date, language = 'en', options = {}) => {
  * Format date in Gregorian calendar
  */
 const formatGregorianDate = (date, language, format, includeTime) => {
-  const locale = language === 'ar' ? 'ar-SA' : 'en-US';
+  // `ar-SA` resolves to the Islamic calendar, so this function — whose name is
+  // formatGregorianDate — was returning Hijri dates. An order placed on
+  // 8 August 2026 was shown as ٢٥ صفر ١٤٤٨, which cannot be matched against a
+  // bank statement, a courier's tracking page, or CJ's dashboard, all of which
+  // are Gregorian. The `-u-ca-gregory` extension pins the calendar while
+  // keeping Arabic month names.
+  const locale = language === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-US';
   
   let options = {};
 

@@ -99,7 +99,12 @@ const Navbar = () => {
             <Link to="/" className="flex flex-col items-start py-1 md:py-2 flex-shrink-0">
               <div className="font-display font-black leading-none flex items-baseline gap-1">
                 <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>
-                <span style={{ fontSize: '8px' }} className="sm:text-xs carousel-luxury-text tracking-[0.1em] sm:tracking-[0.25em] whitespace-nowrap">LUXURY</span>
+                {/* Was 8px, painted with the same clipped gradient as the
+                    name and a 2px drop shadow. At that size the fill is
+                    thinner than the shadow: it rendered as a grey smudge next
+                    to "Auraa" on every page. Solid ink, and big enough to be
+                    a word. */}
+                <span className="text-[10px] sm:text-xs font-semibold text-[#3f2d10]/80 tracking-[0.18em] sm:tracking-[0.28em] whitespace-nowrap">LUXURY</span>
               </div>
               <span className="block text-[7px] sm:text-[9px] md:text-[11px] text-gray-600 tracking-[0.2em] sm:tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
             </Link>
@@ -122,7 +127,7 @@ const Navbar = () => {
                 data-testid="categories-dropdown"
               >
                 {isRTL ? 'تسوق حسب الفئة' : 'Shop by Category'}
-                <ChevronDown className={`h-4 w-4 ml-1 transform transition-transform ${showCategories ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 ms-1 transform transition-transform ${showCategories ? 'rotate-180' : ''}`} />
               </button>
               {showCategories && (
                 <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
@@ -161,7 +166,7 @@ const Navbar = () => {
 
             {/* Track Order */}
             <Link to="/order-tracking" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm flex items-center">
-              <RouteIcon className="h-4 w-4 mr-1" /> {trackOrderLabel}
+              <RouteIcon className="h-4 w-4 me-1" /> {trackOrderLabel}
             </Link>
           </div>
 
@@ -188,13 +193,13 @@ const Navbar = () => {
             </div>
 
             {/* Cart */}
-            <Link to="/cart" className="relative p-1.5 sm:p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
+            <Link to="/cart" className="relative p-3 sm:p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
               <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
               <span className="cart-badge absolute -top-0.5 -right-0.5 bg-brand text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">{cartCount}</span>
             </Link>
 
             {/* Wishlist */}
-            <Link to={user ? '/wishlist' : '/auth'} className="relative p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200">
+            <Link to={user ? '/wishlist' : '/auth'} className="relative p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200">
               <Heart className="h-5 w-5 sm:h-6 sm:w-6" />
               {user && getWishlistCount() > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
@@ -234,7 +239,7 @@ const Navbar = () => {
             {/* Mobile menu button */}
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className="lg:hidden p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200 ml-1" 
+              className="lg:hidden p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200 ms-1" 
               data-testid="mobile-menu-button"
               aria-label="Toggle mobile menu"
             >
@@ -282,11 +287,11 @@ const Navbar = () => {
               {user && (
                 <div className="sm:hidden pb-3 mb-3 border-b border-gray-100 space-y-2">
                   <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
-                    <User className="h-4 w-4 mr-2" />
+                    <User className="h-4 w-4 me-2" />
                     {isRTL ? 'الملف الشخصي' : 'Profile'}
                   </Link>
                   <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
-                    <LogOut className="h-4 w-4 mr-2" />
+                    <LogOut className="h-4 w-4 me-2" />
                     {isRTL ? 'تسجيل الخروج' : 'Logout'}
                   </button>
                 </div>

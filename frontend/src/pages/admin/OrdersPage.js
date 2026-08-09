@@ -35,10 +35,14 @@ const OrdersPage = () => {
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
 
-  // An order is waiting for the owner while it has not been sent on. Read from
-  // supplier_status, and tolerant of orders placed before that field existed.
+  // An order is waiting for the owner's approval once the money is in and it
+  // has not been sent on. Payment is part of the test on purpose: an unpaid
+  // order is not waiting for a decision, it is waiting for a customer, and
+  // listing the two together hid which of the two jobs was actually pending.
   const isAwaitingApproval = (order) =>
-    !order.supplier_order_id && (order.supplier_status || 'awaiting_approval') === 'awaiting_approval';
+    !order.supplier_order_id
+    && (order.supplier_status || 'awaiting_approval') === 'awaiting_approval'
+    && order.payment_status === 'paid';
 
   // Looking a status up with no fallback is the same shape of crash that
   // `order.total` just caused, three lines further down the same loop: one
@@ -123,6 +127,51 @@ const OrdersPage = () => {
     }
   };
 
+  const isPaid = (order) => order?.payment_status === 'paid';
+
+  // There is no gateway to ask whether the money arrived — the bank statement
+  // is the only source of truth, and the owner is the only one reading it.
+  const confirmPayment = async (orderId, paid) => {
+    setSending(true);
+    setSupplierResult(null);
+    try {
+      const reference = paid
+        ? (window.prompt(isRTL
+          ? 'رقم الحوالة أو أي مرجع من كشف الحساب (اختياري):'
+          : 'Transfer reference from the bank statement (optional):') ?? '')
+        : '';
+      const { data } = await axios.post(
+        `${API}/admin/orders/${orderId}/confirm-payment`,
+        { paid, reference }
+      );
+      const patch = (o) => ({
+        ...o,
+        payment_status: data.payment_status,
+        payment_reference: data.payment_reference,
+        payment_confirmed_at: data.payment_confirmed_at,
+      });
+      setOrders(orders.map(o => (o.id === orderId ? patch(o) : o)));
+      setSelectedOrder(prev => (prev && prev.id === orderId ? patch(prev) : prev));
+      setActionError('');
+    } catch (error) {
+      // Nothing on screen may say the money arrived when the server refused to
+      // record it: that flag is what unlocks spending at CJ.
+      setActionError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر حفظ حالة الدفع — لم يتغيّر شيء' : 'Could not save the payment status — nothing changed'));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Opening an order must not inherit the previous one's result line. Run a dry
+  // run on order A, close, open order B, and B's box would still be showing A's
+  // freight quote — a number about a different parcel, presented as this one's.
+  const openOrder = (order) => {
+    setSupplierResult(null);
+    setSelectedOrder(order);
+    setShowOrderModal(true);
+  };
+
   const sendToSupplier = async (orderId) => {
     setSending(true);
     setSupplierResult(null);
@@ -140,11 +189,15 @@ const OrdersPage = () => {
     } catch (error) {
       // Nothing on screen may claim the order was sent when it was not: the
       // owner would wait for a parcel nobody is packing.
-      setSupplierResult({
-        ok: false,
-        message: error.response?.data?.detail
-          || (isRTL ? 'تعذّر إرسال الطلب إلى المورّد' : 'Could not send the order to the supplier'),
-      });
+      const detail = error.response?.data?.detail
+        || (isRTL ? 'تعذّر إرسال الطلب إلى المورّد' : 'Could not send the order to the supplier');
+      // The server has just written supplier_status:"failed" to this order.
+      // Mirror it, or the row keeps its calm amber "waiting for you" badge
+      // until someone happens to reload the page.
+      const markFailed = (o) => ({ ...o, supplier_status: 'failed', supplier_error: detail });
+      setOrders(orders.map(o => (o.id === orderId ? markFailed(o) : o)));
+      setSelectedOrder(prev => (prev && prev.id === orderId ? markFailed(prev) : prev));
+      setSupplierResult({ ok: false, message: detail });
     } finally {
       setSending(false);
     }
@@ -169,13 +222,23 @@ const OrdersPage = () => {
   };
 
   const awaitingApproval = orders.filter(isAwaitingApproval);
+  const failedAtSupplier = orders.filter(
+    (order) => !order.supplier_order_id && order.supplier_status === 'failed'
+  );
+  const unpaid = orders.filter(
+    (order) => !isPaid(order) && !['cancelled'].includes(order.status)
+  );
 
   const filteredOrders = orders.filter(order => {
     const matchesStatus = statusFilter === 'all'
       ? true
       : statusFilter === 'awaiting_approval'
         ? isAwaitingApproval(order)
-        : order.status === statusFilter;
+        : statusFilter === 'supplier_failed'
+          ? !order.supplier_order_id && order.supplier_status === 'failed'
+          : statusFilter === 'unpaid'
+            ? !isPaid(order) && order.status !== 'cancelled'
+            : order.status === statusFilter;
     // A deleted user leaves customer_name null, and .toLowerCase() on null
     // takes the whole page down the moment anyone types in the search box.
     const haystack = [order.customer_name, order.customer_email, order.id, order.order_number]
@@ -186,7 +249,7 @@ const OrdersPage = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+    return date.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -228,6 +291,35 @@ const OrdersPage = () => {
         </div>
       )}
 
+      {/* Orders whose money has not landed. First in the column because it is
+          first in the sequence: nothing else can happen to these until the
+          customer pays, and until now the screen never said which ones. */}
+      {unpaid.length > 0 && (
+        <div
+          className="border border-red-300 bg-red-50 rounded-lg px-4 py-3 flex flex-wrap items-center gap-3"
+          data-testid="unpaid-queue"
+        >
+          <span className="text-red-900 font-semibold">
+            {isRTL
+              ? `${unpaid.length} طلب لم يصل مبلغه`
+              : `${unpaid.length} order(s) not paid yet`}
+          </span>
+          <span className="text-sm text-red-800">
+            {isRTL
+              ? 'راجع كشف حسابك، ثم أكّد الاستلام من داخل الطلب.'
+              : 'Check your bank statement, then confirm receipt inside the order.'}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setStatusFilter('unpaid')}
+            data-testid="show-unpaid-queue"
+          >
+            {isRTL ? 'أظهرها' : 'Show them'}
+          </Button>
+        </div>
+      )}
+
       {/* The approval queue, named and counted.
           Whether an order is waiting for the owner lived only inside the
           details dialog, so the one thing that stops a parcel moving was
@@ -252,6 +344,35 @@ const OrdersPage = () => {
             variant="outline"
             onClick={() => setStatusFilter('awaiting_approval')}
             data-testid="show-approval-queue"
+          >
+            {isRTL ? 'أظهرها' : 'Show them'}
+          </Button>
+        </div>
+      )}
+
+      {/* A send CJ refused stops the parcel exactly as dead as an unapproved
+          order does, and it had no banner, no badge and no error text anywhere
+          — the order simply sat in the list looking ordinary. */}
+      {failedAtSupplier.length > 0 && (
+        <div
+          className="border border-red-300 bg-red-50 rounded-lg px-4 py-3 flex flex-wrap items-center gap-3"
+          data-testid="failed-queue"
+        >
+          <span className="text-red-900 font-semibold">
+            {isRTL
+              ? `${failedAtSupplier.length} طلب فشل إرساله إلى CJ`
+              : `${failedAtSupplier.length} order(s) CJ refused`}
+          </span>
+          <span className="text-sm text-red-800">
+            {isRTL
+              ? 'لم يُشترَ شيء ولن يتحرّك الطلب حتى تُعالج السبب وتعيد الإرسال.'
+              : 'Nothing was bought, and nothing moves until the cause is fixed and it is re-sent.'}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setStatusFilter('supplier_failed')}
+            data-testid="show-failed-queue"
           >
             {isRTL ? 'أظهرها' : 'Show them'}
           </Button>
@@ -284,8 +405,14 @@ const OrdersPage = () => {
               className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
             >
               <option value="all">{isRTL ? 'جميع الحالات' : 'All Statuses'}</option>
+              <option value="unpaid">
+                {isRTL ? 'لم يصل مبلغه' : 'Not paid yet'}
+              </option>
               <option value="awaiting_approval">
                 {isRTL ? 'بانتظار موافقتي' : 'Needs my approval'}
+              </option>
+              <option value="supplier_failed">
+                {isRTL ? 'فشل الإرسال إلى CJ' : 'Send to CJ failed'}
               </option>
               {Object.entries(orderStatuses).map(([status, config]) => (
                 <option key={status} value={status}>{config.label}</option>
@@ -342,8 +469,21 @@ const OrdersPage = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status.color}`}>
-                          <StatusIcon className="h-3 w-3 mr-1" />
+                          <StatusIcon className="h-3 w-3 me-1" />
                           {status.label}
+                        </span>
+                        {/* Whether the shop has been paid was not on this
+                            screen at all — the one fact that decides whether
+                            an order may cost the shop money. */}
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            isPaid(order) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}
+                          data-testid="row-payment"
+                        >
+                          {isPaid(order)
+                            ? (isRTL ? 'مدفوع' : 'Paid')
+                            : (isRTL ? 'غير مدفوع' : 'Unpaid')}
                         </span>
                         {isAwaitingApproval(order) ? (
                           <span
@@ -356,6 +496,17 @@ const OrdersPage = () => {
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                             {isRTL ? 'أُرسل إلى CJ' : 'Sent to CJ'}
                           </span>
+                        ) : order.supplier_status === 'failed' ? (
+                          // A refused send wrote supplier_status:"failed" to the
+                          // order and then showed nothing at all here — the row
+                          // looked like every other pending order while nobody
+                          // was packing anything.
+                          <span
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+                            data-testid="row-supplier-failed"
+                          >
+                            {isRTL ? 'فشل الإرسال إلى CJ' : 'Send to CJ failed'}
+                          </span>
                         ) : null}
                       </div>
                     </td>
@@ -363,18 +514,39 @@ const OrdersPage = () => {
                       {formatDate(order.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Button
-                        onClick={() => {
-                          setSelectedOrder(order);
-                          setShowOrderModal(true);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        className="text-amber-600 hover:text-amber-900"
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        {isRTL ? 'عرض' : 'View'}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {/* The approval action used to live only at the bottom of
+                            the details modal, below two sections that need
+                            scrolling past. The one person who has to press it
+                            could not find it. It gets a door of its own here. */}
+                        {!order.supplier_order_id && (
+                          <Button
+                            onClick={() => openOrder(order)}
+                            data-testid="row-review-and-send"
+                            size="sm"
+                            className={!isPaid(order)
+                              ? 'bg-green-600 hover:bg-green-700 text-white'
+                              : order.supplier_status === 'failed'
+                                ? 'bg-red-600 hover:bg-red-700 text-white'
+                                : 'bg-amber-600 hover:bg-amber-700 text-white'}
+                          >
+                            {!isPaid(order)
+                              ? (isRTL ? 'أكّد الدفع' : 'Confirm payment')
+                              : order.supplier_status === 'failed'
+                                ? (isRTL ? 'أعِد المحاولة' : 'Retry')
+                                : (isRTL ? 'راجِع وأرسِل' : 'Review & send')}
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => openOrder(order)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-amber-600 hover:text-amber-900"
+                        >
+                          <Eye className="h-4 w-4 me-1" />
+                          {isRTL ? 'عرض' : 'View'}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -400,6 +572,150 @@ const OrdersPage = () => {
                 >
                   <X className="h-5 w-5" />
                 </Button>
+              </div>
+
+              {/* Did the money arrive? Nothing else in this dialog matters
+                  until that is answered, and buying the goods is refused by
+                  the server until it says yes. */}
+              <div
+                className={`mb-4 rounded-lg p-4 border-2 ${
+                  isPaid(selectedOrder)
+                    ? 'border-green-200 bg-green-50'
+                    : 'border-red-200 bg-red-50'
+                }`}
+                data-testid="payment-box"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      {isPaid(selectedOrder)
+                        ? (isRTL ? 'الدفع مؤكَّد' : 'Payment confirmed')
+                        : (isRTL ? 'لم يصل المبلغ بعد' : 'Not paid yet')}
+                    </h3>
+                    <p className="text-sm text-gray-700">
+                      {isRTL ? 'طريقة الدفع: ' : 'Method: '}
+                      {selectedOrder.payment_method === 'bank_transfer'
+                        ? (isRTL ? 'حوالة بنكية' : 'Bank transfer')
+                        : (isRTL ? 'الدفع عند تأكيد الطلب' : 'Payment on confirmation')}
+                      {selectedOrder.payment_reference
+                        ? ` — ${selectedOrder.payment_reference}` : ''}
+                    </p>
+                  </div>
+                  {isPaid(selectedOrder) ? (
+                    <Button
+                      onClick={() => confirmPayment(selectedOrder.id, false)}
+                      disabled={sending || !!selectedOrder.supplier_order_id}
+                      data-testid="unconfirm-payment"
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isRTL ? 'تراجع' : 'Undo'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => confirmPayment(selectedOrder.id, true)}
+                      disabled={sending}
+                      data-testid="confirm-payment"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {isRTL ? 'أكّد استلام المبلغ' : 'Confirm payment received'}
+                    </Button>
+                  )}
+                </div>
+                {!isPaid(selectedOrder) && (
+                  <p className="mt-2 text-xs text-gray-600">
+                    {isRTL
+                      ? 'راجع كشف حسابك أولاً. لا تُشترى البضاعة من CJ قبل هذا التأكيد.'
+                      : 'Check your bank statement first. Nothing is bought from CJ before this is confirmed.'}
+                  </p>
+                )}
+              </div>
+
+              {/* Send to the supplier. Deliberately a separate, explicit action:
+                  it commits the shop to buying the goods, so nothing does it on
+                  a timer or on the customer's checkout.
+
+                  It sits first in the modal, not last. It used to come after the
+                  customer block and the item list, which on a laptop put it
+                  below the fold — so the only action in this window that the
+                  owner actually has to take was the only one they had to go
+                  looking for. */}
+              <div className="mb-6 border-2 border-amber-300 bg-amber-50 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-1">
+                  {isRTL ? 'الشراء من المورّد' : 'Buy from the supplier'}
+                </h3>
+                {selectedOrder.supplier_order_id ? (
+                  <p className="text-sm text-green-800" data-testid="supplier-sent">
+                    {isRTL ? 'أُرسل إلى CJ برقم ' : 'Sent to CJ as '}
+                    <span dir="ltr" className="font-mono">{selectedOrder.supplier_order_id}</span>
+                    {selectedOrder.supplier_shipping_method
+                      ? ` — ${selectedOrder.supplier_shipping_method}` : ''}
+                  </p>
+                ) : (
+                  <>
+                    {/* The reason the last attempt failed was written to the
+                        order and never shown to anyone. Without it the owner
+                        presses the same button again and gets the same
+                        silence. */}
+                    {selectedOrder.supplier_status === 'failed' && selectedOrder.supplier_error && (
+                      <p
+                        className="text-sm text-red-700 mb-3 bg-red-50 border border-red-200 rounded p-2"
+                        data-testid="supplier-last-error"
+                      >
+                        <strong>{isRTL ? 'فشلت آخر محاولة إرسال: ' : 'Last send attempt failed: '}</strong>
+                        <span dir="ltr">{selectedOrder.supplier_error}</span>
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-600 mb-3">
+                      {isRTL
+                        ? 'يُنشئ الطلب لدى CJ ولا يدفعه — الدفع يبقى بيدك من رصيدك هناك.'
+                        : 'Creates the order on CJ without paying it — payment stays in your hands.'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {/* Rehearse first. Runs the whole path — variants,
+                          freight, the lot — and creates nothing at CJ. */}
+                      <Button
+                        onClick={() => previewAtSupplier(selectedOrder.id)}
+                        disabled={sending}
+                        data-testid="preview-at-supplier"
+                        variant="outline"
+                        className="border-amber-600 text-amber-800 bg-white hover:bg-amber-100"
+                      >
+                        {isRTL ? 'فحص بلا إرسال (مجاناً)' : 'Dry run (free)'}
+                      </Button>
+                      {/* Disabled rather than left to fail on click: the
+                          server refuses an unpaid order, and a button that
+                          looks ready and then errors teaches nothing. */}
+                      <Button
+                        onClick={() => sendToSupplier(selectedOrder.id)}
+                        disabled={sending || !isPaid(selectedOrder)}
+                        data-testid="send-to-supplier"
+                        title={!isPaid(selectedOrder)
+                          ? (isRTL ? 'أكّد استلام المبلغ أوّلاً' : 'Confirm the payment first')
+                          : undefined}
+                        className="bg-amber-600 hover:bg-amber-700"
+                      >
+                        {sending
+                          ? (isRTL ? 'جارٍ الإرسال…' : 'Sending…')
+                          : (isRTL ? 'أرسل إلى CJ' : 'Send to CJ')}
+                      </Button>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                      {isRTL
+                        ? '«فحص بلا إرسال» يسأل CJ عن التوفّر وتكلفة الشحن الحقيقية ولا ينشئ طلباً — ويعمل قبل تأكيد الدفع.'
+                        : 'The dry run asks CJ for stock and the real freight cost; it creates nothing, and works before payment is confirmed.'}
+                    </p>
+                  </>
+                )}
+                {supplierResult && (
+                  <p
+                    role="alert"
+                    data-testid="supplier-result"
+                    className={`mt-3 text-sm ${supplierResult.ok ? 'text-green-800' : 'text-red-700'}`}
+                  >
+                    {supplierResult.message}
+                  </p>
+                )}
               </div>
 
               {/* Customer Info */}
@@ -434,64 +750,6 @@ const OrdersPage = () => {
                 </div>
               </div>
 
-              {/* Send to the supplier. Deliberately a separate, explicit action:
-                  it commits the shop to buying the goods, so nothing does it
-                  on a timer or on the customer's checkout. */}
-              <div className="mb-6 border border-amber-200 bg-amber-50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-1">
-                  {isRTL ? 'الشراء من المورّد' : 'Buy from the supplier'}
-                </h3>
-                {selectedOrder.supplier_order_id ? (
-                  <p className="text-sm text-green-800" data-testid="supplier-sent">
-                    {isRTL ? 'أُرسل إلى CJ برقم ' : 'Sent to CJ as '}
-                    <span dir="ltr" className="font-mono">{selectedOrder.supplier_order_id}</span>
-                    {selectedOrder.supplier_shipping_method
-                      ? ` — ${selectedOrder.supplier_shipping_method}` : ''}
-                  </p>
-                ) : (
-                  <>
-                    <p className="text-sm text-gray-600 mb-3">
-                      {isRTL
-                        ? 'يُنشئ الطلب لدى CJ ولا يدفعه — الدفع يبقى بيدك من رصيدك هناك.'
-                        : 'Creates the order on CJ without paying it — payment stays in your hands.'}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {/* Rehearse first. Runs the whole path — variants,
-                          freight, the lot — and creates nothing at CJ. */}
-                      <Button
-                        onClick={() => previewAtSupplier(selectedOrder.id)}
-                        disabled={sending}
-                        data-testid="preview-at-supplier"
-                        variant="outline"
-                        size="sm"
-                      >
-                        {isRTL ? 'فحص بلا إرسال' : 'Dry run'}
-                      </Button>
-                      <Button
-                        onClick={() => sendToSupplier(selectedOrder.id)}
-                        disabled={sending}
-                        data-testid="send-to-supplier"
-                        className="bg-amber-600 hover:bg-amber-700"
-                        size="sm"
-                      >
-                        {sending
-                          ? (isRTL ? 'جارٍ الإرسال…' : 'Sending…')
-                          : (isRTL ? 'أرسل إلى CJ' : 'Send to CJ')}
-                      </Button>
-                    </div>
-                  </>
-                )}
-                {supplierResult && (
-                  <p
-                    role="alert"
-                    data-testid="supplier-result"
-                    className={`mt-3 text-sm ${supplierResult.ok ? 'text-green-800' : 'text-red-700'}`}
-                  >
-                    {supplierResult.message}
-                  </p>
-                )}
-              </div>
-
               {/* Status Update */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3">{isRTL ? 'تحديث حالة الطلب' : 'Update Order Status'}</h3>
@@ -506,7 +764,7 @@ const OrdersPage = () => {
                         size="sm"
                         className={selectedOrder.status === status ? "bg-amber-600 hover:bg-amber-700" : ""}
                       >
-                        <StatusIcon className="h-4 w-4 mr-1" />
+                        <StatusIcon className="h-4 w-4 me-1" />
                         {config.label}
                       </Button>
                     );

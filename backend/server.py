@@ -2140,6 +2140,17 @@ async def confirm_order_payment(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    # A hand can vouch for a bank transfer because a hand read the statement.
+    # Nothing but iyzico's signed answer may vouch for a card: this flag
+    # unlocks spending at CJ, and an owner clicking "confirm" on an abandoned
+    # card session would spend the shop's money against a payment that never
+    # happened.
+    if order.get("payment_method") == CARD:
+        raise HTTPException(
+            status_code=409,
+            detail="Card payments are decided by iyzico's signed answer alone; they cannot be set by hand.",
+        )
+
     if payload.paid:
         updates = {
             "payment_status": "paid",
@@ -2570,6 +2581,34 @@ async def admin_update_order_status(
         raise HTTPException(status_code=404, detail="Order not found")
 
     return {"success": True, "id": order_id, "status": payload.status.value}
+
+
+@api_router.delete("/admin/orders/{order_id}")
+async def admin_delete_order(order_id: str, admin: User = Depends(get_admin_user)):
+    """
+    Remove an order's record entirely — the broom for test orders and
+    abandoned card sessions.
+
+    Two records refuse to go. An order already bought at CJ is a debt the shop
+    is tracking, and deleting it would erase what the shop owes an explanation
+    for. A paid order that was never cancelled is money the books still point
+    at — cancelling first is a deliberate second step, not friction.
+    """
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.get("supplier_order_id"):
+        raise HTTPException(
+            status_code=409,
+            detail="This order was bought at CJ; its record cannot be deleted.",
+        )
+    if order.get("payment_status") == "paid" and order.get("status") != "cancelled":
+        raise HTTPException(
+            status_code=409,
+            detail="A paid order must be cancelled before its record can be deleted.",
+        )
+    await db.orders.delete_one({"id": order_id})
+    return {"success": True, "id": order_id}
 
 
 # ---------------------------------------------------------------------------

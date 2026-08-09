@@ -2752,6 +2752,75 @@ def test_a_send_that_crashes_still_names_its_failure(seeded, monkeypatch):
     assert r.json()["supplier_order_id"] == "CJ-ORDER-1"
 
 
+def test_a_send_that_outlives_its_budget_is_stopped_and_named(seeded, monkeypatch):
+    """
+    The CJ client's per-call retries can grind for minutes; Cloudflare cuts
+    the browser off at ~100s, so an over-long attempt answered nobody — the
+    owner saw a dead connection, the claim stayed held, and every impatient
+    retry got "already on its way". Every attempt must END, in words, while
+    someone is still watching.
+    """
+    import asyncio as aio
+    import server as server_module
+
+    order = _order_ready_for_cj(seeded, monkeypatch, email="slow@b.com")
+    real_create_order = cj_client.create_order
+
+    async def _grinds_then_succeeds(**kwargs):
+        await aio.sleep(3)
+        return {"orderId": "CJ-ORDER-LATE"}
+
+    monkeypatch.setattr(cj_client, "create_order", _grinds_then_succeeds)
+    monkeypatch.setattr(server_module, "SUPPLIER_SEND_BUDGET_SECONDS", 1)
+
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 504, r.text
+    assert "stopped" in r.json()["detail"], r.text
+
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["supplier_status"] == "failed", row
+    assert "stopped" in (row["supplier_error"] or ""), row
+    assert row["supplier_order_id"] is None, row
+
+    # The claim is free: a healthy attempt right after runs and succeeds.
+    monkeypatch.setattr(cj_client, "create_order", real_create_order)
+    monkeypatch.setattr(server_module, "SUPPLIER_SEND_BUDGET_SECONDS", 75)
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 200, r.text
+    assert r.json()["supplier_order_id"] == "CJ-ORDER-1"
+
+
+def test_a_send_cancelled_mid_flight_leaves_its_name_and_frees_the_claim(seeded, monkeypatch):
+    """
+    A restart or a dropped connection raises CancelledError — a BaseException
+    the ordinary safety net never sees. Unrecorded, it left the claim stuck
+    and the order silent about why nothing was moving.
+    """
+    import asyncio as aio
+
+    order = _order_ready_for_cj(seeded, monkeypatch, email="cut@b.com")
+    real_create_order = cj_client.create_order
+
+    async def _cut_mid_flight(**kwargs):
+        raise aio.CancelledError()
+
+    monkeypatch.setattr(cj_client, "create_order", _cut_mid_flight)
+    try:
+        seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    except BaseException:  # noqa: BLE001 — the cancellation must keep propagating
+        pass
+
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["supplier_status"] == "failed", row
+    assert "interrupted" in (row["supplier_error"] or ""), row
+
+    # And the very next attempt is allowed to run — and succeeds.
+    monkeypatch.setattr(cj_client, "create_order", real_create_order)
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 200, r.text
+    assert r.json()["supplier_order_id"] == "CJ-ORDER-1"
+
+
 def test_a_send_stuck_mid_flight_can_be_retried_once_stale(seeded, monkeypatch):
     """
     A process killed mid-send — a deploy, a crash — leaves "sending" behind

@@ -2722,6 +2722,64 @@ def _order_ready_for_cj(seeded, monkeypatch, email="ful@b.com"):
     return order
 
 
+def test_a_send_that_crashes_still_names_its_failure(seeded, monkeypatch):
+    """
+    The CJ client's retrier eventually re-raises RAW httpx errors — not
+    CJError — and an unnamed escape answered the browser with a bare 500,
+    stored nothing on the order, and left the claim stuck in "sending" so
+    every later retry was refused as already-on-its-way while nothing was on
+    its way at all. Every failure must leave its name and free the claim.
+    """
+    order = _order_ready_for_cj(seeded, monkeypatch, email="crash@b.com")
+    real_create_order = cj_client.create_order
+
+    async def _explodes(**kwargs):
+        raise RuntimeError("socket exploded mid-flight")
+
+    monkeypatch.setattr(cj_client, "create_order", _explodes)
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 502, r.text
+    assert "RuntimeError" in r.json()["detail"], r.text
+
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert row["supplier_status"] == "failed", row
+    assert "socket exploded" in (row["supplier_error"] or ""), row
+
+    # And the claim is free again: the very next attempt runs — and succeeds.
+    monkeypatch.setattr(cj_client, "create_order", real_create_order)
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 200, r.text
+    assert r.json()["supplier_order_id"] == "CJ-ORDER-1"
+
+
+def test_a_send_stuck_mid_flight_can_be_retried_once_stale(seeded, monkeypatch):
+    """
+    A process killed mid-send — a deploy, a crash — leaves "sending" behind
+    with nobody coming back to finish it. A fresh claim stays exclusive; a
+    corpse does not get to block the order forever.
+    """
+    import asyncio as aio
+    from datetime import datetime, timezone
+
+    order = _order_ready_for_cj(seeded, monkeypatch, email="stuck@b.com")
+
+    # A fresh claim — another worker, seconds ago — is respected.
+    aio.get_event_loop().run_until_complete(seeded._db.orders.update_one(
+        {"id": order["id"]},
+        {"$set": {"supplier_status": "sending",
+                  "supplier_sending_at": datetime.now(timezone.utc).isoformat()}}))
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 409, r.text
+
+    # A claim from before claims were timestamped is a corpse: retry runs.
+    aio.get_event_loop().run_until_complete(seeded._db.orders.update_one(
+        {"id": order["id"]},
+        {"$unset": {"supplier_sending_at": ""}}))
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 200, r.text
+    assert r.json()["supplier_order_id"] == "CJ-ORDER-1"
+
+
 def test_a_dry_run_creates_nothing_at_the_supplier(seeded, monkeypatch):
     """
     A way to find out whether fulfilment works before a real customer's order

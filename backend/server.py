@@ -2004,9 +2004,22 @@ async def _buy_from_supplier(order: Dict[str, Any], actor: str) -> Dict[str, Any
     # an admin can press the button while the automatic send is still running —
     # without an atomic claim, each of them buys the goods and the shop pays
     # for the same parcel twice.
+    #
+    # The claim must also be recoverable. A process killed mid-send — a Render
+    # restart, an unhandled crash — used to leave "sending" behind forever,
+    # and every later attempt was refused as already-on-its-way while nothing
+    # was on its way at all. A claim older than ten minutes (or one from
+    # before claims were timestamped) is a corpse, not a competitor.
+    now = datetime.now(timezone.utc)
+    stale_before = (now - timedelta(minutes=10)).isoformat()
     claim = await db.orders.update_one(
-        {"id": order_id, "supplier_order_id": None, "supplier_status": {"$ne": "sending"}},
-        {"$set": {"supplier_status": "sending"}},
+        {"id": order_id, "supplier_order_id": None,
+         "$or": [
+             {"supplier_status": {"$ne": "sending"}},
+             {"supplier_sending_at": {"$lt": stale_before}},
+             {"supplier_sending_at": {"$exists": False}},
+         ]},
+        {"$set": {"supplier_status": "sending", "supplier_sending_at": now.isoformat()}},
     )
     if claim.modified_count == 0:
         raise HTTPException(
@@ -2028,13 +2041,7 @@ async def _buy_from_supplier(order: Dict[str, Any], actor: str) -> Dict[str, Any
     # the owner already approved and the send is what broke.
     try:
         prepared = await _prepare_supplier_order(order)
-    except HTTPException as e:
-        await record_failure(str(e.detail))
-        raise
-
-    chosen = prepared["chosen"]
-
-    try:
+        chosen = prepared["chosen"]
         result = await cj_client.create_order(
             order_number=order.get("order_number") or order_id,
             shipping=prepared["shipping"],
@@ -2042,9 +2049,23 @@ async def _buy_from_supplier(order: Dict[str, Any], actor: str) -> Dict[str, Any
             logistic_name=chosen.get("logisticName") or chosen.get("logisticAging") or "",
             from_country=os.getenv("CJ_FROM_COUNTRY", "CN"),
         )
+    except HTTPException as e:
+        await record_failure(str(e.detail))
+        raise
     except cj_client.CJError as e:
         await record_failure(f"CJ refused the order: {e}")
         raise HTTPException(status_code=502, detail=f"CJ refused the order: {e}")
+    except Exception as e:  # noqa: BLE001 — deliberate: no failure may pass unnamed
+        # The CJ client retries 429/5xx/network errors and then re-raises the
+        # RAW httpx exception — not a CJError — and anything else unexpected
+        # lands here too. Unnamed, such a failure answered the browser with a
+        # bare 500 ("تعذّر الإرسال" with no reason anywhere), recorded
+        # nothing, and left the claim stuck in "sending" so every later
+        # retry was refused. Name it, store it, release the claim.
+        reason = f"{type(e).__name__}: {e}".strip().rstrip(":")
+        await record_failure(reason)
+        logger.exception("Sending order %s to CJ crashed: %s", order_id, reason)
+        raise HTTPException(status_code=502, detail=f"Sending failed: {reason}")
 
     supplier_order_id = result.get("orderId") or result.get("orderNum")
     await db.orders.update_one({"id": order_id}, {"$set": {

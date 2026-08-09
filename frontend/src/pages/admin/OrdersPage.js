@@ -230,12 +230,20 @@ const OrdersPage = () => {
     } catch (error) {
       // Nothing on screen may claim the order was sent when it was not: the
       // owner would wait for a parcel nobody is packing.
+      //
+      // When the server's answer carries no reason at all, say at least HOW
+      // it carried none — a bare 500 and a dead connection are different
+      // problems, and one generic sentence had the owner reading an old
+      // saved failure as the result of a retry.
       const detail = error.response?.data?.detail
-        || (isRTL ? 'تعذّر إرسال الطلب إلى المورّد' : 'Could not send the order to the supplier');
+        || (isRTL
+          ? `تعذّر إرسال الطلب إلى المورّد (${error.response ? `HTTP ${error.response.status}` : 'انقطع الاتصال'})`
+          : `Could not send the order to the supplier (${error.response ? `HTTP ${error.response.status}` : 'network error'})`);
       // The server has just written supplier_status:"failed" to this order.
-      // Mirror it, or the row keeps its calm amber "waiting for you" badge
-      // until someone happens to reload the page.
-      const markFailed = (o) => ({ ...o, supplier_status: 'failed', supplier_error: detail });
+      // Mirror it — timestamp included, or the fresh local text pairs with
+      // the previous failure's time and reads as history.
+      const markFailed = (o) => ({ ...o, supplier_status: 'failed', supplier_error: detail,
+                                   supplier_failed_at: new Date().toISOString() });
       setOrders(orders.map(o => (o.id === orderId ? markFailed(o) : o)));
       setSelectedOrder(prev => (prev && prev.id === orderId ? markFailed(prev) : prev));
       setSupplierResult({ ok: false, message: detail });

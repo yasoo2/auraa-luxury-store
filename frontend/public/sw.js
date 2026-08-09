@@ -117,6 +117,17 @@ function cachePut(key, response) {
     .catch((err) => console.debug('[SW] Cache put failed:', err));
 }
 
+// A response can be ok and still be an impostor. The hosting fallback answers
+// any missing path with index.html at status 200 — so during a deploy window,
+// an asset request that raced the rollout came back as HTML wearing the
+// stylesheet's URL, passed the response.ok test, and was cached. From then on
+// every page load got HTML served as its CSS and rendered completely bare.
+// An asset whose body claims to be text/html is never stored.
+function cacheableAsset(response) {
+  if (!response || !response.ok || response.type !== 'basic') return false;
+  return !(response.headers.get('Content-Type') || '').includes('text/html');
+}
+
 // Navigations: the network decides, the cached shell rescues. Cache-first here
 // is what serves a stale app after a deploy, so it is deliberately not used.
 async function documentResponse(request) {
@@ -144,7 +155,7 @@ async function assetResponse(request) {
   if (cached) {
     fetch(request)
       .then((response) => {
-        if (response && response.ok && response.type === 'basic') {
+        if (cacheableAsset(response)) {
           cachePut(request, response.clone());
         }
       })
@@ -154,7 +165,7 @@ async function assetResponse(request) {
 
   try {
     const response = await fetch(request);
-    if (response && response.ok && response.type === 'basic') {
+    if (cacheableAsset(response)) {
       cachePut(request, response.clone());
     }
     return response;

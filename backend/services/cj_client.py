@@ -461,9 +461,15 @@ async def create_order(
     a separate call — this only creates it, so a mistake here can still be
     cancelled in the CJ dashboard before anything is spent.
     """
+    from services.country_names import country_name_en
+
     data = await _request_json("POST", "/v1/shopping/order/createOrder", json={
         "orderNumber": order_number,
         "shippingZip": shipping.get("zip") or "",
+        # CJ takes the code for freight but demands the NAME here — omitting
+        # it refuses the whole order with 1600300 "shippingCountry must be
+        # not empty", which is how the store's first paid order died.
+        "shippingCountry": country_name_en(shipping["country_code"]),
         "shippingCountryCode": shipping["country_code"],
         "shippingProvince": shipping.get("province") or "",
         "shippingCity": shipping["city"],

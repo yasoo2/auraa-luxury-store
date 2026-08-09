@@ -2684,6 +2684,15 @@ class _FulfilmentCJ(_FakeCJ):
                 {"logisticName": "CJPacket Ordinary", "logisticPrice": "4.20", "logisticAging": "7-12"},
                 {"logisticName": "DHL", "logisticPrice": "31.00", "logisticAging": "3-5"}]})
         if url.endswith("/v1/shopping/order/createOrder"):
+            # The real CJ refuses an order without the country NAME — the code
+            # alone is not enough, and the store's first paid order died on
+            # exactly this. The fake refuses the same way, so any payload that
+            # would fail in production fails here first.
+            if not (json or {}).get("shippingCountry"):
+                return _FakeResponse(400, {
+                    "code": 1600300, "result": False,
+                    "message": "shippingCountry must be not empty",
+                    "data": None, "success": False})
             return _FakeResponse(200, {"code": 200, "result": True,
                                        "data": {"orderId": "CJ-ORDER-1"}})
         return _FakeResponse(200, {"code": 200, "result": True, "data": {}})

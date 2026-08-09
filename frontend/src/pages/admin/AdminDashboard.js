@@ -68,7 +68,12 @@ const AdminDashboard = () => {
   const { t, language } = useLanguage();
   const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Open where there is room for it. On a phone the 256px sidebar squeezed
+  // the content to ~130px — the orders header hung off the screen and the
+  // pages were unusable until the visitor guessed at the menu button.
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  );
   const isRTL = language === 'ar';
 
   // Redirect if not authenticated or not admin (but wait for loading to complete)
@@ -202,12 +207,14 @@ const AdminDashboard = () => {
         </div>
       </nav>
 
-      <div className="flex">
-        {/* Sidebar */}
+      <div className="flex relative">
+        {/* Sidebar. On large screens it sits beside the content; on small
+            ones it floats over it as a drawer — pushing instead of floating
+            is what squeezed every admin page into an unusable strip. */}
         <aside
           className={`${
             sidebarOpen ? 'w-64' : 'w-0'
-          } bg-white shadow-xl transition-all duration-300 overflow-hidden`}
+          } bg-white shadow-xl transition-all duration-300 overflow-hidden lg:static absolute start-0 top-0 bottom-0 z-40`}
           style={{ minHeight: 'calc(100vh - 64px)' }}
         >
           <nav className="p-4 space-y-2">
@@ -246,8 +253,13 @@ const AdminDashboard = () => {
           <BuildStamp isRTL={isRTL} />
         </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 p-6">
+        {/* Main Content.
+            min-w-0 matters: a flex item's default min-width is its content's
+            minimum size, so the orders table (whitespace-nowrap, ~1400px)
+            forced this <main> wider than the screen and the whole admin area
+            hung off the left edge, clipped and unreachable, instead of the
+            table scrolling inside its own overflow-x-auto wrapper. */}
+        <main className="flex-1 min-w-0 p-6">
           <Routes>
             <Route path="/" element={<Navigate to="/admin/products" replace />} />
             <Route path="/products" element={<EnhancedProductsPage />} />

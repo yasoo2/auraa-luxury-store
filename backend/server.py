@@ -2039,29 +2039,55 @@ async def _buy_from_supplier(order: Dict[str, Any], actor: str) -> Dict[str, Any
     # resolved, no shipping method to that country — raised and left the order
     # sitting in the queue marked "waiting for your approval", which is a lie:
     # the owner already approved and the send is what broke.
-    try:
+    async def _prepare_and_create():
         prepared = await _prepare_supplier_order(order)
         chosen = prepared["chosen"]
-        result = await cj_client.create_order(
+        created = await cj_client.create_order(
             order_number=order.get("order_number") or order_id,
             shipping=prepared["shipping"],
             products=prepared["lines"],
             logistic_name=chosen.get("logisticName") or chosen.get("logisticAging") or "",
             from_country=os.getenv("CJ_FROM_COUNTRY", "CN"),
         )
+        return prepared, chosen, created
+
+    try:
+        # The CJ client retries 429/5xx/network errors with growing waits, per
+        # call, across several calls — an unlucky attempt ground on for
+        # minutes. Cloudflare cuts the browser's connection at ~100s, so the
+        # owner never saw such an attempt's outcome: only a dead connection,
+        # then "already on its way" from every impatient retry. The budget
+        # makes every attempt end, visibly, while the browser is still there.
+        prepared, chosen, result = await asyncio.wait_for(
+            _prepare_and_create(), timeout=SUPPLIER_SEND_BUDGET_SECONDS)
     except HTTPException as e:
         await record_failure(str(e.detail))
         raise
     except cj_client.CJError as e:
         await record_failure(f"CJ refused the order: {e}")
         raise HTTPException(status_code=502, detail=f"CJ refused the order: {e}")
+    except asyncio.TimeoutError:
+        reason = (f"CJ did not answer within {SUPPLIER_SEND_BUDGET_SECONDS}s; "
+                  "the attempt was stopped. Wait a few minutes and retry.")
+        await record_failure(reason)
+        raise HTTPException(status_code=504, detail=reason)
+    except asyncio.CancelledError:
+        # A restart or a dropped connection cancelled us mid-send. This is a
+        # BaseException, so the net below never sees it — unrecorded, it left
+        # the claim stuck and the order silent. Record, release, and let the
+        # cancellation continue on its way.
+        try:
+            await record_failure("The send was interrupted mid-flight "
+                                 "(restart or dropped connection). Retry.")
+        except Exception:  # noqa: BLE001 — shutdown may refuse the write
+            pass
+        raise
     except Exception as e:  # noqa: BLE001 — deliberate: no failure may pass unnamed
-        # The CJ client retries 429/5xx/network errors and then re-raises the
-        # RAW httpx exception — not a CJError — and anything else unexpected
-        # lands here too. Unnamed, such a failure answered the browser with a
-        # bare 500 ("تعذّر الإرسال" with no reason anywhere), recorded
-        # nothing, and left the claim stuck in "sending" so every later
-        # retry was refused. Name it, store it, release the claim.
+        # Anything else unexpected lands here. Unnamed, such a failure
+        # answered the browser with a bare 500 ("تعذّر الإرسال" with no
+        # reason anywhere), recorded nothing, and left the claim stuck in
+        # "sending" so every later retry was refused. Name it, store it,
+        # release the claim.
         reason = f"{type(e).__name__}: {e}".strip().rstrip(":")
         await record_failure(reason)
         logger.exception("Sending order %s to CJ crashed: %s", order_id, reason)
@@ -2445,6 +2471,12 @@ BANK_TRANSFER_REQUIRED = ("bank_name", "account_holder", "iban")
 ON_CONFIRMATION = "on_confirmation"
 BANK_TRANSFER = "bank_transfer"
 CARD = "card"
+
+# The hard ceiling on one attempt to buy an order's goods at CJ. Cloudflare
+# cuts proxied requests at ~100 seconds, so any attempt allowed to grind past
+# that answers nobody: the browser sees a dead connection while the server
+# keeps the claim. 75 leaves room to finish or fail while someone is watching.
+SUPPLIER_SEND_BUDGET_SECONDS = 75
 
 
 def _bank_transfer_option(cfg: Dict[str, Any]) -> Optional[Dict[str, Any]]:

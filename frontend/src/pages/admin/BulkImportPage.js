@@ -228,9 +228,10 @@ const BulkImportPage = () => {
         </p>
       </div>
 
-      {/* Steps */}
+      {/* Steps. Wrap on narrow screens — four labelled steps in one strict
+          row pushed the last of them off a phone's edge. */}
       <div className="mb-8">
-        <div className="flex items-center">
+        <div className="flex flex-wrap items-center gap-y-3">
           {[
             { key: 'upload', label: isRTL ? 'رفع الملف' : 'Upload File', icon: Upload },
             { key: 'preview', label: isRTL ? 'معاينة البيانات' : 'Preview Data', icon: Eye },

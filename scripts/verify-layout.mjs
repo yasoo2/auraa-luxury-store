@@ -79,7 +79,29 @@ await ctx.addInitScript(() => { try { localStorage.setItem('token', 't'); } catc
 await ctx.route('**/api/**', (route) => {
   const p = new URL(route.request().url()).pathname;
   const reply = (b) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
-  if (p.endsWith('/api/auth/me')) return reply({ id: 'u1', email: 'b@x.com', first_name: 'يونس', is_admin: true });
+  if (p.endsWith('/api/auth/me')) return reply({ id: 'u1', email: 'b@x.com', first_name: 'يونس', is_admin: true, is_super_admin: true });
+  if (p.endsWith('/api/health')) return reply({ status: 'ok', db: true, version: 'dev' });
+  if (p.endsWith('/api/readiness')) return reply({ status: 'ready', checks: {} });
+  if (p.endsWith('/api/admin/users')) {
+    // Long emails and mixed names — the shape that stretches a users table.
+    return reply(Array.from({ length: 4 }, (_, i) => ({
+      id: `u${i + 1}`, name: `مستخدم تجريبي طويل الاسم رقم ${i + 1}`,
+      email: `halaafeakomgggg.the.longest.address${i + 1}@gmail.com`,
+      is_admin: i === 0, is_super_admin: false, is_active: true,
+      created_at: '2026-08-01T10:00:00Z', last_login: '2026-08-09T20:00:00Z',
+      orders_count: 3, total_spent: 325.59,
+    })));
+  }
+  if (p.endsWith('/api/admin/products')) return reply(products);
+  if (p.endsWith('/api/admin/analytics')) return reply(null);
+  if (p.endsWith('/api/admin/cms-pages') || p.endsWith('/api/admin/media')) return reply([]);
+  if (p.endsWith('/api/admin/settings') || p.endsWith('/api/admin/payment-settings')
+      || p.endsWith('/api/admin/theme') || p.endsWith('/api/auto-update/status')) {
+    return reply({});
+  }
+  if (p.endsWith('/api/auto-update/currency-rates')) {
+    return reply({ base: 'USD', rates: { USD: 1, SAR: 3.75, TRY: 47.7 }, source: 'fallback' });
+  }
   if (p.endsWith('/api/admin/orders')) {
     // The shape that actually broke the admin: a long English CJ error, long
     // emails, and enough nowrap columns to force the table wider than any
@@ -116,7 +138,24 @@ const PAGES = [['الرئيسية', '/'], ['المنتجات', '/products'], ['�
                ['السلة', '/cart'], ['السداد', '/checkout'], ['المفضّلة', '/wishlist'],
                ['الدخول', '/auth'], ['تتبّع الطلب', '/order-tracking'],
                ['حسابي', '/profile?tab=orders'], ['سياسة الإرجاع', '/return-policy'],
-               ['اتصل بنا', '/contact'], ['إدارة الطلبات', '/admin/orders']];
+               ['اتصل بنا', '/contact'],
+               // The whole admin, not just orders: the owner runs the shop
+               // from a phone, and every one of these screens has to survive
+               // 390px — squeezed tables, filter bars, stat grids and all.
+               ['إدارة الطلبات', '/admin/orders'],
+               ['إدارة المنتجات', '/admin/products'],
+               ['إدارة المستخدمين', '/admin/users'],
+               ['الاستيراد السريع', '/admin/quick-import'],
+               ['الاستيراد المجمّع', '/admin/bulk-import'],
+               ['التحليلات', '/admin/analytics'],
+               ['التكاملات', '/admin/integrations'],
+               ['التحديثات التلقائية', '/admin/auto-update'],
+               ['إدارة الصفحات', '/admin/cms-pages'],
+               ['تخصيص التصميم', '/admin/theme'],
+               ['مكتبة الوسائط', '/admin/media'],
+               ['المستخدمون سوبر', '/admin/users-management'],
+               ['إدارة المديرين', '/admin/admin-management'],
+               ['الإعدادات', '/admin/settings']];
 
 for (const [name, route] of PAGES) {
   await page.goto(`${base}${route}`, { waitUntil: 'domcontentloaded' });
@@ -132,6 +171,10 @@ for (const [name, route] of PAGES) {
       // Only what a person is meant to read. A decorative blur bleeding off
       // the edge is a design choice; a sentence half off-screen is a bug.
       if (el.checkVisibility && !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      // Toasts fly in from off-screen by design; sampling one mid-animation
+      // reports its travel, not the page's layout. Their responsive CSS is
+      // the library's own contract, not this page's.
+      if (el.closest('[class*="Toastify"]')) continue;
       const ownText = [...el.childNodes]
         .filter((n) => n.nodeType === 3 && n.textContent.trim())
         .map((n) => n.textContent.trim()).join(' ');
@@ -162,7 +205,10 @@ for (const [name, route] of PAGES) {
       }
     }
     worst.sort((a, b) => b.over - a.over);
-    return { worst: worst.slice(0, 3) };
+    // A blank page has no text to overflow — a crashed route would sail
+    // through this check greener than a working one. Report how much text
+    // actually rendered so emptiness fails instead of passing by default.
+    return { worst: worst.slice(0, 3), textLen: document.body.innerText.trim().length };
   });
 
   // Measured per element, not from documentElement.scrollWidth.
@@ -172,8 +218,11 @@ for (const [name, route] of PAGES) {
   // assertion passes on every page no matter how far the content hangs off.
   // A 900px canary dropped into this page sat at left:-510 — half of it
   // unreachable — and the check still reported green.
-  check(`${name}: لا يخرج نصّ خارج الشاشة`, overflow.worst.length === 0,
-    overflow.worst.map((w) => `${w.tag}(+${w.over}px) "${w.text}"`).join(' | '));
+  check(`${name}: لا يخرج نصّ خارج الشاشة`,
+    overflow.worst.length === 0 && overflow.textLen >= 40,
+    overflow.textLen < 40
+      ? `الصفحة شبه فارغة (${overflow.textLen} حرفاً) — انهيار أو مسار ميت`
+      : overflow.worst.map((w) => `${w.tag}(+${w.over}px) "${w.text}"`).join(' | '));
 }
 
 // Thumb-sized targets on the actions the shop depends on.

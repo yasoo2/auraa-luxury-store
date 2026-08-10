@@ -76,7 +76,7 @@ const TermsOfService = () => {
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">الأسعار والمدفوعات</h3>
                   <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
-                    <li>الأسعار بالريال السعودي شاملة ضريبة القيمة المضافة</li>
+                    <li>تُعرض الأسعار بعملات متعددة، ويُسحب المبلغ بالعملة المبيَّنة عند إتمام الطلب</li>
                     <li>قد تتغير الأسعار دون إشعار مسبق</li>
                     <li>الدفع مطلوب وقت تقديم الطلب</li>
                     <li>نقبل البطاقات الائتمانية والدفع الإلكتروني الآمن</li>
@@ -93,7 +93,7 @@ const TermsOfService = () => {
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">الشحن والتسليم</h2>
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">مناطق الشحن</h3>
-                  <p className="text-gray-600 mb-4">نشحن إلى جميع أنحاء المملكة العربية السعودية ودول مجلس التعاون الخليجي.</p>
+                  <p className="text-gray-600 mb-4">نشحن إلى معظم دول العالم.</p>
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">أوقات التسليم</h3>
                   <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
@@ -150,7 +150,7 @@ const TermsOfService = () => {
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">تحديد المسؤولية</h2>
                   <p className="text-gray-600">
                     في أقصى الحدود المسموح بها قانونياً، تقتصر مسؤوليتنا الإجمالية على قيمة الطلب المعني 
-                    أو 100 ريال سعودي، أيهما أقل.
+                    كحدّ أقصى.
                   </p>
                 </section>
 
@@ -165,7 +165,7 @@ const TermsOfService = () => {
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">القانون الحاكم</h2>
                   <p className="text-gray-600">
-                    تخضع هذه الشروط لقوانين المملكة العربية السعودية. أي نزاع سيُحل في المحاكم المختصة في الرياض.
+                    تخضع هذه الشروط لقوانين الجمهورية التركية. أي نزاع سيُحل في المحاكم المختصة في إسطنبول.
                   </p>
                 </section>
 
@@ -176,7 +176,7 @@ const TermsOfService = () => {
                     <p className="text-gray-700 font-medium">أورا لاكشري</p>
                     <p className="text-gray-600">البريد الإلكتروني: legal@auraaluxury.com</p>
                     <p className="text-gray-600">الهاتف: +90 501 371 5391</p>
-                    <p className="text-gray-600">العنوان: الرياض، المملكة العربية السعودية</p>
+                    <p className="text-gray-600">العنوان: إسطنبول، تركيا</p>
                   </div>
                 </section>
 
@@ -249,7 +249,7 @@ const TermsOfService = () => {
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">Prices and Payments</h3>
                   <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
-                    <li>Prices in Saudi Riyal including VAT</li>
+                    <li>Prices are shown in multiple currencies; you are charged in the currency shown at checkout</li>
                     <li>Prices may change without prior notice</li>
                     <li>Payment required at time of order</li>
                     <li>We accept credit cards and secure online payment</li>
@@ -266,7 +266,7 @@ const TermsOfService = () => {
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">Shipping and Delivery</h2>
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">Shipping Areas</h3>
-                  <p className="text-gray-600 mb-4">We ship throughout Saudi Arabia and GCC countries.</p>
+                  <p className="text-gray-600 mb-4">We ship to most countries worldwide.</p>
 
                   <h3 className="text-xl font-semibold text-gray-700 mb-3">Delivery Times</h3>
                   <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
@@ -323,7 +323,7 @@ const TermsOfService = () => {
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">Limitation of Liability</h2>
                   <p className="text-gray-600">
                     To the maximum extent permitted by law, our total liability is limited to the value of the order concerned 
-                    or 100 Saudi Riyals, whichever is less.
+                    at most.
                   </p>
                 </section>
 
@@ -338,7 +338,7 @@ const TermsOfService = () => {
                 <section>
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">Governing Law</h2>
                   <p className="text-gray-600">
-                    These terms are governed by Saudi Arabian law. Any disputes will be resolved in competent courts in Riyadh.
+                    These terms are governed by the laws of the Republic of Türkiye. Any disputes will be resolved in the competent courts of Istanbul.
                   </p>
                 </section>
 
@@ -349,7 +349,7 @@ const TermsOfService = () => {
                     <p className="text-gray-700 font-medium">Auraa Luxury</p>
                     <p className="text-gray-600">Email: legal@auraaluxury.com</p>
                     <p className="text-gray-600">Phone: +90 501 371 5391</p>
-                    <p className="text-gray-600">Address: Riyadh, Saudi Arabia</p>
+                    <p className="text-gray-600">Address: Istanbul, Türkiye</p>
                   </div>
                 </section>
 

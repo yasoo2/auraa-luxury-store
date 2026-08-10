@@ -178,7 +178,7 @@ const HomePage = () => {
                 {isRTL ? 'توصيل سريع' : 'Fast Delivery'}
               </h3>
               <p className="text-white/80 leading-relaxed text-sm sm:text-base">
-                {isRTL ? 'توصيل سريع وموثوق لجميع الطلبات داخل المملكة العربية السعودية' : 'Fast and reliable delivery for all orders within Saudi Arabia'}
+                {isRTL ? 'توصيل سريع وموثوق إلى معظم دول العالم' : 'Fast and reliable delivery to most countries worldwide'}
               </p>
               <div className="mt-3 sm:mt-4 w-10 sm:w-12 h-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 mx-auto animate-pulse-gold"></div>
             </div>

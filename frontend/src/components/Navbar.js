@@ -104,7 +104,7 @@ const Navbar = () => {
             <Link to="/" className="flex items-center gap-2 py-1 md:py-2 flex-shrink-0">
               {/* The pendant mark joins the wordmark on wider screens; on a
                   narrow phone every pixel of this row is already spoken for. */}
-              <img src="/favicon.svg" alt="" className="hidden sm:block h-9 w-9" />
+              <img src="/favicon.svg?v=2" alt="" className="hidden sm:block h-9 w-9" />
               <div className="flex flex-col items-start">
               <div className="font-display font-black leading-none flex items-baseline gap-1">
                 <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>

@@ -231,8 +231,8 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: notificationData.body || 'You have a new notification from Auraa Luxury',
-    icon: notificationData.icon || '/favicon.svg',
-    badge: notificationData.badge || '/favicon.svg',
+    icon: notificationData.icon || '/favicon.svg?v=2',
+    badge: notificationData.badge || '/favicon.svg?v=2',
     image: notificationData.image,
     data: notificationData.data,
     actions: [
@@ -367,7 +367,7 @@ async function syncOrderData() {
           // Show success notification
           self.registration.showNotification('Order Placed Successfully', {
             body: 'Your order has been successfully placed!',
-            icon: '/favicon.svg',
+            icon: '/favicon.svg?v=2',
             tag: 'order-success'
           });
         }

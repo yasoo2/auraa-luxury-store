@@ -76,6 +76,15 @@ const AdminDashboard = () => {
   );
   const isRTL = language === 'ar';
 
+  // On a phone the drawer floats OVER the page, so picking a destination
+  // and leaving it open means the new page loads behind a wall — the owner
+  // reported exactly that. Desktop's persistent sidebar stays put.
+  const closeDrawerOnPhone = () => {
+    if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1024px)').matches) {
+      setSidebarOpen(false);
+    }
+  };
+
   // Redirect if not authenticated or not admin (but wait for loading to complete)
   useEffect(() => {
     if (!loading && (!isAuthenticated || !user?.is_admin)) {
@@ -188,6 +197,7 @@ const AdminDashboard = () => {
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
+                data-testid="admin-menu-toggle"
                 className="p-2 rounded-lg hover:bg-white/20 transition-colors"
               >
                 {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
@@ -208,10 +218,20 @@ const AdminDashboard = () => {
       </nav>
 
       <div className="flex relative">
+        {/* The backdrop a floating drawer owes its page: tapping anywhere
+            outside the drawer closes it, like every drawer on every phone. */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/30 z-30 lg:hidden"
+            data-testid="admin-drawer-backdrop"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
         {/* Sidebar. On large screens it sits beside the content; on small
             ones it floats over it as a drawer — pushing instead of floating
             is what squeezed every admin page into an unusable strip. */}
         <aside
+          data-testid="admin-sidebar"
           className={`${
             sidebarOpen ? 'w-64' : 'w-0'
           } bg-white shadow-xl transition-all duration-300 overflow-hidden lg:static absolute start-0 top-0 bottom-0 z-40`}
@@ -225,6 +245,7 @@ const AdminDashboard = () => {
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={closeDrawerOnPhone}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all group ${
                     isRedButton
                       ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl'

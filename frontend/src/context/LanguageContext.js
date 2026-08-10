@@ -71,7 +71,9 @@ const translations = {
 
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('language') || 'ar';
+    // English for first-time visitors — the owner's call for a storefront
+    // selling worldwide. A visitor's own choice persists and always wins.
+    return localStorage.getItem('language') || 'en';
   });
   
   const [currency, setCurrency] = useState(() => {

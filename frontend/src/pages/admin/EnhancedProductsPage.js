@@ -354,8 +354,9 @@ const EnhancedProductsPage = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      {/* Header. Both rows wrap: three buttons next to a title do not fit a
+          phone, and an unwrappable toolbar hung off the screen edge. */}
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <div className="flex items-center gap-3">
           <Package className="h-8 w-8 text-amber-600" />
           <div>
@@ -367,8 +368,8 @@ const EnhancedProductsPage = () => {
             </p>
           </div>
         </div>
-        
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             onClick={() => setShowModal(true)}
             className="bg-amber-600 hover:bg-amber-700"

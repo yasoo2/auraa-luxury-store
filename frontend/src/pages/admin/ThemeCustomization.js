@@ -255,19 +255,21 @@ const ThemeCustomization = () => {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      {/* Wraps on narrow screens: the save/reset pair does not fit beside
+          the title on a phone, and unwrapped it hung off the screen edge. */}
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Palette className="h-8 w-8 text-amber-600" />
             {isRTL ? 'تخصيص التصميم' : 'Theme Customization'}
           </h1>
           <p className="text-gray-600 mt-2">
-            {isRTL 
-              ? 'تخصيص مظهر وألوان المتجر' 
+            {isRTL
+              ? 'تخصيص مظهر وألوان المتجر'
               : 'Customize your store appearance and colors'}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Button variant="outline" onClick={handleReset}>
             <RotateCcw className="h-4 w-4 me-2" />
             {isRTL ? 'استعادة' : 'Reset'}

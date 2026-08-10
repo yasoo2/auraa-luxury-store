@@ -943,9 +943,12 @@ const SettingsPage = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6" aria-label="Tabs">
+        {/* Tabs. Five of them never fit a phone side by side; the strip
+            scrolls sideways instead of hanging 600px off the screen. gap
+            replaces space-x-8 because margin-based spacing does not flip
+            with the reading direction. */}
+        <div className="border-b border-gray-200 overflow-x-auto">
+          <nav className="flex gap-8 px-6 w-max min-w-full" aria-label="Tabs">
             {tabs.map((tab) => {
               const TabIcon = tab.icon;
               return (

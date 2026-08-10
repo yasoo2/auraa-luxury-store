@@ -53,7 +53,7 @@ const SEOHead = ({
     "address": {
       "@type": "PostalAddress",
       "addressCountry": "SA",
-      "addressLocality": "Riyadh"
+      "addressLocality": "Istanbul"
     }
   };
 
@@ -149,7 +149,7 @@ const SEOHead = ({
       
       {/* Geo Meta Tags */}
       <meta name="geo.region" content="SA" />
-      <meta name="geo.placename" content="Riyadh" />
+      <meta name="geo.placename" content="Istanbul" />
       <meta name="geo.position" content="24.7136;46.6753" />
       <meta name="ICBM" content="24.7136, 46.6753" />
       

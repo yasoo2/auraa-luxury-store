@@ -38,18 +38,18 @@ const SettingsPage = () => {
     store_description_ar: 'إكسسوارات فاخرة للعملاء المميزين',
     
     // Contact Information
-    contact_email: 'info@auraa.com',
+    contact_email: 'younes.sowady2011@gmail.com',
     contact_phone: '+905013715391',
     whatsapp_number: '+905013715391',
     
     // Address
-    address_line1: '123 Luxury Street',
-    address_line1_ar: '123 شارع الفخامة',
-    city: 'Riyadh',
-    city_ar: 'الرياض',
-    country: 'Saudi Arabia',
-    country_ar: 'المملكة العربية السعودية',
-    postal_code: '12345',
+    address_line1: 'Pınartepe Mah.',
+    address_line1_ar: 'حي بينارتيبه',
+    city: 'Istanbul',
+    city_ar: 'إسطنبول',
+    country: 'Türkiye',
+    country_ar: 'تركيا',
+    postal_code: '45000',
     
     // Business Settings
     currency_primary: 'SAR',
@@ -422,7 +422,7 @@ const SettingsPage = () => {
             <Input
               value={settings.address_line1}
               onChange={(e) => updateSetting('address_line1', e.target.value)}
-              placeholder="123 Luxury Street"
+              placeholder="Pınartepe Mah."
             />
           </div>
           
@@ -433,7 +433,7 @@ const SettingsPage = () => {
             <Input
               value={settings.address_line1_ar}
               onChange={(e) => updateSetting('address_line1_ar', e.target.value)}
-              placeholder="123 شارع الفخامة"
+              placeholder="حي بينارتيبه"
               dir="rtl"
             />
           </div>
@@ -447,7 +447,7 @@ const SettingsPage = () => {
             <Input
               value={settings.city}
               onChange={(e) => updateSetting('city', e.target.value)}
-              placeholder="Riyadh"
+              placeholder="Istanbul"
             />
           </div>
           
@@ -458,7 +458,7 @@ const SettingsPage = () => {
             <Input
               value={settings.country}
               onChange={(e) => updateSetting('country', e.target.value)}
-              placeholder="Saudi Arabia"
+              placeholder="Türkiye"
             />
           </div>
           

@@ -143,8 +143,8 @@ const AboutUs = () => {
                 </p>
                 <p>
                   {isRTL 
-                    ? 'اليوم، نفخر بكوننا وجهة موثوقة للمجوهرات الفاخرة في المملكة العربية السعودية ودول الخليج. نجحنا في بناء مجتمع من العملاء المميزين الذين يثقون بنا لإضافة لمسة من البريق والأناقة إلى حياتهم اليومية.'
-                    : 'Today, we are proud to be a trusted destination for luxury jewelry in Saudi Arabia and the Gulf countries. We have successfully built a community of distinguished customers who trust us to add a touch of sparkle and elegance to their daily lives.'
+                    ? 'اليوم، نفخر بكوننا وجهة موثوقة للمجوهرات الفاخرة لعملائنا في العالم العربي وحول العالم. نجحنا في بناء مجتمع من العملاء المميزين الذين يثقون بنا لإضافة لمسة من البريق والأناقة إلى حياتهم اليومية.'
+                    : 'Today, we are proud to be a trusted destination for luxury jewelry for customers across the Arab world and beyond. We have successfully built a community of distinguished customers who trust us to add a touch of sparkle and elegance to their daily lives.'
                   }
                 </p>
                 <p>

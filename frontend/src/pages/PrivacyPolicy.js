@@ -139,7 +139,7 @@ const PrivacyPolicy = () => {
                     <p className="text-gray-700 font-medium">أورا لاكشري</p>
                     <p className="text-gray-600">البريد الإلكتروني: privacy@auraaluxury.com</p>
                     <p className="text-gray-600">الهاتف: +90 501 371 5391</p>
-                    <p className="text-gray-600">العنوان: الرياض، المملكة العربية السعودية</p>
+                    <p className="text-gray-600">العنوان: إسطنبول، تركيا</p>
                   </div>
                 </section>
 
@@ -257,7 +257,7 @@ const PrivacyPolicy = () => {
                     <p className="text-gray-700 font-medium">Auraa Luxury</p>
                     <p className="text-gray-600">Email: privacy@auraaluxury.com</p>
                     <p className="text-gray-600">Phone: +90 501 371 5391</p>
-                    <p className="text-gray-600">Address: Riyadh, Saudi Arabia</p>
+                    <p className="text-gray-600">Address: Istanbul, Türkiye</p>
                   </div>
                 </section>
 

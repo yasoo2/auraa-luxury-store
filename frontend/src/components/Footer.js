@@ -126,12 +126,12 @@ const Footer = () => {
               </li>
               <li className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-amber-400 me-2" />
-                <span className="text-gray-300">info@auraaluxury.com</span>
+                <span className="text-gray-300" dir="ltr">younes.sowady2011@gmail.com</span>
               </li>
               <li className="flex items-start space-x-2">
                 <MapPin className="h-4 w-4 text-amber-400 me-2 mt-1" />
                 <span className="text-gray-300">
-                  الرياض، المملكة العربية السعودية
+                  إسطنبول، تركيا
                 </span>
               </li>
             </ul>

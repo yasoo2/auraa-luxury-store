@@ -2144,6 +2144,15 @@ async def _buy_from_supplier_inner(order: Dict[str, Any], order_id: str, actor: 
         raise HTTPException(status_code=502, detail=f"Sending failed: {reason}")
 
     supplier_order_id = result.get("orderId") or result.get("orderNum")
+    if not supplier_order_id:
+        # CJ said yes but the answer carries no id we recognise. Writing
+        # "sent" with a null id would pass every guard downstream while
+        # nothing can ever be tracked or reconciled against CJ.
+        reason = (f"CJ accepted the order but answered in an unknown shape: {result!r:.300}. "
+                  f"Check the CJ dashboard for {order.get('order_number') or order_id} before resending.")
+        await record_failure(reason)
+        raise HTTPException(status_code=502, detail=reason)
+
     try:
         await db.orders.update_one({"id": order_id}, {"$set": {
             "supplier_status": "sent",

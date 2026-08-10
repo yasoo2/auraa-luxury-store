@@ -480,4 +480,11 @@ async def create_order(
         "fromCountryCode": from_country,
         "products": products,
     })
-    return data.get("data") or {}
+    payload = data.get("data")
+    # CJ answers createOrder with the new order's id as a BARE STRING in
+    # `data`, not an object — reading .get() off it crashed the send one
+    # line after CJ had already accepted the order, which is the single
+    # worst place to crash. Normalise both shapes.
+    if isinstance(payload, str):
+        return {"orderId": payload}
+    return payload or {}

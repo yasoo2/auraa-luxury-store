@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown, Route as RouteIcon, ShieldAlert } from 'lucide-react';
+import { ShoppingCart, User, Search, Menu, X, Heart, LogOut, ChevronDown, Route as RouteIcon, LayoutDashboard } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -18,7 +18,7 @@ const API = `${BACKEND_URL}/api`;
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout } = useAuth();
   const { language } = useLanguage();
   const isRTL = language === 'ar' || language === 'he';
   const { getWishlistCount, clearWishlist } = useWishlist();
@@ -87,9 +87,14 @@ const Navbar = () => {
 
   const trackOrderLabel = isRTL ? 'تتبع الطلب' : 'Track Order';
 
+  // Category documents carry both names; showing `name` (the Arabic one)
+  // regardless of language left Arabic labels inside the English menu.
+  const categoryLabel = (c) => (isRTL ? c.name : (c.name_en || c.name));
+  const categoryAltLabel = (c) => (isRTL ? (c.name_en || '') : c.name);
+
   return (
     <nav ref={navRef} className="nav-glass sticky top-0" style={{ zIndex: 200 }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* min-w-0 lets the flex children shrink instead of forcing the row wider
               than the viewport, which pushed the right-hand actions off-screen at
               tablet widths. */}
@@ -139,10 +144,10 @@ const Navbar = () => {
                         className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-amber-50 hover-text-brand transition-colors"
                         onClick={() => setShowCategories(false)}
                       >
-                        <span className="text-lg mr-3">{category.icon}</span>
+                        <span className="text-lg me-3">{category.icon}</span>
                         <div>
-                          <div className="font-medium">{category.name}</div>
-                          <div className="text-xs text-gray-500">{category.name_en}</div>
+                          <div className="font-medium">{categoryLabel(category)}</div>
+                          <div className="text-xs text-gray-500">{categoryAltLabel(category)}</div>
                         </div>
                       </Link>
                     ))}
@@ -186,7 +191,10 @@ const Navbar = () => {
           </form>
 
           {/* Right Actions - Mobile optimized */}
-          <div className={`flex items-center min-w-0 ${isRTL ? 'space-x-reverse space-x-1 sm:space-x-2 md:space-x-4' : 'space-x-1 sm:space-x-2 md:space-x-4'}`}>
+          {/* gap, not space-x: direction-agnostic, so the RTL reverse dance
+              goes — and on a 320px cover display every one of these pixels
+              decides whether the row fits or gets clipped. */}
+          <div className="flex items-center min-w-0 gap-1 sm:gap-2 md:gap-4">
             {/* Language Currency Selector - Hidden on smallest screens */}
             <div className="hidden sm:block">
               <LanguageCurrencySelector />
@@ -221,9 +229,11 @@ const Navbar = () => {
                   <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 
-                {/* Admin Button - Always visible if admin */}
+                {/* Admin chip, wide screens only. On a narrow phone it was
+                    the straw that pushed the whole top row wider than the
+                    viewport — the admin entry lives in the drawer there. */}
                 {user && user.is_admin && (
-                  <Link to="/admin" className="px-2 py-1 text-xs sm:text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors whitespace-nowrap">
+                  <Link to="/admin" className="hidden sm:inline-block px-2 py-1 text-sm bg-ivory text-brand rounded-full hover:bg-pearl transition-colors whitespace-nowrap">
                     {isRTL ? 'إدارة' : 'Admin'}
                   </Link>
                 )}
@@ -239,7 +249,7 @@ const Navbar = () => {
             {/* Mobile menu button */}
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className="lg:hidden p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200 ms-1" 
+              className="lg:hidden p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200"
               data-testid="mobile-menu-button"
               aria-label="Toggle mobile menu"
             >
@@ -290,6 +300,12 @@ const Navbar = () => {
                     <User className="h-4 w-4 me-2" />
                     {isRTL ? 'الملف الشخصي' : 'Profile'}
                   </Link>
+                  {user.is_admin && (
+                    <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors" data-testid="drawer-admin-link">
+                      <LayoutDashboard className="h-4 w-4 me-2" />
+                      {isRTL ? 'لوحة الإدارة' : 'Admin Panel'}
+                    </Link>
+                  )}
                   <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors">
                     <LogOut className="h-4 w-4 me-2" />
                     {isRTL ? 'تسجيل الخروج' : 'Logout'}
@@ -306,8 +322,8 @@ const Navbar = () => {
                 <div className="grid grid-cols-2 gap-2">
                   {categories.map((category) => (
                     <Link key={category.id} to={`/products?category=${category.id}`} className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover-text-brand hover:bg-amber-50 rounded-lg transition-colors" onClick={() => setIsMenuOpen(false)}>
-                      <span className="text-base mr-2">{category.icon}</span>
-                      <span className="truncate">{category.name}</span>
+                      <span className="text-base me-2">{category.icon}</span>
+                      <span className="truncate">{categoryLabel(category)}</span>
                     </Link>
                   ))}
                 </div>

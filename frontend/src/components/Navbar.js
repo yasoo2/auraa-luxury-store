@@ -101,7 +101,11 @@ const Navbar = () => {
         <div className="relative flex justify-between items-center gap-2 min-w-0 min-h-16 md:min-h-20 py-2" style={{ direction: 'ltr' }}>
           {/* Logo (default inline left) - Mobile optimized */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
-            <Link to="/" className="flex flex-col items-start py-1 md:py-2 flex-shrink-0">
+            <Link to="/" className="flex items-center gap-2 py-1 md:py-2 flex-shrink-0">
+              {/* The pendant mark joins the wordmark on wider screens; on a
+                  narrow phone every pixel of this row is already spoken for. */}
+              <img src="/favicon.svg" alt="" className="hidden sm:block h-9 w-9" />
+              <div className="flex flex-col items-start">
               <div className="font-display font-black leading-none flex items-baseline gap-1">
                 <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>
                 {/* Was 8px, painted with the same clipped gradient as the
@@ -112,6 +116,7 @@ const Navbar = () => {
                 <span className="text-[10px] sm:text-xs font-semibold text-[#3f2d10]/80 tracking-[0.18em] sm:tracking-[0.28em] whitespace-nowrap">LUXURY</span>
               </div>
               <span className="block text-[7px] sm:text-[9px] md:text-[11px] text-gray-600 tracking-[0.2em] sm:tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
+              </div>
             </Link>
           )}
 

@@ -1,4 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" fill="#D97706"/>
-  <text x="50" y="70" font-size="60" text-anchor="middle" fill="#FFFBEB" font-family="Arial, sans-serif" font-weight="bold">A</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Auraa Luxury — «العقد على الجيد»: قلادة تنسدل كما تستقر على العنق،
+       ودمعة ذهب في قاعها. اختيار المالك من عشرين اقتراحاً (رقم ١٦).
+       الأوزان معايَرة لتصمد في 16px داخل تبويب المتصفح. -->
+  <circle cx="32" cy="32" r="32" fill="#101724"/>
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#c9a24b" stroke-width="2"/>
+  <path d="M9 12 Q20 29 32 36 Q44 29 55 12" fill="none" stroke="#c9a24b" stroke-width="3.4" stroke-linecap="round"/>
+  <circle cx="16.5" cy="21" r="2.2" fill="#e8cc84"/>
+  <circle cx="24" cy="28.5" r="2.2" fill="#e8cc84"/>
+  <circle cx="47.5" cy="21" r="2.2" fill="#e8cc84"/>
+  <circle cx="40" cy="28.5" r="2.2" fill="#e8cc84"/>
+  <circle cx="32" cy="41" r="2.8" fill="none" stroke="#e8cc84" stroke-width="2"/>
+  <path d="M32 45 C39.5 52 38 59.5 32 61 C26 59.5 24.5 52 32 45" fill="#f6efdd" stroke="#c9a24b" stroke-width="1.5"/>
 </svg>

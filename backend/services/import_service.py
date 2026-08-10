@@ -1,6 +1,6 @@
 # services/import_service.py
 import asyncio
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Set
 from services.cj_client import list_products, get_product_details
 import logging
 
@@ -41,103 +41,121 @@ async def chunked(lst: List[Any], size: int):
     for i in range(0, len(lst), size):
         yield lst[i:i+size]
 
+# Pages to try before concluding CJ has nothing new for this keyword. With 50
+# per page that is up to 2000 listings scanned — enough to fill any real
+# request, small enough to end a hopeless keyword in a couple of minutes.
+MAX_PAGES = 40
+
+
 async def bulk_import_products(
-    total_count: int, 
-    keyword: str = "luxury jewelry"
+    total_count: int,
+    keyword: str = "luxury jewelry",
+    exclude_ids: Optional[Set[str]] = None,
 ) -> Dict[str, Any]:
     """
-    استيراد منتجات على دفعات من CJ Dropshipping
-    
-    Args:
-        total_count: العدد الإجمالي للمنتجات المطلوبة
-        keyword: كلمة البحث
-    
-    Returns:
-        dict مع نتائج الاستيراد
+    Fetch `total_count` products the shop does NOT already have.
+
+    The old version computed how many pages `total_count` needs and read
+    exactly those, starting from page 1 — the same first page every run. After
+    the first import ever, every product it fetched already existed, the
+    importer skipped them all, and the owner pressed «استيراد» to watch fifty
+    duplicates get refused: requested 50, imported 0, reported success.
+
+    `exclude_ids` carries the external ids the shop already owns; pages are
+    read until enough NEW products are found or the supplier runs dry.
     """
+    exclude = set(exclude_ids or ())
     results = {
         "total_requested": total_count,
         "total_fetched": 0,
         "ok": 0,
         "failed": 0,
+        "skipped_existing": 0,
         "batches": [],
         "products": []
     }
 
-    # حساب عدد الصفحات المطلوبة
     page_size = BATCH_SIZE
-    num_pages = (total_count + page_size - 1) // page_size
+    logger.info(f"🚀 Starting bulk import: {total_count} new products, {len(exclude)} already owned")
 
-    logger.info(f"🚀 Starting bulk import: {total_count} products in {num_pages} batches")
-
-    batch_index = 0
+    # CJ can repeat an item across pages; one run must not import it twice.
+    seen_pids = set()
     products_fetched = 0
-    
-    for page_num in range(1, num_pages + 1):
-        # Stop if we have enough products
+
+    for page_num in range(1, MAX_PAGES + 1):
         if products_fetched >= total_count:
             break
-            
-        batch_index += 1
-        
+
         try:
-            logger.info(f"📦 Batch {batch_index}/{num_pages}: Fetching page {page_num}")
-            
-            # جلب المنتجات
+            logger.info(f"📦 Page {page_num}: fetching (have {products_fetched}/{total_count})")
+
             response = await list_products(
                 page_num=page_num,
                 page_size=page_size,
                 keyword=keyword
             )
-            
-            batch_products = _products_from(response)
-            
-            # حد العدد المطلوب
-            remaining = total_count - products_fetched
-            batch_products = batch_products[:remaining]
-            
-            if batch_products:
-                results["products"].extend(batch_products)
-                products_fetched += len(batch_products)
-                results["ok"] += len(batch_products)
-                
+
+            page_products = _products_from(response)
+            if not page_products:
+                # The supplier has nothing further for this keyword.
                 results["batches"].append({
-                    "batch": batch_index,
-                    "page": page_num,
-                    "size": len(batch_products),
-                    "status": "success"
-                })
-                
-                logger.info(f"✅ Batch {batch_index} success: {len(batch_products)} products ({products_fetched}/{total_count})")
-            else:
-                logger.warning(f"⚠️ Batch {batch_index}: No products returned")
-                results["batches"].append({
-                    "batch": batch_index,
+                    "batch": page_num,
                     "page": page_num,
                     "size": 0,
                     "status": "empty"
                 })
-                break  # No more products available
-            
-        except Exception as e:
-            logger.error(f"❌ Batch {batch_index} failed: {e}")
-            results["failed"] += page_size
+                break
+
+            fresh = []
+            for product in page_products:
+                pid = str(product.get("pid") or "")
+                if not pid or pid in seen_pids:
+                    continue
+                seen_pids.add(pid)
+                if pid in exclude:
+                    results["skipped_existing"] += 1
+                    continue
+                fresh.append(product)
+
+            remaining = total_count - products_fetched
+            fresh = fresh[:remaining]
+
+            if fresh:
+                results["products"].extend(fresh)
+                products_fetched += len(fresh)
+                results["ok"] += len(fresh)
+
             results["batches"].append({
-                "batch": batch_index,
+                "batch": page_num,
+                "page": page_num,
+                "size": len(fresh),
+                "status": "success"
+            })
+
+            logger.info(f"✅ Page {page_num}: {len(fresh)} new ({products_fetched}/{total_count})")
+
+        except Exception as e:
+            logger.error(f"❌ Page {page_num} failed: {e}")
+            results["failed"] += min(page_size, total_count - products_fetched)
+            results["batches"].append({
+                "batch": page_num,
                 "page": page_num,
                 "size": 0,
                 "status": f"error: {str(e)[:100]}"
             })
-        
+
         # راحة قصيرة بين الدفعات لتفادي 429
-        if batch_index < num_pages:
-            logger.info(f"😴 Sleeping {PAUSE_BETWEEN_BATCHES}s before next batch...")
+        if products_fetched < total_count and page_num < MAX_PAGES:
+            logger.info(f"😴 Sleeping {PAUSE_BETWEEN_BATCHES}s before next page...")
             await asyncio.sleep(PAUSE_BETWEEN_BATCHES)
-    
+
     results["total_fetched"] = products_fetched
-    
-    logger.info(f"✅ Bulk import complete: {products_fetched}/{total_count} products fetched")
-    
+
+    logger.info(
+        f"✅ Bulk import complete: {products_fetched}/{total_count} new, "
+        f"{results['skipped_existing']} already owned"
+    )
+
     return results
 
 async def fetch_product_details_batch(product_ids: List[str]) -> List[Dict[str, Any]]:

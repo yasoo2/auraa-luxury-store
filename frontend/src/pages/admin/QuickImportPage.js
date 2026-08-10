@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../api';
-import { API_BASE_URL } from '../../api';
 
-const API_BASE = API_BASE_URL;
 const QuickImportPage = () => {
   const [language, setLanguage] = useState('ar');
   const [backendReady, setBackendReady] = useState(false);
@@ -92,7 +89,22 @@ const QuickImportPage = () => {
         if (status.state === 'completed') {
           clearInterval(pollInterval);
           setIsImporting(false);
-          toast.success(`✅ اكتمل الاستيراد! تم استيراد ${status.processed} منتج`);
+          // The report speaks in the job's real numbers. `processed` counts
+          // items *looked at* — reporting it as "imported" once told the
+          // owner fifty products arrived when every one had been refused as
+          // a duplicate and the shop gained nothing.
+          const imported = status.imported || 0;
+          const skipped = status.skipped_existing || 0;
+          const failed = status.failed || 0;
+          const details = [];
+          if (skipped > 0) details.push(`${skipped} موجود مسبقاً`);
+          if (failed > 0) details.push(`${failed} فشل`);
+          const suffix = details.length ? ` (${details.join('، ')})` : '';
+          if (imported > 0) {
+            toast.success(`✅ اكتمل الاستيراد: ${imported} منتج جديد${suffix}`);
+          } else {
+            toast.warning(`⚠️ لم يُستورد أي منتج جديد${suffix || ' — لم يصل شيء من المورد'}`);
+          }
         } else if (status.state === 'failed') {
           clearInterval(pollInterval);
           setIsImporting(false);

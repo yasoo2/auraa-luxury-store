@@ -2821,6 +2821,69 @@ def test_a_send_cancelled_mid_flight_leaves_its_name_and_frees_the_claim(seeded,
     assert r.json()["supplier_order_id"] == "CJ-ORDER-1"
 
 
+def test_cj_created_but_recording_failed_names_the_cj_order(seeded, monkeypatch):
+    """
+    The one moment a blank 500 costs real money: CJ accepted the order and
+    the write-back died. Unnamed, that reads as "the send failed" and invites
+    a retry that buys the goods twice. The answer must carry the CJ number.
+    """
+    from mongomock_motor import AsyncMongoMockCollection
+
+    order = _order_ready_for_cj(seeded, monkeypatch, email="ghost@b.com")
+
+    # db.orders builds a fresh collection object on every attribute access,
+    # so the patch has to live on the class. The filter keeps it surgical:
+    # only the success write-back carries a truthy supplier_order_id.
+    real_update = AsyncMongoMockCollection.update_one
+
+    async def _loses_the_success_write(self, flt, update, **kwargs):
+        if (update.get("$set") or {}).get("supplier_order_id"):
+            raise RuntimeError("db write lost")
+        return await real_update(self, flt, update, **kwargs)
+
+    monkeypatch.setattr(AsyncMongoMockCollection, "update_one", _loses_the_success_write)
+    r = seeded.post(f"/api/admin/orders/{order['id']}/send-to-supplier")
+    assert r.status_code == 502, r.text
+    assert "CJ-ORDER-1" in r.json()["detail"], r.text
+    assert "Do NOT resend" in r.json()["detail"], r.text
+
+    row = {o["id"]: o for o in seeded.get("/api/admin/orders").json()}[order["id"]]
+    assert "CJ-ORDER-1" in (row["supplier_error"] or ""), row
+
+
+def test_an_unhandled_crash_answers_with_its_type_not_a_blank_500(seeded, monkeypatch):
+    """
+    The floor under every endpoint. A bare "Internal Server Error" rendered
+    as a generic shrug in the UI and cost a night of guessing; the type name
+    at least points at the culprit — and leaks nothing, unlike messages.
+    """
+    from fastapi.testclient import TestClient
+    from mongomock_motor import AsyncMongoMockCollection
+    import server as server_module
+
+    register(seeded, email="floor@b.com")
+    make_admin(seeded, "floor@b.com")
+
+    # Class-level (fresh collection object per access), filtered to the one
+    # lookup this endpoint makes so auth's own reads stay healthy.
+    real_find = AsyncMongoMockCollection.find_one
+
+    async def _driver_hiccup(self, flt=None, *args, **kwargs):
+        if flt == {"id": "whatever"}:
+            raise RuntimeError("connection pool exploded")
+        return await real_find(self, flt, *args, **kwargs)
+
+    monkeypatch.setattr(AsyncMongoMockCollection, "find_one", _driver_hiccup)
+
+    # A client that reports the response instead of re-raising server errors,
+    # wearing the admin's own cookies.
+    raw = TestClient(server_module.app, raise_server_exceptions=False)
+    raw.cookies.update(seeded.cookies)
+    r = raw.post("/api/admin/orders/whatever/send-to-supplier")
+    assert r.status_code == 500, r.text
+    assert r.json()["detail"] == "Internal error: RuntimeError", r.text
+
+
 def test_a_send_stuck_mid_flight_can_be_retried_once_stale(seeded, monkeypatch):
     """
     A process killed mid-send — a deploy, a crash — leaves "sending" behind

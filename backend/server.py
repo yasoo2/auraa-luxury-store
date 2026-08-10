@@ -85,12 +85,26 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
                 response.headers["Access-Control-Max-Age"] = "3600"
             return response
         
-        # Process request
+        # Process request. This except is the outermost one in the app, so
+        # whatever it does defines every unhandled crash's face:
+        # - str(e) as the body leaked driver messages (which can carry
+        #   connection strings) to the public, as plain text no UI could
+        #   read — the admin saw a shapeless "HTTP 500" all night while
+        #   three inner safety nets never got the chance to name anything.
+        # - The TYPE name leaks nothing and points somewhere. The traceback
+        #   goes to the log, where secrets are allowed to live.
+        # It must also fall through to the CORS block below: an error
+        # response without those headers is unreadable cross-origin, and
+        # the storefront and API live on different subdomains.
         try:
             response = await call_next(request)
         except Exception as e:
-            logger.error(f"Error processing request: {e}")
-            response = StarletteResponse(status_code=500, content=str(e))
+            logger.exception("Unhandled %s on %s %s",
+                             type(e).__name__, request.method, request.url.path)
+            response = JSONResponse(
+                status_code=500,
+                content={"detail": f"Internal error: {type(e).__name__}"},
+            )
         
         # Add CORS headers to response
         if is_allowed and origin:
@@ -109,6 +123,27 @@ app.add_middleware(
     window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "300")),
 )
 app.add_middleware(CustomCORSMiddleware)
+
+
+@app.exception_handler(Exception)
+async def _unhandled_error_names_itself(request: Request, exc: Exception):
+    """
+    The floor under every endpoint: nothing answers with a blank 500.
+
+    A bare "Internal Server Error" told the owner nothing and the UI less —
+    it rendered as a generic Arabic shrug, and one such shrug cost a night of
+    guessing at a payment flow that was actually failing in a driver call.
+    Only the exception's TYPE is exposed: messages can carry connection
+    strings and secrets, the type name never does. The full traceback goes to
+    the log, which is where secrets are allowed to live.
+    """
+    logger.exception("Unhandled %s on %s %s",
+                     type(exc).__name__, request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal error: {type(exc).__name__}"},
+    )
+
 
 api_router = APIRouter(prefix="/api")
 
@@ -1982,9 +2017,24 @@ async def _buy_from_supplier(order: Dict[str, Any], actor: str) -> Dict[str, Any
     payment, on purpose — two code paths to the supplier means two ways to be
     wrong about what was bought.
     """
-    from services import cj_client
-
     order_id = order["id"]
+
+    try:
+        return await _buy_from_supplier_inner(order, order_id, actor)
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001 — nothing in this path may answer namelessly
+        # The zones outside the send's own try — the pre-checks, the claim's
+        # DB round-trip — used to answer a driver hiccup with a blank 500.
+        logger.exception("Sending order %s failed outside the send itself", order_id)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Sending could not run: {type(e).__name__}: {e}",
+        )
+
+
+async def _buy_from_supplier_inner(order: Dict[str, Any], order_id: str, actor: str) -> Dict[str, Any]:
+    from services import cj_client
 
     if order.get("supplier_order_id"):
         raise HTTPException(
@@ -2094,17 +2144,32 @@ async def _buy_from_supplier(order: Dict[str, Any], actor: str) -> Dict[str, Any
         raise HTTPException(status_code=502, detail=f"Sending failed: {reason}")
 
     supplier_order_id = result.get("orderId") or result.get("orderNum")
-    await db.orders.update_one({"id": order_id}, {"$set": {
-        "supplier_status": "sent",
-        "supplier_order_id": supplier_order_id,
-        "supplier_shipping_method": chosen.get("logisticName"),
-        "supplier_shipping_cost": chosen.get("logisticPrice"),
-        "supplier_error": None,
-        "supplier_failed_at": None,
-        "sent_to_supplier_at": datetime.now(timezone.utc).isoformat(),
-        "sent_to_supplier_by": actor,
-        "status": OrderStatus.processing.value,
-    }})
+    try:
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "supplier_status": "sent",
+            "supplier_order_id": supplier_order_id,
+            "supplier_shipping_method": chosen.get("logisticName"),
+            "supplier_shipping_cost": chosen.get("logisticPrice"),
+            "supplier_error": None,
+            "supplier_failed_at": None,
+            "sent_to_supplier_at": datetime.now(timezone.utc).isoformat(),
+            "sent_to_supplier_by": actor,
+            "status": OrderStatus.processing.value,
+        }})
+    except Exception as e:  # noqa: BLE001 — the one moment a blank 500 costs real money
+        # CJ has the order; our book missed it. A blank 500 here reads as
+        # "the send failed" and invites a retry that buys the goods twice.
+        # Say the CJ number out loud and park the order with it.
+        reason = (f"CJ created the order as {supplier_order_id}, but recording it "
+                  f"here failed ({type(e).__name__}). Do NOT resend — find "
+                  f"{order.get('order_number') or order_id} in the CJ dashboard first.")
+        try:
+            await record_failure(reason)
+        except Exception:  # noqa: BLE001 — the same broken DB may refuse this too
+            pass
+        logger.exception("Order %s created at CJ as %s but not recorded",
+                         order_id, supplier_order_id)
+        raise HTTPException(status_code=502, detail=reason)
 
     return {
         "success": True,

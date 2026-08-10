@@ -2698,8 +2698,11 @@ class _FulfilmentCJ(_FakeCJ):
                     "code": 1600300, "result": False,
                     "message": "shippingCountry must be not empty",
                     "data": None, "success": False})
+            # Success carries the new order's id as a BARE STRING — the shape
+            # production actually answered with, and the one that crashed a
+            # send one line after CJ had accepted the order.
             return _FakeResponse(200, {"code": 200, "result": True,
-                                       "data": {"orderId": "CJ-ORDER-1"}})
+                                       "data": "CJ-ORDER-1"})
         return _FakeResponse(200, {"code": 200, "result": True, "data": {}})
 
 

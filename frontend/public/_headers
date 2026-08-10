@@ -20,6 +20,13 @@
   
 /*.svg
   Cache-Control: public, max-age=31536000, immutable
+
+# The brand mark is NOT immutable: it lives at a fixed URL and the owner
+# changes it. The year-long rule above froze the old orange "A" in every
+# browser and edge cache — the new pendant logo deployed and nobody saw it.
+# Later rules override earlier ones for the same header on Cloudflare Pages.
+/favicon.svg
+  Cache-Control: public, max-age=300, must-revalidate
   
 /*.png
   Cache-Control: public, max-age=31536000, immutable

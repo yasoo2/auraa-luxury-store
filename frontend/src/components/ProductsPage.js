@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Filter, SlidersHorizontal, Star, Heart, ShoppingCart, Scale, Grid, List, ChevronUp, ChevronDown } from 'lucide-react';
+import { Filter, SlidersHorizontal, Star, ShoppingCart, Scale, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
@@ -36,11 +36,17 @@ const ProductsPage = () => {
     sortBy: 'newest'
   });
   
+  // The server pages its listing; without asking for more, the shop showed
+  // exactly the first page forever and the owner asked where the rest of
+  // his catalogue went.
+  const PAGE_SIZE = 24;
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   // New state for advanced features
   const [showComparison, setShowComparison] = useState(false);
   const [comparisonProducts, setComparisonProducts] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // grid, list
-  const [showFilters, setShowFilters] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
   const getLocalizedName = (p) => {
@@ -83,35 +89,65 @@ const ProductsPage = () => {
     }
   };
 
+  const filterParams = () => {
+    const params = new URLSearchParams();
+    if (filters.category) params.append('category', filters.category);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.minPrice) params.append('min_price', filters.minPrice);
+    if (filters.maxPrice) params.append('max_price', filters.maxPrice);
+    params.append('limit', String(PAGE_SIZE));
+    return params;
+  };
+
+  const sortList = (list) => {
+    const sorted = [...list];
+    switch (filters.sortBy) {
+      case 'price_low':
+        sorted.sort((a, b) => a.price - b.price);
+        break;
+      case 'price_high':
+        sorted.sort((a, b) => b.price - a.price);
+        break;
+      case 'rating':
+        sorted.sort((a, b) => b.rating - a.rating);
+        break;
+      default:
+        sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+    return sorted;
+  };
+
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (filters.category) params.append('category', filters.category);
-      if (filters.search) params.append('search', filters.search);
-      if (filters.minPrice) params.append('min_price', filters.minPrice);
-      if (filters.maxPrice) params.append('max_price', filters.maxPrice);
-      const response = await axios.get(`${API}/products?${params}`);
-      let fetchedProducts = response.data;
-      switch (filters.sortBy) {
-        case 'price_low':
-          fetchedProducts.sort((a, b) => a.price - b.price);
-          break;
-        case 'price_high':
-          fetchedProducts.sort((a, b) => b.price - a.price);
-          break;
-        case 'rating':
-          fetchedProducts.sort((a, b) => b.rating - a.rating);
-          break;
-        default:
-          fetchedProducts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      }
-      setProducts(fetchedProducts);
+      const response = await axios.get(`${API}/products?${filterParams()}`);
+      const fetched = response.data;
+      setProducts(sortList(fetched));
+      setHasMore(fetched.length === PAGE_SIZE);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error(isRTL ? 'فشل في تحميل المنتجات' : 'Failed to load products');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreProducts = async () => {
+    setLoadingMore(true);
+    try {
+      const params = filterParams();
+      params.append('skip', String(products.length));
+      const response = await axios.get(`${API}/products?${params}`);
+      const fetched = response.data;
+      // Append then re-sort the whole list, or the new page would sit as a
+      // sorted island under the old one.
+      setProducts(prev => sortList([...prev, ...fetched]));
+      setHasMore(fetched.length === PAGE_SIZE);
+    } catch (error) {
+      console.error('Error fetching more products:', error);
+      toast.error(isRTL ? 'تعذّر تحميل المزيد' : 'Could not load more');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -148,10 +184,6 @@ const ProductsPage = () => {
       setComparisonProducts([...comparisonProducts, product]);
       toast.success(isRTL ? 'تم إضافة المنتج للمقارنة' : 'Added to comparison');
     }
-  };
-
-  const removeFromComparison = (productId) => {
-    setComparisonProducts(comparisonProducts.filter(p => p.id !== productId));
   };
 
   return (
@@ -289,6 +321,7 @@ const ProductsPage = () => {
                 <Button onClick={() => { setFilters({ category: '', search: '', minPrice: '', maxPrice: '', sortBy: 'newest' }); setSearchParams({}); }}>{isRTL ? 'مسح المرشحات' : 'Clear filters'}</Button>
               </div>
             ) : (
+              <>
               <div className={viewMode === 'grid' 
                 ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6" 
                 : "flex flex-col space-y-4"
@@ -379,6 +412,26 @@ const ProductsPage = () => {
                   </Card>
                 ))}
               </div>
+
+              {/* The server hands out PAGE_SIZE items per request; this asks
+                  for the next slice. A short page means the catalogue is
+                  exhausted and the button goes away. */}
+              {hasMore && (
+                <div className="text-center mt-10">
+                  <Button
+                    onClick={loadMoreProducts}
+                    disabled={loadingMore}
+                    variant="outline"
+                    className="px-10 py-3"
+                    data-testid="load-more-products"
+                  >
+                    {loadingMore
+                      ? (isRTL ? 'جارٍ التحميل…' : 'Loading…')
+                      : (isRTL ? 'عرض المزيد' : 'Load more')}
+                  </Button>
+                </div>
+              )}
+              </>
             )}
           </div>
         </div>

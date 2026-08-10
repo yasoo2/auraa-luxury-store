@@ -77,11 +77,43 @@ const ContactUs = () => {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          
+
           {/* Contact Information */}
           <div className="lg:col-span-1">
             <div className="space-y-6">
-              
+
+              {/* Business identity. Payment partners (Payoneer among them)
+                  verify the shop by opening this page and matching what it
+                  says against the owner's verified profile — name, store
+                  name, email, phone and city have to be the real ones. */}
+              <Card className="p-6 border-amber-200 bg-amber-50/50" data-testid="business-info">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  {isRTL ? 'بيانات النشاط التجاري' : 'Business Information'}
+                </h3>
+                <dl className="text-sm text-gray-700 space-y-2">
+                  <div>
+                    <dt className="font-medium text-gray-500">{isRTL ? 'اسم المتجر' : 'Store name'}</dt>
+                    <dd dir="ltr">Auraa Luxury Store</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-gray-500">{isRTL ? 'صاحب المتجر' : 'Owner'}</dt>
+                    <dd dir="ltr">Younis Soudi</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-gray-500">{isRTL ? 'البريد الإلكتروني' : 'Email'}</dt>
+                    <dd dir="ltr" className="break-all">younes.sowady2011@gmail.com</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-gray-500">{isRTL ? 'الهاتف' : 'Phone'}</dt>
+                    <dd dir="ltr">+90 501 371 5391</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-gray-500">{isRTL ? 'العنوان' : 'Address'}</dt>
+                    <dd dir="ltr">Pınartepe Mah., Istanbul 45000, Türkiye</dd>
+                  </div>
+                </dl>
+              </Card>
+
               {/* Phone */}
               <Card className="p-6 hover:shadow-lg transition-shadow">
                 <div className="flex items-center space-x-4">
@@ -137,7 +169,7 @@ const ContactUs = () => {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {isRTL ? 'البريد الإلكتروني' : 'Email'}
                     </h3>
-                    <p className="text-gray-600">info@auraaluxury.com</p>
+                    <p className="text-gray-600 break-all" dir="ltr">younes.sowady2011@gmail.com</p>
                     <p className="text-sm text-gray-500">
                       {isRTL ? 'رد خلال 24 ساعة' : 'Response within 24 hours'}
                     </p>
@@ -155,10 +187,14 @@ const ContactUs = () => {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {isRTL ? 'العنوان' : 'Address'}
                     </h3>
+                    {/* The real one. "Riyadh, Saudi Arabia" stood here — an
+                        invented address that contradicted the owner's
+                        verified profile in front of the very reviewers who
+                        compare the two. */}
                     <p className="text-gray-600">
-                      {isRTL 
-                        ? 'الرياض، المملكة العربية السعودية'
-                        : 'Riyadh, Saudi Arabia'
+                      {isRTL
+                        ? 'إسطنبول، تركيا'
+                        : 'Istanbul, Türkiye'
                       }
                     </p>
                   </div>

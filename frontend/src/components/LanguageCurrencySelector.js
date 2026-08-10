@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Globe, DollarSign, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { useLanguage } from '../context/LanguageContext';
-import FLAGS from '../config/flags';
 
 const LanguageCurrencySelector = () => {
   const { language, currency, switchLanguage, switchCurrency, languages, currencies } = useLanguage();
@@ -43,8 +42,13 @@ const LanguageCurrencySelector = () => {
   const currentLanguage = languagesList.find(lang => lang.code === language);
   const currentCurrency = currenciesList.find(curr => curr.code === currency);
 
+  // Both menus anchor with `start-0` (a logical edge), not `left-0`. Inside
+  // the RTL mobile drawer the trigger sits by the right screen edge; a menu
+  // pinned by its LEFT corner grew rightward off-screen, and the drawer
+  // answered with a horizontal scroll that clipped its own edges — exactly
+  // what the owner photographed on a Fold's narrow cover display.
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center gap-2">
       <div className="relative" ref={languageRef}>
         <Button
           variant="ghost"
@@ -53,15 +57,16 @@ const LanguageCurrencySelector = () => {
             setShowLanguages(!showLanguages);
             setShowCurrencies(false); // Close currency dropdown when opening language
           }}
-          className="flex items-center space-x-1 hover:bg-gray-100"
+          data-testid="language-toggle"
+          className="flex items-center gap-1 hover:bg-gray-100"
         >
           <Globe className="h-4 w-4" />
           <span className="text-sm">{currentLanguage?.flag}</span>
           <ChevronDown className="h-3 w-3" />
         </Button>
-        
+
         {showLanguages && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px] max-h-[300px] overflow-y-auto" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
+          <div data-testid="language-menu" className="absolute top-full start-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px] max-w-[calc(100vw-1rem)] max-h-[300px] overflow-y-auto" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
             {languagesList.map((lang) => (
               <button
                 key={lang.code}
@@ -69,7 +74,7 @@ const LanguageCurrencySelector = () => {
                   switchLanguage(lang.code);
                   setShowLanguages(false);
                 }}
-                className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2 text-sm first:rounded-t-lg last:rounded-b-lg ${
+                className={`w-full px-3 py-2 text-start hover:bg-gray-50 flex items-center gap-2 text-sm first:rounded-t-lg last:rounded-b-lg ${
                   language === lang.code ? 'bg-amber-50 text-amber-700' : 'text-gray-700'
                 }`}
               >
@@ -90,7 +95,7 @@ const LanguageCurrencySelector = () => {
             setShowLanguages(false); // Close language dropdown when opening currency
           }}
           data-testid="currency-toggle"
-          className="flex items-center space-x-1 hover:bg-gray-100"
+          className="flex items-center gap-1 hover:bg-gray-100"
         >
           <DollarSign className="h-4 w-4" />
           <span data-testid="currency-toggle-symbol" className="text-sm font-medium">{currentCurrency?.symbol}</span>
@@ -103,7 +108,7 @@ const LanguageCurrencySelector = () => {
              running past the bottom of the screen, so everything below the
              fold — including the lira the shop's own owner went hunting for —
              could not be reached at all. */
-          <div data-testid="currency-menu" className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px] max-h-[300px] overflow-y-auto" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
+          <div data-testid="currency-menu" className="absolute top-full start-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[160px] max-w-[calc(100vw-1rem)] max-h-[300px] overflow-y-auto" style={{ backgroundColor: 'white', opacity: 1, backdropFilter: 'none' }}>
             {currenciesList.map((curr) => (
               <button
                 key={curr.code}
@@ -112,7 +117,7 @@ const LanguageCurrencySelector = () => {
                   switchCurrency(curr.code);
                   setShowCurrencies(false);
                 }}
-                className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between text-sm first:rounded-t-lg last:rounded-b-lg ${
+                className={`w-full px-3 py-2 text-start hover:bg-gray-50 flex items-center justify-between text-sm first:rounded-t-lg last:rounded-b-lg ${
                   currency === curr.code ? 'bg-amber-50 text-amber-700' : 'text-gray-700'
                 }`}
               >

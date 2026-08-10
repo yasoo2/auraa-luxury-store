@@ -138,6 +138,15 @@ await ctx.route('**/api/**', (route) => {
   }
   if (p.endsWith('/api/payment-methods')) return reply({ methods: [{ id: 'card', provider: 'iyzico', currency: 'USD' }] });
   if (p.endsWith('/api/geo/detect')) return reply({ country_code: 'SA' });
+  if (p.endsWith('/api/categories')) {
+    // Real shape: both names on every document. The mobile drawer used to
+    // print `name` — the Arabic one — whatever language the visitor chose.
+    return reply([
+      { id: 'necklaces', name: 'قلادات', name_en: 'Necklaces', icon: '📿' },
+      { id: 'rings', name: 'خواتم', name_en: 'Rings', icon: '💍' },
+      { id: 'sets', name: 'أطقم', name_en: 'Sets', icon: '✨' },
+    ]);
+  }
   // The REAL response shape: Product documents carry `images` (plural) and
   // no recommendation_score — the card once invented a score off the missing
   // field and printed "NaN%" to customers.
@@ -386,6 +395,36 @@ if (loadMore.ok && catalogueGrew && loadMoreAfter) lmWhy.push('الزر باقٍ
 check('صفحة المنتجات تجلب صفحة كاملة و«عرض المزيد» يُكمل الكتالوج ثم يختفي',
   lmWhy.length === 0, lmWhy.join('، '));
 
+// The store opens in English, but the chrome around every page — navbar,
+// drawer, footer — carried Arabic written straight into the JSX, so the
+// switch changed some words and left the rest: «هناك كلمات لم تتغير».
+// Currency symbols (ر.س) are money, not UI copy, and stay exempt.
+await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(700);
+await page.locator('[data-testid="mobile-menu-button"]').click();
+await page.waitForTimeout(400);
+const arLeaks = await page.evaluate(() => {
+  const leaks = [];
+  const scan = (sel, label) => {
+    const root = document.querySelector(sel);
+    if (!root) { leaks.push(`${label}: العنصر غير موجود`); return; }
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const text = walker.currentNode.textContent;
+      if (!/[؀-ۿ]/.test(text)) continue;
+      const el = walker.currentNode.parentElement;
+      if (el && el.closest('[data-testid^="currency"]')) continue;
+      leaks.push(`${label}: «${text.trim().slice(0, 40)}»`);
+      return;
+    }
+  };
+  scan('nav', 'الشريط والقائمة');
+  scan('footer', 'الفوتر');
+  return leaks;
+});
+check('الوضع الإنجليزي إنجليزي فعلاً: لا عربية مثبّتة في الشريط والقائمة والفوتر',
+  arLeaks.length === 0, arLeaks.join(' | '));
+
 // The wordmark, at the width where it broke.
 await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(700);
@@ -434,6 +473,51 @@ for (const file of sources) {
   }
 }
 check('لا شاشة تعرض تاريخاً بالتقويم الهجري', hijri.length === 0, hijri.join(' | '));
+
+// A Fold's cover display is narrower than anything tested before. 320px is
+// the narrowest common phone width, checked in Arabic — the direction that
+// actually broke: the language menu was pinned by its LEFT corner, so inside
+// the RTL drawer it grew rightward off-screen and dragged the drawer into a
+// horizontal scroll that clipped its edges — the owner's photo exactly.
+await page.setViewportSize({ width: 320, height: 700 });
+await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+await page.evaluate(() => localStorage.setItem('language', 'ar'));
+await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(800);
+let narrow;
+try {
+  await page.locator('[data-testid="mobile-menu-button"]').click();
+  await page.waitForSelector('[data-testid="language-toggle"]:visible', { timeout: 5000 });
+  await page.locator('[data-testid="language-toggle"]:visible').click();
+  await page.waitForSelector('[data-testid="language-menu"]', { timeout: 5000 });
+} catch (e) {
+  // A missing toggle or menu is this check failing, not the harness dying —
+  // the rest of the checks must still run and be reported.
+  narrow = { ok: false, why: `تعذّر فتح قائمة اللغات: ${e.message.split('\n')[0]}` };
+}
+if (!narrow) narrow = await page.evaluate(() => {
+  const menu = document.querySelector('[data-testid="language-menu"]');
+  const r = menu.getBoundingClientRect();
+  if (r.left < -0.5 || r.right > innerWidth + 0.5) {
+    return { ok: false, why: `القائمة تمتد من ${Math.round(r.left)} إلى ${Math.round(r.right)} وعرض الشاشة ${innerWidth}` };
+  }
+  const en = [...menu.querySelectorAll('button')].find((b) => b.textContent.includes('English'));
+  if (!en) return { ok: false, why: 'خيار English غير موجود في القائمة' };
+  const er = en.getBoundingClientRect();
+  const top = document.elementFromPoint(er.left + er.width / 2, er.top + er.height / 2);
+  const hit = en === top || en.contains(top) || (top && top.contains(en));
+  if (!hit) return { ok: false, why: `الخيار مغطّى بعنصر ${top ? top.tagName : 'لا شيء'}` };
+  // The drawer itself must not answer with a horizontal scroll — that is
+  // what clipped its edges on the owner's phone. Only elements that clip or
+  // scroll (overflow-x other than visible) count: an open dropdown always
+  // makes its little relative wrapper "overflow", harmlessly.
+  const clipped = [...document.querySelectorAll('nav *')].find((el) =>
+    el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX !== 'visible');
+  if (clipped) return { ok: false, why: `عنصر يقصّ محتواه الأعرض منه بـ${clipped.scrollWidth - clipped.clientWidth}px` };
+  return { ok: true, why: '' };
+});
+check('قائمة اللغات كاملة وقابلة للنقر على أضيق شاشة هاتف (320px) بالوضع العربي',
+  narrow.ok, narrow.why);
 
 await browser.close();
 server.close();

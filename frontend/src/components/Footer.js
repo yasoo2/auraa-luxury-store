@@ -1,10 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
+// Every string here follows the language switch. Most of this footer used to
+// be Arabic written straight into the JSX: with the store now opening in
+// English, visitors got an English chrome over an Arabic footer — the mixed
+// page the owner photographed.
 const Footer = () => {
-  const { language, isRTL } = useLanguage();
+  const { isRTL } = useLanguage();
 
   return (
     <footer className="bg-gray-900 text-white">
@@ -12,55 +16,49 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-1">
-            <div className="flex items-center space-x-2 mb-4">
+            <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-sm">A</span>
               </div>
               <span className="font-display text-2xl font-bold gradient-text">Auraa Luxury</span>
             </div>
             <p className="text-gray-300 mb-4 leading-relaxed">
-              متجرك المتخصص في الاكسسوارات والمجوهرات الفاخرة. نقدم لك أجود المنتجات بأفضل الأسعار.
+              {isRTL
+                ? 'متجرك المتخصص في الاكسسوارات والمجوهرات الفاخرة. نقدم لك أجود المنتجات بأفضل الأسعار.'
+                : 'Your specialist store for luxury accessories and jewellery. The finest products at the best prices.'}
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-amber-400 transition-colors">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-amber-400 transition-colors">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-amber-400 transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
-            </div>
+            {/* The three social icons that sat here all linked to "#" —
+                buttons promising pages that do not exist. They come back the
+                day real profiles do. */}
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-bold mb-4 text-amber-400">روابط سريعة</h3>
+            <h3 className="text-lg font-bold mb-4 text-amber-400">{isRTL ? 'روابط سريعة' : 'Quick Links'}</h3>
             <ul className="space-y-2">
               <li>
                 <Link to="/" className="text-gray-300 hover:text-white transition-colors">
-                  الرئيسية
+                  {isRTL ? 'الرئيسية' : 'Home'}
                 </Link>
               </li>
               <li>
                 <Link to="/products" className="text-gray-300 hover:text-white transition-colors">
-                  المنتجات
+                  {isRTL ? 'المنتجات' : 'Products'}
                 </Link>
               </li>
               <li>
                 <Link to="/products?category=necklaces" className="text-gray-300 hover:text-white transition-colors">
-                  قلادات
+                  {isRTL ? 'قلادات' : 'Necklaces'}
                 </Link>
               </li>
               <li>
                 <Link to="/products?category=earrings" className="text-gray-300 hover:text-white transition-colors">
-                  أقراط
+                  {isRTL ? 'أقراط' : 'Earrings'}
                 </Link>
               </li>
               <li>
                 <Link to="/products?category=rings" className="text-gray-300 hover:text-white transition-colors">
-                  خواتم
+                  {isRTL ? 'خواتم' : 'Rings'}
                 </Link>
               </li>
               <li>
@@ -73,65 +71,66 @@ const Footer = () => {
 
           {/* Categories */}
           <div>
-            <h3 className="text-lg font-bold mb-4 text-amber-400">الفئات</h3>
+            <h3 className="text-lg font-bold mb-4 text-amber-400">{isRTL ? 'الفئات' : 'Categories'}</h3>
             <ul className="space-y-2">
               <li>
                 <Link to="/products?category=bracelets" className="text-gray-300 hover:text-white transition-colors">
-                  أساور
+                  {isRTL ? 'أساور' : 'Bracelets'}
                 </Link>
               </li>
               <li>
                 <Link to="/products?category=watches" className="text-gray-300 hover:text-white transition-colors">
-                  ساعات
+                  {isRTL ? 'ساعات' : 'Watches'}
                 </Link>
               </li>
               <li>
                 <Link to="/products?category=sets" className="text-gray-300 hover:text-white transition-colors">
-                  أطقم
+                  {isRTL ? 'أطقم' : 'Sets'}
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                  العروض الخاصة
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                  المنتجات الجديدة
-                </a>
+                {/* The products page opens newest-first, so this link is the
+                    real thing. «العروض الخاصة» pointed at "#" and is gone
+                    until an offers page exists to point at. */}
+                <Link to="/products" className="text-gray-300 hover:text-white transition-colors">
+                  {isRTL ? 'المنتجات الجديدة' : 'New Arrivals'}
+                </Link>
               </li>
             </ul>
           </div>
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-lg font-bold mb-4 text-amber-400">تواصل معنا</h3>
+            <h3 className="text-lg font-bold mb-4 text-amber-400">{isRTL ? 'تواصل معنا' : 'Contact Us'}</h3>
             <ul className="space-y-3">
-              <li className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-amber-400 me-2" />
-                <a href="tel:+905013715391" className="text-gray-300 hover:text-amber-400 transition-colors">
+              <li className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-amber-400" />
+                <a href="tel:+905013715391" className="text-gray-300 hover:text-amber-400 transition-colors" dir="ltr">
                   +90 501 371 5391
                 </a>
               </li>
-              <li className="flex items-center space-x-2">
-                <MessageCircle className="h-4 w-4 text-amber-400 me-2" />
-                <a 
-                  href="https://wa.me/905013715391" 
-                  target="_blank" 
+              <li className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-amber-400" />
+                <a
+                  href="https://wa.me/905013715391"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  واتساب: +90 501 371 5391
+                  {/* dir="ltr" keeps the number reading +90 501… — inside an
+                      RTL sentence the bidi algorithm flipped it to 5391…90+. */}
+                  {isRTL ? 'واتساب: ' : 'WhatsApp: '}
+                  <span dir="ltr">+90 501 371 5391</span>
                 </a>
               </li>
-              <li className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-amber-400 me-2" />
+              <li className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-amber-400" />
                 <span className="text-gray-300" dir="ltr">younes.sowady2011@gmail.com</span>
               </li>
-              <li className="flex items-start space-x-2">
-                <MapPin className="h-4 w-4 text-amber-400 me-2 mt-1" />
+              <li className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-amber-400 mt-1" />
                 <span className="text-gray-300">
-                  إسطنبول، تركيا
+                  {isRTL ? 'إسطنبول، تركيا' : 'Istanbul, Türkiye'}
                 </span>
               </li>
             </ul>
@@ -140,7 +139,9 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
           <div className="text-gray-400 text-sm mb-4 md:mb-0">
-            © 2024 Auraa Luxury. جميع الحقوق محفوظة.
+            {isRTL
+              ? `© ${new Date().getFullYear()} Auraa Luxury. جميع الحقوق محفوظة.`
+              : `© ${new Date().getFullYear()} Auraa Luxury. All rights reserved.`}
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
             <Link to="/privacy-policy" className="text-gray-400 hover:text-white transition-colors">

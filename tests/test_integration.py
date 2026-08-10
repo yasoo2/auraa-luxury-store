@@ -788,6 +788,24 @@ def test_a_configured_card_gateway_is_the_only_method_offered(seeded, card_shop)
     assert offered == ["card"], offered
 
 
+def test_a_sandbox_gateway_never_hides_the_real_payment_methods(seeded, card_shop, monkeypatch):
+    """
+    A sandbox gateway charges no money. While it was the only card option,
+    the hide-the-bank rule still fired — so the live store offered exactly
+    one method, and that method was a rehearsal: no customer could pay.
+    """
+    from services import iyzico_client
+    monkeypatch.setattr(iyzico_client, "SANDBOX", True)
+
+    register(seeded, email="adm-sbx@b.com")
+    make_admin(seeded, "adm-sbx@b.com")
+    assert _set_bank(seeded).status_code == 200
+
+    methods = {m["id"]: m for m in seeded.get("/api/payment-methods").json()["methods"]}
+    assert "card" in methods and methods["card"]["sandbox"] is True, methods
+    assert "bank_transfer" in methods, methods
+
+
 def test_paying_by_card_never_marks_the_order_paid_on_its_own(seeded, card_shop):
     """
     Opening a payment session is not payment. Until iyzico says otherwise the

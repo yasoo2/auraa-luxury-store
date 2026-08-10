@@ -2595,15 +2595,18 @@ async def available_payment_methods() -> List[Dict[str, Any]]:
         })
 
     # A wire transfer to a Turkish account is a real way to be paid and a poor
-    # way to be bought from. It stays available while there is no card option,
-    # and steps aside once there is.
+    # way to be bought from. It stays available while there is no REAL card
+    # option, and steps aside once there is. A sandbox gateway does not
+    # count: it charges no money, so letting it hide the bank details left
+    # the live store with no way to actually be paid at all.
+    card_real = card_live and not iyzico_client.SANDBOX
     bank = _bank_transfer_option(cfg)
-    if bank and not card_live:
+    if bank and not card_real:
         methods.append(bank)
 
     # Defaults to on, so configuring anything else is an improvement rather
     # than the moment the shop starts taking orders at all.
-    if (cfg.get(ON_CONFIRMATION) or {}).get("enabled", True) and not card_live:
+    if (cfg.get(ON_CONFIRMATION) or {}).get("enabled", True) and not card_real:
         methods.append({"id": ON_CONFIRMATION})
 
     return methods

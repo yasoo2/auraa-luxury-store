@@ -2730,10 +2730,14 @@ async def admin_delete_order(order_id: str, admin: User = Depends(get_admin_user
     order = await db.orders.find_one({"id": order_id})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    if order.get("supplier_order_id"):
+    # Cancelling first is the deliberate second step for anything with money
+    # or goods behind it: a paid record, or one already bought at CJ. The
+    # cancel is the owner declaring the commitment void — including having
+    # dealt with the CJ side of it.
+    if order.get("supplier_order_id") and order.get("status") != "cancelled":
         raise HTTPException(
             status_code=409,
-            detail="This order was bought at CJ; its record cannot be deleted.",
+            detail="This order was bought at CJ. Cancel it first — and make sure it is cancelled at CJ too.",
         )
     if order.get("payment_status") == "paid" and order.get("status") != "cancelled":
         raise HTTPException(

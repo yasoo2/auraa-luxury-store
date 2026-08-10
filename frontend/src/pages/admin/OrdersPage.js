@@ -33,6 +33,7 @@ const OrdersPage = () => {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selected, setSelected] = useState(() => new Set());
   const [loadError, setLoadError] = useState('');
   const [actionError, setActionError] = useState('');
 
@@ -134,12 +135,13 @@ const OrdersPage = () => {
   const isPaid = (order) => order?.payment_status === 'paid';
   const isCard = (order) => order?.payment_method === 'card';
 
-  // Deleting is for records that never cost anybody money: unpaid tests and
-  // cancelled orders. Anything bought at CJ, and any paid order that was not
-  // cancelled first, is refused by the server — mirrored here so the button
-  // only appears where pressing it can succeed.
+  // Anything with money or goods behind it — a paid record, or one bought at
+  // CJ — must be cancelled before it can be deleted; the cancel is the owner
+  // declaring the commitment void, CJ side included. Mirrors the server's
+  // rule so the button only appears where pressing it can succeed.
   const deletable = (order) =>
-    !order.supplier_order_id && (!isPaid(order) || order.status === 'cancelled');
+    order.status === 'cancelled'
+    || (!isPaid(order) && !order.supplier_order_id);
 
   // Every order carries a readable number like AUR-20260809-XXXX; the raw
   // UUID went on screen anyway, and nobody can tell two UUIDs apart at a
@@ -181,9 +183,12 @@ const OrdersPage = () => {
   };
 
   const deleteOrder = async (order) => {
+    const cjNote = order.supplier_order_id
+      ? (isRTL ? ' تأكد أنه ملغى لدى CJ أيضاً.' : ' Make sure it is cancelled at CJ too.')
+      : '';
     const ok = window.confirm(isRTL
-      ? `يُحذف سجلّ الطلب ${orderLabel(order)} نهائياً ولا يمكن استرجاعه. متأكد؟`
-      : `The record of order ${orderLabel(order)} will be permanently deleted. Sure?`);
+      ? `يُحذف سجلّ الطلب ${orderLabel(order)} نهائياً ولا يمكن استرجاعه.${cjNote} متأكد؟`
+      : `The record of order ${orderLabel(order)} will be permanently deleted.${cjNote} Sure?`);
     if (!ok) return;
     setSending(true);
     try {
@@ -191,6 +196,7 @@ const OrdersPage = () => {
       // Remove the row only after the server says it is gone — a row that
       // vanishes while the record survives is the same lie as a fake success.
       setOrders(prev => prev.filter(o => o.id !== order.id));
+      setSelected(prev => { const next = new Set(prev); next.delete(order.id); return next; });
       if (selectedOrder && selectedOrder.id === order.id) {
         setSelectedOrder(null);
         setShowOrderModal(false);
@@ -202,6 +208,55 @@ const OrdersPage = () => {
     } finally {
       setSending(false);
     }
+  };
+
+  // Bulk deletion: only rows the server would accept are attempted, each one
+  // individually, and a row leaves the screen only after its own delete
+  // succeeded. Whatever was refused is counted and named, not glossed over.
+  const deleteSelected = async () => {
+    const targets = filteredOrders.filter((o) => selected.has(o.id));
+    const eligible = targets.filter(deletable);
+    const skipped = targets.length - eligible.length;
+    if (eligible.length === 0) {
+      setActionError(isRTL
+        ? 'لا شيء من المحدد قابل للحذف — الطلب المدفوع أو المُرسَل إلى CJ يُلغى أولاً.'
+        : 'Nothing selected is deletable — paid or CJ-sent orders must be cancelled first.');
+      return;
+    }
+    const ok = window.confirm(isRTL
+      ? `يُحذف نهائياً ${eligible.length} طلباً${skipped ? ` (وسيُتجاوز ${skipped} غير قابل للحذف)` : ''}. متأكد؟`
+      : `${eligible.length} order(s) will be permanently deleted${skipped ? ` (${skipped} not deletable will be skipped)` : ''}. Sure?`);
+    if (!ok) return;
+    setSending(true);
+    const removed = [];
+    const failures = [];
+    for (const order of eligible) {
+      try {
+        await axios.delete(`${API}/admin/orders/${order.id}`);
+        removed.push(order.id);
+      } catch (error) {
+        failures.push(`${orderLabel(order)}: ${error.response?.data?.detail
+          || (isRTL ? 'تعذّر الحذف' : 'delete failed')}`);
+      }
+    }
+    setOrders(prev => prev.filter(o => !removed.includes(o.id)));
+    setSelected(new Set());
+    if (failures.length || skipped) {
+      setActionError(isRTL
+        ? `حُذف ${removed.length}. ${skipped ? `تُجوهل ${skipped} غير قابل للحذف. ` : ''}${failures.length ? `تعذّر ${failures.length}: ${failures[0]}` : ''}`
+        : `Deleted ${removed.length}. ${skipped ? `${skipped} skipped. ` : ''}${failures.length ? `${failures.length} failed: ${failures[0]}` : ''}`);
+    } else {
+      setActionError('');
+    }
+    setSending(false);
+  };
+
+  const toggleSelect = (orderId) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) next.delete(orderId); else next.add(orderId);
+      return next;
+    });
   };
 
   // Opening an order must not inherit the previous one's result line. Run a dry
@@ -480,12 +535,53 @@ const OrdersPage = () => {
         </div>
       </div>
 
+      {/* Bulk actions — visible only while something is selected. */}
+      {selected.size > 0 && (
+        <div
+          className="border border-red-200 bg-red-50 rounded-lg px-4 py-3 flex flex-wrap items-center gap-3"
+          data-testid="bulk-actions"
+        >
+          <span className="text-sm text-red-900 font-semibold">
+            {isRTL ? `${selected.size} محدد` : `${selected.size} selected`}
+          </span>
+          <Button
+            size="sm"
+            onClick={deleteSelected}
+            disabled={sending}
+            className="bg-red-600 hover:bg-red-700 text-white"
+            data-testid="delete-selected"
+          >
+            <Trash2 className="h-4 w-4 me-1" />
+            {isRTL ? 'حذف المحدد' : 'Delete selected'}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setSelected(new Set())}>
+            {isRTL ? 'إلغاء التحديد' : 'Clear selection'}
+          </Button>
+        </div>
+      )}
+
       {/* Orders Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-amber-600 align-middle"
+                    aria-label={isRTL ? 'تحديد الكل' : 'Select all'}
+                    data-testid="select-all-orders"
+                    checked={filteredOrders.length > 0
+                      && filteredOrders.every((o) => selected.has(o.id))}
+                    onChange={() => {
+                      const allPicked = filteredOrders.every((o) => selected.has(o.id));
+                      setSelected(allPicked
+                        ? new Set()
+                        : new Set(filteredOrders.map((o) => o.id)));
+                    }}
+                  />
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {isRTL ? 'رقم الطلب' : 'Order ID'}
                 </th>
@@ -512,6 +608,16 @@ const OrdersPage = () => {
                 const StatusIcon = status.icon;
                 return (
                   <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-amber-600 align-middle"
+                        aria-label={isRTL ? `تحديد ${orderLabel(order)}` : `Select ${orderLabel(order)}`}
+                        data-testid={`select-order-${order.id}`}
+                        checked={selected.has(order.id)}
+                        onChange={() => toggleSelect(order.id)}
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       <span title={order.id} dir="ltr">{orderLabel(order)}</span>
                     </td>

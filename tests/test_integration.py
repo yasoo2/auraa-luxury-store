@@ -1111,10 +1111,11 @@ def test_a_paid_order_refuses_deletion_until_cancelled(seeded, card_shop):
     assert order["id"] not in ids
 
 
-def test_an_order_bought_at_cj_keeps_its_record(seeded, card_shop, monkeypatch):
+def test_an_order_bought_at_cj_needs_cancelling_before_deletion(seeded, card_shop, monkeypatch):
     """
-    Deleting a record does not un-buy the goods: CJ still has the order and
-    the shop still owes it an explanation. The record stays, full stop.
+    Deleting a record does not un-buy the goods: CJ still has the order.
+    Cancelling first is the owner declaring the commitment void — including
+    the CJ side of it — and only then may the record go.
     """
     import asyncio
 
@@ -1142,7 +1143,15 @@ def test_an_order_bought_at_cj_keeps_its_record(seeded, card_shop, monkeypatch):
 
     r = seeded.delete(f"/api/admin/orders/{order['id']}")
     assert r.status_code == 409, r.text
+    assert "Cancel it first" in r.json()["detail"], r.text
     assert order["id"] in [o["id"] for o in seeded.get("/api/admin/orders").json()]
+
+    # The owner cancels (having dealt with CJ) — now the record may go.
+    assert seeded.put(f"/api/admin/orders/{order['id']}",
+                      json={"status": "cancelled"}).status_code == 200
+    r = seeded.delete(f"/api/admin/orders/{order['id']}")
+    assert r.status_code == 200, r.text
+    assert order["id"] not in [o["id"] for o in seeded.get("/api/admin/orders").json()]
     cj_client._reset_token()
 
 

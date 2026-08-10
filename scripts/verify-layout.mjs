@@ -225,6 +225,35 @@ for (const [name, route] of PAGES) {
       : overflow.worst.map((w) => `${w.tag}(+${w.over}px) "${w.text}"`).join(' | '));
 }
 
+// The admin drawer on a phone must get out of the way once it has done its
+// job: pick a destination and the new page used to load BEHIND the drawer,
+// which stayed glued over everything — the owner reported exactly that.
+// Tapping the dimmed backdrop must close it too.
+await page.goto(`${base}/admin/orders`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(900);
+await page.click('[data-testid="admin-menu-toggle"]');
+await page.waitForTimeout(400);
+await page.locator('aside a[href="/admin/products"]').click();
+await page.waitForURL('**/admin/products', { timeout: 5000 });
+await page.waitForTimeout(500);
+const drawerAfterNav = await page.evaluate(() => {
+  const el = document.querySelector('[data-testid="admin-sidebar"]');
+  return el ? Math.round(el.getBoundingClientRect().width) : -1;
+});
+check('قائمة اللوحة تُغلق نفسها بعد اختيار وجهة على الهاتف', drawerAfterNav === 0,
+  `عرض الدُّرج بعد الانتقال ${drawerAfterNav}px`);
+
+await page.click('[data-testid="admin-menu-toggle"]');
+await page.waitForTimeout(400);
+await page.click('[data-testid="admin-drawer-backdrop"]', { position: { x: 5, y: 300 } });
+await page.waitForTimeout(400);
+const drawerAfterBackdrop = await page.evaluate(() => {
+  const el = document.querySelector('[data-testid="admin-sidebar"]');
+  return el ? Math.round(el.getBoundingClientRect().width) : -1;
+});
+check('النقر خارج الدُّرج يُغلقه', drawerAfterBackdrop === 0,
+  `عرض الدُّرج بعد نقر الخلفية ${drawerAfterBackdrop}px`);
+
 // Thumb-sized targets on the actions the shop depends on.
 //
 // Not every control: a breadcrumb and a carousel dot are conventionally small

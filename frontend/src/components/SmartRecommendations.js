@@ -10,12 +10,8 @@ import {
   Heart,
   ShoppingCart,
   Star,
-  Zap,
   Target,
-  Users,
   Eye,
-  Clock,
-  Gift,
   Crown,
   Gem,
   Award
@@ -34,7 +30,7 @@ const SmartRecommendations = ({
   limit = 6,
   showTitle = true 
 }) => {
-  const { t, language, currency } = useLanguage();
+  const { language, currency } = useLanguage();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const isRTL = language === 'ar';
@@ -194,8 +190,11 @@ const SmartRecommendations = ({
           >
             {/* Product Image */}
             <div className="relative aspect-square overflow-hidden">
+              {/* Product documents carry `images` (plural); the singular
+                  `image` never existed on the API and every card rendered
+                  a broken frame. */}
               <img
-                src={product.image}
+                src={product.images?.[0] || product.image}
                 alt={product.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
@@ -220,13 +219,9 @@ const SmartRecommendations = ({
                 )}
               </div>
 
-              {/* AI Recommendation Score */}
-              <div className="absolute top-2 right-2">
-                <div className="flex items-center bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
-                  <Sparkles className="h-3 w-3 me-1" />
-                  {Math.round(product.recommendation_score * 100)}%
-                </div>
-              </div>
+              {/* The "AI score" badge that used to sit here multiplied a
+                  field the API never sends and stamped "NaN%" on every
+                  card. No real score exists, so no badge pretends one does. */}
 
               {/* Quick Actions */}
               <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -260,12 +255,6 @@ const SmartRecommendations = ({
                 {product.name}
               </h3>
               
-              {/* AI Recommendation Reason */}
-              <p className="text-xs text-purple-600 mb-2 flex items-center">
-                <Zap className="h-3 w-3 me-1 flex-shrink-0" />
-                {product.recommendation_reason}
-              </p>
-
               {/* Rating */}
               <div className="flex items-center mb-2">
                 <div className="flex items-center">

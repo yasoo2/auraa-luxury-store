@@ -62,7 +62,9 @@ const IMG = 'data:image/svg+xml;base64,' + Buffer.from(
 
 // Long Arabic names on purpose: a card that fits "خاتم" and bursts on a real
 // CJ title has not been tested with anything the shop actually sells.
-const products = Array.from({ length: 6 }, (_, i) => ({
+// 30 of them: more than one server page (24), so the pagination flow below
+// exercises a second page for real instead of trusting the first.
+const products = Array.from({ length: 30 }, (_, i) => ({
   id: `p${i + 1}`,
   name: `طقم أقراط ستانلس ستيل مطلي ذهب ١٨ قيراط تصميم فاخر رقم ${i + 1}`,
   description: 'وصف طويل بالعربية.',
@@ -122,12 +124,24 @@ await ctx.route('**/api/**', (route) => {
     ]);
   }
   if (/\/api\/products\/p\d/.test(p)) return reply(products[0]);
-  if (p.includes('/api/products')) return reply(products);
+  if (p.includes('/api/products')) {
+    // Pages exactly like the real endpoint: skip/limit with limit defaulting
+    // to 20. Replying with the whole catalogue at once would hide the bug
+    // this guards against — a storefront that never asks past page one.
+    const q = new URL(route.request().url()).searchParams;
+    const skip = Number(q.get('skip')) || 0;
+    const limit = Number(q.get('limit')) || 20;
+    return reply(products.slice(skip, skip + limit));
+  }
   if (p.endsWith('/api/cart')) {
     return reply({ items: products.slice(0, 2).map((x) => ({ product_id: x.id, quantity: 1, price: x.price, product_name: x.name, image: IMG })), total_amount: 188.22 });
   }
   if (p.endsWith('/api/payment-methods')) return reply({ methods: [{ id: 'card', provider: 'iyzico', currency: 'USD' }] });
   if (p.endsWith('/api/geo/detect')) return reply({ country_code: 'SA' });
+  // The REAL response shape: Product documents carry `images` (plural) and
+  // no recommendation_score — the card once invented a score off the missing
+  // field and printed "NaN%" to customers.
+  if (p.includes('/api/recommendations')) return reply(products.slice(0, 6));
   if (p.endsWith('/api/shipping/estimate')) return reply({ shipping_cost: 0, free_shipping: true, estimated_days: '5-15' });
   return reply([]);
 });
@@ -208,7 +222,13 @@ for (const [name, route] of PAGES) {
     // A blank page has no text to overflow — a crashed route would sail
     // through this check greener than a working one. Report how much text
     // actually rendered so emptiness fails instead of passing by default.
-    return { worst: worst.slice(0, 3), textLen: document.body.innerText.trim().length };
+    //
+    // And no page may ever show the literal text "NaN": it is always some
+    // arithmetic run on a field that does not exist — an invented number
+    // printed to a customer. The recommendations card did exactly that.
+    const text = document.body.innerText;
+    return { worst: worst.slice(0, 3), textLen: text.trim().length,
+             hasNaN: /\bNaN\b/.test(text) };
   });
 
   // Measured per element, not from documentElement.scrollWidth.
@@ -219,10 +239,12 @@ for (const [name, route] of PAGES) {
   // A 900px canary dropped into this page sat at left:-510 — half of it
   // unreachable — and the check still reported green.
   check(`${name}: لا يخرج نصّ خارج الشاشة`,
-    overflow.worst.length === 0 && overflow.textLen >= 40,
-    overflow.textLen < 40
-      ? `الصفحة شبه فارغة (${overflow.textLen} حرفاً) — انهيار أو مسار ميت`
-      : overflow.worst.map((w) => `${w.tag}(+${w.over}px) "${w.text}"`).join(' | '));
+    overflow.worst.length === 0 && overflow.textLen >= 40 && !overflow.hasNaN,
+    overflow.hasNaN
+      ? 'الصفحة تعرض "NaN" — حسبة على حقل غير موجود'
+      : overflow.textLen < 40
+        ? `الصفحة شبه فارغة (${overflow.textLen} حرفاً) — انهيار أو مسار ميت`
+        : overflow.worst.map((w) => `${w.tag}(+${w.over}px) "${w.text}"`).join(' | '));
 }
 
 // The admin drawer on a phone must get out of the way once it has done its
@@ -326,6 +348,43 @@ check('كل صفحة تُفتح من أعلاها لا من حيث تُرك ال
   preScroll > 0 && postScroll === 0,
   `قبل الانتقال ${preScroll}px، بعده ${postScroll}px`);
 await page.setViewportSize({ width: 390, height: 844 });
+
+// The server pages the catalogue (limit defaults to 20) and the storefront
+// used to fetch once and stop: exactly twenty products no matter the stock —
+// the owner's report «فقط يعرض ٢٠ منتج». A full page must arrive, «عرض
+// المزيد» must be the element actually under the tap, and tapping it must
+// fetch the rest and then remove itself once the catalogue is exhausted.
+await page.goto(`${base}/products`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(900);
+const firstPage = await page.evaluate(() => document.querySelectorAll('[data-testid^="product-"]').length);
+const loadMore = await page.evaluate(() => {
+  const el = document.querySelector('[data-testid="load-more-products"]');
+  if (!el) return { ok: false, why: 'زر «عرض المزيد» غير موجود' };
+  el.scrollIntoView({ block: 'center' });
+  const r = el.getBoundingClientRect();
+  const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  const hit = el === top || el.contains(top) || (top && top.contains(el));
+  return hit ? { ok: true, why: '' } : { ok: false, why: `مغطّى بعنصر ${top ? top.tagName : 'لا شيء'}` };
+});
+let catalogueGrew = false;
+if (loadMore.ok) {
+  await page.locator('[data-testid="load-more-products"]').click();
+  try {
+    // 30 = the whole mock catalogue: 24 on the first page + 6 on the second.
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-testid^="product-"]').length === 30,
+      { timeout: 5000 });
+    catalogueGrew = true;
+  } catch { catalogueGrew = false; }
+}
+const loadMoreAfter = await page.evaluate(() => !!document.querySelector('[data-testid="load-more-products"]'));
+const lmWhy = [];
+if (firstPage !== 24) lmWhy.push(`أول جلب ${firstPage} منتجاً بدل 24`);
+if (!loadMore.ok) lmWhy.push(loadMore.why);
+if (loadMore.ok && !catalogueGrew) lmWhy.push('النقر لم يوصل الكتالوج إلى 30');
+if (loadMore.ok && catalogueGrew && loadMoreAfter) lmWhy.push('الزر باقٍ بعد نفاد الكتالوج');
+check('صفحة المنتجات تجلب صفحة كاملة و«عرض المزيد» يُكمل الكتالوج ثم يختفي',
+  lmWhy.length === 0, lmWhy.join('، '));
 
 // The wordmark, at the width where it broke.
 await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });

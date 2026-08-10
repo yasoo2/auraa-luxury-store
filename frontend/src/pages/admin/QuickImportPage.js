@@ -7,11 +7,25 @@ const QuickImportPage = () => {
   const [language, setLanguage] = useState('ar');
   const [backendReady, setBackendReady] = useState(false);
   const [productCount, setProductCount] = useState(50);
+  // "sweep" fills every category of the shop evenly; "keyword" fetches one
+  // search only. One generic keyword filled the shop with lookalikes.
+  const [importMode, setImportMode] = useState('sweep');
+  const [keyword, setKeyword] = useState('luxury jewelry accessories');
   const [isImporting, setIsImporting] = useState(false);
   const [importCounter, setImportCounter] = useState(0);
+  const [byCategory, setByCategory] = useState({});
   const [stagingProducts, setStagingProducts] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false);
+
+  const CATEGORY_LABELS = {
+    earrings: { ar: 'أقراط', en: 'Earrings' },
+    necklaces: { ar: 'قلادات', en: 'Necklaces' },
+    bracelets: { ar: 'أساور', en: 'Bracelets' },
+    rings: { ar: 'خواتم', en: 'Rings' },
+    watches: { ar: 'ساعات', en: 'Watches' },
+    sets: { ar: 'أطقم', en: 'Sets' },
+  };
 
   useEffect(() => {
     checkBackendHealth();
@@ -48,6 +62,7 @@ const QuickImportPage = () => {
 
     setIsImporting(true);
     setImportCounter(0);
+    setByCategory({});
     setStagingProducts([]);
 
     toast.info(`🚀 بدء استيراد ${productCount} منتج...`);
@@ -58,7 +73,8 @@ const QuickImportPage = () => {
         source: 'cj',
         count: productCount,
         batch_size: 20,
-        keyword: 'luxury jewelry accessories'
+        mode: importMode,
+        keyword: importMode === 'keyword' ? keyword : 'luxury jewelry accessories'
       });
 
       const jobId = response.jobId;
@@ -79,6 +95,7 @@ const QuickImportPage = () => {
         const status = await apiGet(`/api/imports/${jobId}/status`);
 
         setImportCounter(status.processed || 0);
+        setByCategory(status.by_category || {});
 
         // Get imported products from staging area
         if (status.processed > 0) {
@@ -101,7 +118,10 @@ const QuickImportPage = () => {
           if (failed > 0) details.push(`${failed} فشل`);
           const suffix = details.length ? ` (${details.join('، ')})` : '';
           if (imported > 0) {
-            toast.success(`✅ اكتمل الاستيراد: ${imported} منتج جديد${suffix}`);
+            const cats = Object.entries(status.by_category || {})
+              .map(([cat, n]) => `${CATEGORY_LABELS[cat]?.ar || cat} ${n}`)
+              .join('، ');
+            toast.success(`✅ اكتمل الاستيراد: ${imported} منتج جديد${suffix}${cats ? ` — ${cats}` : ''}`, { autoClose: 10000 });
           } else {
             toast.warning(`⚠️ لم يُستورد أي منتج جديد${suffix || ' — لم يصل شيء من المورد'}`);
           }
@@ -217,6 +237,58 @@ const QuickImportPage = () => {
 
         {/* Import Control - Input + RED Button */}
         <div className="bg-gray-800 p-6 rounded-lg mb-6">
+          {/* Mode: sweep every shelf, or chase one search phrase */}
+          <div className="mb-4">
+            <label className="block text-white font-semibold mb-2">
+              {language === 'ar' ? '🧭 وضع الاستيراد' : '🧭 Import Mode'}
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <label className={`flex-1 flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer ${importMode === 'sweep' ? 'border-amber-500 bg-amber-500/10' : 'border-gray-600 bg-gray-700/40'}`}>
+                <input
+                  type="radio"
+                  name="import-mode"
+                  checked={importMode === 'sweep'}
+                  onChange={() => setImportMode('sweep')}
+                  disabled={isImporting}
+                  className="mt-1"
+                  data-testid="import-mode-sweep"
+                />
+                <span className="text-white text-sm">
+                  <span className="font-bold block">{language === 'ar' ? '🧺 تغطية كل الفئات (موصى به)' : '🧺 Sweep all categories (recommended)'}</span>
+                  {language === 'ar'
+                    ? 'يمسح أقراطاً وقلادات وأساور وخواتم وساعات وأطقماً وزينة بكلمات بحث متعددة، ويوزّع العدد عليها بالتساوي'
+                    : 'Searches earrings, necklaces, bracelets, rings, watches, sets and adornments with many phrasings, splitting the count evenly'}
+                </span>
+              </label>
+              <label className={`flex-1 flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer ${importMode === 'keyword' ? 'border-amber-500 bg-amber-500/10' : 'border-gray-600 bg-gray-700/40'}`}>
+                <input
+                  type="radio"
+                  name="import-mode"
+                  checked={importMode === 'keyword'}
+                  onChange={() => setImportMode('keyword')}
+                  disabled={isImporting}
+                  className="mt-1"
+                  data-testid="import-mode-keyword"
+                />
+                <span className="text-white text-sm">
+                  <span className="font-bold block">{language === 'ar' ? '🔍 كلمة بحث واحدة' : '🔍 Single keyword'}</span>
+                  {language === 'ar' ? 'لجلب نوع محدد تختاره أنت' : 'Fetch one specific kind you choose'}
+                </span>
+              </label>
+            </div>
+            {importMode === 'keyword' && (
+              <input
+                type="text"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                disabled={isImporting}
+                className="mt-3 w-full px-4 py-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                placeholder={language === 'ar' ? 'مثال: pearl earrings' : 'e.g. pearl earrings'}
+                data-testid="import-keyword-input"
+              />
+            )}
+          </div>
+
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <label className="block text-white font-semibold mb-2">
@@ -233,7 +305,7 @@ const QuickImportPage = () => {
                 placeholder="50"
               />
             </div>
-            
+
             {/* RED Import Button */}
             <button
               onClick={handleImportNow}
@@ -265,6 +337,22 @@ const QuickImportPage = () => {
             </div>
             <div className="text-white">
               {language === 'ar' ? '📦 جاري تنزيل المنتجات...' : '📦 Downloading Products...'}
+            </div>
+          </div>
+        )}
+
+        {/* Where the new arrivals landed, shelf by shelf */}
+        {Object.keys(byCategory).length > 0 && (
+          <div className="bg-gray-800 p-4 rounded-lg mb-6" data-testid="import-by-category">
+            <div className="text-white font-semibold mb-3">
+              {language === 'ar' ? '🗂️ توزيع الجديد على الفئات' : '🗂️ New arrivals by category'}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(byCategory).map(([cat, n]) => (
+                <span key={cat} className="px-3 py-1.5 bg-amber-500/15 border border-amber-500/40 text-amber-300 rounded-full text-sm">
+                  {(language === 'ar' ? CATEGORY_LABELS[cat]?.ar : CATEGORY_LABELS[cat]?.en) || cat}: {n}
+                </span>
+              ))}
             </div>
           </div>
         )}
@@ -426,9 +514,9 @@ const QuickImportPage = () => {
             {language === 'ar' ? '📋 كيفية الاستخدام' : '📋 How to Use'}
           </h3>
           <ol className="space-y-2 text-gray-300" style={{direction: language === 'ar' ? 'rtl' : 'ltr'}}>
-            <li>1️⃣ {language === 'ar' ? 'أدخل عدد المنتجات (1-1000)' : 'Enter number of products (1-1000)'}</li>
-            <li>2️⃣ {language === 'ar' ? 'اضغط على زر "استيراد الآن" الأحمر 🔴' : 'Click the red "Import Now" button 🔴'}</li>
-            <li>3️⃣ {language === 'ar' ? 'شاهد المنتجات تنزل واحدة تلو الأخرى مع العداد' : 'Watch products download one by one with counter'}</li>
+            <li>1️⃣ {language === 'ar' ? 'اختر الوضع: تغطية كل الفئات (موصى به) أو كلمة بحث واحدة' : 'Pick a mode: sweep all categories (recommended) or a single keyword'}</li>
+            <li>2️⃣ {language === 'ar' ? 'أدخل العدد (1-1000) واضغط "استيراد الآن" 🔴 — يُجلب الجديد فقط ويُتخطى ما تملكه' : 'Enter the count (1-1000) and press "Import Now" 🔴 — only NEW products arrive, owned ones are skipped'}</li>
+            <li>3️⃣ {language === 'ar' ? 'كرّر الاستيراد متى شئت لمراكمة الآلاف: كل تشغيلة تحفر أعمق في المورد' : 'Repeat whenever you like to stack up thousands: every run digs deeper into the supplier'}</li>
             <li>4️⃣ {language === 'ar' ? 'عدّل المنتجات (السعر، الاسم، الصورة، الوصف)' : 'Edit products (price, name, image, description)'}</li>
             <li>5️⃣ {language === 'ar' ? 'اضغط على زر "Live" الأخضر 🟢 لنشر المنتجات للمتجر' : 'Click the green "Live" button 🟢 to publish to store'}</li>
           </ol>

@@ -562,6 +562,9 @@ class ImportRequest(BaseModel):
     count: int = 50
     batch_size: int = 20
     keyword: str = "luxury jewelry accessories"
+    # "sweep" walks every store category with its own search phrasings so the
+    # whole shop fills evenly; "keyword" fetches one search only.
+    mode: str = "sweep"
 
 
 @api_router.post("/imports/start")
@@ -583,7 +586,10 @@ async def start_import_job(
         
         if source != "cj":
             raise HTTPException(status_code=400, detail="Only 'cj' source is supported")
-        
+
+        if payload.mode not in ("sweep", "keyword"):
+            raise HTTPException(status_code=400, detail="mode must be 'sweep' or 'keyword'")
+
         job_manager = ImportJobManager(db)
         job_id = await job_manager.create_job(
             job_type="bulk_import",
@@ -591,12 +597,13 @@ async def start_import_job(
             params={
                 "max_products": count,
                 "batch_size": batch_size,
-                "keyword": keyword
+                "keyword": keyword,
+                "mode": payload.mode
             }
         )
-        
-        logger.info(f"🚀 Starting CJ import job {job_id}: {count} products with keyword '{keyword}'")
-        
+
+        logger.info(f"🚀 Starting CJ import job {job_id}: {count} products, mode={payload.mode}, keyword '{keyword}'")
+
         # Start background import
         background_tasks.add_task(
             background_import_cj_products,
@@ -605,6 +612,7 @@ async def start_import_job(
             category_id=None,
             max_products=count,
             db=db,
+            sweep=(payload.mode == "sweep"),
         )
         
         return {
@@ -646,7 +654,9 @@ async def get_unified_import_status(job_id: str, admin: User = Depends(get_admin
             # number the page called every one of them "imported" and declared
             # success over a run that added nothing.
             "skipped_existing": job["progress"].get("skipped_existing", 0),
-            "failed": job["progress"]["failed"]
+            "failed": job["progress"]["failed"],
+            # How the new arrivals spread over the shop's six shelves.
+            "by_category": job["progress"].get("by_category", {})
         }
         
     except Exception as e:

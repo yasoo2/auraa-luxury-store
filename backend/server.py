@@ -642,6 +642,10 @@ async def get_unified_import_status(job_id: str, admin: User = Depends(get_admin
             "batch_size": job["params"].get("batch_size", 50),
             "percent": job["progress"]["percent"],
             "imported": job["progress"]["imported"],
+            # Items refused because the shop already owns them. Without this
+            # number the page called every one of them "imported" and declared
+            # success over a run that added nothing.
+            "skipped_existing": job["progress"].get("skipped_existing", 0),
             "failed": job["progress"]["failed"]
         }
         

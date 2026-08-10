@@ -2233,6 +2233,80 @@ def test_import_start_still_rejects_an_out_of_range_count(client):
     assert r.status_code == 400
 
 
+def test_import_reads_past_products_the_shop_already_owns(client, monkeypatch):
+    """
+    «استورد N» has to mean N NEW products. The fetcher used to read the same
+    first page on every run: after the first import ever, everything it saw
+    already existed, the duplicate check refused it all, and the job reported
+    success over a run that added nothing — the owner's exact report:
+    «تم استيراد 50 منتج ولكنه لم يستورد شيء».
+    """
+    import asyncio
+    import services.import_service as import_service
+    from services.background_import import (
+        background_import_cj_products, ImportJobManager,
+    )
+
+    loop = asyncio.get_event_loop()
+    # The shop already owns P1 from an earlier import.
+    loop.run_until_complete(client._db.products.insert_one({
+        "id": "owned-1", "source": "cj_dropshipping", "external_id": "P1",
+        "name": "Owned Ring", "description": "d", "price": 10.0,
+        "category": "rings", "images": [], "staging": False,
+    }))
+
+    pages = {
+        1: [{"pid": "P1", "productNameEn": "Gold Ring, restated for search",
+             "productName": "خاتم ذهبي", "sellPrice": "2.5",
+             "productImage": "https://cf.cjdropshipping.com/a.jpg",
+             "categoryName": "Jewelry"},
+            {"pid": "P2", "productNameEn": "Pearl Necklace, restated",
+             "productName": "قلادة لؤلؤ", "sellPrice": "3.0",
+             "productImage": "https://cf.cjdropshipping.com/b.jpg",
+             "categoryName": "Jewelry"}],
+        2: [{"pid": "P3", "productNameEn": "Silver Bangle, restated",
+             "productName": "سوار فضي", "sellPrice": "1.5",
+             "productImage": "https://cf.cjdropshipping.com/c.jpg",
+             "categoryName": "Jewelry"}],
+    }
+    fetched_pages = []
+
+    async def fake_list_products(page_num=1, page_size=50, keyword=""):
+        fetched_pages.append(page_num)
+        return {"code": 200, "result": True,
+                "data": {"pageNum": page_num, "list": pages.get(page_num, [])}}
+
+    monkeypatch.setattr(import_service, "list_products", fake_list_products)
+    monkeypatch.setattr(import_service, "PAUSE_BETWEEN_BATCHES", 0)
+
+    manager = ImportJobManager(client._db)
+    job_id = loop.run_until_complete(manager.create_job(
+        job_type="bulk_import", supplier="cj", params={"max_products": 2}))
+    loop.run_until_complete(background_import_cj_products(
+        job_id=job_id, keyword="ring", category_id=None,
+        max_products=2, db=client._db))
+
+    job = loop.run_until_complete(manager.get_job(job_id))
+    assert job["status"] == "completed", job.get("error")
+    assert job["progress"]["imported"] == 2, (
+        f"asked for 2 new products, imported {job['progress']['imported']} — "
+        "the fetcher never read past the page the shop already owns")
+    assert job["progress"]["skipped_existing"] == 1, "the refused duplicate must be reported"
+    assert 2 in fetched_pages, "the second page was never fetched"
+
+    staged = loop.run_until_complete(
+        client._db.products.find({"staging": True}).to_list(100))
+    assert {p["external_id"] for p in staged} == {"P2", "P3"}
+
+    # And the status endpoint must carry the same truth to the page that
+    # announces the result to the owner.
+    register(client, email="imp3@b.com")
+    make_admin(client, "imp3@b.com")
+    status = client.get(f"/api/imports/{job_id}/status").json()
+    assert status["imported"] == 2
+    assert status["skipped_existing"] == 1
+
+
 # ---------------------------------------------------------------------------
 # Imported products must actually reach the storefront
 #

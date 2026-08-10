@@ -297,18 +297,30 @@ async def background_import_cj_products(
         await job_manager.update_job_status(job_id, "running")
         
         logger.info(f"🚀 Starting background CJ import job: {job_id} (Rate Limited)")
-        
-        # Use new rate-limited bulk import
+
+        # Everything the shop already owns from this supplier, so the fetcher
+        # reads past it. Without this list it re-read the same first page on
+        # every run, skipped all of it as duplicates, and the owner watched
+        # «تم استيراد 50» import nothing.
+        owned_ids = {
+            str(pid) for pid in await db.products.distinct(
+                "external_id", {"source": "cj_dropshipping"}
+            ) if pid
+        }
+
         import_results = await bulk_import_products(
             total_count=max_products,
-            keyword=keyword or "luxury jewelry"
+            keyword=keyword or "luxury jewelry",
+            exclude_ids=owned_ids,
         )
-        
+
         products = import_results.get("products", [])
         total = len(products)
         imported_count = 0
         failed_count = 0
-        skipped_existing = 0
+        # Duplicates the fetcher already filtered out count here too — the job
+        # report owes the owner the whole truth in one place.
+        skipped_existing = int(import_results.get("skipped_existing", 0))
         imported_products = []
         
         logger.info(f"📦 Fetched {total} products from CJ (requested {max_products})")
@@ -423,6 +435,7 @@ async def background_import_cj_products(
                             "total": total,
                             "processed": idx,
                             "imported": imported_count,
+                            "skipped_existing": skipped_existing,
                             "failed": failed_count,
                             "percent": percent
                         }

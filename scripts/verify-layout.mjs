@@ -245,7 +245,14 @@ check('قائمة اللوحة تُغلق نفسها بعد اختيار وجه�
 
 await page.click('[data-testid="admin-menu-toggle"]');
 await page.waitForTimeout(400);
-await page.click('[data-testid="admin-drawer-backdrop"]', { position: { x: 5, y: 300 } });
+// The drawer hugs the inline-start edge — right in RTL, left in LTR — so a
+// fixed tap point sits on free backdrop in one direction and on the drawer
+// itself in the other. Tap whichever side the drawer left uncovered.
+const freeSide = await page.evaluate(() => {
+  const r = document.querySelector('[data-testid="admin-sidebar"]').getBoundingClientRect();
+  return r.left > window.innerWidth - r.right ? 10 : window.innerWidth - 10;
+});
+await page.mouse.click(freeSide, 300);
 await page.waitForTimeout(400);
 const drawerAfterBackdrop = await page.evaluate(() => {
   const el = document.querySelector('[data-testid="admin-sidebar"]');

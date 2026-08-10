@@ -16,6 +16,11 @@ const axiosInstance = axios.create({
 // Also set defaults for the default axios instance
 axios.defaults.withCredentials = true;
 axios.defaults.baseURL = BACKEND_URL;
+// A request with no deadline can hang forever. The session check rode the
+// bare axios instance during a backend cold start and did exactly that —
+// the owner watched the "waking up" spinner for five minutes until a manual
+// refresh. 90s covers the slowest observed wake-up with room to spare.
+axios.defaults.timeout = 90000;
 
 // Setup axios interceptor for automatic token refresh
 let isRefreshing = false;

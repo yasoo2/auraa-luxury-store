@@ -53,9 +53,22 @@ export const AuthProvider = ({ children }) => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${stored}`;
       }
 
-      const response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
-        withCredentials: true
-      });
+      // One automatic retry on timeout: a backend waking from idle can eat
+      // the very first request whole, and bouncing the visitor to "guest"
+      // over that made a five-minute spinner out of a thirty-second nap.
+      let response;
+      try {
+        response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
+          withCredentials: true
+        });
+      } catch (firstError) {
+        const timedOut = firstError.code === 'ECONNABORTED'
+          || /timeout/i.test(firstError.message || '');
+        if (!timedOut) throw firstError;
+        response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
+          withCredentials: true
+        });
+      }
 
       console.log('✅ User authenticated:', response.data);
       setUser(response.data);

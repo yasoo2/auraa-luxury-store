@@ -275,12 +275,50 @@ def _clean_description(product: dict) -> str:
     return ''
 
 
+# One keyword surfaces one slice of CJ's catalogue — «luxury jewelry
+# accessories» returns mostly the same vein forever, which is why the shop
+# filled with lookalikes. The sweep asks the supplier for every kind of
+# accessory the store actually sells, a few search phrasings per category,
+# and splits the requested count evenly across them.
+CATEGORY_SWEEP_KEYWORDS = {
+    "earrings":  ["earrings women", "hoop earrings", "stud earrings",
+                  "pearl earrings", "zircon earrings", "gold plated earrings",
+                  "drop earrings"],
+    "necklaces": ["necklace women", "pendant necklace", "choker necklace",
+                  "gold plated necklace", "pearl necklace", "layered necklace",
+                  "zircon pendant"],
+    "bracelets": ["bracelet women", "bangle", "charm bracelet",
+                  "anklet women", "pearl bracelet", "cuff bracelet"],
+    "rings":     ["ring women", "adjustable ring", "zircon ring",
+                  "gold plated ring", "ring set women"],
+    "watches":   ["women watch", "quartz watch women", "bracelet watch set"],
+    # The store's sixth shelf is also its catch-all, so the wider world of
+    # women's adornment — hair pieces, brooches, body chains — lands here,
+    # visible and re-fileable, instead of nowhere.
+    "sets":      ["jewelry set", "necklace earrings set", "bridal jewelry set",
+                  "hair accessories women", "hair clip pearl", "brooch women",
+                  "body chain jewelry"],
+}
+
+
+def _sweep_plan(total_count: int):
+    """Split the requested count across the six categories, first ones taking
+    the remainder — asking for 50 yields quotas of 9,9,8,8,8,8."""
+    cats = list(CATEGORY_SWEEP_KEYWORDS)
+    base, rem = divmod(total_count, len(cats))
+    return [
+        (cat, CATEGORY_SWEEP_KEYWORDS[cat], base + (1 if i < rem else 0))
+        for i, cat in enumerate(cats)
+    ]
+
+
 async def background_import_cj_products(
     job_id: str,
     keyword: Optional[str],
     category_id: Optional[str],
     max_products: int,
     db: AsyncIOMotorDatabase,
+    sweep: bool = False,
 ):
     # There was a `cj_service` parameter here that every caller dutifully passed
     # and this function never read: the fetching happens inside
@@ -308,20 +346,43 @@ async def background_import_cj_products(
             ) if pid
         }
 
-        import_results = await bulk_import_products(
-            total_count=max_products,
-            keyword=keyword or "luxury jewelry",
-            exclude_ids=owned_ids,
-        )
+        # Both modes run the same machinery over a fetch plan: the sweep walks
+        # every store category with its own search phrasings and quota; the
+        # keyword mode is a plan of one. Each category tries its next phrasing
+        # only for whatever its quota still lacks.
+        if sweep:
+            plan = _sweep_plan(max_products)
+        else:
+            plan = [("keyword", [keyword or "luxury jewelry"], max_products)]
 
-        products = import_results.get("products", [])
+        products = []
+        skipped_existing = 0
+        fetch_report = []
+        for plan_cat, keywords, quota in plan:
+            remaining = quota
+            for kw in keywords:
+                if remaining <= 0:
+                    break
+                part = await bulk_import_products(
+                    total_count=remaining,
+                    keyword=kw,
+                    exclude_ids=owned_ids,
+                )
+                got = part.get("products", [])
+                products.extend(got)
+                remaining -= len(got)
+                skipped_existing += int(part.get("skipped_existing", 0))
+                fetch_report.append({"plan": plan_cat, "keyword": kw, "fetched": len(got)})
+                # The next search must not re-fetch what this one just found.
+                owned_ids.update(str(p.get("pid")) for p in got if p.get("pid"))
+
         total = len(products)
         imported_count = 0
         failed_count = 0
-        # Duplicates the fetcher already filtered out count here too — the job
-        # report owes the owner the whole truth in one place.
-        skipped_existing = int(import_results.get("skipped_existing", 0))
         imported_products = []
+        # What actually landed where, by the classifier's verdict — the number
+        # the owner cares about: does every shelf of the shop fill up?
+        by_category: Dict[str, int] = {}
         
         logger.info(f"📦 Fetched {total} products from CJ (requested {max_products})")
         
@@ -335,7 +396,7 @@ async def background_import_cj_products(
                 "imported": 0,
                 "failed": 0,
                 "percent": 0,
-                "batches_info": import_results.get("batches", [])
+                "batches_info": fetch_report
             }
         )
         
@@ -424,6 +485,7 @@ async def background_import_cj_products(
                 await db.products.insert_one(product_data)
                 imported_count += 1
                 imported_products.append(product_data)
+                by_category[product_data["category"]] = by_category.get(product_data["category"], 0) + 1
                 
                 # Update progress every 10 products
                 if idx % 10 == 0 or idx == total:
@@ -437,7 +499,8 @@ async def background_import_cj_products(
                             "imported": imported_count,
                             "skipped_existing": skipped_existing,
                             "failed": failed_count,
-                            "percent": percent
+                            "percent": percent,
+                            "by_category": by_category
                         }
                     )
                 
@@ -454,6 +517,8 @@ async def background_import_cj_products(
             "imported": imported_count,
             "skipped_existing": skipped_existing,
             "failed": failed_count,
+            "by_category": by_category,
+            "fetch_report": fetch_report,
             "sample_products": imported_products[:5]
         }
 
@@ -466,7 +531,8 @@ async def background_import_cj_products(
                 "imported": imported_count,
                 "skipped_existing": skipped_existing,
                 "failed": failed_count,
-                "percent": 100
+                "percent": 100,
+                "by_category": by_category
             },
             result=result
         )

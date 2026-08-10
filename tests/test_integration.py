@@ -2307,6 +2307,69 @@ def test_import_reads_past_products_the_shop_already_owns(client, monkeypatch):
     assert status["skipped_existing"] == 1
 
 
+def test_sweep_import_fills_every_shelf_of_the_shop(client, monkeypatch):
+    """
+    «تغطية كل الفئات»: one sweep run must reach earrings AND necklaces AND
+    bracelets AND rings AND watches AND sets — not fifty variations of a
+    single search. The fake supplier answers each search phrase with one
+    product of that kind and nothing else, so only a run that actually
+    searches every category can fill every shelf.
+    """
+    import asyncio
+    import services.import_service as import_service
+    from services.background_import import (
+        background_import_cj_products, ImportJobManager,
+    )
+
+    kinds = {
+        "earring": ("E1", "Pearl Stud Earrings"),
+        "necklace": ("N1", "Layered Pendant Necklace"),
+        "bracelet": ("B1", "Charm Bangle Bracelet"),
+        "ring": ("R1", "Zircon Adjustable Ring"),
+        "watch": ("W1", "Quartz Women Watch"),
+        "set": ("S1", "Bridal Jewelry Set"),
+    }
+
+    async def fake_list_products(page_num=1, page_size=50, keyword=""):
+        for marker, (pid, name) in kinds.items():
+            if marker in keyword:
+                if page_num > 1:
+                    return {"code": 200, "data": {"list": []}}
+                return {"code": 200, "data": {"list": [{
+                    "pid": pid, "productNameEn": f"{name}, restated for search",
+                    "productName": name, "sellPrice": "2.0",
+                    "productImage": "https://cf.cjdropshipping.com/x.jpg",
+                    "categoryName": "Jewelry",
+                }]}}
+        return {"code": 200, "data": {"list": []}}
+
+    monkeypatch.setattr(import_service, "list_products", fake_list_products)
+    monkeypatch.setattr(import_service, "PAUSE_BETWEEN_BATCHES", 0)
+
+    loop = asyncio.get_event_loop()
+    manager = ImportJobManager(client._db)
+    job_id = loop.run_until_complete(manager.create_job(
+        job_type="bulk_import", supplier="cj",
+        params={"max_products": 6, "mode": "sweep"}))
+    loop.run_until_complete(background_import_cj_products(
+        job_id=job_id, keyword=None, category_id=None,
+        max_products=6, db=client._db, sweep=True))
+
+    job = loop.run_until_complete(manager.get_job(job_id))
+    assert job["status"] == "completed", job.get("error")
+    assert job["progress"]["imported"] == 6, job["progress"]
+    by_cat = job["progress"].get("by_category") or {}
+    assert set(by_cat) == {"earrings", "necklaces", "bracelets",
+                           "rings", "watches", "sets"}, (
+        f"a sweep must fill every shelf of the shop, got: {by_cat}")
+
+    # The page announcing the result reads the same breakdown.
+    register(client, email="imp4@b.com")
+    make_admin(client, "imp4@b.com")
+    status = client.get(f"/api/imports/{job_id}/status").json()
+    assert status["by_category"] == by_cat
+
+
 # ---------------------------------------------------------------------------
 # Imported products must actually reach the storefront
 #

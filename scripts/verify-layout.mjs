@@ -605,6 +605,32 @@ check('كل الأسعار المعروضة أعداد صحيحة بلا كسو�
   fractional.bad ? `سعر بكسور: «${fractional.bad}»`
     : (fractional.count ? '' : 'لا أسعار وُجدت للفحص'));
 
+// زاوية التثبيت: حين يعلن المتصفح قابلية التثبيت (beforeinstallprompt)
+// يظهر زرّ «ثبّت التطبيق» في قائمة الهاتف، ونقرته تستدعي مثبّت المتصفح
+// الأصلي نفسه — الذي يعرف وحده أهذا هاتف أم كمبيوتر.
+await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(700);
+await page.evaluate(() => {
+  const stub = new Event('beforeinstallprompt');
+  stub.prompt = () => { window.__prompted = true; return Promise.resolve(); };
+  stub.userChoice = Promise.resolve({ outcome: 'accepted' });
+  window.dispatchEvent(stub);
+});
+await page.waitForTimeout(300);
+let installOk = false;
+let installWhy = '';
+try {
+  await page.locator('[data-testid="mobile-menu-button"]').click();
+  await page.waitForSelector('[data-testid="install-app"]:visible', { timeout: 4000 });
+  await page.locator('[data-testid="install-app"]:visible').first().click();
+  await page.waitForTimeout(300);
+  installOk = await page.evaluate(() => window.__prompted === true);
+  if (!installOk) installWhy = 'الزر ظهر لكنه لم يستدعِ المثبّت';
+} catch (e) {
+  installWhy = 'زر التثبيت لم يظهر رغم إعلان المتصفح القابلية';
+}
+check('زاوية «ثبّت التطبيق» تظهر وتستدعي مثبّت المتصفح الأصلي', installOk, installWhy);
+
 await browser.close();
 server.close();
 

@@ -17,6 +17,16 @@ root.render(
 // There used to be three racing each other — a timer after "installed", a
 // SW_UPDATED message from the worker, and controllerchange — so a single
 // deploy could reload a shopper mid-checkout more than once.
+// The browser fires beforeinstallprompt ONCE, early — often before React
+// has mounted anything. Caught here and parked on window, so the install
+// corner can summon the native installer whenever it renders. The native
+// prompt itself already knows whether this is a phone or a computer.
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  window.__auraaInstallPrompt = event;
+  window.dispatchEvent(new CustomEvent('auraa-installable'));
+});
+
 if ('serviceWorker' in navigator) {
   // No controller on a first visit: the worker claims the page a moment after
   // it installs, and reloading then would restart every visit for nothing.

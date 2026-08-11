@@ -8,6 +8,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import LanguageCurrencySelector from './LanguageCurrencySelector';
+import InstallAppButton from './InstallAppButton';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import FLAGS from '../config/flags';
@@ -208,6 +209,9 @@ const Navbar = () => {
               <LanguageCurrencySelector />
             </div>
 
+            {/* Install corner (wide screens; phones get the drawer row) */}
+            <InstallAppButton variant="navbar" />
+
             {/* Cart */}
             <Link to="/cart" className="relative p-3 sm:p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
               <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -284,6 +288,11 @@ const Navbar = () => {
               {/* Language/Currency Selector - Visible in mobile menu */}
               <div className="sm:hidden mb-4 pb-3 border-b border-gray-100">
                 <LanguageCurrencySelector />
+              </div>
+
+              {/* Install corner for phones */}
+              <div className="mb-3">
+                <InstallAppButton variant="drawer" onDone={() => setIsMenuOpen(false)} />
               </div>
 
               {/* Mobile Search */}

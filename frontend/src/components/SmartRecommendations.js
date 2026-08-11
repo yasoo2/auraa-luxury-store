@@ -194,7 +194,7 @@ const SmartRecommendations = ({
                   a broken frame. */}
               <img
                 src={product.images?.[0] || product.image}
-                alt={product.name}
+                alt={isRTL ? (product.name_ar || product.name) : (product.name_en || product.name)}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 loading="lazy"
               />
@@ -251,7 +251,7 @@ const SmartRecommendations = ({
             {/* Product Info */}
             <div className="p-4">
               <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-sm">
-                {product.name}
+                {isRTL ? (product.name_ar || product.name) : (product.name_en || product.name)}
               </h3>
               
               {/* Rating */}

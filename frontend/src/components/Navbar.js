@@ -108,7 +108,7 @@ const Navbar = () => {
               <img src="/favicon.svg?v=2" alt="" className="hidden sm:block h-9 w-9" />
               <div className="flex flex-col items-start">
               <div className="font-display font-black leading-none flex items-baseline gap-1">
-                <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>
+                <span className="text-xl sm:text-2xl md:text-3xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>
                 {/* Was 8px, painted with the same clipped gradient as the
                     name and a 2px drop shadow. At that size the fill is
                     thinner than the shadow: it rendered as a grey smudge next
@@ -122,11 +122,7 @@ const Navbar = () => {
           )}
 
           {/* Desktop Navigation */}
-          <div className={`hidden lg:flex items-center gap-8 px-8`} style={{ marginLeft: 'auto' }}>
-            <Link to="/" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm">
-              {isRTL ? 'الرئيسية' : 'Home'}
-            </Link>
-
+          <div className="hidden xl:flex items-center gap-4 px-2" style={{ marginLeft: 'auto' }}>
             {/* Categories Dropdown */}
             <div className="relative">
               <button
@@ -185,7 +181,7 @@ const Navbar = () => {
               (min 10rem, max 20rem) so the box is always usable and never
               spills under the language/currency controls — the fixed-width
               focus trick that did exactly that is gone from App.css. */}
-          <form onSubmit={handleSearch} className="hidden lg:flex items-center flex-1 min-w-[10rem] max-w-xs mx-2">
+          <form onSubmit={handleSearch} className="hidden xl:flex items-center flex-1 min-w-[9.5rem] max-w-[14rem] mx-2">
             <div className="relative w-full">
               <Input
                 type="text"
@@ -261,7 +257,7 @@ const Navbar = () => {
             {/* Mobile menu button */}
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className="lg:hidden p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200"
+              className="xl:hidden p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200"
               data-testid="mobile-menu-button"
               aria-label="Toggle mobile menu"
             >
@@ -283,7 +279,7 @@ const Navbar = () => {
 
         {/* Mobile Menu - Enhanced */}
         {isMenuOpen && (
-          <div className="lg:hidden border-t border-gray-200 bg-white shadow-lg">
+          <div className="xl:hidden border-t border-gray-200 bg-white shadow-lg">
             <div className="px-4 py-4 space-y-3 max-h-[80vh] overflow-y-auto">
               {/* Language/Currency Selector - Visible in mobile menu */}
               <div className="sm:hidden mb-4 pb-3 border-b border-gray-100">

@@ -23,7 +23,6 @@ import CartPage from './components/CartPage';
 import WishlistPage from './components/WishlistPage';
 import AuthPage from './components/AuthPage';
 import OAuthCallback from './pages/OAuthCallback';
-import DeploymentSetup from './components/DeploymentSetup';
 import ProfilePage from './components/ProfilePage';
 import CheckoutPage from './components/CheckoutPage';
 import OrderPaymentPage from './components/OrderPaymentPage';
@@ -89,7 +88,6 @@ function App() {
                     <Route path="/auth/oauth-callback" element={<OAuthCallback />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/setup" element={<DeploymentSetup />} />
                     <Route path="/admin-setup" element={<AdminSetup />} />
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                     <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />

@@ -149,13 +149,13 @@ const CartPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
         <Card className="luxury-card p-8 text-center max-w-md">
           <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-amber-600" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">يجب تسجيل الدخول</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{isRTL ? 'يجب تسجيل الدخول' : 'Sign in required'}</h2>
           <p className="text-gray-600 mb-6">
-            يجب تسجيل الدخول لعرض سلة التسوق
+            {isRTL ? 'يجب تسجيل الدخول لعرض سلة التسوق' : 'Sign in to see your shopping cart'}
           </p>
           <Link to="/auth">
             <Button className="btn-luxury">
-              تسجيل الدخول
+              {isRTL ? 'تسجيل الدخول' : 'Sign in'}
             </Button>
           </Link>
         </Card>
@@ -178,15 +178,15 @@ const CartPage = () => {
           <div className="text-center">
             <ShoppingBag className="h-24 w-24 mx-auto mb-6 text-gray-400" />
             <h1 className="font-display text-4xl font-bold text-gray-900 mb-4" data-testid="empty-cart-title">
-              سلة التسوق فارغة
+              {isRTL ? 'سلة التسوق فارغة' : 'Your cart is empty'}
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              لم تقم بإضافة أي منتجات بعد
+              {isRTL ? 'لم تقم بإضافة أي منتجات بعد' : 'You have not added any products yet'}
             </p>
             <div className="space-y-4">
               <Link to="/products">
                 <Button className="btn-luxury" data-testid="continue-shopping-button">
-                  تابع التسوق
+                  {isRTL ? 'تابع التسوق' : 'Continue shopping'}
                   <ArrowLeft className="ms-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -202,10 +202,10 @@ const CartPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="font-display text-4xl font-bold text-gray-900 mb-4" data-testid="cart-page-title">
-            سلة التسوق
+            {isRTL ? 'سلة التسوق' : 'Shopping cart'}
           </h1>
           <p className="text-xl text-gray-600">
-            مراجعة وتعديل منتجاتك قبل إتمام الطلب
+            {isRTL ? 'مراجعة وتعديل منتجاتك قبل إتمام الطلب' : 'Review and adjust your items before checkout'}
           </p>
         </div>
 
@@ -223,7 +223,7 @@ const CartPage = () => {
                       <Link to={`/product/${product.id}`}>
                         <img 
                           src={product.images[0]} 
-                          alt={product.name}
+                          alt={isRTL ? (product.name_ar || product.name) : (product.name_en || product.name)}
                           className="w-full md:w-32 h-32 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
                         />
                       </Link>
@@ -234,7 +234,7 @@ const CartPage = () => {
                         <div>
                           <Link to={`/product/${product.id}`}>
                             <h3 className="font-bold text-lg text-gray-900 hover:text-amber-600 transition-colors">
-                              {product.name}
+                              {isRTL ? (product.name_ar || product.name) : (product.name_en || product.name)}
                             </h3>
                           </Link>
                           <p className="text-gray-600 text-sm mt-1">
@@ -276,10 +276,10 @@ const CartPage = () => {
                         
                         <div className="text-right">
                           <div className="text-2xl font-bold text-amber-600" data-testid={`item-total-${item.product_id}`}>
-                            {(item.price * item.quantity).toFixed(2)} ر.س
+                            {formatMoney(item.price * item.quantity)}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {item.price} ر.س للقطعة
+                            {formatMoney(item.price)} {isRTL ? 'للقطعة' : 'each'}
                           </div>
                         </div>
                       </div>
@@ -324,7 +324,7 @@ const CartPage = () => {
                     ) : (
                       <>
                         <span className="font-medium">
-                          {shippingEstimate.cost.toFixed(2)} {isRTL ? 'ر.س' : currency}
+                          {formatMoney(shippingEstimate.cost)}
                         </span>
                         {shippingEstimate.days && (
                           <div className="text-xs text-gray-500 mt-1">
@@ -340,7 +340,7 @@ const CartPage = () => {
                 <div className="flex justify-between text-xl font-bold">
                   <span>{isRTL ? 'المجموع:' : 'Total:'}</span>
                   <span className="text-amber-600" data-testid="total-amount">
-                    {(cart.total_amount + (shippingEstimate.cost || 0)).toFixed(2)} {isRTL ? 'ر.س' : currency}
+                    {formatMoney(cart.total_amount + (shippingEstimate.cost || 0))}
                   </span>
                 </div>
               </div>
@@ -371,8 +371,8 @@ const CartPage = () => {
               {/* Security badges */}
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="text-center text-sm text-gray-600">
-                  <p className="mb-2">🔒 دفع آمن ومشفر</p>
-                  <p>🚚 شحن سريع وآمن</p>
+                  <p className="mb-2">🔒 {isRTL ? 'دفع آمن ومشفر' : 'Secure, encrypted payment'}</p>
+                  <p>🚚 {isRTL ? 'شحن سريع وآمن' : 'Fast, safe shipping'}</p>
                 </div>
               </div>
             </Card>

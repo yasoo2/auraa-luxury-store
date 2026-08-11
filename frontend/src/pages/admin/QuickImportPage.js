@@ -2,8 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../api';
+import { useLanguage } from '../../context/LanguageContext';
 
 const QuickImportPage = () => {
+  // Prices follow the store-wide currency switcher like every other screen.
+  // The cards used to print a hardcoded "SAR" whatever the owner selected.
+  const { formatMoney } = useLanguage();
   const [language, setLanguage] = useState('ar');
   const [backendReady, setBackendReady] = useState(false);
   const [productCount, setProductCount] = useState(50);
@@ -422,7 +426,7 @@ const QuickImportPage = () => {
                   )}
                   
                   <h3 className="text-white font-bold mb-2 truncate">{product.name}</h3>
-                  <p className="text-green-400 font-bold text-xl mb-0.5">{product.price} SAR</p>
+                  <p className="text-green-400 font-bold text-xl mb-0.5">{formatMoney(product.price)}</p>
                   {Number(product.supplier_price) > 0 && (
                     <p className="text-xs text-red-400 mb-2">
                       التكلفة <span dir="ltr">${Number(product.supplier_price).toFixed(2)}</span>
@@ -485,7 +489,7 @@ const QuickImportPage = () => {
 
                 <div>
                   <label className="block text-white mb-2">
-                    {language === 'ar' ? 'السعر (ريال)' : 'Price (SAR)'}
+                    {language === 'ar' ? 'السعر (يُحفظ بالريال، والعرض بعملة النظام)' : 'Price (stored in SAR, shown in the system currency)'}
                   </label>
                   <input
                     type="number"
@@ -494,6 +498,9 @@ const QuickImportPage = () => {
                     onChange={(e) => setEditingProduct({...editingProduct, price: parseFloat(e.target.value)})}
                     className="w-full px-4 py-2 bg-gray-700 text-white rounded"
                   />
+                  {editingProduct.price > 0 && (
+                    <p className="text-xs text-gray-400 mt-1">≈ {formatMoney(editingProduct.price)}</p>
+                  )}
                 </div>
 
                 <div>

@@ -9,6 +9,7 @@ Handles complex pricing calculations including:
 """
 
 import logging
+import math
 from typing import Dict, Optional
 from datetime import datetime, timezone
 
@@ -158,8 +159,10 @@ class PricingService:
         # Calculate tax
         tax_amount = price_with_profit * country_config["tax_rate"]
 
-        # Final price (rounded)
-        final_price = round(price_with_profit + tax_amount, 2)
+        # Final price: whole numbers only, always rounded UP — the owner's
+        # rule («مقربة لأكبر سعر فلا اريد كسور»). 215.62 lists as 216, and
+        # rounding up means the computed profit is a floor, never shaved.
+        final_price = float(math.ceil(price_with_profit + tax_amount))
 
         # Convert to local currency if needed
         target_currency = country_config["currency"]

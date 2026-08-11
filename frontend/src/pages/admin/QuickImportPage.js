@@ -29,7 +29,22 @@ const QuickImportPage = () => {
 
   useEffect(() => {
     checkBackendHealth();
+    // The staging area lives in the database; the page used to forget it on
+    // every visit — import fifty, walk away, come back to an empty screen
+    // with the products sitting safely in storage the whole time.
+    loadStagingProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadStagingProducts = async () => {
+    try {
+      const products = await apiGet('/api/products/staging');
+      setStagingProducts(Array.isArray(products) ? products : []);
+    } catch (error) {
+      console.error('Staging fetch error:', error);
+      toast.error('تعذّر تحميل المنتجات المنتظرة للمراجعة');
+    }
+  };
 
   const checkBackendHealth = async () => {
     try {
@@ -97,10 +112,11 @@ const QuickImportPage = () => {
         setImportCounter(status.processed || 0);
         setByCategory(status.by_category || {});
 
-        // Get imported products from staging area
+        // Refresh the WHOLE staging area, not this job's slice only — what
+        // this list shows is exactly what «نشر للمتجر» will publish, and
+        // leftovers from earlier runs belong in that picture.
         if (status.processed > 0) {
-          const products = await apiGet(`/api/products/staging?job_id=${jobId}`);
-          setStagingProducts(products || []);
+          await loadStagingProducts();
         }
 
         if (status.state === 'completed') {
@@ -361,9 +377,16 @@ const QuickImportPage = () => {
         {stagingProducts.length > 0 && (
           <div className="bg-gray-800 p-6 rounded-lg mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-white">
-                {language === 'ar' ? `📦 المنتجات المستوردة (${stagingProducts.length})` : `📦 Imported Products (${stagingProducts.length})`}
-              </h2>
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {language === 'ar' ? `📦 المنتجات المستوردة (${stagingProducts.length})` : `📦 Imported Products (${stagingProducts.length})`}
+                </h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  {language === 'ar'
+                    ? 'محفوظة هنا حتى تنشرها أو تحذفها — حتى لو غادرت الصفحة وعدت.'
+                    : 'Kept here until you publish or delete them — even if you leave and come back.'}
+                </p>
+              </div>
               
               {/* GREEN Live Button */}
               <button

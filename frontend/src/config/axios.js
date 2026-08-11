@@ -58,13 +58,16 @@ const setupInterceptor = (instance) => {
 
       // If 401 and not already retried, try to refresh
       if (error.response?.status === 401 && !originalRequest._retry) {
-        // Auth endpoints answer 401 as a normal verdict, not as a stale
-        // session — refreshing on them is meaningless, and refreshing on
-        // /auth/refresh itself is the deadlock above. Belt and braces: the
-        // bare client above already keeps this path out of here.
-        if (originalRequest.url?.includes('/auth/login')
-            || originalRequest.url?.includes('/auth/register')
-            || originalRequest.url?.includes('/auth/refresh')) {
+        // Only ONE endpoint's 401 means "your session went stale": /auth/me.
+        // Everywhere else under /auth/ a 401 is the answer itself — wrong
+        // password, spent Google code, expired reset link — and refreshing a
+        // session the caller does not have yet is meaningless. This used to
+        // be a blocklist of two (login, register), so /auth/refresh fell
+        // through it into the deadlock, and the Google callback fell through
+        // it into a pointless extra round-trip on the slowest screen in the
+        // shop. An allowlist cannot be out-grown by a new endpoint.
+        const url = originalRequest.url || '';
+        if (url.includes('/auth/') && !url.includes('/auth/me')) {
           return Promise.reject(error);
         }
 

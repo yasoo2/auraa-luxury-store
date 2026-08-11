@@ -764,6 +764,52 @@ if (settled) {
 check('جلسة منتهية لا تُعلّق صفحة محمية إلى الأبد', settled, settledWhy);
 await deadCtx.close();
 
+// دخول Google: السباق الذي علّق صفحة «جاري تسجيل الدخول» إلى الأبد.
+//
+// تبادل رمز Google يستغرق ثانيتين، وفحص الجلسة ينتهي أثناءها بـ401 (وهي
+// الحالة الطبيعية لمن لم يسجّل بعد) فيتغيّر كائن سياق المصادقة. كانت
+// الصفحة تُدرج ذلك السياق في تبعيّاتها، فيهدمها React ويرفع رايةَ «أُلغيت»،
+// ثم يعيد الدخول فيصدّه حارس «مرة واحدة» — فيعود ردّ Google الناجح إلى
+// صفحة توقّفت عن الإصغاء، ويدور الدوّار بلا نهاية.
+const oauthCtx = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+await oauthCtx.addInitScript(() => {
+  try { sessionStorage.setItem('auraa_oauth_state', 'teststate123'); } catch { /* blocked */ }
+});
+await oauthCtx.route('**/api/**', async (route) => {
+  const p = new URL(route.request().url()).pathname;
+  if (p.endsWith('/api/auth/me')) {
+    // ترد بسرعة: هذا ما يبدّل السياق في منتصف التبادل.
+    return route.fulfill({ status: 401, contentType: 'application/json',
+                           body: JSON.stringify({ detail: 'Unauthorized' }) });
+  }
+  if (p.includes('/api/auth/oauth/google/callback')) {
+    await new Promise((r) => setTimeout(r, 2000));
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ access_token: 'tok', user: { id: 'u1', email: 'g@x.com', first_name: 'Younes' } }) });
+  }
+  return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+});
+const oauthPage = await oauthCtx.newPage();
+await oauthPage.goto(`${base}/auth/oauth-callback?code=testcode&state=teststate123`,
+                     { waitUntil: 'domcontentloaded' });
+let signedIn = false;
+let signedWhy = '';
+try {
+  await oauthPage.waitForFunction(
+    () => !/Signing you in|جاري تسجيل الدخول/.test(document.body.innerText),
+    { timeout: 12000 });
+  signedIn = true;
+} catch (e) {
+  signedWhy = 'الصفحة عالقة على «جاري تسجيل الدخول» — ردّ Google وصل ولم يُلتقط';
+}
+if (signedIn && oauthPage.url().includes('oauth-callback')) {
+  signedIn = false;
+  signedWhy = 'لم تغادر صفحة الرد بعد نجاح الدخول';
+}
+check('دخول Google يكتمل ولا يعلق رغم تبدّل سياق المصادقة أثناءه',
+  signedIn, signedWhy);
+await oauthCtx.close();
+
 await browser.close();
 server.close();
 

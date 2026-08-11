@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { safeLocal } from '../lib/safeStorage';
 import { API_BASE_URL } from '../api';
@@ -110,7 +110,7 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  const login = async (identifier, password, turnstileToken, rememberMe = false) => {
+  const login = useCallback(async (identifier, password, turnstileToken, rememberMe = false) => {
     try {
       console.log(`🔐 Logging in as: ${identifier}`);
       
@@ -150,9 +150,9 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'login_failed' };
       }
     }
-  };
+  }, [BACKEND_URL]);
 
-  const register = async (userData, turnstileToken) => {
+  const register = useCallback(async (userData, turnstileToken) => {
     try {
       console.log('📝 Registering new user:', userData.email || userData.phone);
 
@@ -187,9 +187,9 @@ export const AuthProvider = ({ children }) => {
       
       return { success: false, error: 'registration_failed' };
     }
-  };
+  }, [BACKEND_URL]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await axios.post(
         `${BACKEND_URL}/api/auth/logout`,
@@ -206,9 +206,18 @@ export const AuthProvider = ({ children }) => {
       storeToken(null);
       setUser(null);
     }
-  };
+  }, [BACKEND_URL]);
 
-  const value = {
+  // Memoised on purpose, and it is not a micro-optimisation.
+  //
+  // This used to be a fresh object literal on every render, so every consumer
+  // saw a NEW auth identity each time `user` or `loading` changed. Any effect
+  // listing `auth` in its dependencies was therefore torn down and re-run one
+  // second into the page — and the Google callback did exactly that: it set a
+  // `cancelled` flag in its cleanup, re-entered, hit its own run-once guard,
+  // and returned. The sign-in that Google had just approved came back to a
+  // page that had stopped listening, and the spinner ran forever.
+  const value = useMemo(() => ({
     user,
     setUser,
     loading,
@@ -219,7 +228,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin: user?.is_admin || false,
     isSuperAdmin: user?.is_super_admin || false,
     checkAuthStatus
-  };
+  }), [user, loading, login, register, logout, checkAuthStatus]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

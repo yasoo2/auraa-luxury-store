@@ -68,7 +68,7 @@ const products = Array.from({ length: 30 }, (_, i) => ({
   id: `p${i + 1}`,
   name: `طقم أقراط ستانلس ستيل مطلي ذهب ١٨ قيراط تصميم فاخر رقم ${i + 1}`,
   description: 'وصف طويل بالعربية.',
-  price: 93.11 + i, category: 'earrings', images: [IMG], image: IMG,
+  price: 93.11 + i, supplier_price: 8.5, category: 'earrings', images: [IMG], image: IMG,
   rating: 4.5, reviews_count: 12, in_stock: true, stock_quantity: 25,
   is_active: true, sku: `SKU-${i + 1}`,
 }));

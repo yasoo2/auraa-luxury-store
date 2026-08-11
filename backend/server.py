@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 # the repaired client while the import ran on a broken one. The duplicates are
 # gone; anything CJ goes through cj_client.
 from services.cj_client import credentials_configured as cj_credentials_configured
+from services.import_service import looks_like_adornment
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -3353,6 +3354,59 @@ async def admin_bulk_update_products(
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
     result = await db.products.update_many({"id": {"$in": payload.ids}}, {"$set": updates})
     return {"success": True, "updated": result.modified_count}
+
+
+def _as_supplier_shape(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """Adapt a stored product document to the import gate's field names, so
+    one vocabulary decides what belongs to the shop — at import and here."""
+    return {
+        "productNameEn": doc.get("name") or doc.get("name_en") or "",
+        "productName": doc.get("name_ar") or "",
+        "categoryName": doc.get("supplier_category") or "",
+    }
+
+
+@api_router.get("/admin/products/off-niche")
+async def list_off_niche_products(admin: User = Depends(get_admin_user)):
+    """
+    Products that do not look like adornment — clothes, shoes, home decor —
+    whether live or still in staging. Earlier imports had no gate, so dresses
+    and dried-flower bouquets entered the shop dressed as «أطقم»; this is the
+    broom that finds them for the owner to confirm and sweep.
+    """
+    docs = await db.products.find({}).to_list(100000)
+    suspects = [d for d in docs if not looks_like_adornment(_as_supplier_shape(d))]
+    return [{
+        "id": d["id"],
+        "name": d.get("name", ""),
+        "name_ar": d.get("name_ar", ""),
+        "price": d.get("price"),
+        "category": d.get("category", ""),
+        "supplier_category": d.get("supplier_category", ""),
+        "staging": bool(d.get("staging")),
+        "image": (d.get("images") or [None])[0],
+    } for d in suspects]
+
+
+@api_router.post("/admin/products/off-niche/purge")
+async def purge_off_niche_products(data: Dict[str, Any], admin: User = Depends(get_admin_user)):
+    """Delete the confirmed intruders — and only ids that STILL look
+    off-niche right now, so a stale list in a forgotten tab cannot delete an
+    innocent product."""
+    ids = [str(x) for x in (data.get("ids") or [])]
+    if not ids:
+        raise HTTPException(status_code=400, detail="No product ids provided")
+
+    docs = await db.products.find({"id": {"$in": ids}}).to_list(100000)
+    confirmed = [d["id"] for d in docs if not looks_like_adornment(_as_supplier_shape(d))]
+    refused = sorted(set(ids) - set(confirmed))
+
+    deleted = 0
+    if confirmed:
+        result = await db.products.delete_many({"id": {"$in": confirmed}})
+        deleted = result.deleted_count
+
+    return {"deleted": deleted, "refused": refused}
 
 
 @api_router.delete("/admin/products/{product_id}")

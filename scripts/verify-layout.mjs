@@ -572,6 +572,23 @@ check('الاستيراد السريع يعرض المنتظر فور الدخو
   !stagingShown.listed ? 'القائمة فارغة رغم وجود 3 منتجات'
     : (stagingShown.hardcodedSar ? 'السعر مكتوب بـ"SAR" حرفية متجاهلاً مبدّل العملة' : ''));
 
+// زر «تعديل» في منتجات الإدارة كان يطلق حالةً لا يقرؤها أحد: المودال
+// مستورد لكنه غير موضوع في الشجرة أصلاً — نقرة بلا أي أثر، وبلاغ المالك:
+// «زر تعديل على المنتوجات لا يعمل بشكل صحيح».
+await page.goto(`${base}/admin/products`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(900);
+let editOpened = false;
+try {
+  await page.locator('button:has-text("تعديل")').first().click();
+  await page.waitForTimeout(600);
+  editOpened = await page.evaluate(() =>
+    document.body.innerText.includes('الأسعار والمخزون'));
+} catch (e) {
+  editOpened = false;
+}
+check('زر تعديل المنتج يفتح نافذة التحرير فعلاً', editOpened,
+  editOpened ? '' : 'النقرة لم تفتح أي نافذة');
+
 await browser.close();
 server.close();
 

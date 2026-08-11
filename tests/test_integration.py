@@ -2394,6 +2394,13 @@ def test_import_refuses_clothes_and_shoes_and_digs_for_real_adornment(client, mo
              "productName": "حذاء نسائي", "sellPrice": "19",
              "productImage": "https://cf.cjdropshipping.com/b.jpg",
              "categoryName": "Shoes"},
+            # The one that actually reached the live shop: "Accessories Set"
+            # in the title used to satisfy the gate's positive check.
+            {"pid": "F1",
+             "productNameEn": "Mini Dried Flower Bouquets, Party Accessories Set",
+             "productName": "باقات زهور مجففة", "sellPrice": "6",
+             "productImage": "https://cf.cjdropshipping.com/f.jpg",
+             "categoryName": "Home & Garden"},
             {"pid": "J1", "productNameEn": "Gold Plated Pendant Necklace, x",
              "productName": "قلادة", "sellPrice": "3",
              "productImage": "https://cf.cjdropshipping.com/j1.jpg",
@@ -2421,8 +2428,9 @@ def test_import_refuses_clothes_and_shoes_and_digs_for_real_adornment(client, mo
     job = loop.run_until_complete(manager.get_job(job_id))
     assert job["status"] == "completed", job.get("error")
     assert job["progress"]["imported"] == 2, job["progress"]
-    assert job["progress"]["rejected_off_category"] == 2, (
-        "the dress and the boots must be refused and counted, not shelved as أطقم")
+    assert job["progress"]["rejected_off_category"] == 3, (
+        "the dress, the boots and the flower bouquets must be refused and "
+        "counted, not shelved as أطقم")
 
     staged = loop.run_until_complete(
         client._db.products.find({"staging": True}).to_list(100))
@@ -2433,7 +2441,50 @@ def test_import_refuses_clothes_and_shoes_and_digs_for_real_adornment(client, mo
     register(client, email="gate@b.com")
     make_admin(client, "gate@b.com")
     status = client.get(f"/api/imports/{job_id}/status").json()
-    assert status["rejected_off_category"] == 2
+    assert status["rejected_off_category"] == 3
+
+
+def test_off_niche_broom_finds_and_purges_only_true_intruders(client):
+    """
+    Dresses and flower bouquets entered before the import gate existed. The
+    broom must list exactly them — live or staged — and the purge must
+    re-verify server-side so a stale list cannot delete a real jewel.
+    """
+    import asyncio
+
+    register(client, email="broom@b.com")
+    make_admin(client, "broom@b.com")
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_many([
+        {"id": "flower-1", "source": "cj_dropshipping", "external_id": "F9",
+         "name": "Mini Dried Flower Bouquets, Party Accessories Set",
+         "name_ar": "باقات زهور مجففة", "description": "d", "price": 39.0,
+         "supplier_category": "Home & Garden", "category": "sets",
+         "images": [], "staging": False},
+        {"id": "dress-1", "source": "cj_dropshipping", "external_id": "D9",
+         "name": "Elegant Evening Dress", "name_ar": "فستان سهرة",
+         "description": "d", "price": 59.0, "supplier_category": "Clothing",
+         "category": "sets", "images": [], "staging": True},
+        {"id": "jewel-1", "source": "cj_dropshipping", "external_id": "J9",
+         "name": "Zircon Pendant Necklace", "name_ar": "قلادة زركون",
+         "description": "d", "price": 120.0, "supplier_category": "Jewelry",
+         "category": "necklaces", "images": [], "staging": False},
+    ]))
+
+    suspects = client.get("/api/admin/products/off-niche").json()
+    assert {s["id"] for s in suspects} == {"flower-1", "dress-1"}, suspects
+
+    # Purge asks for the jewel too — the server must refuse it by name.
+    r = client.post("/api/admin/products/off-niche/purge",
+                    json={"ids": ["flower-1", "dress-1", "jewel-1"]})
+    assert r.status_code == 200, r.text
+    report = r.json()
+    assert report["deleted"] == 2
+    assert report["refused"] == ["jewel-1"], "an innocent product was purgeable"
+
+    left = loop.run_until_complete(client._db.products.find({}).to_list(100))
+    assert {p["id"] for p in left} == {"jewel-1"}, "the jewel must survive the broom"
 
 
 # ---------------------------------------------------------------------------

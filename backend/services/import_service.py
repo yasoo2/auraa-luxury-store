@@ -55,13 +55,18 @@ MAX_PAGES = 40
 # too, counted and reported — never silently shelved.
 import re as _re
 
-_APPAREL_NEGATIVE = _re.compile(
+_OFF_NICHE_NEGATIVE = _re.compile(
+    # Apparel
     r"\b(dress|dresses|shoes?|boots?|sneakers?|sandals?|slippers?|heels|"
     r"socks?|stockings?|shirt|t-?shirts?|hoodies?|sweaters?|sweatshirts?|"
     r"jackets?|coats?|pants|trousers|jeans|shorts|skirts?|blouses?|"
     r"underwear|lingerie|bra|bras|panties|pajamas?|nightgowns?|swimsuits?|"
     r"bikinis?|leggings?|gloves?|scarf|scarves|belts?|wallets?|handbags?|"
-    r"backpacks?|purses?|phone\s*case)\b", _re.IGNORECASE)
+    r"backpacks?|purses?|phone\s*case|"
+    # Home decor and party props — «باقات زهور مجففة» slipped through as an
+    # "Accessories Set" because only apparel was refused.
+    r"flowers?|bouquets?|vases?|candles?|decorations?|home\s*decor|"
+    r"stickers?|mugs?|keychains?|key\s*chains?|toys?|plush)\b", _re.IGNORECASE)
 
 _ADORNMENT_POSITIVE = (
     # English — the six shelves and the wider adornment vocabulary
@@ -84,8 +89,9 @@ def looks_like_adornment(product: Dict[str, Any]) -> bool:
                     ("productNameEn", "productName", "categoryName")).lower()
     if not text.strip():
         return False
-    # Crystal-studded boots are still boots: apparel words veto first.
-    if _APPAREL_NEGATIVE.search(text):
+    # Crystal-studded boots are still boots, and a dried-flower "accessories
+    # set" is still flowers: off-niche words veto first.
+    if _OFF_NICHE_NEGATIVE.search(text):
         return False
     return any(term in text for term in _ADORNMENT_POSITIVE)
 

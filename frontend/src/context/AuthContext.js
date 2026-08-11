@@ -40,6 +40,18 @@ const storeToken = (token) => {
   }
 };
 
+// A hard ceiling on the session check, in wall-clock seconds.
+//
+// `finally` is not a guarantee: it runs when the promise settles, and a
+// promise can be built that never settles at all. One did — the refresh
+// interceptor deadlocked against its own queue and this screen span forever
+// on every protected page. The bug is fixed at its root in config/axios.js;
+// this is the floor under it, so that NO future bug in any layer below can
+// ever hold a visitor in front of a spinner again. When the deadline fires
+// the visitor is treated as a guest: on a protected page that lands them on
+// the login screen, which is a place they can act from — unlike a spinner.
+const AUTH_CHECK_DEADLINE_MS = 45000;
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +59,7 @@ export const AuthProvider = ({ children }) => {
   const BACKEND_URL = API_BASE_URL;
   // Check auth status on mount (cookie, or a stored token if one survives)
   const checkAuthStatus = useCallback(async () => {
+    let deadline;
     try {
       const stored = safeLocal.get(TOKEN_KEY);
       if (stored) {
@@ -56,19 +69,30 @@ export const AuthProvider = ({ children }) => {
       // One automatic retry on timeout: a backend waking from idle can eat
       // the very first request whole, and bouncing the visitor to "guest"
       // over that made a five-minute spinner out of a thirty-second nap.
-      let response;
-      try {
-        response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
-          withCredentials: true
-        });
-      } catch (firstError) {
-        const timedOut = firstError.code === 'ECONNABORTED'
-          || /timeout/i.test(firstError.message || '');
-        if (!timedOut) throw firstError;
-        response = await axios.get(`${BACKEND_URL}/api/auth/me`, {
-          withCredentials: true
-        });
-      }
+      const ask = async () => {
+        try {
+          return await axios.get(`${BACKEND_URL}/api/auth/me`, {
+            withCredentials: true
+          });
+        } catch (firstError) {
+          const timedOut = firstError.code === 'ECONNABORTED'
+            || /timeout/i.test(firstError.message || '');
+          if (!timedOut) throw firstError;
+          return axios.get(`${BACKEND_URL}/api/auth/me`, {
+            withCredentials: true
+          });
+        }
+      };
+
+      const response = await Promise.race([
+        ask(),
+        new Promise((_, reject) => {
+          deadline = setTimeout(
+            () => reject(new Error('auth check exceeded its deadline')),
+            AUTH_CHECK_DEADLINE_MS
+          );
+        }),
+      ]);
 
       console.log('✅ User authenticated:', response.data);
       setUser(response.data);
@@ -77,6 +101,7 @@ export const AuthProvider = ({ children }) => {
       storeToken(null);
       setUser(null);
     } finally {
+      clearTimeout(deadline);
       setLoading(false);
     }
   }, [BACKEND_URL]);

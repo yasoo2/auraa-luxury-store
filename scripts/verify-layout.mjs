@@ -345,6 +345,33 @@ const lira = await page.evaluate(() => {
 });
 check('الليرة التركية قابلة للوصول والنقر في قائمة العملات', lira.ok, lira.why);
 
+// صندوق البحث في الشريط: كان ينضغط لشريحة ~٥٤ بكسل ثم «يتمدد» عند النقر
+// بعرض ثابت من CSS تحت زرّ اللغة — لقطة المالك حرفياً. الصندوق يجب أن
+// يكون عريضاً بما يُستعمل، ونقرة مركزه تصيبه هو، ولا يتقاطع مع زرّ اللغة
+// حتى بعد التركيز.
+await page.mouse.click(200, 400);
+await page.waitForTimeout(300);
+const searchBox = await page.evaluate(() => {
+  const input = document.querySelector('nav form input');
+  if (!input) return { ok: false, why: 'صندوق البحث غير موجود' };
+  const r = input.getBoundingClientRect();
+  if (r.width < 150) return { ok: false, why: `عرضه ${Math.round(r.width)}px فقط` };
+  const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  const hit = top === input || input.contains(top) || (top && top.contains(input));
+  if (!hit) return { ok: false, why: `مركزه مغطّى بعنصر ${top ? top.tagName : 'لا شيء'}` };
+  input.focus();
+  const rf = input.getBoundingClientRect();
+  const toggle = document.querySelector('[data-testid="language-toggle"]');
+  if (toggle) {
+    const t = toggle.getBoundingClientRect();
+    const overlap = !(t.left >= rf.right || t.right <= rf.left
+      || t.bottom <= rf.top || t.top >= rf.bottom);
+    if (overlap) return { ok: false, why: 'زرّ اللغة فوق الصندوق بعد التركيز' };
+  }
+  return { ok: true, why: '' };
+});
+check('صندوق البحث عريض ومركزه يصيبه ولا يزاحمه زرّ اللغة', searchBox.ok, searchBox.why);
+
 // Opening a page must start it from the top. Client-side navigation keeps
 // the previous page's scroll position, so a shopper who reached the bottom
 // of one page opened every next page already scrolled to its bottom — the

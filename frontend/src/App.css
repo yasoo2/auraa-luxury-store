@@ -594,14 +594,10 @@ body {
   box-shadow: 0 2px 0 #000000;
 }
 
-/* Search animation */
-.search-expand {
-  transition: width 0.3s ease;
-}
-
-.search-expand:focus {
-  width: 300px;
-}
+/* The old "search animation" forced the input to a fixed 300px on focus,
+   regardless of the space its row actually had — at laptop widths the box
+   exploded underneath the language button the moment it was clicked. The
+   form now owns a real flex share instead; no width tricks. */
 
 /* Price animation */
 .price-highlight {
@@ -661,10 +657,6 @@ body {
   .product-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 16px;
-  }
-  
-  .search-expand:focus {
-    width: 180px;
   }
   
   .luxury-card {

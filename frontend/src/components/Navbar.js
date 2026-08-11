@@ -180,18 +180,21 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Search Bar (desktop) */}
-          <form onSubmit={handleSearch} className="hidden lg:flex items-center flex-1 min-w-0 mx-2">
+          {/* Search Bar (desktop). The form owns a bounded flex share
+              (min 10rem, max 20rem) so the box is always usable and never
+              spills under the language/currency controls — the fixed-width
+              focus trick that did exactly that is gone from App.css. */}
+          <form onSubmit={handleSearch} className="hidden lg:flex items-center flex-1 min-w-[10rem] max-w-xs mx-2">
             <div className="relative w-full">
               <Input
                 type="text"
                 placeholder={isRTL ? 'ابحث عن المنتجات...' : 'Search products...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full max-w-xs pr-10 search-expand focus-ring"
+                className="w-full pr-10 focus-ring"
                 dir={isRTL ? 'rtl' : 'ltr'}
               />
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400`} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             </div>
           </form>
 
@@ -294,7 +297,7 @@ const Navbar = () => {
                     className="w-full pr-10 text-sm"
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
-                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400`} />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 </div>
               </form>
 

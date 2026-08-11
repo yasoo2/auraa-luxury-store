@@ -724,6 +724,46 @@ try {
 }
 check('زرّ «ثبّت التطبيق» في قائمة الهاتف يستدعي المثبّت أيضاً', installOk, installWhy);
 
+// أخطر عطل واجهه المالك: صفحة محمية تدور إلى الأبد.
+//
+// جلسة منتهية ترد 401 على ‎/auth/me، فيطلب المعترض تجديداً يرد 401 أيضاً —
+// وكان المعترض يمسك طلب التجديد نفسه ويركنه في طابور لا يُفرَّغ إلا بعد
+// عودة ذلك الطلب: انتظار دائري لا ينتهي، ووعد لا يستقر، فـ finally لا
+// يعمل، فالدوّار أبديّ. هذا الفحص يعيد إنتاج الحالة حرفياً ويطالب بأن
+// تحسم الصفحة أمرها خلال عشر ثوانٍ — لا شاشة انتظار أبدية بعد اليوم.
+const deadCtx = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+await deadCtx.addInitScript(() => { try { localStorage.setItem('token', 'stale'); } catch { /* blocked */ } });
+await deadCtx.route('**/api/**', (route) => {
+  const p = new URL(route.request().url()).pathname;
+  if (p.endsWith('/api/auth/me') || p.endsWith('/api/auth/refresh')) {
+    return route.fulfill({ status: 401, contentType: 'application/json',
+                           body: JSON.stringify({ detail: 'Unauthorized' }) });
+  }
+  return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+});
+const deadPage = await deadCtx.newPage();
+await deadPage.goto(`${base}/profile`, { waitUntil: 'domcontentloaded' });
+let settled = false;
+let settledWhy = '';
+try {
+  // إمّا انتقل إلى صفحة الدخول أو رسم الصفحة محتوى حقيقياً — المهم ألا يبقى
+  // الدوّار وحده على الشاشة.
+  await deadPage.waitForFunction(() => {
+    const spinning = Boolean(document.querySelector('[role="status"][aria-label="Loading"]'));
+    return !spinning;
+  }, { timeout: 10000 });
+  settled = true;
+} catch (e) {
+  settledWhy = 'الصفحة ما زالت تدور بعد عشر ثوانٍ — جلسة منتهية تُعلّق الواجهة';
+}
+if (settled) {
+  const url = deadPage.url();
+  const text = (await deadPage.evaluate(() => document.body.innerText)).trim();
+  if (text.length < 40) { settled = false; settledWhy = `الصفحة شبه فارغة بعد الحسم (${url})`; }
+}
+check('جلسة منتهية لا تُعلّق صفحة محمية إلى الأبد', settled, settledWhy);
+await deadCtx.close();
+
 await browser.close();
 server.close();
 

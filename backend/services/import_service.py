@@ -47,6 +47,49 @@ async def chunked(lst: List[Any], size: int):
 MAX_PAGES = 40
 
 
+# CJ's keyword search answers loosely: «bracelet women» brings dresses and
+# boots along for the ride, and the category classifier used to file anything
+# it did not recognise under «sets» — so shoes entered the shop dressed as a
+# jewellery set. This gate is what "importing accessories" means: apparel is
+# refused by name, and a product with no adornment signal at all is refused
+# too, counted and reported — never silently shelved.
+import re as _re
+
+_APPAREL_NEGATIVE = _re.compile(
+    r"\b(dress|dresses|shoes?|boots?|sneakers?|sandals?|slippers?|heels|"
+    r"socks?|stockings?|shirt|t-?shirts?|hoodies?|sweaters?|sweatshirts?|"
+    r"jackets?|coats?|pants|trousers|jeans|shorts|skirts?|blouses?|"
+    r"underwear|lingerie|bra|bras|panties|pajamas?|nightgowns?|swimsuits?|"
+    r"bikinis?|leggings?|gloves?|scarf|scarves|belts?|wallets?|handbags?|"
+    r"backpacks?|purses?|phone\s*case)\b", _re.IGNORECASE)
+
+_ADORNMENT_POSITIVE = (
+    # English — the six shelves and the wider adornment vocabulary
+    "earring", "ear stud", "ear cuff", "hoop", "stud",
+    "necklace", "pendant", "choker", "locket", "collar chain",
+    "bracelet", "bangle", "anklet", "cuff", "charm",
+    "ring", "watch", "jewelry", "jewellery", "brooch", "tiara", "crown",
+    "hair clip", "hairpin", "hair pin", "barrette", "hair accessor",
+    "body chain", "waist chain", "gemstone", "zircon", "rhinestone",
+    "pearl", "crystal", "plated", "18k", "925", "sterling", "amulet",
+    # Arabic — CJ's productName side
+    "مجوهرات", "قلادة", "عقد", "خاتم", "سوار", "أسورة", "خلخال",
+    "أقراط", "قرط", "حلق", "ساعة", "طقم", "دبوس", "تاج", "بروش",
+    "لؤلؤ", "زركون", "كريستال",
+)
+
+
+def looks_like_adornment(product: Dict[str, Any]) -> bool:
+    text = " ".join(str(product.get(k) or "") for k in
+                    ("productNameEn", "productName", "categoryName")).lower()
+    if not text.strip():
+        return False
+    # Crystal-studded boots are still boots: apparel words veto first.
+    if _APPAREL_NEGATIVE.search(text):
+        return False
+    return any(term in text for term in _ADORNMENT_POSITIVE)
+
+
 async def bulk_import_products(
     total_count: int,
     keyword: str = "luxury jewelry",
@@ -71,6 +114,7 @@ async def bulk_import_products(
         "ok": 0,
         "failed": 0,
         "skipped_existing": 0,
+        "rejected_off_category": 0,
         "batches": [],
         "products": []
     }
@@ -114,6 +158,11 @@ async def bulk_import_products(
                 seen_pids.add(pid)
                 if pid in exclude:
                     results["skipped_existing"] += 1
+                    continue
+                if not looks_like_adornment(product):
+                    # Not our trade: the pager digs further instead, so the
+                    # requested count still arrives — all of it adornment.
+                    results["rejected_off_category"] += 1
                     continue
                 fresh.append(product)
 

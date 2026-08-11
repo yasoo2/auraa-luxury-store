@@ -2370,6 +2370,72 @@ def test_sweep_import_fills_every_shelf_of_the_shop(client, monkeypatch):
     assert status["by_category"] == by_cat
 
 
+def test_import_refuses_clothes_and_shoes_and_digs_for_real_adornment(client, monkeypatch):
+    """
+    CJ's keyword search answers loosely — «bracelet women» brings dresses and
+    boots along («يجلب ملابس واحذيه»), and the category classifier used to
+    file anything unrecognised under «sets», so shoes entered the shop
+    dressed as a jewellery set. Apparel must be refused by name and the pager
+    must dig further until the requested count is adornment through and
+    through.
+    """
+    import asyncio
+    import services.import_service as import_service
+    from services.background_import import (
+        background_import_cj_products, ImportJobManager,
+    )
+
+    pages = {
+        1: [{"pid": "D1", "productNameEn": "Elegant Summer Dress For Women",
+             "productName": "فستان صيفي", "sellPrice": "9",
+             "productImage": "https://cf.cjdropshipping.com/d.jpg",
+             "categoryName": "Women's Clothing"},
+            {"pid": "B1", "productNameEn": "Crystal Embellished Ankle Boots",
+             "productName": "حذاء نسائي", "sellPrice": "19",
+             "productImage": "https://cf.cjdropshipping.com/b.jpg",
+             "categoryName": "Shoes"},
+            {"pid": "J1", "productNameEn": "Gold Plated Pendant Necklace, x",
+             "productName": "قلادة", "sellPrice": "3",
+             "productImage": "https://cf.cjdropshipping.com/j1.jpg",
+             "categoryName": "Jewelry"}],
+        2: [{"pid": "J2", "productNameEn": "Pearl Stud Earrings, y",
+             "productName": "أقراط لؤلؤ", "sellPrice": "2",
+             "productImage": "https://cf.cjdropshipping.com/j2.jpg",
+             "categoryName": "Jewelry"}],
+    }
+
+    async def fake_list_products(page_num=1, page_size=50, keyword=""):
+        return {"code": 200, "data": {"list": pages.get(page_num, [])}}
+
+    monkeypatch.setattr(import_service, "list_products", fake_list_products)
+    monkeypatch.setattr(import_service, "PAUSE_BETWEEN_BATCHES", 0)
+
+    loop = asyncio.get_event_loop()
+    manager = ImportJobManager(client._db)
+    job_id = loop.run_until_complete(manager.create_job(
+        job_type="bulk_import", supplier="cj", params={"max_products": 2}))
+    loop.run_until_complete(background_import_cj_products(
+        job_id=job_id, keyword="bracelet women", category_id=None,
+        max_products=2, db=client._db, sweep=False))
+
+    job = loop.run_until_complete(manager.get_job(job_id))
+    assert job["status"] == "completed", job.get("error")
+    assert job["progress"]["imported"] == 2, job["progress"]
+    assert job["progress"]["rejected_off_category"] == 2, (
+        "the dress and the boots must be refused and counted, not shelved as أطقم")
+
+    staged = loop.run_until_complete(
+        client._db.products.find({"staging": True}).to_list(100))
+    assert {p["external_id"] for p in staged} == {"J1", "J2"}, (
+        f"apparel reached the shop: {[p['name'] for p in staged]}")
+
+    # The page announcing the result must carry the refusal count too.
+    register(client, email="gate@b.com")
+    make_admin(client, "gate@b.com")
+    status = client.get(f"/api/imports/{job_id}/status").json()
+    assert status["rejected_off_category"] == 2
+
+
 # ---------------------------------------------------------------------------
 # Pricing: the owner's profit dial
 # ---------------------------------------------------------------------------

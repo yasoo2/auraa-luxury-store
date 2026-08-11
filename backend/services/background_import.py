@@ -361,6 +361,7 @@ async def background_import_cj_products(
 
         products = []
         skipped_existing = 0
+        rejected_off_category = 0
         fetch_report = []
         for plan_cat, keywords, quota in plan:
             remaining = quota
@@ -376,6 +377,7 @@ async def background_import_cj_products(
                 products.extend(got)
                 remaining -= len(got)
                 skipped_existing += int(part.get("skipped_existing", 0))
+                rejected_off_category += int(part.get("rejected_off_category", 0))
                 fetch_report.append({"plan": plan_cat, "keyword": kw, "fetched": len(got)})
                 # The next search must not re-fetch what this one just found.
                 owned_ids.update(str(p.get("pid")) for p in got if p.get("pid"))
@@ -504,6 +506,7 @@ async def background_import_cj_products(
                             "processed": idx,
                             "imported": imported_count,
                             "skipped_existing": skipped_existing,
+                            "rejected_off_category": rejected_off_category,
                             "failed": failed_count,
                             "percent": percent,
                             "by_category": by_category
@@ -522,6 +525,7 @@ async def background_import_cj_products(
             "total_found": total,
             "imported": imported_count,
             "skipped_existing": skipped_existing,
+            "rejected_off_category": rejected_off_category,
             "failed": failed_count,
             "by_category": by_category,
             "fetch_report": fetch_report,
@@ -536,6 +540,7 @@ async def background_import_cj_products(
                 "processed": total,
                 "imported": imported_count,
                 "skipped_existing": skipped_existing,
+                "rejected_off_category": rejected_off_category,
                 "failed": failed_count,
                 "percent": 100,
                 "by_category": by_category

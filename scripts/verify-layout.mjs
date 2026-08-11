@@ -605,18 +605,43 @@ check('كل الأسعار المعروضة أعداد صحيحة بلا كسو�
   fractional.bad ? `سعر بكسور: «${fractional.bad}»`
     : (fractional.count ? '' : 'لا أسعار وُجدت للفحص'));
 
-// زاوية التثبيت: حين يعلن المتصفح قابلية التثبيت (beforeinstallprompt)
-// يظهر زرّ «ثبّت التطبيق» في قائمة الهاتف، ونقرته تستدعي مثبّت المتصفح
-// الأصلي نفسه — الذي يعرف وحده أهذا هاتف أم كمبيوتر.
+// التثبيت: حين يعلن المتصفح القابلية (beforeinstallprompt) يظهر شريطٌ
+// سفلي بارز كشريط الكوكيز — يعود كل زيارة حتى يثبّت الزائر — وزرٌ في
+// قائمة الهاتف. نقرة أيٍّ منهما تستدعي مثبّت المتصفح الأصلي نفسه، الذي
+// يعرف وحده أهذا هاتف أم كمبيوتر.
+await page.evaluate(() => localStorage.setItem('cookie_consent', 'accepted'));
 await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(700);
-await page.evaluate(() => {
+const fireInstallable = () => page.evaluate(() => {
   const stub = new Event('beforeinstallprompt');
   stub.prompt = () => { window.__prompted = true; return Promise.resolve(); };
-  stub.userChoice = Promise.resolve({ outcome: 'accepted' });
+  stub.userChoice = Promise.resolve({ outcome: 'dismissed' });
   window.dispatchEvent(stub);
 });
-await page.waitForTimeout(300);
+await fireInstallable();
+let bannerOk = false;
+let bannerWhy = '';
+try {
+  await page.waitForSelector('[data-testid="install-banner"]', { timeout: 4000 });
+  await page.locator('[data-testid="install-banner-cta"]').click();
+  await page.waitForTimeout(300);
+  bannerOk = await page.evaluate(() => window.__prompted === true);
+  if (!bannerOk) bannerWhy = 'الشريط ظهر لكن زرّه لم يستدعِ المثبّت';
+  if (bannerOk) {
+    await page.locator('[data-testid="install-banner-later"]').click();
+    await page.waitForTimeout(300);
+    const stillThere = await page.evaluate(() =>
+      Boolean(document.querySelector('[data-testid="install-banner"]')));
+    if (stillThere) { bannerOk = false; bannerWhy = '«لاحقاً» لم يُخفِ الشريط'; }
+  }
+} catch (e) {
+  bannerWhy = 'شريط التثبيت لم يظهر رغم إعلان المتصفح القابلية';
+}
+check('شريط «ثبّت التطبيق» السفلي يظهر ويستدعي المثبّت و«لاحقاً» يطويه للزيارة',
+  bannerOk, bannerWhy);
+
+await page.evaluate(() => { window.__prompted = false; });
+await fireInstallable();
 let installOk = false;
 let installWhy = '';
 try {
@@ -629,7 +654,7 @@ try {
 } catch (e) {
   installWhy = 'زر التثبيت لم يظهر رغم إعلان المتصفح القابلية';
 }
-check('زاوية «ثبّت التطبيق» تظهر وتستدعي مثبّت المتصفح الأصلي', installOk, installWhy);
+check('زرّ «ثبّت التطبيق» في قائمة الهاتف يستدعي المثبّت أيضاً', installOk, installWhy);
 
 await browser.close();
 server.close();

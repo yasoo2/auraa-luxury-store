@@ -15,6 +15,7 @@ import { CartProvider } from './context/CartContext';
 import ScrollToTop from './components/ScrollToTop';
 import Navbar from './components/Navbar';
 import CookieConsent from './components/CookieConsent';
+import InstallBanner from './components/InstallBanner';
 import HomePage from './components/HomePage';
 import ProductsPage from './components/ProductsPage';
 import ProductDetailPage from './components/ProductDetailPage';
@@ -48,7 +49,6 @@ import ResetPassword from './pages/ResetPassword';
 import { Toaster } from './components/ui/sonner';
 
 // Feature Flags
-import { FEATURE_MULTI_LANG_EXTENDED, FEATURE_PWA_SUPPORT, FEATURE_LIVE_CHAT } from './config/flags';
 
 function App() {
   return (
@@ -118,6 +118,7 @@ function App() {
 
                 <Footer />
                 <CookieConsent />
+                <InstallBanner />
                 <Toaster />
               </div>
             </Router>

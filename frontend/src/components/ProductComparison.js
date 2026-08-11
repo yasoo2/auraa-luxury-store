@@ -30,7 +30,7 @@ const BACKEND_URL = API_BASE_URL;
 const API = `${BACKEND_URL}/api`;
 
 const ProductComparison = ({ initialProducts = [], onClose = null, isModal = false }) => {
-  const { t, language, currency } = useLanguage();
+  const { t, language, formatMoney } = useLanguage();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const isRTL = language === 'ar';
@@ -220,12 +220,11 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat(isRTL ? 'ar-SA' : 'en-US', {
-      style: 'currency',
-      currency: currency
-    }).format(amount);
-  };
+  // One money pipe for the whole shop: converts from the stored riyals
+  // and shows whole numbers in every currency — the owner's rule. This
+  // local formatter used to stamp a currency symbol on the unconverted
+  // riyal figure, with fractions.
+  const formatCurrency = (amount) => formatMoney(amount);
 
   const getBestValue = (field, products) => {
     if (field.type === 'price') {

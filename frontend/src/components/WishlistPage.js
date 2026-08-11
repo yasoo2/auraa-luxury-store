@@ -19,7 +19,7 @@ import { Card } from './ui/card';
 import HeartButton from './HeartButton';
 
 const WishlistPage = () => {
-  const { t, language } = useLanguage();
+  const { t, language, formatMoney } = useLanguage();
   const isRTL = language === 'ar';
   const { user } = useAuth();
   const { 
@@ -31,12 +31,11 @@ const WishlistPage = () => {
   } = useWishlist();
   const { addToCart } = useCart();
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat(isRTL ? 'ar-SA' : 'en-US', {
-      style: 'currency',
-      currency: 'SAR'
-    }).format(amount);
-  };
+  // One money pipe for the whole shop: converts from the stored riyals
+  // and shows whole numbers in every currency — the owner's rule. This
+  // local formatter used to stamp a currency symbol on the unconverted
+  // riyal figure, with fractions.
+  const formatCurrency = (amount) => formatMoney(amount);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString(

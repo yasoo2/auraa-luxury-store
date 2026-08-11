@@ -589,6 +589,22 @@ try {
 check('زر تعديل المنتج يفتح نافذة التحرير فعلاً', editOpened,
   editOpened ? '' : 'النقرة لم تفتح أي نافذة');
 
+// «في اي عمله لا اريد اي كسور»: كل سعر معروض عدد صحيح. تسقيف الريال
+// المخزّن وحده لم يكفِ — التحويل لعملة الزائر كان يعيد توليد الكسور
+// في العرض (216 ريالاً تُقرأ ‎$57.60).
+await page.goto(`${base}/products`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(900);
+const fractional = await page.evaluate(() => {
+  const els = [...document.querySelectorAll('.price-highlight')];
+  const bad = els.map((e) => e.textContent.trim())
+    .find((t) => /[\d٠-٩][.,٫][\d٠-٩]/.test(t));
+  return { count: els.length, bad: bad || null };
+});
+check('كل الأسعار المعروضة أعداد صحيحة بلا كسور بأي عملة',
+  fractional.count > 0 && !fractional.bad,
+  fractional.bad ? `سعر بكسور: «${fractional.bad}»`
+    : (fractional.count ? '' : 'لا أسعار وُجدت للفحص'));
+
 await browser.close();
 server.close();
 

@@ -2595,12 +2595,19 @@ def test_reprice_applies_the_new_margin_and_spares_hand_set_prices(client):
          "supplier_price": 10.0, "supplier_shipping": 0.0, "weight_kg": 0.5,
          "pricing_auto_calculated": False, "category": "rings", "images": [],
          "staging": False},
+        # Imported before the auto flag existed: no flag at all. Machine-priced
+        # by definition, so repricing must reach it — requiring `== True`
+        # skipped these and the owner kept his old fractional prices.
+        {"id": "legacy-1", "source": "cj_dropshipping", "external_id": "L1",
+         "name": "Legacy Ring", "description": "d", "price": 88.13,
+         "supplier_price": 10.0, "supplier_shipping": 0.0, "weight_kg": 0.5,
+         "category": "rings", "images": [], "staging": False},
     ]))
 
     r = client.post("/api/admin/pricing-settings/reprice")
     assert r.status_code == 200, r.text
     report = r.json()
-    assert report["repriced"] == 1
+    assert report["repriced"] == 2, report
     assert report["kept_manual"] == 1
 
     expected = pricing_service.calculate_final_price(
@@ -2610,7 +2617,9 @@ def test_reprice_applies_the_new_margin_and_spares_hand_set_prices(client):
         minimum_profit_sar=10)["final_price_sar"]
     auto = loop.run_until_complete(client._db.products.find_one({"id": "auto-1"}))
     manual = loop.run_until_complete(client._db.products.find_one({"id": "manual-1"}))
+    legacy = loop.run_until_complete(client._db.products.find_one({"id": "legacy-1"}))
     assert auto["price"] == expected, "the auto-priced product kept its stale price"
+    assert legacy["price"] == expected, "the pre-flag legacy product was skipped by repricing"
     assert manual["price"] == 77.0, "a hand-set price was overwritten by bulk repricing"
 
 

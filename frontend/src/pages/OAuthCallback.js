@@ -36,6 +36,19 @@ const OAuthCallback = () => {
   // just succeeded. The code is single-use anyway: run this exactly once.
   const ran = useRef(false);
 
+  // The effect below runs on mount and NEVER again, so anything it needs that
+  // can change is read through a ref instead of a dependency. Listing `auth`
+  // and `language` as dependencies is what broke the sign-in: the auth
+  // context object was rebuilt the moment the session check finished (one
+  // second in, always), React tore the effect down — arming its `cancelled`
+  // flag — and re-entered, where the run-once guard returned immediately.
+  // Google's approval then came back to a page that had stopped listening:
+  // every completion path checked `cancelled` and quietly did nothing, and
+  // "Signing you in…" span forever. Fixed at the source too (the context is
+  // memoised now), but this page must not depend on that to work.
+  const live = useRef({ auth, language });
+  live.current = { auth, language };
+
   useEffect(() => {
     const timer = setTimeout(() => setSlow(true), 7000);
     return () => clearTimeout(timer);
@@ -68,7 +81,7 @@ const OAuthCallback = () => {
       }
 
       setStatus('error');
-      setError(getAuthTranslation(key, language) || key);
+      setError(getAuthTranslation(key, live.current.language) || key);
       setTimeout(() => navigate('/auth', { replace: true }), 4000);
     };
 
@@ -114,8 +127,9 @@ const OAuthCallback = () => {
         if (cancelled) return;
 
         safeLocal.set('token', access_token);
-        if (auth && typeof auth.setToken === 'function') auth.setToken(access_token);
-        if (auth && typeof auth.setUser === 'function') auth.setUser(user);
+        const ctx = live.current.auth;
+        if (ctx && typeof ctx.setToken === 'function') ctx.setToken(access_token);
+        if (ctx && typeof ctx.setUser === 'function') ctx.setUser(user);
 
         safeSession.remove('oauth_provider');
 
@@ -136,12 +150,29 @@ const OAuthCallback = () => {
     // processOAuthCallback already catches its own failures; this catches the
     // ones it cannot — a browser that throws on storage took the whole
     // function down mid-flight, including the handler meant to recover from it.
-    processOAuthCallback().catch((err) => {
-      console.error('OAuth callback crashed:', err);
-      if (!cancelled) fail('oauth_session_invalid');
-    });
-    return () => { cancelled = true; };
-  }, [navigate, auth, language, BACKEND_URL]);
+    // The floor under everything above. No matter which layer stalls — the
+    // network, an interceptor, a promise that never settles — this page states
+    // an outcome and moves on. A sign-in screen that spins past a minute and
+    // a half is indistinguishable from a broken shop.
+    let done = false;
+    const deadline = setTimeout(() => {
+      if (cancelled || done) return;
+      console.error('OAuth callback exceeded its deadline');
+      fail('oauth_session_invalid');
+    }, 100000);
+
+    processOAuthCallback()
+      .catch((err) => {
+        console.error('OAuth callback crashed:', err);
+        if (!cancelled) fail('oauth_session_invalid');
+      })
+      .finally(() => { done = true; clearTimeout(deadline); });
+
+    return () => { cancelled = true; clearTimeout(deadline); };
+    // Deliberately empty: this must run exactly once, on mount. Everything
+    // mutable is read through `live` above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center p-4">

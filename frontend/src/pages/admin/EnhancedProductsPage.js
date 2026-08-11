@@ -8,29 +8,15 @@ import {
   Trash2, 
   Search,
   Package,
-  DollarSign,
-  Image as ImageIcon,
-  X,
   Check,
-  Upload,
   Eye,
-  Filter,
   Download,
   Star,
   AlertCircle,
-  Save,
-  Camera,
   Loader2,
-  Copy,
-  ExternalLink,
   Grid3x3,
   List,
-  MoreHorizontal,
-  Settings,
-  Tag,
-  Palette,
-  Ruler,
-  Weight
+  Palette
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -49,40 +35,9 @@ const EnhancedProductsPage = () => {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [uploading, setUploading] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid or list
-  const [submitting, setSubmitting] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
   
   const isRTL = language === 'ar';
-
-  // Get auth token
-  const token = localStorage.getItem('token');
-
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    name_en: '',
-    description: '',
-    description_en: '',
-    price: '',
-    original_price: '',
-    category: 'necklaces',
-    images: [''],
-    stock_quantity: 100,
-    sku: '',
-    weight: '',
-    dimensions: '',
-    material: '',
-    color: '',
-    tags: '',
-    is_featured: false,
-    is_active: true,
-    meta_title: '',
-    meta_description: ''
-  });
-
-  // const [formErrors, setFormErrors] = useState({}); // Reserved for future validation
 
   const categories = [
     { value: 'necklaces', label_ar: 'قلادات', label_en: 'Necklaces', icon: '📿' },
@@ -91,15 +46,6 @@ const EnhancedProductsPage = () => {
     { value: 'bracelets', label_ar: 'أساور', label_en: 'Bracelets', icon: '📿' },
     { value: 'watches', label_ar: 'ساعات', label_en: 'Watches', icon: '⌚' },
     { value: 'sets', label_ar: 'أطقم', label_en: 'Sets', icon: '✨' }
-  ];
-
-  const materials = [
-    { value: 'gold', label: isRTL ? 'ذهب' : 'Gold' },
-    { value: 'silver', label: isRTL ? 'فضة' : 'Silver' },
-    { value: 'platinum', label: isRTL ? 'بلاتين' : 'Platinum' },
-    { value: 'pearl', label: isRTL ? 'لؤلؤ' : 'Pearl' },
-    { value: 'diamond', label: isRTL ? 'ماس' : 'Diamond' },
-    { value: 'crystal', label: isRTL ? 'كريستال' : 'Crystal' }
   ];
 
   const colors = [
@@ -152,14 +98,16 @@ const EnhancedProductsPage = () => {
   const handleSaveProduct = async (productData) => {
     try {
       if (editingProduct) {
-        // Update existing product
-        const response = await axios.put(`${API_URL}/api/products/${editingProduct.id}`, productData);
-        setProducts(products.map(p => p.id === editingProduct.id ? response.data : p));
+        await axios.put(`${API_URL}/api/products/${editingProduct.id}`, productData);
       } else {
-        // Create new product
-        const response = await axios.post(`${API_URL}/api/products`, productData);
-        setProducts([...products, response.data]);
+        await axios.post(`${API_URL}/api/products`, productData);
       }
+      // Refresh from the admin listing rather than patching the row with the
+      // save response: that response is filtered through the public Product
+      // model, so patching stripped the admin-only fields — the supplier-cost
+      // line and the storefront-visibility flag vanished from the card until
+      // the next full reload.
+      await fetchProducts();
       
       setShowModal(false);
       setEditingProduct(null);
@@ -178,6 +126,47 @@ const EnhancedProductsPage = () => {
   const handleEditProduct = (product) => {
     setEditingProduct(product);
     setShowModal(true);
+  };
+
+  // ---- Off-niche broom: scan → owner confirms → purge -------------------
+  const [scanningOffNiche, setScanningOffNiche] = useState(false);
+  const [offNiche, setOffNiche] = useState(null);   // null = closed, [] = clean
+  const [offNicheChecked, setOffNicheChecked] = useState(new Set());
+  const [purging, setPurging] = useState(false);
+
+  const scanOffNiche = async () => {
+    setScanningOffNiche(true);
+    try {
+      const { data } = await axios.get(`${API_URL}/api/admin/products/off-niche`);
+      const suspects = Array.isArray(data) ? data : [];
+      setOffNiche(suspects);
+      setOffNicheChecked(new Set(suspects.map((s) => s.id)));
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'فشل فحص الدخلاء' : 'Intruder scan failed'));
+    } finally {
+      setScanningOffNiche(false);
+    }
+  };
+
+  const purgeOffNiche = async () => {
+    const ids = [...offNicheChecked];
+    if (!ids.length) return;
+    setPurging(true);
+    try {
+      const { data } = await axios.post(`${API_URL}/api/admin/products/off-niche/purge`, { ids });
+      toast.success(isRTL
+        ? `حُذف ${data.deleted} دخيلاً${data.refused?.length ? ` — ورُفض ${data.refused.length} لم يعد مشتبهاً` : ''}`
+        : `Deleted ${data.deleted} intruders${data.refused?.length ? ` — ${data.refused.length} refused (no longer suspect)` : ''}`);
+      setOffNiche(null);
+      setOffNicheChecked(new Set());
+      await fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'فشل الحذف — لم يُحذف شيء' : 'Purge failed — nothing was deleted'));
+    } finally {
+      setPurging(false);
+    }
   };
 
   const handleDeleteProduct = async (productId) => {
@@ -325,13 +314,6 @@ const EnhancedProductsPage = () => {
     }).format(display);
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(
-      isRTL ? 'ar-SA' : 'en-US',
-      { year: 'numeric', month: 'short', day: 'numeric' }
-    );
-  };
-
   const getCategoryLabel = (categoryValue) => {
     const category = categories.find(cat => cat.value === categoryValue);
     return category ? (isRTL ? category.label_ar : category.label_en) : categoryValue;
@@ -381,6 +363,20 @@ const EnhancedProductsPage = () => {
           <Button variant="outline" onClick={exportCsv} data-testid="export-products">
             <Download className="h-4 w-4 me-2" />
             {isRTL ? 'تصدير' : 'Export'}
+          </Button>
+
+          {/* The broom: finds clothes/shoes/decor that entered before the
+              import gate existed, and deletes only what the owner confirms. */}
+          <Button
+            variant="outline"
+            onClick={scanOffNiche}
+            disabled={scanningOffNiche}
+            data-testid="off-niche-scan"
+            className="border-red-300 text-red-700 hover:bg-red-50"
+          >
+            🧹 {scanningOffNiche
+              ? (isRTL ? 'جارٍ الفحص…' : 'Scanning…')
+              : (isRTL ? 'الدخلاء خارج التخصص' : 'Off-niche intruders')}
           </Button>
 
           <Button variant="outline" onClick={removeDuplicates} data-testid="remove-duplicates">
@@ -831,7 +827,86 @@ const EnhancedProductsPage = () => {
         </div>
       )}
 
-      {/* Product Form Modal */}
+      )}
+
+      {/* The edit/create dialog. It was imported, and every «تعديل» click
+          set its state — but the component itself was never placed in the
+          tree, so the button did nothing at all. */}
+      <ProductFormModal
+        isOpen={showModal}
+        onClose={() => { setShowModal(false); setEditingProduct(null); }}
+        product={editingProduct}
+        onSave={handleSaveProduct}
+      />
+
+      {/* Off-niche confirmation: nothing is deleted until the owner looks
+          the list in the eye and presses the red button. */}
+      {offNiche !== null && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" data-testid="off-niche-modal">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+            <div className="p-5 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                🧹 {isRTL ? `دخلاء خارج التخصص (${offNiche.length})` : `Off-niche intruders (${offNiche.length})`}
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {isRTL
+                  ? 'ملابس وأحذية وديكور تسللت قبل وجود حارس الاستيراد. راجع وأزل التحديد عمّا تريد إبقاءه.'
+                  : 'Clothes, shoes and decor that slipped in before the import gate existed. Uncheck anything you want to keep.'}
+              </p>
+            </div>
+            <div className="p-5 overflow-y-auto flex-1">
+              {offNiche.length === 0 ? (
+                <p className="text-green-700 font-semibold">
+                  {isRTL ? '✅ نظيف — لا دخلاء في المتجر.' : '✅ Clean — no intruders in the shop.'}
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {offNiche.map((s) => (
+                    <li key={s.id} className="flex items-center gap-3 p-2 rounded border border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={offNicheChecked.has(s.id)}
+                        onChange={(e) => {
+                          const next = new Set(offNicheChecked);
+                          if (e.target.checked) next.add(s.id); else next.delete(s.id);
+                          setOffNicheChecked(next);
+                        }}
+                        className="h-4 w-4"
+                      />
+                      {s.image && <img src={s.image} alt="" className="w-12 h-12 object-cover rounded" />}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-gray-900 truncate">{s.name || s.name_ar}</div>
+                        <div className="text-xs text-gray-500">
+                          {s.supplier_category || s.category}
+                          {s.staging
+                            ? (isRTL ? ' · في المراجعة' : ' · in staging')
+                            : (isRTL ? ' · معروض للزبائن' : ' · live in the shop')}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="p-5 border-t border-gray-200 flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => { setOffNiche(null); setOffNicheChecked(new Set()); }}>
+                {isRTL ? 'إغلاق' : 'Close'}
+              </Button>
+              {offNiche.length > 0 && (
+                <Button
+                  onClick={purgeOffNiche}
+                  disabled={purging || offNicheChecked.size === 0}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  data-testid="off-niche-purge"
+                >
+                  {purging
+                    ? (isRTL ? 'جارٍ الحذف…' : 'Deleting…')
+                    : (isRTL ? `حذف المحدد (${offNicheChecked.size})` : `Delete selected (${offNicheChecked.size})`)}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

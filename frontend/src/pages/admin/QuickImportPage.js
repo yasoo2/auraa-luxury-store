@@ -397,7 +397,12 @@ const QuickImportPage = () => {
                   )}
                   
                   <h3 className="text-white font-bold mb-2 truncate">{product.name}</h3>
-                  <p className="text-green-400 font-bold text-xl mb-2">{product.price} SAR</p>
+                  <p className="text-green-400 font-bold text-xl mb-0.5">{product.price} SAR</p>
+                  {Number(product.supplier_price) > 0 && (
+                    <p className="text-xs text-red-400 mb-2">
+                      التكلفة <span dir="ltr">${Number(product.supplier_price).toFixed(2)}</span>
+                    </p>
+                  )}
                   <p className="text-gray-400 text-sm mb-3 line-clamp-2">{product.description}</p>
                   
                   <div className="flex gap-2">

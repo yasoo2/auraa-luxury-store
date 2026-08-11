@@ -629,6 +629,14 @@ const EnhancedProductsPage = () => {
                             {formatCurrency(product.original_price)}
                           </span>
                         )}
+                        {/* Supplier cost, admin eyes only — the public API
+                            never carries this field. */}
+                        {Number(product.supplier_price) > 0 && (
+                          <span className="text-xs text-red-600" data-testid="admin-supplier-cost">
+                            {isRTL ? 'التكلفة ' : 'Cost '}
+                            <span dir="ltr">${Number(product.supplier_price).toFixed(2)}</span>
+                          </span>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-semibold text-gray-900">
@@ -744,6 +752,12 @@ const EnhancedProductsPage = () => {
                         <div className="text-sm text-gray-900">{formatCurrency(product.price)}</div>
                         {product.original_price && product.original_price > product.price && (
                           <div className="text-sm text-gray-500 line-through">{formatCurrency(product.original_price)}</div>
+                        )}
+                        {Number(product.supplier_price) > 0 && (
+                          <div className="text-xs text-red-600">
+                            {isRTL ? 'التكلفة ' : 'Cost '}
+                            <span dir="ltr">${Number(product.supplier_price).toFixed(2)}</span>
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

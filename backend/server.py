@@ -895,8 +895,13 @@ async def reprice_catalogue(admin: User = Depends(get_admin_user)):
     Hand-edited prices keep the owner's number and are reported, not touched.
     """
     cfg = await load_pricing_settings(db)
+    # A missing flag counts as auto: products imported before the flag
+    # existed were priced by the machine too, and requiring `== True` left
+    # them out of repricing — the owner pressed the button and kept seeing
+    # the old fractional prices on his older catalogue. Only an explicit
+    # False (a hand-typed price) is spared.
     auto_priced = await db.products.find(
-        {"pricing_auto_calculated": True, "supplier_price": {"$gt": 0}}
+        {"pricing_auto_calculated": {"$ne": False}, "supplier_price": {"$gt": 0}}
     ).to_list(100000)
 
     repriced = 0
@@ -921,7 +926,7 @@ async def reprice_catalogue(admin: User = Depends(get_admin_user)):
         repriced += 1
 
     kept_manual = await db.products.count_documents(
-        {"supplier_price": {"$gt": 0}, "pricing_auto_calculated": {"$ne": True}}
+        {"supplier_price": {"$gt": 0}, "pricing_auto_calculated": False}
     )
     return {
         "repriced": repriced,

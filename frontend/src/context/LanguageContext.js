@@ -154,8 +154,10 @@ export const LanguageProvider = ({ children }) => {
     const code = value === null ? 'SAR' : currency;
     const shown = value === null ? sar : value;
     const info = CURRENCIES[code] || CURRENCIES.SAR;
-    const decimals = info?.decimals ?? 2;
-    return `${shown.toFixed(decimals)} ${info?.symbol || code}`;
+    // Whole numbers in EVERY currency, rounded up — the owner's rule. The
+    // stored riyal prices are already whole, but converting to the shopper's
+    // currency regrew fractions in the display: 216 SAR read as $57.60.
+    return `${Math.ceil(shown)} ${info?.symbol || code}`;
   };
 
   const convert = (amount, fromCurrency, toCurrency) => {

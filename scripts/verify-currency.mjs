@@ -64,9 +64,13 @@ const buildFormat = (rates, currency) =>
     `${fn}\n${fmFn}\nreturn formatMoney;`)(rates, currency, CURRENCIES);
 
 const money = [
-  ['SAR stays SAR',                 NOT_LOADED, 'SAR', 175, '175.00 ر.س'],
-  ['converts once rates are in',    LOADED,     'USD', 375, '100.00 $'],
-  ['no rate → the true SAR figure', NOT_LOADED, 'USD', 175, '175.00 ر.س'],
+  // Whole numbers in every currency, rounded up — the owner's standing rule:
+  // «في اي عمله لا اريد اي كسور».
+  ['SAR stays SAR',                 NOT_LOADED, 'SAR', 175, '175 ر.س'],
+  ['converts once rates are in',    LOADED,     'USD', 375, '100 $'],
+  ['no rate → the true SAR figure', NOT_LOADED, 'USD', 175, '175 ر.س'],
+  ['fractions round UP, never down', NOT_LOADED, 'SAR', 93.11, '94 ر.س'],
+  ['converted fractions round UP too', LOADED,  'USD', 376, '101 $'],
 ];
 
 for (const [name, rates, currency, amount, want] of money) {

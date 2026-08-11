@@ -127,6 +127,11 @@ await ctx.route('**/api/**', (route) => {
         created_at: '2026-08-08T10:17:00Z', items: [] },
     ]);
   }
+  if (p.includes('/api/products/staging')) {
+    // Three products sitting in review from an earlier run — the page must
+    // show them the moment it opens, not only during a live import.
+    return reply(products.slice(0, 3).map((x) => ({ ...x, staging: true })));
+  }
   if (/\/api\/products\/p\d/.test(p)) return reply(products[0]);
   if (p.includes('/api/products')) {
     // Pages exactly like the real endpoint: skip/limit with limit defaulting
@@ -550,6 +555,17 @@ if (!narrow) narrow = await page.evaluate(() => {
 });
 check('قائمة اللغات كاملة وقابلة للنقر على أضيق شاشة هاتف (320px) بالوضع العربي',
   narrow.ok, narrow.why);
+
+// منطقة المراجعة تعيش في قاعدة البيانات، والصفحة كانت تنساها عند كل دخول:
+// استورد المالك، غادر، عاد — فوجد الشاشة فارغة والمنتجات قابعة في التخزين
+// («ارى ان المنتجات اختفت»). الدخول يجب أن يعرض كل ما ينتظر النشر.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.goto(`${base}/admin/quick-import`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(900);
+const stagingShown = await page.evaluate(() =>
+  document.body.innerText.includes('المنتجات المستوردة (3)'));
+check('الاستيراد السريع يعرض المنتجات المنتظرة للمراجعة فور الدخول',
+  stagingShown, stagingShown ? '' : 'القائمة فارغة رغم وجود 3 منتجات في منطقة المراجعة');
 
 await browser.close();
 server.close();

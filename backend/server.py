@@ -26,6 +26,10 @@ from enum import Enum
 
 # Import services
 from services.background_import import ImportJobManager, background_import_cj_products
+from services.pricing_service import (
+    pricing_service, load_pricing_settings,
+    DEFAULT_PROFIT_MARGIN_PERCENT, DEFAULT_MINIMUM_PROFIT_SAR,
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -743,6 +747,21 @@ async def update_staging_product(
     """
     Update a product in staging area
     """
+    # Only the fields the edit form owns. This used to $set the raw payload,
+    # so any key — staging, id, supplier_price — could be overwritten.
+    EDITABLE = {
+        "name", "name_ar", "name_en", "description", "description_ar",
+        "description_en", "price", "images", "category", "in_stock",
+        "stock_quantity",
+    }
+    updates = {k: v for k, v in updates.items() if k in EDITABLE}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No editable fields in payload")
+    if "price" in updates:
+        # A price the owner typed is the owner's price: bulk repricing with a
+        # new margin must never overwrite it.
+        updates["pricing_auto_calculated"] = False
+
     try:
         result = await db.products.update_one(
             {"id": product_id, "staging": True},
@@ -808,7 +827,7 @@ async def publish_staging_products(
         )
         
         logger.info(f"✅ Published {result.modified_count} products to live store")
-        
+
         return {
             "success": True,
             "published": result.modified_count,
@@ -819,6 +838,92 @@ async def publish_staging_products(
     except Exception as e:
         logger.error(f"Error publishing staging products: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# PRICING SETTINGS — the owner's profit dial
+#
+# The margin lived as a constant in the code; changing it meant a deploy.
+# Now it is a setting: reads apply to every future import, and «إعادة تسعير»
+# rewrites the auto-priced catalogue in place. Prices the owner set by hand
+# (pricing_auto_calculated=False) are never touched.
+# ============================================================================
+
+class PricingSettingsUpdate(BaseModel):
+    profit_margin_percent: float
+    minimum_profit_sar: float = DEFAULT_MINIMUM_PROFIT_SAR
+
+
+@api_router.get("/admin/pricing-settings")
+async def get_pricing_settings(admin: User = Depends(get_admin_user)):
+    cfg = await load_pricing_settings(db)
+    cfg["defaults"] = {
+        "profit_margin_percent": DEFAULT_PROFIT_MARGIN_PERCENT,
+        "minimum_profit_sar": DEFAULT_MINIMUM_PROFIT_SAR,
+    }
+    return cfg
+
+
+@api_router.put("/admin/pricing-settings")
+async def update_pricing_settings(payload: PricingSettingsUpdate, admin: User = Depends(get_admin_user)):
+    if not (0 <= payload.profit_margin_percent <= 1000):
+        raise HTTPException(status_code=400, detail="نسبة الربح يجب أن تكون بين 0 و1000 — Profit margin must be between 0 and 1000 percent")
+    if not (0 <= payload.minimum_profit_sar <= 10000):
+        raise HTTPException(status_code=400, detail="الحد الأدنى للربح يجب أن يكون بين 0 و10000 ريال — Minimum profit must be between 0 and 10000 SAR")
+    await db.settings.update_one(
+        {"key": "pricing"},
+        {"$set": {
+            "key": "pricing",
+            "profit_margin_percent": payload.profit_margin_percent,
+            "minimum_profit_sar": payload.minimum_profit_sar,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": admin.email,
+        }},
+        upsert=True,
+    )
+    return await load_pricing_settings(db)
+
+
+@api_router.post("/admin/pricing-settings/reprice")
+async def reprice_catalogue(admin: User = Depends(get_admin_user)):
+    """
+    Recompute every auto-priced product with the margin saved right now.
+    Hand-edited prices keep the owner's number and are reported, not touched.
+    """
+    cfg = await load_pricing_settings(db)
+    auto_priced = await db.products.find(
+        {"pricing_auto_calculated": True, "supplier_price": {"$gt": 0}}
+    ).to_list(100000)
+
+    repriced = 0
+    for product in auto_priced:
+        pricing = pricing_service.calculate_final_price(
+            base_cost=float(product.get("supplier_price") or 0),
+            shipping_cost=float(product.get("supplier_shipping") or 0),
+            country_code="SA",
+            weight_kg=float(product.get("weight_kg") or 0.5),
+            original_currency="USD",
+            profit_margin_percent=cfg["profit_margin_percent"],
+            minimum_profit_sar=cfg["minimum_profit_sar"],
+        )
+        await db.products.update_one(
+            {"id": product["id"]},
+            {"$set": {
+                "price": pricing["final_price_sar"],
+                "price_breakdown": pricing["breakdown"],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }},
+        )
+        repriced += 1
+
+    kept_manual = await db.products.count_documents(
+        {"supplier_price": {"$gt": 0}, "pricing_auto_calculated": {"$ne": True}}
+    )
+    return {
+        "repriced": repriced,
+        "kept_manual": kept_manual,
+        "profit_margin_percent": cfg["profit_margin_percent"],
+    }
 
 
 # ============================================================================
@@ -1268,9 +1373,14 @@ async def update_product(
     product_data: ProductCreate,
     admin: User = Depends(get_admin_user)
 ):
+    set_fields = product_data.model_dump(exclude_unset=True)
+    if "price" in set_fields:
+        # The admin form submitted a price: it is now a hand-set price, and
+        # bulk repricing with a new margin must leave it alone.
+        set_fields["pricing_auto_calculated"] = False
     result = await db.products.update_one(
         {"id": product_id},
-        {"$set": product_data.model_dump(exclude_unset=True)}
+        {"$set": set_fields}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")

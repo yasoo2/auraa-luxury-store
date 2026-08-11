@@ -2371,6 +2371,168 @@ def test_sweep_import_fills_every_shelf_of_the_shop(client, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Pricing: the owner's profit dial
+# ---------------------------------------------------------------------------
+
+def test_profit_margin_is_a_setting_the_import_obeys(client, monkeypatch):
+    """
+    The margin saved on the pricing screen must shape every imported price.
+    It used to be a constant in the code — changing profit meant a deploy.
+    """
+    import asyncio
+    import services.import_service as import_service
+    from services.background_import import (
+        background_import_cj_products, ImportJobManager,
+    )
+    from services.pricing_service import pricing_service
+
+    register(client, email="pr@b.com")
+    make_admin(client, "pr@b.com")
+
+    r = client.put("/api/admin/pricing-settings",
+                   json={"profit_margin_percent": 100, "minimum_profit_sar": 5})
+    assert r.status_code == 200, r.text
+    assert client.get("/api/admin/pricing-settings").json()["profit_margin_percent"] == 100
+
+    # Out-of-range margins are refused by name.
+    assert client.put("/api/admin/pricing-settings",
+                      json={"profit_margin_percent": 2000}).status_code == 400
+
+    async def fake_list_products(page_num=1, page_size=50, keyword=""):
+        if page_num > 1:
+            return {"code": 200, "data": {"list": []}}
+        return {"code": 200, "data": {"list": [{
+            "pid": "M1", "productNameEn": "Margin Test Ring, x",
+            "productName": "خاتم", "sellPrice": "10",
+            "productImage": "https://cf.cjdropshipping.com/m.jpg",
+            "categoryName": "Jewelry"}]}}
+
+    monkeypatch.setattr(import_service, "list_products", fake_list_products)
+    monkeypatch.setattr(import_service, "PAUSE_BETWEEN_BATCHES", 0)
+
+    loop = asyncio.get_event_loop()
+    manager = ImportJobManager(client._db)
+    job_id = loop.run_until_complete(manager.create_job(
+        job_type="bulk_import", supplier="cj", params={"max_products": 1}))
+    loop.run_until_complete(background_import_cj_products(
+        job_id=job_id, keyword="ring", category_id=None,
+        max_products=1, db=client._db, sweep=False))
+
+    product = loop.run_until_complete(
+        client._db.products.find_one({"external_id": "M1"}))
+    assert product, "nothing imported"
+
+    expected = pricing_service.calculate_final_price(
+        base_cost=10.0, shipping_cost=0.0, country_code="SA",
+        weight_kg=0.5, original_currency="USD",
+        profit_margin_percent=100, minimum_profit_sar=5)["final_price_sar"]
+    at_default = pricing_service.calculate_final_price(
+        base_cost=10.0, shipping_cost=0.0, country_code="SA",
+        weight_kg=0.5, original_currency="USD")["final_price_sar"]
+    assert expected != at_default, "test setup: the two margins must differ"
+    assert product["price"] == expected, (
+        f"priced {product['price']}, the saved 100% margin says {expected} — "
+        "the import ignored the owner's setting")
+    assert product["price_breakdown"]["profit_margin_percent_applied"] == 100
+
+
+def test_reprice_applies_the_new_margin_and_spares_hand_set_prices(client):
+    import asyncio
+    from services.pricing_service import pricing_service
+
+    register(client, email="pr2@b.com")
+    make_admin(client, "pr2@b.com")
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_many([
+        {"id": "auto-1", "source": "cj_dropshipping", "external_id": "A1",
+         "name": "Auto Ring", "description": "d", "price": 999.0,
+         "supplier_price": 10.0, "supplier_shipping": 0.0, "weight_kg": 0.5,
+         "pricing_auto_calculated": True, "category": "rings", "images": [],
+         "staging": False},
+        {"id": "manual-1", "source": "cj_dropshipping", "external_id": "H1",
+         "name": "Hand Ring", "description": "d", "price": 77.0,
+         "supplier_price": 10.0, "supplier_shipping": 0.0, "weight_kg": 0.5,
+         "pricing_auto_calculated": False, "category": "rings", "images": [],
+         "staging": False},
+    ]))
+
+    r = client.post("/api/admin/pricing-settings/reprice")
+    assert r.status_code == 200, r.text
+    report = r.json()
+    assert report["repriced"] == 1
+    assert report["kept_manual"] == 1
+
+    expected = pricing_service.calculate_final_price(
+        base_cost=10.0, shipping_cost=0.0, country_code="SA",
+        weight_kg=0.5, original_currency="USD",
+        profit_margin_percent=report["profit_margin_percent"],
+        minimum_profit_sar=10)["final_price_sar"]
+    auto = loop.run_until_complete(client._db.products.find_one({"id": "auto-1"}))
+    manual = loop.run_until_complete(client._db.products.find_one({"id": "manual-1"}))
+    assert auto["price"] == expected, "the auto-priced product kept its stale price"
+    assert manual["price"] == 77.0, "a hand-set price was overwritten by bulk repricing"
+
+
+def test_editing_a_price_by_hand_pins_it_against_reprice(client):
+    import asyncio
+
+    register(client, email="pr3@b.com")
+    make_admin(client, "pr3@b.com")
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_one({
+        "id": "s-1", "source": "cj_dropshipping", "external_id": "S1",
+        "name": "Staged Ring", "description": "d", "price": 50.0,
+        "supplier_price": 5.0, "pricing_auto_calculated": True,
+        "category": "rings", "images": [], "staging": True,
+    }))
+
+    r = client.put("/api/products/staging/s-1", json={"price": 123.0})
+    assert r.status_code == 200, r.text
+
+    doc = loop.run_until_complete(client._db.products.find_one({"id": "s-1"}))
+    assert doc["price"] == 123.0
+    assert doc["pricing_auto_calculated"] is False, (
+        "a hand-typed price stayed marked auto — the next bulk reprice would erase it")
+
+    # And the editable-fields gate: unknown keys must not reach the document.
+    r = client.put("/api/products/staging/s-1", json={"staging": False, "name": "Renamed"})
+    assert r.status_code == 200
+    doc = loop.run_until_complete(client._db.products.find_one({"id": "s-1"}))
+    assert doc["staging"] is True, "the staging flag was writable through the edit form"
+    assert doc["name"] == "Renamed"
+
+
+def test_supplier_cost_never_reaches_the_public_api(client):
+    """
+    The owner's wholesale numbers are admin-only. The public endpoints filter
+    through the Product model, which must never grow these fields.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_one({
+        "id": "pub-1", "source": "cj_dropshipping", "external_id": "P9",
+        "name": "Public Ring", "description": "d", "price": 120.0,
+        "supplier_price": 8.5, "supplier_shipping": 1.0,
+        "price_breakdown": {"base_cost_sar": 31.9},
+        "category": "rings", "images": [], "in_stock": True, "staging": False,
+    }))
+
+    secret_fields = {"supplier_price", "supplier_shipping", "price_breakdown"}
+
+    listed = client.get("/api/products").json()
+    assert listed, "the product must be publicly listed"
+    for item in listed:
+        assert not (secret_fields & set(item)), (
+            f"wholesale fields leaked to customers: {secret_fields & set(item)}")
+
+    detail = client.get("/api/products/pub-1").json()
+    assert not (secret_fields & set(detail)), (
+        f"wholesale fields leaked on the product page: {secret_fields & set(detail)}")
+
+
+# ---------------------------------------------------------------------------
 # Imported products must actually reach the storefront
 #
 # The storefront accepts six categories and drops anything else with only a log

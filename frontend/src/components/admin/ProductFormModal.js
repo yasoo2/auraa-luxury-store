@@ -4,7 +4,6 @@ import {
   X,
   Save,
   Upload,
-  Camera,
   Trash2,
   Plus,
   Tag,
@@ -361,7 +360,55 @@ const ProductFormModal = ({
                 <DollarSign className="h-5 w-5 me-2" />
                 {isRTL ? 'الأسعار والمخزون' : 'Pricing & Inventory'}
               </h3>
-              
+
+              {/* The true cost, admins' eyes only. Comes straight off the
+                  product document; the public API never carries these fields,
+                  so nothing here can reach a customer. */}
+              {isEdit && Number(product?.supplier_price) > 0 && (
+                <div className="mb-4 p-4 rounded-lg border border-amber-300 bg-amber-50" data-testid="admin-cost-panel">
+                  <div className="font-bold text-amber-900 mb-2 text-sm">
+                    {isRTL ? '💰 التكلفة الحقيقية — تظهر للمديرين فقط' : '💰 True cost — visible to admins only'}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-sm text-gray-800">
+                    <span className="text-gray-600">{isRTL ? 'سعر المورد' : 'Supplier price'}</span>
+                    <span dir="ltr" className="font-semibold">${Number(product.supplier_price).toFixed(2)}</span>
+                    {Number(product?.supplier_shipping) > 0 && (
+                      <>
+                        <span className="text-gray-600">{isRTL ? 'شحن المورد' : 'Supplier shipping'}</span>
+                        <span dir="ltr" className="font-semibold">${Number(product.supplier_shipping).toFixed(2)}</span>
+                      </>
+                    )}
+                    {product?.price_breakdown?.total_cost_sar != null && (
+                      <>
+                        <span className="text-gray-600">{isRTL ? 'إجمالي التكلفة' : 'Total cost'}</span>
+                        <span className="font-semibold">{product.price_breakdown.total_cost_sar} {isRTL ? 'ر.س' : 'SAR'}</span>
+                      </>
+                    )}
+                    {product?.price_breakdown?.profit_amount_sar != null && (
+                      <>
+                        <span className="text-gray-600">{isRTL ? 'الربح' : 'Profit'}</span>
+                        <span className="font-semibold text-green-700">{product.price_breakdown.profit_amount_sar} {isRTL ? 'ر.س' : 'SAR'}</span>
+                      </>
+                    )}
+                    {product?.price_breakdown?.tax_amount_sar != null && (
+                      <>
+                        <span className="text-gray-600">{isRTL ? 'الضريبة' : 'Tax'}</span>
+                        <span className="font-semibold">{product.price_breakdown.tax_amount_sar} {isRTL ? 'ر.س' : 'SAR'}</span>
+                      </>
+                    )}
+                    <span className="text-gray-600">{isRTL ? 'السعر النهائي الحالي' : 'Current final price'}</span>
+                    <span className="font-bold text-amber-900">{Number(product.price).toFixed(2)} {isRTL ? 'ر.س' : 'SAR'}</span>
+                  </div>
+                  {product?.pricing_auto_calculated === false && (
+                    <p className="mt-2 text-xs text-amber-800">
+                      {isRTL
+                        ? '📌 هذا السعر عدّلته يدوياً — إعادة التسعير الجماعية لا تمسّه.'
+                        : '📌 This price was set by hand — bulk repricing will not touch it.'}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

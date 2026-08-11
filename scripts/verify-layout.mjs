@@ -101,6 +101,10 @@ await ctx.route('**/api/**', (route) => {
       || p.endsWith('/api/admin/theme') || p.endsWith('/api/auto-update/status')) {
     return reply({});
   }
+  if (p.endsWith('/api/admin/pricing-settings')) {
+    return reply({ profit_margin_percent: 200, minimum_profit_sar: 10,
+                   defaults: { profit_margin_percent: 200, minimum_profit_sar: 10 } });
+  }
   if (p.endsWith('/api/auto-update/currency-rates')) {
     return reply({ base: 'USD', rates: { USD: 1, SAR: 3.75, TRY: 47.7 }, source: 'fallback' });
   }
@@ -167,6 +171,7 @@ const PAGES = [['الرئيسية', '/'], ['المنتجات', '/products'], ['�
                // 390px — squeezed tables, filter bars, stat grids and all.
                ['إدارة الطلبات', '/admin/orders'],
                ['إدارة المنتجات', '/admin/products'],
+               ['التسعير والربح', '/admin/pricing'],
                ['إدارة المستخدمين', '/admin/users'],
                ['الاستيراد السريع', '/admin/quick-import'],
                ['الاستيراد المجمّع', '/admin/bulk-import'],

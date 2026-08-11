@@ -12,6 +12,7 @@ import IntegrationsPage from './IntegrationsPage';
 import AutoUpdatePage from './AutoUpdatePage';
 import BulkImportPage from './BulkImportPage';
 import QuickImportPage from './QuickImportPage';
+import PricingPage from './PricingPage';
 import CMSPagesManager from './CMSPagesManager';
 import MediaLibrary from './MediaLibrary';
 import ThemeCustomization from './ThemeCustomization';
@@ -21,9 +22,7 @@ import {
   Package,
   ShoppingCart,
   Users,
-  TrendingUp,
   Settings,
-  Zap,
   LogOut,
   Menu,
   X,
@@ -36,7 +35,8 @@ import {
   FileText,
   Image,
   Palette,
-  Shield
+  Shield,
+  DollarSign
 } from 'lucide-react';
 
 const BuildStamp = ({ isRTL }) => {
@@ -114,6 +114,11 @@ const AdminDashboard = () => {
       name: isRTL ? 'الطلبات' : 'Orders',
       path: '/admin/orders',
       icon: ShoppingCart
+    },
+    {
+      name: isRTL ? 'التسعير والربح' : 'Pricing & Profit',
+      path: '/admin/pricing',
+      icon: DollarSign
     },
     {
       name: isRTL ? 'المستخدمون' : 'Users',
@@ -287,6 +292,7 @@ const AdminDashboard = () => {
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/quick-import" element={<QuickImportPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />

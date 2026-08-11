@@ -70,15 +70,30 @@ EXCHANGE_RATES = {
     "EUR": 4.10,  # 1 EUR ≈ 4.10 SAR
 }
 
+# The store's starting numbers — what applies before the owner ever touches
+# the pricing screen, and what «إعادة الضبط» returns to.
+DEFAULT_PROFIT_MARGIN_PERCENT = 200.0
+DEFAULT_MINIMUM_PROFIT_SAR = 10.0
+
+
+async def load_pricing_settings(db) -> Dict:
+    """The margin the owner set in الإدارة, or the store's defaults."""
+    doc = await db.settings.find_one({"key": "pricing"}) or {}
+    return {
+        "profit_margin_percent": float(doc.get("profit_margin_percent", DEFAULT_PROFIT_MARGIN_PERCENT)),
+        "minimum_profit_sar": float(doc.get("minimum_profit_sar", DEFAULT_MINIMUM_PROFIT_SAR)),
+    }
+
+
 class PricingService:
     """
     Advanced pricing calculator for products
     """
-    
+
     def __init__(self):
-        self.profit_margin = 2.0  # 200% profit (3x markup)
-        self.minimum_profit_sar = 10.0  # Minimum 10 SAR profit
-    
+        self.profit_margin = DEFAULT_PROFIT_MARGIN_PERCENT / 100.0
+        self.minimum_profit_sar = DEFAULT_MINIMUM_PROFIT_SAR
+
     def calculate_final_price(
         self,
         base_cost: float,
@@ -86,7 +101,9 @@ class PricingService:
         country_code: str = "SA",
         additional_costs: float = 0.0,
         weight_kg: float = 0.5,
-        original_currency: str = "USD"
+        original_currency: str = "USD",
+        profit_margin_percent: float = None,
+        minimum_profit_sar: float = None,
     ) -> Dict:
         """
         Calculate final product price with all factors
@@ -102,85 +119,80 @@ class PricingService:
         Returns:
             Dict with price breakdown
         """
-        try:
-            # Convert base cost to SAR if needed
-            if original_currency != "SAR":
-                conversion_rate = EXCHANGE_RATES.get(original_currency, EXCHANGE_RATES["USD"])
-                base_cost_sar = base_cost * conversion_rate
-                shipping_cost_sar = shipping_cost * conversion_rate
-            else:
-                base_cost_sar = base_cost
-                shipping_cost_sar = shipping_cost
+        # The margin the caller carries (from the owner's saved settings)
+        # wins; the constructor numbers are only the store's starting point.
+        margin = (self.profit_margin if profit_margin_percent is None
+                  else profit_margin_percent / 100.0)
+        min_profit = (self.minimum_profit_sar if minimum_profit_sar is None
+                      else float(minimum_profit_sar))
+
+        # No try/except: a product whose price cannot be computed must fail
+        # loudly and not be priced at all. This used to swallow any error and
+        # answer with `base_cost * 4` — an invented price on a real shop.
+        # Convert base cost to SAR if needed
+        if original_currency != "SAR":
+            conversion_rate = EXCHANGE_RATES.get(original_currency, EXCHANGE_RATES["USD"])
+            base_cost_sar = base_cost * conversion_rate
+            shipping_cost_sar = shipping_cost * conversion_rate
+        else:
+            base_cost_sar = base_cost
+            shipping_cost_sar = shipping_cost
+
+        # Get country configuration
+        country_config = COUNTRY_CONFIGS.get(country_code, COUNTRY_CONFIGS["default"])
+
+        # Calculate country-specific shipping
+        local_shipping = self._calculate_local_shipping(weight_kg, country_config)
+
+        # Calculate total cost before profit
+        total_cost = base_cost_sar + shipping_cost_sar + additional_costs + local_shipping
+
+        # Apply profit margin
+        price_with_profit = total_cost * (1 + margin)
+
+        # Ensure minimum profit
+        minimum_price = total_cost + min_profit
+        if price_with_profit < minimum_price:
+            price_with_profit = minimum_price
             
-            # Get country configuration
-            country_config = COUNTRY_CONFIGS.get(country_code, COUNTRY_CONFIGS["default"])
-            
-            # Calculate country-specific shipping
-            local_shipping = self._calculate_local_shipping(weight_kg, country_config)
-            
-            # Calculate total cost before profit
-            total_cost = base_cost_sar + shipping_cost_sar + additional_costs + local_shipping
-            
-            # Apply profit margin (200% = 3x markup)
-            price_with_profit = total_cost * (1 + self.profit_margin)
-            
-            # Ensure minimum profit
-            minimum_price = total_cost + self.minimum_profit_sar
-            if price_with_profit < minimum_price:
-                price_with_profit = minimum_price
-            
-            # Calculate tax
-            tax_amount = price_with_profit * country_config["tax_rate"]
-            
-            # Final price (rounded)
-            final_price = round(price_with_profit + tax_amount, 2)
-            
-            # Convert to local currency if needed
-            target_currency = country_config["currency"]
-            if target_currency != "SAR":
-                final_price_local = final_price / EXCHANGE_RATES.get(target_currency, 1.0)
-                final_price_local = round(final_price_local, 2)
-            else:
-                final_price_local = final_price
-            
-            # Calculate actual profit
-            actual_profit = price_with_profit - total_cost
-            profit_percentage = (actual_profit / total_cost) * 100 if total_cost > 0 else 0
-            
-            return {
-                "final_price_sar": final_price,
-                "final_price_local": final_price_local,
-                "local_currency": target_currency,
-                "breakdown": {
-                    "base_cost_sar": round(base_cost_sar, 2),
-                    "supplier_shipping_sar": round(shipping_cost_sar, 2),
-                    "local_shipping_sar": round(local_shipping, 2),
-                    "additional_costs_sar": round(additional_costs, 2),
-                    "total_cost_sar": round(total_cost, 2),
-                    "profit_amount_sar": round(actual_profit, 2),
-                    "profit_percentage": round(profit_percentage, 2),
-                    "tax_amount_sar": round(tax_amount, 2),
-                    "tax_rate": country_config["tax_rate"] * 100,
-                },
-                "original_currency": original_currency,
-                "country_code": country_code,
-                "calculated_at": datetime.now(timezone.utc).isoformat()
-            }
-            
-        except Exception as e:
-            logger.error(f"Error calculating price: {e}")
-            # Return safe default
-            return {
-                "final_price_sar": base_cost * 4,  # Safe fallback
-                "final_price_local": base_cost * 4,
-                "local_currency": "SAR",
-                "breakdown": {
-                    "base_cost_sar": base_cost,
-                    "error": str(e)
-                },
-                "original_currency": original_currency,
-                "country_code": country_code
-            }
+        # Calculate tax
+        tax_amount = price_with_profit * country_config["tax_rate"]
+
+        # Final price (rounded)
+        final_price = round(price_with_profit + tax_amount, 2)
+
+        # Convert to local currency if needed
+        target_currency = country_config["currency"]
+        if target_currency != "SAR":
+            final_price_local = final_price / EXCHANGE_RATES.get(target_currency, 1.0)
+            final_price_local = round(final_price_local, 2)
+        else:
+            final_price_local = final_price
+
+        # Calculate actual profit
+        actual_profit = price_with_profit - total_cost
+        profit_percentage = (actual_profit / total_cost) * 100 if total_cost > 0 else 0
+
+        return {
+            "final_price_sar": final_price,
+            "final_price_local": final_price_local,
+            "local_currency": target_currency,
+            "breakdown": {
+                "base_cost_sar": round(base_cost_sar, 2),
+                "supplier_shipping_sar": round(shipping_cost_sar, 2),
+                "local_shipping_sar": round(local_shipping, 2),
+                "additional_costs_sar": round(additional_costs, 2),
+                "total_cost_sar": round(total_cost, 2),
+                "profit_amount_sar": round(actual_profit, 2),
+                "profit_percentage": round(profit_percentage, 2),
+                "profit_margin_percent_applied": round(margin * 100, 2),
+                "tax_amount_sar": round(tax_amount, 2),
+                "tax_rate": country_config["tax_rate"] * 100,
+            },
+            "original_currency": original_currency,
+            "country_code": country_code,
+            "calculated_at": datetime.now(timezone.utc).isoformat()
+        }
     
     def _calculate_local_shipping(self, weight_kg: float, country_config: Dict) -> float:
         """

@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
-from .pricing_service import pricing_service
+from .pricing_service import pricing_service, load_pricing_settings
 from .import_service import bulk_import_products
 
 logger = logging.getLogger(__name__)
@@ -346,6 +346,10 @@ async def background_import_cj_products(
             ) if pid
         }
 
+        # The margin the owner saved on the pricing screen — read once per
+        # job, applied to every product it prices.
+        pricing_cfg = await load_pricing_settings(db)
+
         # Both modes run the same machinery over a fetch plan: the sweep walks
         # every store category with its own search phrasings and quota; the
         # keyword mode is a plan of one. Each category tries its next phrasing
@@ -438,7 +442,9 @@ async def background_import_cj_products(
                     shipping_cost=shipping_cost,
                     country_code="SA",  # Default country
                     weight_kg=weight,
-                    original_currency="USD"  # CJ prices are usually in USD
+                    original_currency="USD",  # CJ prices are usually in USD
+                    profit_margin_percent=pricing_cfg["profit_margin_percent"],
+                    minimum_profit_sar=pricing_cfg["minimum_profit_sar"],
                 )
                 
                 # Create product document (in STAGING area for editing before publish)

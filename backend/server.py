@@ -658,6 +658,9 @@ async def get_unified_import_status(job_id: str, admin: User = Depends(get_admin
             # number the page called every one of them "imported" and declared
             # success over a run that added nothing.
             "skipped_existing": job["progress"].get("skipped_existing", 0),
+            # Items the adornment gate refused — clothes and shoes the CJ
+            # keyword search dragged in. Reported, never silently shelved.
+            "rejected_off_category": job["progress"].get("rejected_off_category", 0),
             "failed": job["progress"]["failed"],
             # How the new arrivals spread over the shop's six shelves.
             "by_category": job["progress"].get("by_category", {})

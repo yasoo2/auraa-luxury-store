@@ -128,9 +128,11 @@ const QuickImportPage = () => {
           // a duplicate and the shop gained nothing.
           const imported = status.imported || 0;
           const skipped = status.skipped_existing || 0;
+          const rejected = status.rejected_off_category || 0;
           const failed = status.failed || 0;
           const details = [];
           if (skipped > 0) details.push(`${skipped} موجود مسبقاً`);
+          if (rejected > 0) details.push(`${rejected} خارج التخصص (ملابس/أحذية...) استُبعد`);
           if (failed > 0) details.push(`${failed} فشل`);
           const suffix = details.length ? ` (${details.join('، ')})` : '';
           if (imported > 0) {

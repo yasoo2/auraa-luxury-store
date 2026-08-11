@@ -67,7 +67,11 @@ const IMG = 'data:image/svg+xml;base64,' + Buffer.from(
 const products = Array.from({ length: 30 }, (_, i) => ({
   id: `p${i + 1}`,
   name: `طقم أقراط ستانلس ستيل مطلي ذهب ١٨ قيراط تصميم فاخر رقم ${i + 1}`,
+  // English names too: the English-mode pages must be able to render with
+  // no Arabic at all, so the leak scan below can demand exactly that.
+  name_en: `18K Gold-Plated Stainless Steel Earring Set, Luxury Design No. ${i + 1}`,
   description: 'وصف طويل بالعربية.',
+  description_en: 'A long English description for the luxury earring set.',
   price: 93.11 + i, supplier_price: 8.5, category: 'earrings', images: [IMG], image: IMG,
   rating: 4.5, reviews_count: 12, in_stock: true, stock_quantity: 25,
   is_active: true, sku: `SKU-${i + 1}`,
@@ -77,11 +81,16 @@ const browser = await chromium.launch({
   executablePath: '/opt/pw-browsers/chromium', channel: 'chromium', args: ['--no-proxy-server'],
 });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
-await ctx.addInitScript(() => { try { localStorage.setItem('token', 't'); } catch { /* blocked */ } });
+await ctx.addInitScript(() => { try {
+  localStorage.setItem('token', 't');
+  // Deterministic currency: without it the first paints race the geo call
+  // and the default SAR symbol pollutes the English-purity scan.
+  localStorage.setItem('currency', 'USD');
+} catch { /* blocked */ } });
 await ctx.route('**/api/**', (route) => {
   const p = new URL(route.request().url()).pathname;
   const reply = (b) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
-  if (p.endsWith('/api/auth/me')) return reply({ id: 'u1', email: 'b@x.com', first_name: 'يونس', is_admin: true, is_super_admin: true });
+  if (p.endsWith('/api/auth/me')) return reply({ id: 'u1', email: 'b@x.com', first_name: 'Younes', is_admin: true, is_super_admin: true });
   if (p.endsWith('/api/health')) return reply({ status: 'ok', db: true, version: 'dev' });
   if (p.endsWith('/api/readiness')) return reply({ status: 'ready', checks: {} });
   if (p.endsWith('/api/admin/users')) {
@@ -143,10 +152,13 @@ await ctx.route('**/api/**', (route) => {
     return reply(products.slice(skip, skip + limit));
   }
   if (p.endsWith('/api/cart')) {
-    return reply({ items: products.slice(0, 2).map((x) => ({ product_id: x.id, quantity: 1, price: x.price, product_name: x.name, image: IMG })), total_amount: 188.22 });
+    return reply({ items: products.slice(0, 2).map((x) => ({ product_id: x.id, quantity: 1, price: x.price, product_name: x.name_en, image: IMG })), total_amount: 188.22 });
   }
   if (p.endsWith('/api/payment-methods')) return reply({ methods: [{ id: 'card', provider: 'iyzico', currency: 'USD' }] });
-  if (p.endsWith('/api/geo/detect')) return reply({ country_code: 'SA' });
+  // US, not SA: the default currency symbol becomes "$". With SAR the ر.س
+  // symbol puts Arabic script on every page and the English-purity scan
+  // could not tell a currency sign from hardcoded copy.
+  if (p.endsWith('/api/geo/detect')) return reply({ country_code: 'US' });
   if (p.endsWith('/api/categories')) {
     // Real shape: both names on every document. The mobile drawer used to
     // print `name` — the Arabic one — whatever language the visitor chose.
@@ -170,7 +182,11 @@ const PAGES = [['الرئيسية', '/'], ['المنتجات', '/products'], ['�
                ['السلة', '/cart'], ['السداد', '/checkout'], ['المفضّلة', '/wishlist'],
                ['الدخول', '/auth'], ['تتبّع الطلب', '/order-tracking'],
                ['حسابي', '/profile?tab=orders'], ['سياسة الإرجاع', '/return-policy'],
-               ['اتصل بنا', '/contact'],
+               ['اتصل بنا', '/contact'], ['عن المتجر', '/about'],
+               ['الشروط', '/terms-of-service'], ['الخصوصية', '/privacy-policy'],
+               ['الكوكيز', '/cookies-policy'],
+               ['نسيت كلمة المرور', '/forgot-password'],
+               ['إعادة التعيين', '/reset-password'],
                // The whole admin, not just orders: the owner runs the shop
                // from a phone, and every one of these screens has to survive
                // 390px — squeezed tables, filter bars, stat grids and all.
@@ -247,7 +263,8 @@ for (const [name, route] of PAGES) {
     // printed to a customer. The recommendations card did exactly that.
     const text = document.body.innerText;
     return { worst: worst.slice(0, 3), textLen: text.trim().length,
-             hasNaN: /\bNaN\b/.test(text) };
+             hasNaN: /\bNaN\b/.test(text),
+             arLeak: (text.match(/[؀-ۿ][^\n]{0,40}/) || [null])[0] };
   });
 
   // Measured per element, not from documentElement.scrollWidth.
@@ -264,6 +281,16 @@ for (const [name, route] of PAGES) {
       : overflow.textLen < 40
         ? `الصفحة شبه فارغة (${overflow.textLen} حرفاً) — انهيار أو مسار ميت`
         : overflow.worst.map((w) => `${w.tag}(+${w.over}px) "${w.text}"`).join(' | '));
+
+  // The store opens in English; on storefront pages (the admin is the
+  // owner's own Arabic-first cockpit) any Arabic in that mode is copy
+  // hardcoded past the language switch — the mixed page the owner keeps
+  // photographing. Mock data is fully bilingual, so nothing legitimate
+  // trips this.
+  if (!route.startsWith('/admin')) {
+    check(`${name}: الوضع الإنجليزي بلا عربية مثبتة`, !overflow.arLeak,
+      overflow.arLeak ? `تسرب: «${overflow.arLeak.trim()}»` : '');
+  }
 }
 
 // The admin drawer on a phone must get out of the way once it has done its
@@ -376,6 +403,47 @@ const searchBox = await page.evaluate(() => {
   return { ok: true, why: '' };
 });
 check('صندوق البحث عريض ومركزه يصيبه ولا يزاحمه زرّ اللغة', searchBox.ok, searchBox.why);
+
+// «تختفي الأزرار إلى اليمين»: صفّ الشريط يجب أن يسع كل أزراره داخل الشاشة
+// على كل العروض المكتبية — بحساب مسجَّل كمدير وبالإنجليزية (الأوسع)، ومع
+// زرّ التثبيت حاضراً في القياس. حارسٌ وُلد من انزلاق وصل المالك فعلاً.
+for (const vw of [1024, 1280, 1440]) {
+  await page.setViewportSize({ width: vw, height: 800 });
+  await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(700);
+  await page.evaluate(() => {
+    const stub = new Event('beforeinstallprompt');
+    stub.prompt = () => Promise.resolve();
+    stub.userChoice = Promise.resolve({ outcome: 'dismissed' });
+    window.dispatchEvent(stub);
+  });
+  await page.waitForTimeout(250);
+  const rowFits = await page.evaluate(() => {
+    const row = document.querySelector('nav .relative.flex');
+    if (!row) return { ok: false, why: 'صفّ الشريط غير موجود' };
+    const width = document.documentElement.clientWidth;
+    if (row.scrollWidth > row.clientWidth + 1) {
+      return { ok: false, why: `محتوى الصف أعرض من مساحته بـ${row.scrollWidth - row.clientWidth}px` };
+    }
+    let worst = 0;
+    let offender = '';
+    for (const el of row.querySelectorAll('a, button')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width) continue;
+      if (r.right > worst) {
+        worst = r.right;
+        offender = (el.getAttribute('aria-label') || el.textContent || el.tagName)
+          .trim().slice(0, 24);
+      }
+    }
+    if (worst > width + 1) {
+      return { ok: false, why: `«${offender}» يبلغ ${Math.round(worst)}px وعرض الشاشة ${width}` };
+    }
+    return { ok: true, why: '' };
+  });
+  check(`صفّ الشريط يسع كل أزراره داخل الشاشة (${vw}px)`, rowFits.ok, rowFits.why);
+}
+await page.setViewportSize({ width: 1280, height: 700 });
 
 // Opening a page must start it from the top. Client-side navigation keeps
 // the previous page's scroll position, so a shopper who reached the bottom

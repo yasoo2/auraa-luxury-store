@@ -91,7 +91,7 @@ const HomePage = () => {
                       <Link to={`/product/${p.id}`}>
                         <img 
                           src={p.images?.[0]} 
-                          alt={p.name} 
+                          alt={isRTL ? (p.name_ar || p.name) : (p.name_en || p.name)} 
                           className="w-full h-64 object-cover transition-all duration-700 group-hover:scale-110" 
                         />
                         {/* Luxury overlay effect */}
@@ -118,7 +118,7 @@ const HomePage = () => {
                     <div className="p-6">
                       <Link to={`/product/${p.id}`}>
                         <h3 className="font-bold text-lg mb-3 text-gray-900 group-hover:text-amber-600 transition-colors duration-300 line-clamp-2 font-display">
-                          {p.name}
+                          {isRTL ? (p.name_ar || p.name) : (p.name_en || p.name)}
                         </h3>
                       </Link>
                       

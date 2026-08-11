@@ -111,10 +111,14 @@ const InstallAppButton = ({ variant = 'navbar', onDone }) => {
     <button
       onClick={handleClick}
       data-testid="install-app"
+      aria-label={label}
+      title={label}
       className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-full transition-colors whitespace-nowrap"
     >
       <Download className="h-4 w-4" />
-      {label}
+      {/* The label spells itself out only where the row has real room;
+          elsewhere the pill is icon-only and the banner carries the words. */}
+      <span className="hidden 2xl:inline">{label}</span>
     </button>
   );
 

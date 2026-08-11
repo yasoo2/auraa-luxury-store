@@ -2502,6 +2502,29 @@ def test_profit_margin_is_a_setting_the_import_obeys(client, monkeypatch):
     assert product["price_breakdown"]["profit_margin_percent_applied"] == 100
 
 
+def test_final_prices_are_whole_numbers_rounded_up():
+    """
+    «مقربة لأكبر سعر فلا اريد كسور»: the listed price must be a whole number
+    and never below the computed value — rounding up, so the profit the
+    margin promises is a floor.
+    """
+    from services.pricing_service import pricing_service
+
+    result = pricing_service.calculate_final_price(
+        base_cost=10.0, shipping_cost=0.0, country_code="SA",
+        weight_kg=0.5, original_currency="USD")
+    price = result["final_price_sar"]
+    assert price == int(price), f"the listed price carries fractions: {price}"
+
+    # Reconstruct the pre-rounding value from the breakdown and confirm the
+    # rounding went UP, not down.
+    raw = (result["breakdown"]["total_cost_sar"]
+           + result["breakdown"]["profit_amount_sar"]
+           + result["breakdown"]["tax_amount_sar"])
+    assert price >= raw - 0.011, (price, raw)
+    assert price - raw < 1.0, "rounded by more than one whole unit"
+
+
 def test_reprice_applies_the_new_margin_and_spares_hand_set_prices(client):
     import asyncio
     from services.pricing_service import pricing_service

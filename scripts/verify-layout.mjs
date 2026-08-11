@@ -562,10 +562,15 @@ check('قائمة اللغات كاملة وقابلة للنقر على أضي�
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(`${base}/admin/quick-import`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(900);
-const stagingShown = await page.evaluate(() =>
-  document.body.innerText.includes('المنتجات المستوردة (3)'));
-check('الاستيراد السريع يعرض المنتجات المنتظرة للمراجعة فور الدخول',
-  stagingShown, stagingShown ? '' : 'القائمة فارغة رغم وجود 3 منتجات في منطقة المراجعة');
+const stagingShown = await page.evaluate(() => ({
+  listed: document.body.innerText.includes('المنتجات المستوردة (3)'),
+  // الأسعار تتبع مبدّل عملة النظام؛ "SAR" المكتوبة حرفياً كانت تتجاهله.
+  hardcodedSar: /\d\s*SAR\b/.test(document.body.innerText),
+}));
+check('الاستيراد السريع يعرض المنتظر فور الدخول وبعملة النظام لا بـSAR حرفية',
+  stagingShown.listed && !stagingShown.hardcodedSar,
+  !stagingShown.listed ? 'القائمة فارغة رغم وجود 3 منتجات'
+    : (stagingShown.hardcodedSar ? 'السعر مكتوب بـ"SAR" حرفية متجاهلاً مبدّل العملة' : ''));
 
 await browser.close();
 server.close();

@@ -648,13 +648,30 @@ check('التقويم الميلادي مثبَّت وليس افتراضياً'
 
 // وشبكة الأمان: صفحة بيضاء يجب أن تُصلح نفسها لا أن تترك صاحب المتجر أمام
 // لا شيء. الحارس مكتوب في الـHTML نفسه لأن الحزمة التي فشلت لا تستطيع إنقاذ
-// نفسها.
+// نفسها. وإن عجز، يقول السبب — «تعذّر التشغيل» بلا سبب لا يُبنى عليه شيء.
 {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const hasWatchdog = html.includes('auraa-blank-recovery')
     && html.indexOf('auraa-blank-recovery') < html.indexOf('</head>');
   check('حارس الصفحة البيضاء موجود في الـHTML قبل أي شيء آخر', hasWatchdog,
     hasWatchdog ? '' : 'لا حارس — صفحة بيضاء تبقى بيضاء');
+
+  const reports = html.includes('unhandledrejection') && html.includes('failed to load');
+  check('الحارس يقول سبب الفشل لا «تعذّر التشغيل» وحدها', reports,
+    reports ? '' : 'رسالة بلا سبب لا يُبنى عليها تشخيص');
+}
+
+// قوقعة الصفحة لا تُخزَّن في ذاكرة المتصفّح. القاعدة ‎/*.html لم تُطابق صفحةً
+// واحدة من هذا المتجر: المتصفّح يطلب ‎/products و‎/admin/orders — مسارات بلا
+// ‎.html — وإعادةُ الكتابة إلى index.html تحدث بعد مطابقة الترويسات لا قبلها.
+// وقوقعة محفوظة في ذاكرة المتصفّح تظلّ تشير إلى بصمة حزمة حذفها النشر التالي:
+// بياضٌ لا يزيله إفراغ الذاكرة المؤقتة ولا إلغاء عامل الخدمة ولا إعادة التحميل.
+{
+  const headers = fs.readFileSync(path.join(ROOT, '_headers'), 'utf8');
+  const firstRule = headers.slice(headers.indexOf('\n/*'), headers.indexOf('/static/*'));
+  const noStore = /Cache-Control:\s*[^\n]*no-cache/i.test(firstRule);
+  check('قوقعة الصفحة غير قابلة للتخزين في ذاكرة المتصفّح', noStore,
+    noStore ? '' : 'القاعدة العامة لا تمنع تخزين الـHTML');
 }
 
 // Every date on every screen must use the pinned locale. This is the check

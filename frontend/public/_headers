@@ -1,7 +1,18 @@
 # Cloudflare Pages Headers Configuration
 
 # Security headers for all pages
+#
+# Cache-Control is here too, and deliberately first: every rule below overrides
+# it for the hashed assets, so what is left holding "no-cache" is the HTML.
+# That matters because the /*.html rule further down never matched a single
+# page of this shop — the browser asks for /products and /admin/orders, paths
+# with no .html on the end, which the SPA rewrite turns into index.html only
+# *after* header matching. So the shell was cacheable, and a shell held in the
+# browser's HTTP cache keeps naming a bundle hash that the next deploy deleted:
+# a white page that survives clearing Cache Storage, unregistering the service
+# worker, and reloading, because none of those touch the HTTP cache.
 /*
+  Cache-Control: no-cache, must-revalidate
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   X-XSS-Protection: 1; mode=block

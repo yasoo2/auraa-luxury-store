@@ -17,7 +17,7 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <img src="/favicon.svg?v=2" alt="" className="w-9 h-9" />
+              <img src="/favicon.svg?v=3" alt="" className="w-9 h-9" />
               <span className="font-display text-2xl font-bold gradient-text">Auraa Luxury</span>
             </div>
             <p className="text-gray-300 mb-4 leading-relaxed">

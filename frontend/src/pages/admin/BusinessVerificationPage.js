@@ -136,7 +136,7 @@ const BusinessVerificationPage = () => {
         {/* Letterhead */}
         <header className="flex items-start justify-between gap-4 pb-5 border-b-2 border-[#c9a24b]">
           <div className="flex items-center gap-3 min-w-0">
-            <img src="/favicon.svg?v=2" alt="" className="h-14 w-14 shrink-0" />
+            <img src="/favicon.svg?v=3" alt="" className="h-14 w-14 shrink-0" />
             <div className="min-w-0">
               <div className="font-display text-2xl sm:text-3xl font-black text-[#2c2519] leading-none">
                 {data.store.name}

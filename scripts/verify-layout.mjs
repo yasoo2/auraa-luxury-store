@@ -697,6 +697,34 @@ check('التقويم الميلادي مثبَّت وليس افتراضياً'
     reports ? '' : 'رسالة بلا سبب لا يُبنى عليها تشخيص');
 }
 
+// كل إشارة إلى الشعار تحمل النسخة نفسها.
+// الشعار يُخدَّم بذاكرة طويلة، فتغييره وحده لا يصل إلى أحد — لا بدّ من رفع
+// ‎?v=‎ معه في كل موضع. وقد وقع هذا فعلاً: بقي هاتف المالك يعرض الشعار
+// القديم بعد تغييره لأن موضعاً واحداً لم يُرفَع.
+{
+  const seen = new Map();
+  const scan = (label, text) => {
+    for (const [, file, ver] of text.matchAll(/\/(favicon\.svg|icon-[a-z0-9-]+\.png)\?v=(\d+)/g)) {
+      if (!seen.has(ver)) seen.set(ver, []);
+      seen.get(ver).push(`${label}:${file}`);
+    }
+  };
+  for (const name of ['index.html', 'manifest.json', 'sw.js']) {
+    const file = path.join(ROOT, name);
+    if (fs.existsSync(file)) scan(name, fs.readFileSync(file, 'utf8'));
+  }
+  const bundles = path.join(ROOT, 'static', 'js');
+  if (fs.existsSync(bundles)) {
+    for (const f of fs.readdirSync(bundles).filter((f) => f.endsWith('.js'))) {
+      scan('bundle', fs.readFileSync(path.join(bundles, f), 'utf8'));
+    }
+  }
+  const versions = [...seen.keys()];
+  check('كل إشارات الشعار على نسخة واحدة', versions.length === 1,
+    versions.length === 0 ? 'لم يُعثر على أي إشارة للشعار'
+      : versions.map((v) => `v=${v} (${[...new Set(seen.get(v))].join('، ')})`).join(' — '));
+}
+
 // لا قاعدة تحجب حزمة المتجر عن نفسه.
 // كانت في ‎_redirects قاعدة ‎`/static/* /index.html 404` كُتبت لتمنع ردّ القوقعة
 // مكان أصلٍ مفقود. لكن Cloudflare Pages يُقيّم قاعدة البدل عند الحافة قبل أن

@@ -4387,3 +4387,48 @@ def test_the_broom_keeps_a_ring_with_a_flower_on_it():
     ]
     for name in sweep:
         assert not verdict(name), f"an intruder the broom would leave in the shop: {name}"
+
+
+def test_a_title_the_supplier_sent_as_a_list_is_shown_as_a_sentence():
+    """
+    A product card on the live storefront read `["Mini","Dried Flower 6
+    Bouquets"]` — brackets, quotes and commas, to shoppers.
+
+    CJ sends some titles as a JSON array, the same shape it uses for
+    productImageSet, which this importer already normalises. The title did not:
+    it was stored verbatim, and it is short enough that the shortening pass
+    never touched it, so it went straight to the screen.
+    """
+    from services.background_import import plain_name, _product_name
+
+    assert plain_name('["Mini","Dried Flower 6 Bouquets"]') == "Mini Dried Flower 6 Bouquets"
+    assert plain_name(["Sterling Silver", "Butterfly Necklace"]) == "Sterling Silver Butterfly Necklace"
+    # An ordinary title passes through untouched, brackets and all when they
+    # are genuinely part of the name.
+    assert plain_name("Zircon Ring [Gift Box]") == "Zircon Ring [Gift Box]"
+    assert plain_name("") == ""
+    assert plain_name(None) == ""
+    # Malformed JSON is text, not an error.
+    assert plain_name('["unclosed', ) == '["unclosed'
+
+    # And the importer's heading builder uses it before splitting on commas —
+    # otherwise the first clause of the array is `["Mini"`.
+    assert _product_name('["Mini","Dried Flower 6 Bouquets"]') == "Mini Dried Flower 6 Bouquets"
+
+
+def test_a_stored_list_title_is_repaired_on_the_way_out(client):
+    """Rows already in the shop carry the raw array; the read path unwraps it."""
+    import asyncio
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_one({
+        "id": "arr-1", "source": "cj_dropshipping", "external_id": "A1",
+        "imported_from_cj": True,
+        "name": '["Mini","Dried Flower 6 Bouquets"]',
+        "description": "d", "price": 39.0, "category": "sets",
+        "images": ["https://x/a.jpg"], "in_stock": True, "is_active": True,
+    }))
+
+    row = next(p for p in client.get("/api/products").json() if p["id"] == "arr-1")
+    assert row["name"] == "Mini Dried Flower 6 Bouquets", \
+        f"the storefront still prints a data structure: {row['name']!r}"

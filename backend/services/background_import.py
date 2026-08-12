@@ -233,7 +233,33 @@ def _collect_images(product: dict) -> list:
 _NAME_MAX = 60
 
 
-def _product_name(raw: str) -> str:
+_JSON_ARRAY = re.compile(r'^\s*\[.*\]\s*$', re.S)
+
+
+def plain_name(raw) -> str:
+    """
+    A title as text, whatever shape the supplier sent it in.
+
+    CJ sometimes gives the title as a JSON array — the same trick it plays with
+    productImageSet, which this file already normalises. Stored verbatim, the
+    shop printed a product card reading `["Mini","Dried Flower 6 Bouquets"]`:
+    brackets, quotes and commas, on the storefront, to shoppers.
+    """
+    if isinstance(raw, (list, tuple)):
+        return " ".join(str(x).strip() for x in raw if str(x).strip())
+
+    text = str(raw or "").strip()
+    if _JSON_ARRAY.match(text):
+        try:
+            parsed = json.loads(text)
+        except ValueError:
+            return text
+        if isinstance(parsed, list):
+            return " ".join(str(x).strip() for x in parsed if str(x).strip())
+    return text
+
+
+def _product_name(raw) -> str:
     """
     A heading a person would read, taken from CJ's keyword-stuffed title.
 
@@ -241,7 +267,7 @@ def _product_name(raw: str) -> str:
     restatement for the supplier's search engine. Cut there, and only fall back
     to trimming on length when there is no comma to cut at.
     """
-    text = re.sub(r'\s+', ' ', (raw or '')).strip()
+    text = re.sub(r'\s+', ' ', plain_name(raw)).strip()
     if not text:
         return ''
 

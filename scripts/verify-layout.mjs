@@ -726,7 +726,6 @@ check('التقويم الميلادي مثبَّت وليس افتراضياً'
       return (x + 0.05) / (y + 0.05);
     };
 
-    const ink = rgb(ring.getAttribute('data-stroke') || '');
     const style = getComputedStyle(bar);
     const grounds = [];
     for (const m of (style.backgroundImage || '').matchAll(/#([0-9a-f]{6})|rgba?\([^)]+\)/gi)) {
@@ -735,14 +734,121 @@ check('التقويم الميلادي مثبَّت وليس افتراضياً'
     }
     const solid = rgb(style.backgroundColor || '');
     if (solid && grounds.length === 0) grounds.push(solid);
-    if (!ink || grounds.length === 0) return { why: 'تعذّرت قراءة الألوان' };
+    if (grounds.length === 0) return { why: 'تعذّرت قراءة خلفية الشريط' };
+    const against = (c) => Math.min(...grounds.map((g) => ratio(c, g)));
 
-    return { worst: Math.min(...grounds.map((g) => ratio(ink, g))), stops: grounds.length };
+    const worst = [];
+
+    // The mark.
+    const ink = rgb(ring.getAttribute('data-stroke') || '');
+    if (ink) worst.push({ what: 'الشعار', r: against(ink) });
+
+    // And everything else standing on the bar. Darkening the ground to rescue
+    // one element is the obvious way to blind the other twenty, so the check
+    // that guards the bar has to look at all of them: any text sitting on the
+    // bar itself — not inside a panel with a background of its own.
+    for (const el of bar.querySelectorAll('a, button, span, p')) {
+      // Only elements that paint their own text. A wrapper's `color` is
+      // whatever it inherited, and its textContent is its children's — reading
+      // that measured the logo link's inherited colour against the bar and
+      // reported the wordmark as unreadable while the wordmark was gold.
+      const own = [...el.childNodes]
+        .filter((n) => n.nodeType === 3 && n.textContent.trim())
+        .map((n) => n.textContent.trim())
+        .join(' ');
+      if (!own || own.length > 40) continue;
+      // An emoji paints itself and ignores `color`, so measuring it measures
+      // nothing — the flag in the language button reported 1.04:1 while being
+      // perfectly visible.
+      if (!/[\p{L}\p{N}]/u.test(own.replace(/\p{Extended_Pictographic}|[\u{1F1E6}-\u{1F1FF}]/gu, ''))) continue;
+      const text = own;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+
+      // Skip anything painted onto its own background — dropdown panels, the
+      // search field, badges, the login button.
+      let onOwnGround = false;
+      for (let n = el; n && n !== bar; n = n.parentElement) {
+        const bg = getComputedStyle(n).backgroundColor;
+        const c = rgb(bg || '');
+        const alpha = (bg.match(/rgba?\(([^)]+)\)/) || [])[1]?.split(',')[3];
+        if (c && (alpha === undefined || parseFloat(alpha) > 0.25)) { onOwnGround = true; break; }
+      }
+      if (onOwnGround) continue;
+
+      const style_ = getComputedStyle(el);
+      // Text painted through background-clip has no colour of its own.
+      if (style_.webkitTextFillColor === 'rgba(0, 0, 0, 0)') continue;
+      const fg = rgb(style_.color || '');
+      if (!fg) continue;
+      worst.push({ what: text.slice(0, 18), r: against(fg) });
+    }
+
+    worst.sort((a, b) => a.r - b.r);
+    return { worst: worst[0], checked: worst.length, stops: grounds.length };
   });
-  const ok = contrast.worst >= 3;
-  check('الشعار يُرى على خلفية الشريط لا يذوب فيها', ok,
+  const ok = contrast.worst && contrast.worst.r >= 3;
+  check('كل ما في الشريط يُقرأ على خلفيته', ok,
     contrast.why ? contrast.why
-      : `أسوأ تباين ${contrast.worst.toFixed(2)}:1 عبر ${contrast.stops} درجات (المطلوب 3:1)`);
+      : `أضعف عنصر «${contrast.worst.what}» بتباين ${contrast.worst.r.toFixed(2)}:1`
+        + ` من ${contrast.checked} عنصراً (المطلوب 3:1)`);
+
+  // ودُرج الهاتف: سطح فاتح داخل شريط داكن. إن ورث ألوان الشريط صار نصّه
+  // كريمياً على أبيض — وهو ما وقع فعلاً عند تعتيم الشريط، ولا يظهر في فحص
+  // سطح المكتب لأن الدرج لا يُفتح فيه أصلاً.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(500);
+  let drawer = { why: 'تعذّر فتح الدرج' };
+  try {
+    await page.locator('[data-testid="mobile-menu-button"]').click();
+    await page.waitForTimeout(400);
+    drawer = await page.evaluate(() => {
+      const panel = document.querySelector('nav .xl\\:hidden.bg-white');
+      if (!panel) return { why: 'الدرج غير موجود' };
+      const rgb = (t) => {
+        const m = (t || '').match(/rgba?\(([^)]+)\)/i);
+        return m ? m[1].split(',').slice(0, 3).map(Number) : null;
+      };
+      const lum = ([r, g, b]) => {
+        const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+      };
+      const ground = rgb(getComputedStyle(panel).backgroundColor) || [255, 255, 255];
+      let worst = null;
+      const targets = [];
+      for (const el of panel.querySelectorAll('a, button, span')) {
+        const own = [...el.childNodes]
+          .filter((n) => n.nodeType === 3 && n.textContent.trim())
+          .map((n) => n.textContent.trim()).join(' ');
+        if (own && /[\p{L}\p{N}]/u.test(own)) targets.push([el, own]);
+      }
+      // Icons too: lucide draws with stroke="currentColor", so an icon's
+      // colour is its element's `color`. The language and currency control in
+      // this drawer has no words at all — a text-only scan could not see it
+      // turn cream on white.
+      for (const el of panel.querySelectorAll('svg')) {
+        if (el.closest('[data-testid="brand-mark"]')) continue;
+        const label = el.parentElement?.getAttribute('data-testid') || 'أيقونة';
+        targets.push([el, label]);
+      }
+      for (const [el, own] of targets) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        const fg = rgb(getComputedStyle(el).color);
+        if (!fg) continue;
+        const [x, y] = [lum(fg), lum(ground)].sort((a, b) => b - a);
+        const ratio = (x + 0.05) / (y + 0.05);
+        if (!worst || ratio < worst.r) worst = { what: own.slice(0, 18), r: ratio };
+      }
+      return worst ? { worst } : { why: 'لا نصّ في الدرج' };
+    });
+  } catch (e) { drawer = { why: `تعذّر فتح الدرج: ${e.message.split('\n')[0]}` }; }
+  const drawerOk = drawer.worst && drawer.worst.r >= 4.5;
+  check('درج الهاتف يُقرأ على سطحه الفاتح', drawerOk,
+    drawer.why ? drawer.why
+      : `أضعف عنصر «${drawer.worst.what}» بتباين ${drawer.worst.r.toFixed(2)}:1`);
+  await page.setViewportSize({ width: 1440, height: 900 });
 }
 
 // كل إشارة إلى الشعار تحمل النسخة نفسها.

@@ -121,22 +121,22 @@ const Navbar = () => {
               to="/"
               className="flex items-center gap-2 py-1 md:py-2 flex-shrink-0
                          pe-2 sm:pe-3 xl:pe-4
-                         xl:border-e xl:border-black/15"
+                         xl:border-e xl:border-[color:var(--nav-rule)]"
             >
               {/* The pendant mark joins the wordmark on wider screens; on a
                   narrow phone every pixel of this row is already spoken for. */}
-              <BrandMark tone="ink" className="hidden sm:block h-9 w-9" />
+              <BrandMark className="hidden sm:block h-9 w-9" />
               <div className="flex flex-col items-start">
               <div className="font-display font-black leading-none flex items-baseline gap-1">
-                <span className="text-xl sm:text-2xl md:text-3xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>
+                <span className="text-xl sm:text-2xl md:text-3xl wordmark-gold leading-none whitespace-nowrap">Auraa</span>
                 {/* Was 8px, painted with the same clipped gradient as the
                     name and a 2px drop shadow. At that size the fill is
                     thinner than the shadow: it rendered as a grey smudge next
                     to "Auraa" on every page. Solid ink, and big enough to be
                     a word. */}
-                <span className="text-[10px] sm:text-xs font-semibold text-[#3f2d10]/80 tracking-[0.18em] sm:tracking-[0.28em] whitespace-nowrap">LUXURY</span>
+                <span className="text-[10px] sm:text-xs font-semibold text-[color:var(--nav-fg-dim)] tracking-[0.18em] sm:tracking-[0.28em] whitespace-nowrap">LUXURY</span>
               </div>
-              <span className="block text-[7px] sm:text-[9px] md:text-[11px] text-gray-600 tracking-[0.2em] sm:tracking-[0.45em] border-t border-black/20 pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
+              <span className="block text-[7px] sm:text-[9px] md:text-[11px] text-[color:var(--nav-fg-dim)] tracking-[0.2em] sm:tracking-[0.45em] border-t border-[color:var(--nav-rule)] pt-0.5 uppercase whitespace-nowrap">ACCESSORIES</span>
               </div>
             </Link>
           )}
@@ -151,7 +151,7 @@ const Navbar = () => {
             <div className="relative">
               <button
                 onClick={() => setShowCategories(!showCategories)}
-                className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium flex items-center text-sm"
+                className="text-[color:var(--nav-fg)] hover-text-brand transition-colors duration-200 font-medium flex items-center text-sm"
                 onBlur={() => setTimeout(() => setShowCategories(false), 200)}
                 aria-haspopup="true"
                 aria-expanded={showCategories}
@@ -191,12 +191,12 @@ const Navbar = () => {
               )}
             </div>
 
-            <Link to="/products" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm">
+            <Link to="/products" className="text-[color:var(--nav-fg)] hover-text-brand transition-colors duration-200 font-medium text-sm">
               {isRTL ? 'المنتجات' : 'Products'}
             </Link>
 
             {/* Track Order */}
-            <Link to="/order-tracking" className="text-gray-700 hover-text-brand transition-colors duration-200 font-medium text-sm flex items-center">
+            <Link to="/order-tracking" className="text-[color:var(--nav-fg)] hover-text-brand transition-colors duration-200 font-medium text-sm flex items-center">
               <RouteIcon className="h-4 w-4 me-1" /> {trackOrderLabel}
             </Link>
           </div>
@@ -212,10 +212,10 @@ const Navbar = () => {
                 placeholder={isRTL ? 'ابحث عن المنتجات...' : 'Search products...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pr-10 focus-ring"
+                className="w-full ps-10 focus-ring"
                 dir={isRTL ? 'rtl' : 'ltr'}
               />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
             </div>
           </form>
 
@@ -232,16 +232,16 @@ const Navbar = () => {
             {/* Install corner (wide screens; phones get the drawer row) */}
             <InstallAppButton variant="navbar" />
 
-            <span className="hidden sm:block h-6 w-px bg-black/15 mx-1" aria-hidden="true" />
+            <span className="hidden sm:block h-6 w-px bg-[color:var(--nav-rule)] mx-1" aria-hidden="true" />
 
             {/* Cart */}
-            <Link to="/cart" className="relative p-3 sm:p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
+            <Link to="/cart" className="relative p-3 sm:p-2 text-[color:var(--nav-fg)] hover-text-brand transition-colors duration-200" data-testid="cart-link">
               <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
               <span className="cart-badge absolute -top-0.5 -right-0.5 bg-brand text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">{cartCount}</span>
             </Link>
 
             {/* Wishlist */}
-            <Link to={user ? '/wishlist' : '/auth'} className="relative p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200">
+            <Link to={user ? '/wishlist' : '/auth'} className="relative p-3 sm:p-2 text-[color:var(--nav-fg)] hover-text-brand transition-colors duration-200">
               <Heart className="h-5 w-5 sm:h-6 sm:w-6" />
               {user && getWishlistCount() > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] sm:text-[10px] rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
@@ -252,14 +252,14 @@ const Navbar = () => {
 
             {/* User Actions - Responsive */}
             {user ? (
-              <div className="flex items-center gap-1 sm:gap-2 sm:ps-2 sm:ms-1 sm:border-s sm:border-black/15">
+              <div className="flex items-center gap-1 sm:gap-2 sm:ps-2 sm:ms-1 sm:border-s sm:border-[color:var(--nav-rule)]">
                 {/* Profile - Hidden on mobile, shown in menu */}
-                <Link to="/profile" className="hidden sm:block p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200" data-testid="profile-link">
+                <Link to="/profile" className="hidden sm:block p-1.5 sm:p-2 text-[color:var(--nav-fg)] hover-text-brand transition-colors duration-200" data-testid="profile-link">
                   <User className="h-5 w-5 sm:h-6 sm:w-6" />
                 </Link>
                 
                 {/* Logout - Hidden on mobile, shown in menu */}
-                <Button onClick={handleLogout} variant="ghost" size="sm" className="hidden sm:block p-1.5 sm:p-2 text-gray-700 hover-text-brand" data-testid="logout-button">
+                <Button onClick={handleLogout} variant="ghost" size="sm" className="hidden sm:block p-1.5 sm:p-2 text-[color:var(--nav-fg)] hover-text-brand" data-testid="logout-button">
                   <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 
@@ -283,7 +283,7 @@ const Navbar = () => {
             {/* Mobile menu button */}
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className="xl:hidden p-3 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200"
+              className="xl:hidden p-3 sm:p-2 text-[color:var(--nav-fg)] hover-text-brand transition-colors duration-200"
               data-testid="mobile-menu-button"
               aria-label="Toggle mobile menu"
             >
@@ -303,9 +303,20 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Mobile Menu - Enhanced */}
+        {/* Mobile Menu - Enhanced.
+            The drawer is a light surface inside a dark bar, so it redefines the
+            bar's tokens rather than inheriting them. Without this the language
+            and currency triggers rendered in the header's cream — on white.
+            A surface owns its own foreground. */}
         {isMenuOpen && (
-          <div className="xl:hidden border-t border-gray-200 bg-white shadow-lg">
+          <div
+            className="xl:hidden border-t border-gray-200 bg-white shadow-lg"
+            style={{
+              '--nav-fg': '#374151',
+              '--nav-fg-dim': '#6b7280',
+              '--nav-rule': 'rgba(0,0,0,0.12)',
+            }}
+          >
             <div className="px-4 py-4 space-y-3 max-h-[80vh] overflow-y-auto">
               {/* Language/Currency Selector - Visible in mobile menu */}
               <div className="sm:hidden mb-4 pb-3 border-b border-gray-100">
@@ -325,10 +336,14 @@ const Navbar = () => {
                     placeholder={isRTL ? 'ابحث عن المنتجات...' : 'Search products...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pr-10 text-sm"
+                    className="w-full ps-10 text-sm"
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  {/* gray-500, not gray-400: the paler shade measures 2.54:1
+                      on white, which the drawer's contrast check refuses. It
+                      had been that faint since long before the dark bar —
+                      found only because the check finally looks at icons. */}
+                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                 </div>
               </form>
 

@@ -61,7 +61,7 @@ const InstallBanner = () => {
       <div
         data-testid="install-banner"
         dir={isRTL ? 'rtl' : 'ltr'}
-        className="fixed bottom-0 inset-inline-start-0 inset-inline-end-0 left-0 right-0 z-40 bg-[#101724] text-white border-t-2 border-[#c9a24b] shadow-2xl"
+        className="fixed bottom-0 start-0 end-0 z-40 bg-[#101724] text-white border-t-2 border-[#c9a24b] shadow-2xl"
       >
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           <BrandMark className="w-10 h-10 flex-shrink-0" />

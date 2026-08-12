@@ -49,6 +49,11 @@ const LanguageCurrencySelector = () => {
   // what the owner photographed on a Fold's narrow cover display.
   return (
     <div className="flex items-center gap-2">
+      {/* The two triggers read their colour from the bar they sit on
+          (--nav-fg), and fall back to `inherit` anywhere else — this
+          control is also used off the header. The hover was
+          bg-gray-100, a near-white wash that on the dark bar flashed
+          a pale block under the icon. */}
       <div className="relative" ref={languageRef}>
         <Button
           variant="ghost"
@@ -58,7 +63,7 @@ const LanguageCurrencySelector = () => {
             setShowCurrencies(false); // Close currency dropdown when opening language
           }}
           data-testid="language-toggle"
-          className="flex items-center gap-1 hover:bg-gray-100"
+          className="flex items-center gap-1 text-[color:var(--nav-fg,inherit)] hover:bg-white/10 hover:text-[color:var(--nav-fg,inherit)]"
         >
           <Globe className="h-4 w-4" />
           <span className="text-sm">{currentLanguage?.flag}</span>
@@ -95,7 +100,7 @@ const LanguageCurrencySelector = () => {
             setShowLanguages(false); // Close language dropdown when opening currency
           }}
           data-testid="currency-toggle"
-          className="flex items-center gap-1 hover:bg-gray-100"
+          className="flex items-center gap-1 text-[color:var(--nav-fg,inherit)] hover:bg-white/10 hover:text-[color:var(--nav-fg,inherit)]"
         >
           <DollarSign className="h-4 w-4" />
           <span data-testid="currency-toggle-symbol" className="text-sm font-medium">{currentCurrency?.symbol}</span>

@@ -589,12 +589,42 @@ body {
 /* Gold under the wordmark. The bar is pinned LTR in every language (the
    logo is a fixed landmark, by the owner's rule), so the gold starts on the
    left and stays there — no direction-aware flip. */
+/* The bar is dark so the gold can be gold.
+   It used to run gold → silver, and the shop's own mark is gold: contrast
+   1.23:1, which is not "faint", it is invisible. There were two ways out —
+   darken the mark, or darken the bar — and the owner chose the bar, to keep
+   the mark in the brand's metal. So the bar became the ground and everything
+   standing on it turned to light; the tokens below are what the header's text
+   and rules read from, and every one of them is measured by
+   «كل ما في الشريط يُقرأ على خلفيته» in scripts/verify-layout.mjs. */
 .nav-glass {
-  background: linear-gradient(90deg, var(--color-gold) 0%, var(--color-silver) 100%);
+  --nav-fg: #f7efdd;                      /* headings, icons, links */
+  --nav-fg-dim: rgba(247, 239, 221, 0.72); /* the smaller lines under them */
+  --nav-rule: rgba(247, 239, 221, 0.22);   /* dividers and hairlines */
+
+  background: linear-gradient(90deg, #16120b 0%, #262015 52%, #16120b 100%);
   backdrop-filter: blur(6px);
-  border-bottom: 2px solid #000000;
-  border-top: 2px solid #000000;
-  box-shadow: 0 2px 0 #000000;
+  /* A gold hairline instead of the black one: on a dark bar a black edge is
+     no edge at all, and this is what now separates the header from the page. */
+  border-bottom: 2px solid var(--color-gold);
+  border-top: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* The wordmark in metal. `carousel-luxury-text` paints it in dark browns —
+   right on a gold bar, unreadable on this one — and it is still used on the
+   admin header, which is gold, so it stays as it is and this one joins it. */
+.wordmark-gold {
+  background: linear-gradient(135deg, #f0dda0 0%, #c9a227 28%, #f5e6b8 52%, #b8901a 76%, #eed88f 100%);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: luxuryShimmer 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wordmark-gold { animation: none; }
 }
 
 /* The old "search animation" forced the input to a fixed 300px on focus,

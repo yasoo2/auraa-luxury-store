@@ -12,6 +12,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
 from .pricing_service import pricing_service, load_pricing_settings
 from .import_service import bulk_import_products
+from .product_translation import translate_title, translate_description
 
 logger = logging.getLogger(__name__)
 
@@ -449,19 +450,31 @@ async def background_import_cj_products(
                     minimum_profit_sar=pricing_cfg["minimum_profit_sar"],
                 )
                 
+                english_name = _product_name(
+                    product.get('productNameEn') or product.get('productName', '')
+                )
+                english_description = _clean_description(product)
+
                 # Create product document (in STAGING area for editing before publish)
                 product_data = {
                     "id": str(uuid.uuid4()),
                     "source": "cj_dropshipping",
                     "external_id": product_id,
-                    "name": _product_name(product.get('productNameEn') or product.get('productName', '')),
-                    "name_ar": _product_name(product.get('productName') or product.get('productNameEn', '')),
+                    "name": english_name,
+                    # CJ has no Arabic. Both of its title fields are English, so
+                    # writing productName here — as this did — filled the Arabic
+                    # column with English and the store's language button had
+                    # nothing to switch the catalogue to. The Arabic is composed
+                    # from the attributes the supplier actually stated; when the
+                    # title states none we know, it stays None and the storefront
+                    # falls back to the English above, which is at least true.
+                    "name_ar": translate_title(english_name),
                     # The supplier's full title becomes the description when CJ
                     # sends no real one. It must never fall back to `name` —
                     # that printed the identical sentence as heading and as body
                     # on every product page.
-                    "description": _clean_description(product) or (product.get('productNameEn') or ''),
-                    "description_ar": _clean_description(product) or (product.get('productName') or ''),
+                    "description": english_description or (product.get('productNameEn') or ''),
+                    "description_ar": translate_description(english_name, english_description),
                     "price": pricing['final_price_sar'],  # profit + tax + shipping included
                     # Deliberately no "original_price". It used to be set to the
                     # supplier's cost, which the product page renders struck

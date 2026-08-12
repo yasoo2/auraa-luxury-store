@@ -1,2 +1,2 @@
-commit eddd082
-built   2026-08-08T15:14:52.448Z
+commit 1bc78f6
+built   2026-08-12T17:21:41.549Z

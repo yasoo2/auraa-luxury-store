@@ -64,14 +64,18 @@ const IMG = 'data:image/svg+xml;base64,' + Buffer.from(
 // CJ title has not been tested with anything the shop actually sells.
 // 30 of them: more than one server page (24), so the pagination flow below
 // exercises a second page for real instead of trusting the first.
+// Shaped exactly as the backend stores products, which it had not been: the
+// fixture used to put Arabic in `name` and English in `name_en`, while every
+// imported product carries English in `name` and its Arabic in `name_ar`. So
+// the harness rendered an Arabic catalogue no server ever sends, and an
+// all-English shop passed all 78 checks while the owner was looking at one.
 const products = Array.from({ length: 30 }, (_, i) => ({
   id: `p${i + 1}`,
-  name: `طقم أقراط ستانلس ستيل مطلي ذهب ١٨ قيراط تصميم فاخر رقم ${i + 1}`,
-  // English names too: the English-mode pages must be able to render with
-  // no Arabic at all, so the leak scan below can demand exactly that.
+  name: `18K Gold-Plated Stainless Steel Earring Set, Luxury Design No. ${i + 1}`,
   name_en: `18K Gold-Plated Stainless Steel Earring Set, Luxury Design No. ${i + 1}`,
-  description: 'وصف طويل بالعربية.',
-  description_en: 'A long English description for the luxury earring set.',
+  name_ar: `طقم أقراط ستانلس ستيل مطلي بالذهب عيار 18 فاخر رقم ${i + 1}`,
+  description: 'A long English description for the luxury earring set.',
+  description_ar: 'وصف عربي طويل لطقم الأقراط الفاخر.',
   price: 93.11 + i, supplier_price: 8.5, category: 'earrings', images: [IMG], image: IMG,
   rating: 4.5, reviews_count: 12, in_stock: true, stock_quantity: 25,
   is_active: true, sku: `SKU-${i + 1}`,
@@ -415,6 +419,31 @@ for (const lang of ['ar', 'en']) {
   if (!head) why.push('الشريط أو الشعار غير موجود');
   else if (!head.logoOnLeftHalf) why.push('الشعار انتقل إلى الجهة الأخرى بتبدّل اللغة');
   check(`الشعار ثابت في مكانه مهما تبدّلت اللغة (${lang})`, why.length === 0, why.join('، '));
+}
+await page.evaluate(() => localStorage.setItem('language', 'en'));
+
+// أسماء المنتجات نفسها تتبدّل باللغة، لا الواجهة وحدها.
+// كان المستورد يكتب عنوان المورّد الإنجليزي في الحقل العربي، فيبقى الكتالوج
+// إنجليزياً مهما ضُغط زرّ اللغة — وهو ما رآه المالك على شاشته.
+for (const lang of ['ar', 'en']) {
+  await page.evaluate((l) => localStorage.setItem('language', l), lang);
+  await page.goto(`${base}/products`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(500);
+
+  const titles = await page.evaluate(() =>
+    [...document.querySelectorAll('h3, h2')]
+      .map((n) => (n.textContent || '').trim())
+      .filter((t) => t.includes('18') || t.includes('طقم'))
+      .slice(0, 6));
+
+  const arabic = /[؀-ۿ]/;
+  const wanted = lang === 'ar' ? 'عربية' : 'إنجليزية';
+  const ok = titles.length > 0 && titles.every((t) => (lang === 'ar' ? arabic.test(t) : !arabic.test(t)));
+  check(
+    `أسماء المنتجات تتبدّل مع اللغة لا الواجهة وحدها (${lang})`,
+    ok,
+    titles.length === 0 ? 'لم يُعثر على عناوين منتجات' : `المتوقّع ${wanted}: ${titles[0]}`,
+  );
 }
 await page.evaluate(() => localStorage.setItem('language', 'en'));
 

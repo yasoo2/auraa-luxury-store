@@ -3876,7 +3876,10 @@ def test_a_cj_import_puts_real_products_into_staging(client, monkeypatch):
     by_sku = {p["sku"]: p for p in staged}
     necklace = by_sku["SKU-1"]
     assert necklace["name"] == "Gold Plated Necklace For Women"
-    assert necklace["name_ar"] == "قلادة مطلية بالذهب"  # الجزء قبل الفاصلة
+    # كان هذا يقرأ حقل CJ الثاني ويقصّه عند الفاصلة. الحقل إنجليزيّ عند المورّد،
+    # فكان العمود العربي يمتلئ إنجليزيةً ولا يجد زرُّ اللغة ما يُبدّل إليه.
+    # الآن يُركَّب الاسم العربي من الصفات التي ذكرها المورّد فعلاً.
+    assert necklace["name_ar"] == "قلادة مطلية بالذهب للنساء"
     assert necklace["category"] == "necklaces", necklace["category"]
     assert necklace["images"] == ["https://cj/img1.jpg"]
     assert "<p>" not in necklace["description"], "supplier HTML reached the store"
@@ -4089,3 +4092,176 @@ def test_a_successful_check_says_which_variables_worked(monkeypatch):
     assert result["credentials_used"] == "CJ_EMAIL + CJ_API_KEY", result
     assert "the-right-one" not in str(result), "the key itself must not be reported"
     cj_client._reset_token()
+
+
+# ---------------------------------------------------------------------------
+# Arabic for the catalogue
+#
+# The store's language button worked everywhere except on the products. The
+# reason was not the button: the importer wrote CJ's English title into
+# `name_ar`, so the Arabic column was full of English and there was nothing to
+# switch to. These tests hold that column to being Arabic — or honestly empty.
+# ---------------------------------------------------------------------------
+
+import re as _re                                    # noqa: E402
+from services.product_translation import (          # noqa: E402
+    translate_title, translate_description, analyse, looks_untranslated,
+)
+
+ARABIC_LETTER = _re.compile(r"[؀-ۿ]")
+
+
+def test_a_supplier_title_becomes_arabic_a_person_can_read():
+    """
+    Not a word-for-word gloss — Arabic word order, with the noun first and its
+    adjectives agreeing with it.
+    """
+    assert translate_title("S925 Sterling Silver Butterfly Pendant Necklace for Women") == \
+        "قلادة بتعليقة فضة إسترليني 925 بتصميم فراشة للنساء"
+
+    # Feminine head noun takes feminine adjectives; masculine takes masculine.
+    assert translate_title("Luxury Vintage Ring for Women") == "خاتم كلاسيكي فاخر للنساء"
+    assert translate_title("Luxury Vintage Necklace for Women") == "قلادة كلاسيكية فاخرة للنساء"
+
+
+def test_the_head_noun_decides_the_type_not_the_first_word_found():
+    """
+    English puts the head noun last: "Butterfly Pendant Necklace" is a
+    necklace. And the more specific reading wins where two end together —
+    "Stud Earrings" is أقراط ثابتة, not the vaguer أقراط.
+    """
+    assert analyse("Vintage Owl Pendant Long Chain Necklace")["type"] == "قلادة بسلسلة"
+    assert analyse("Fashion Simple Alloy Stud Earrings")["type"] == "أقراط ثابتة"
+    assert analyse("Luxury Pearl Drop Earrings")["type"] == "أقراط متدلّية"
+
+    # "ring" hides inside "earring". Word boundaries, or every pair of earrings
+    # in the shop becomes a خاتم.
+    assert analyse("Gold Plated Earrings")["type"] == "أقراط"
+
+
+def test_a_word_already_spent_is_not_read_a_second_time():
+    """
+    "Rose Gold" is a metal. Reading it as the metal and then reading "rose"
+    again as a motif sold a snake bracelet as a flower one.
+    """
+    title = translate_title("Adjustable Rose Gold Snake Bangle Bracelet Ladies")
+    assert "ذهب وردي" in title
+    assert "وردة" not in title, f"the metal was read again as a flower: {title}"
+    assert "أفعى" in title
+
+
+def test_a_title_that_names_nothing_we_know_stays_in_english():
+    """
+    The honest outcome. An invented Arabic name is worse than an English one,
+    and a catalogue of identical bare "خاتم" is worse than both.
+    """
+    assert translate_title("Mini Dried Flower 6 Bouquets") is None
+    assert translate_title("Hot Selling Product 2024 New Arrival") is None
+    assert translate_title("Ring") is None, "a bare type is the category, not a name"
+
+
+def test_the_arabic_description_states_only_what_the_supplier_stated():
+    described = translate_description("18K Gold Plated Cubic Zirconia Heart Ring for Women")
+    assert "الخامة: مطلي بالذهب عيار 18" in described
+    assert "الحجر: زركون مكعّب" in described
+    assert "التصميم: قلب" in described
+    assert translate_description("Hot Selling Product 2024") is None
+
+
+def test_an_english_string_in_the_arabic_field_counts_as_untranslated():
+    """
+    The check that finds the existing catalogue. Asking whether the field is
+    empty reported a wholly English shop as wholly translated, because every
+    row had a populated `name_ar` — holding English.
+    """
+    assert looks_untranslated("Women Vintage Lace Cubic Zirconia Ring") is True
+    assert looks_untranslated("") is True
+    assert looks_untranslated(None) is True
+    assert looks_untranslated("خاتم كلاسيكي") is False
+
+
+def test_importing_writes_arabic_into_the_arabic_field(client, monkeypatch):
+    """
+    The defect at its source. The importer put CJ's English `productName` into
+    `name_ar`, so a freshly imported shop had no Arabic anywhere in it.
+    """
+    import asyncio
+    from services import background_import as bg
+
+    async def fake_bulk(total_count=1, keyword=None, exclude_ids=None, **_):
+        return {"products": [{
+            "pid": "T-1",
+            "productNameEn": "S925 Sterling Silver Butterfly Pendant Necklace for Women",
+            "productName": "S925 Sterling Silver Butterfly Pendant Necklace for Women",
+            "sellPrice": 10.0, "shippingPrice": 2.0, "weight": 0.2,
+            "productImage": "https://example.com/a.jpg",
+            "categoryName": "Jewelry", "productSku": "SKU-T1", "sellQuantity": 5,
+        }], "report": {}}
+
+    monkeypatch.setattr(bg, "bulk_import_products", fake_bulk)
+
+    register(client, email="tr@b.com")
+    make_admin(client, "tr@b.com")
+    loop = asyncio.get_event_loop()
+    manager = bg.ImportJobManager(client._db)
+    job_id = loop.run_until_complete(
+        manager.create_job("bulk", "cj", {"max_products": 1}, "u1"))
+    loop.run_until_complete(bg.background_import_cj_products(
+        job_id=job_id, keyword="necklace", category_id=None,
+        max_products=1, db=client._db))
+
+    doc = loop.run_until_complete(client._db.products.find_one({"external_id": "T-1"}))
+    assert ARABIC_LETTER.search(doc["name_ar"]), \
+        f"the Arabic field was filled with English: {doc['name_ar']!r}"
+    assert doc["name"] == "S925 Sterling Silver Butterfly Pendant Necklace for Women"
+    assert ARABIC_LETTER.search(doc["description_ar"] or ""), doc["description_ar"]
+
+
+def test_the_backfill_translates_the_catalogue_and_owns_up_to_what_it_cannot(client):
+    """
+    The shop already holds products whose Arabic field is English. The backfill
+    must fix those, leave a name the owner wrote alone, and report — not
+    invent — the ones it cannot read.
+    """
+    import asyncio
+
+    register(client, email="fill@b.com")
+    make_admin(client, "fill@b.com")
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_many([
+        {"id": "en-1", "source": "cj_dropshipping", "external_id": "E1",
+         "name": "Women Vintage Lace Halo Cubic Zirconia Ring",
+         "name_ar": "Women Vintage Lace Halo Cubic Zirconia Ring",
+         "description": "d", "price": 78.0, "category": "rings", "images": []},
+        {"id": "mine-1", "source": "manual",
+         "name": "Zircon Ring", "name_ar": "خاتم اخترتُ اسمه بنفسي",
+         "description": "d", "description_ar": "وصف كتبتُه بنفسي",
+         "price": 90.0, "category": "rings", "images": []},
+        {"id": "opaque-1", "source": "cj_dropshipping", "external_id": "O1",
+         "name": "Hot Selling New Arrival 2024", "name_ar": "Hot Selling New Arrival 2024",
+         "description": "d", "price": 20.0, "category": "sets", "images": []},
+    ]))
+
+    pending = client.get("/api/admin/products/untranslated").json()
+    assert pending["untranslated"] == 2, pending
+    assert pending["translatable"] == 1, "the count must not promise what it cannot do"
+
+    report = client.post("/api/admin/products/translate").json()
+    assert report["translated"] == 1, report
+    assert report["unreadable"] == 1
+    assert report["unreadable_products"][0]["id"] == "opaque-1"
+
+    docs = {d["id"]: d for d in
+            loop.run_until_complete(client._db.products.find({}).to_list(100))}
+    assert ARABIC_LETTER.search(docs["en-1"]["name_ar"]), docs["en-1"]["name_ar"]
+    assert docs["mine-1"]["name_ar"] == "خاتم اخترتُ اسمه بنفسي", \
+        "a name the owner wrote must never be overwritten"
+    assert docs["mine-1"]["description_ar"] == "وصف كتبتُه بنفسي", \
+        "nor a description he wrote"
+    assert docs["opaque-1"]["name_ar"] == "Hot Selling New Arrival 2024", \
+        "an unreadable title must keep its English, not gain an invented Arabic"
+
+    # Running it twice must change nothing further.
+    again = client.post("/api/admin/products/translate").json()
+    assert again["translated"] == 0, again

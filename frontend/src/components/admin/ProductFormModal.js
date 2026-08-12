@@ -31,10 +31,18 @@ const ProductFormModal = ({
   const isRTL = language === 'ar';
   const isEdit = !!product;
 
+  // `name` is the English name and `name_ar` the Arabic one, matching what the
+  // storefront reads (`name_ar || name` in Arabic, `name || name_en` in
+  // English). This form used to label `name` as the Arabic field, so the box
+  // marked «اسم المنتج (عربي)» showed the English title and saving it wrote
+  // English back — the one screen the owner would open to correct a
+  // translation could not store one.
   const [formData, setFormData] = useState({
     name: '',
+    name_ar: '',
     name_en: '',
     description: '',
+    description_ar: '',
     description_en: '',
     price: '',
     original_price: '',
@@ -88,8 +96,10 @@ const ProductFormModal = ({
     if (product) {
       setFormData({
         name: product.name || '',
+        name_ar: product.name_ar || '',
         name_en: product.name_en || '',
         description: product.description || '',
+        description_ar: product.description_ar || '',
         description_en: product.description_en || '',
         price: product.price || '',
         original_price: product.original_price || '',
@@ -124,13 +134,11 @@ const ProductFormModal = ({
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
 
-    // Auto-generate English name/description if not provided
-    if (field === 'name' && !formData.name_en && value) {
-      setFormData(prev => ({ ...prev, name_en: value }));
-    }
-    if (field === 'description' && !formData.description_en && value) {
-      setFormData(prev => ({ ...prev, description_en: value }));
-    }
+    // No auto-copy between the language fields. It used to mirror whatever was
+    // typed into the other language's box, which is how a shop ends up with an
+    // Arabic column full of English — the exact fault this form now exists to
+    // let the owner repair. An empty Arabic field is honest, and the storefront
+    // already falls back to the English name when it finds one.
   };
 
   const handleImageChange = (index, value) => {
@@ -266,28 +274,33 @@ const ProductFormModal = ({
                 {/* Product Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {isRTL ? 'اسم المنتج (عربي) *' : 'Product Name (Arabic) *'}
+                    {isRTL ? 'اسم المنتج (عربي)' : 'Product Name (Arabic)'}
                   </label>
                   <Input
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder={isRTL ? 'أدخل اسم المنتج' : 'Enter product name'}
-                    className={errors.name ? 'border-red-500' : ''}
+                    value={formData.name_ar}
+                    onChange={(e) => handleInputChange('name_ar', e.target.value)}
+                    placeholder={isRTL ? 'أدخل اسم المنتج بالعربية' : 'Enter product name in Arabic'}
                     dir="rtl"
                   />
-                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                  <p className="text-xs text-gray-500 mt-1">
+                    {isRTL
+                      ? 'إن تُرك فارغاً يُعرض الاسم الإنجليزي للزائر العربي.'
+                      : 'Left empty, Arabic visitors see the English name.'}
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {isRTL ? 'اسم المنتج (إنجليزي)' : 'Product Name (English)'}
+                    {isRTL ? 'اسم المنتج (إنجليزي) *' : 'Product Name (English) *'}
                   </label>
                   <Input
-                    value={formData.name_en}
-                    onChange={(e) => handleInputChange('name_en', e.target.value)}
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter product name in English"
+                    className={errors.name ? 'border-red-500' : ''}
                     dir="ltr"
                   />
+                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                 </div>
               </div>
 
@@ -298,10 +311,10 @@ const ProductFormModal = ({
                     {isRTL ? 'وصف المنتج (عربي)' : 'Product Description (Arabic)'}
                   </label>
                   <textarea
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    value={formData.description_ar}
+                    onChange={(e) => handleInputChange('description_ar', e.target.value)}
                     rows={4}
-                    placeholder={isRTL ? 'أدخل وصف المنتج' : 'Enter product description'}
+                    placeholder={isRTL ? 'أدخل وصف المنتج بالعربية' : 'Enter product description in Arabic'}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                     dir="rtl"
                   />
@@ -312,8 +325,8 @@ const ProductFormModal = ({
                     {isRTL ? 'وصف المنتج (إنجليزي)' : 'Product Description (English)'}
                   </label>
                   <textarea
-                    value={formData.description_en}
-                    onChange={(e) => handleInputChange('description_en', e.target.value)}
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
                     rows={4}
                     placeholder="Enter product description in English"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"

@@ -4333,3 +4333,57 @@ def test_the_api_actually_sends_the_arabic_name_it_stores(client):
     # And the single-product page, which reads the same fields.
     one = client.get("/api/products/wire-1").json()
     assert ARABIC_LETTER.search(one.get("name_ar") or ""), one
+
+
+def test_the_broom_keeps_a_ring_with_a_flower_on_it():
+    """
+    The broom deletes. So the question is not only "does it find the intruders"
+    but "what would it have deleted by mistake".
+
+    Most jewellery is shaped like something. "Crystal Flower Pendant Necklace",
+    "Rose Flower Stud Earrings", "Vintage Flower Ring" — the word flower is on
+    the off-niche list for dried bouquets, and the veto used to be absolute, so
+    the broom marked all three and the purge re-verified with the same rule and
+    agreed. That is real stock, deleted on the owner's confirmation, with the
+    screen telling him they were intruders.
+    """
+    from services.import_service import looks_like_adornment
+
+    def verdict(name, category="Jewelry & Accessories"):
+        return looks_like_adornment(
+            {"productNameEn": name, "productName": "", "categoryName": category})
+
+    keep = [
+        "Crystal Flower Pendant Necklace for Women",
+        "Rose Flower Stud Earrings 925 Silver",
+        "Vintage Flower Ring Gold Plated",
+        "Butterfly Charm Bracelet Stainless Steel",
+        "Pearl Belt Chain Waist Jewelry",
+        "Snake Chain Anklet Beach Jewelry",
+        "Hair Clip Pearl Elegant for Girls",
+        "Bridal Tiara Crown Rhinestone",
+        "18K Gold Plated Zircon Inlaid Accessory",
+    ]
+    for name in keep:
+        assert verdict(name), f"the broom would have deleted real stock: {name}"
+
+    sweep = [
+        "Mini Dried Flower 6 Bouquets",
+        "Elegant Evening Dress Women",
+        "Running Shoes Men Sneakers",
+        "Scented Candles Home Decor Set",
+        "Plush Toy Bear Gift",
+        "Leather Handbag Purse Women",
+        "Phone Case Silicone Cover",
+        "Winter Knitted Scarf Women",
+        # Carries a jewellery word and is not jewellery.
+        "Necklace Display Stand Holder Organizer",
+        "Jewelry Box Storage Case Velvet",
+        "Keychain Bear Plush Pendant Gift",
+        # CJ files these under "Jewelry & Accessories" too. The supplier's
+        # category must never be what decides a product is jewellery.
+        "Wireless Bluetooth Earphones",
+        "USB Fast Charger Cable",
+    ]
+    for name in sweep:
+        assert not verdict(name), f"an intruder the broom would leave in the shop: {name}"

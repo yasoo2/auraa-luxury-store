@@ -697,6 +697,54 @@ check('التقويم الميلادي مثبَّت وليس افتراضياً'
     reports ? '' : 'رسالة بلا سبب لا يُبنى عليها تشخيص');
 }
 
+// الشعار يُرى على الخلفية التي تحته.
+// كان ذهبياً على شريط ذهبي، فنسبة التباين قريبة من ١ — لا باهت بل غائب،
+// ورآه المالك على متجره قبل أن يراه أي فحص. تُقاس النسبة فعلاً بين لون
+// الحلقة وكل درجة في تدرّج الشريط، ويُطالَب بـ٣:١ وهو حدّ WCAG للأشكال.
+{
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(500);
+  const contrast = await page.evaluate(() => {
+    const ring = document.querySelector('[data-testid="brand-mark-ring"]');
+    if (!ring) return { why: 'علامة الشعار غير موجودة في الشريط' };
+    const bar = ring.closest('nav');
+    if (!bar) return { why: 'لا شريط حول الشعار' };
+
+    const rgb = (text) => {
+      const hex = text.match(/#([0-9a-f]{6})/i);
+      if (hex) return [0, 2, 4].map((i) => parseInt(hex[1].slice(i, i + 2), 16));
+      const m = text.match(/rgba?\(([^)]+)\)/i);
+      return m ? m[1].split(',').slice(0, 3).map((n) => parseFloat(n)) : null;
+    };
+    const lum = ([r, g, b]) => {
+      const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const ratio = (a, b) => {
+      const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+      return (x + 0.05) / (y + 0.05);
+    };
+
+    const ink = rgb(ring.getAttribute('data-stroke') || '');
+    const style = getComputedStyle(bar);
+    const grounds = [];
+    for (const m of (style.backgroundImage || '').matchAll(/#([0-9a-f]{6})|rgba?\([^)]+\)/gi)) {
+      const c = rgb(m[0]);
+      if (c) grounds.push(c);
+    }
+    const solid = rgb(style.backgroundColor || '');
+    if (solid && grounds.length === 0) grounds.push(solid);
+    if (!ink || grounds.length === 0) return { why: 'تعذّرت قراءة الألوان' };
+
+    return { worst: Math.min(...grounds.map((g) => ratio(ink, g))), stops: grounds.length };
+  });
+  const ok = contrast.worst >= 3;
+  check('الشعار يُرى على خلفية الشريط لا يذوب فيها', ok,
+    contrast.why ? contrast.why
+      : `أسوأ تباين ${contrast.worst.toFixed(2)}:1 عبر ${contrast.stops} درجات (المطلوب 3:1)`);
+}
+
 // كل إشارة إلى الشعار تحمل النسخة نفسها.
 // الشعار يُخدَّم بذاكرة طويلة، فتغييره وحده لا يصل إلى أحد — لا بدّ من رفع
 // ‎?v=‎ معه في كل موضع. وقد وقع هذا فعلاً: بقي هاتف المالك يعرض الشعار

@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import {
   isIos, useInstallState, triggerInstall, IosInstallGuide,
 } from './InstallAppButton';
+import BrandMark from './BrandMark';
 
 // The owner's ask, verbatim: a bar like the cookie bar that tells the visitor
 // plainly to install the app, comes back on EVERY visit until they install —
@@ -63,7 +64,7 @@ const InstallBanner = () => {
         className="fixed bottom-0 inset-inline-start-0 inset-inline-end-0 left-0 right-0 z-40 bg-[#101724] text-white border-t-2 border-[#c9a24b] shadow-2xl"
       >
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          <img src="/favicon.svg?v=3" alt="" className="w-10 h-10 flex-shrink-0" />
+          <BrandMark className="w-10 h-10 flex-shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-bold text-sm sm:text-base text-[#e8cc84]">
               {isRTL ? 'ثبّت تطبيق Auraa Luxury' : 'Install the Auraa Luxury app'}

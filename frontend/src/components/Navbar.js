@@ -13,6 +13,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import FLAGS from '../config/flags';
 import { API_BASE_URL } from '../api';
+import BrandMark from './BrandMark';
 
 const BACKEND_URL = API_BASE_URL;
 const API = `${BACKEND_URL}/api`;
@@ -124,7 +125,7 @@ const Navbar = () => {
             >
               {/* The pendant mark joins the wordmark on wider screens; on a
                   narrow phone every pixel of this row is already spoken for. */}
-              <img src="/favicon.svg?v=3" alt="" className="hidden sm:block h-9 w-9" />
+              <BrandMark tone="ink" className="hidden sm:block h-9 w-9" />
               <div className="flex flex-col items-start">
               <div className="font-display font-black leading-none flex items-baseline gap-1">
                 <span className="text-xl sm:text-2xl md:text-3xl carousel-luxury-text leading-none whitespace-nowrap">Auraa</span>

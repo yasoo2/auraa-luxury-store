@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import BrandMark from './BrandMark';
 
 // Every string here follows the language switch. Most of this footer used to
 // be Arabic written straight into the JSX: with the store now opening in
@@ -17,7 +18,7 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <img src="/favicon.svg?v=3" alt="" className="w-9 h-9" />
+              <BrandMark className="w-9 h-9" />
               <span className="font-display text-2xl font-bold gradient-text">Auraa Luxury</span>
             </div>
             <p className="text-gray-300 mb-4 leading-relaxed">

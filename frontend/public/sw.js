@@ -1,7 +1,7 @@
 // Service Worker for Auraa Luxury PWA
 // IMPORTANT: Auto-generated version based on deployment time
 const APP_VERSION = '1.0.9';
-const BUILD_TIMESTAMP = 1786565120944; // Auto-generated on each build
+const BUILD_TIMESTAMP = 1786566829698; // Auto-generated on each build
 const CACHE_NAME = `auraa-luxury-v${APP_VERSION}-${BUILD_TIMESTAMP}`;
 const DATA_CACHE_NAME = `auraa-data-v${APP_VERSION}-${BUILD_TIMESTAMP}`;
 
@@ -240,8 +240,8 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: notificationData.body || 'You have a new notification from Auraa Luxury',
-    icon: notificationData.icon || '/favicon.svg?v=2',
-    badge: notificationData.badge || '/favicon.svg?v=2',
+    icon: notificationData.icon || '/favicon.svg?v=3',
+    badge: notificationData.badge || '/favicon.svg?v=3',
     image: notificationData.image,
     data: notificationData.data,
     actions: [
@@ -376,7 +376,7 @@ async function syncOrderData() {
           // Show success notification
           self.registration.showNotification('Order Placed Successfully', {
             body: 'Your order has been successfully placed!',
-            icon: '/favicon.svg?v=2',
+            icon: '/favicon.svg?v=3',
             tag: 'order-success'
           });
         }

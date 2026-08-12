@@ -66,7 +66,10 @@ _OFF_NICHE_NEGATIVE = _re.compile(
     # Home decor and party props — «باقات زهور مجففة» slipped through as an
     # "Accessories Set" because only apparel was refused.
     r"flowers?|bouquets?|vases?|candles?|decorations?|home\s*decor|"
-    r"stickers?|mugs?|keychains?|key\s*chains?|toys?|plush)\b", _re.IGNORECASE)
+    r"stickers?|mugs?|keychains?|key\s*chains?|toys?|plush|"
+    # Electronics, which CJ also files under "Jewelry & Accessories"
+    r"earphones?|headphones?|earbuds?|chargers?|cables?|speakers?|"
+    r"power\s*banks?|mouse\s*pads?)\b", _re.IGNORECASE)
 
 _ADORNMENT_POSITIVE = (
     # English — the six shelves and the wider adornment vocabulary
@@ -84,16 +87,71 @@ _ADORNMENT_POSITIVE = (
 )
 
 
+# The nouns that name the product itself. A title containing one of these is
+# jewellery, whatever else it mentions.
+#
+# This exists because the veto below used to be absolute, and most jewellery is
+# *shaped like something*: "Crystal Flower Pendant Necklace", "Rose Flower Stud
+# Earrings", "Vintage Flower Ring". The word "flower" is on the off-niche list —
+# for dried bouquets — so the broom marked all three for deletion, and the purge
+# re-verified with the same rule and agreed. It would have deleted real stock.
+# A decorative word describes the piece; the head noun says what it is.
+_ADORNMENT_TYPES = _re.compile(
+    r"\b(earrings?|ear\s*studs?|ear\s*cuffs?|hoop\s*earrings?|"
+    r"necklaces?|pendants?|chokers?|lockets?|clavicle\s*chains?|"
+    r"bracelets?|bangles?|anklets?|"
+    r"rings?|watches|watch|brooch(?:es)?|tiaras?|"
+    r"jewell?e?ry\s*sets?|waist\s*jewell?e?ry|body\s*jewell?e?ry|"
+    r"hair\s*(?:clips?|pins?|bands?|combs?)|headbands?|barrettes?|"
+    r"body\s*chains?|waist\s*chains?)\b", _re.IGNORECASE)
+
+# Note what is NOT in that list: the bare words "jewelry" and "jewellery". CJ
+# labels half its catalogue "Jewelry & Accessories", so accepting the bare word
+# as a head noun kept every dress and every pair of shoes that arrived under it
+# — which is precisely what the first draft of this rule did.
+
+# And the words that win even against a head noun, because they name what the
+# object *is*. "Necklace Display Stand" carries the word necklace and is not
+# one; "Keychain Bear Plush Pendant" carries the word pendant and is a keyring.
+_NOT_THE_JEWEL_ITSELF = _re.compile(
+    r"\b(display\s*(?:stand|rack|holder)|"
+    r"jewell?e?ry\s*(?:box|boxes|case|cases|organiser|organizer|display|stand|"
+    r"holder|tray|roll|pouch|bag)|"
+    r"storage\s*box|gift\s*box|packaging|"
+    r"jewell?e?ry\s*making|findings|pliers|tool\s*kits?|"
+    r"beading\s*wire|clasps?\s*for|"
+    r"keychains?|key\s*chains?|key\s*rings?|phone\s*case|plush|toys?|"
+    r"handbags?|backpacks?|purses?|wallets?)\b", _re.IGNORECASE)
+
+
 def looks_like_adornment(product: Dict[str, Any]) -> bool:
-    text = " ".join(str(product.get(k) or "") for k in
-                    ("productNameEn", "productName", "categoryName")).lower()
-    if not text.strip():
+    # The head noun is read from the product's own name only. The supplier's
+    # category is free text — "Jewelry & Accessories" sits on shoes — so it may
+    # inform the softer checks below but must never decide what a product is.
+    named = " ".join(str(product.get(k) or "") for k in
+                     ("productNameEn", "productName")).lower()
+    everything = f"{named} {str(product.get('categoryName') or '')}".lower()
+    if not everything.strip():
         return False
-    # Crystal-studded boots are still boots, and a dried-flower "accessories
-    # set" is still flowers: off-niche words veto first.
-    if _OFF_NICHE_NEGATIVE.search(text):
+
+    # A box for necklaces is not a necklace, however often it says the word.
+    if _NOT_THE_JEWEL_ITSELF.search(everything):
         return False
-    return any(term in text for term in _ADORNMENT_POSITIVE)
+
+    # The head noun decides. A ring with a flower on it is a ring.
+    if _ADORNMENT_TYPES.search(named):
+        return True
+
+    # Nothing names a piece of jewellery. Now the off-niche words carry it:
+    # crystal-studded boots are still boots, and a dried-flower "accessories
+    # set" is still flowers.
+    if _OFF_NICHE_NEGATIVE.search(everything):
+        return False
+    # Name-only again, and for the same reason: CJ files Bluetooth earphones
+    # under "Jewelry & Accessories", and the word jewelry is on the positive
+    # list — so reading the category here let electronics through on the
+    # supplier's say-so rather than on anything about the product.
+    return any(term in named for term in _ADORNMENT_POSITIVE)
 
 
 async def bulk_import_products(

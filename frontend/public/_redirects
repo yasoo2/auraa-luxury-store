@@ -1,13 +1,29 @@
 # Cloudflare Pages Redirects
 #
-# Static assets that do not exist must say so with a 404 — never the SPA
-# shell at 200. During a deploy window the shell-as-200 answer was cached
-# under the stylesheet's URL (browsers honour the year-long immutable
-# header, and the service worker trusts response.ok), and the store then
-# served HTML as its CSS: a completely unstyled page. Existing files are
-# served before these rules run, so the 404 line only fires for assets
-# that genuinely do not exist.
-/static/* /index.html 404
-
-# All other routes serve index.html for client-side routing
+# One rule, and nothing before it.
+#
+# There used to be a `/static/* /index.html 404` line above this one, written to
+# stop the SPA catch-all answering a missing asset with the shell at status 200.
+# It carried the assumption that "existing files are served before these rules
+# run" — and that assumption was never checked. Cloudflare Pages evaluates a
+# wildcard rule at the edge, ahead of resolving the file, so the rule did not
+# fire only for assets that were missing: it answered 404 for the shop's own
+# JavaScript bundle, every single request.
+#
+# It took three days to surface because /static/* is served `immutable,
+# max-age=31536000`. Every browser that had already loaded a bundle kept using
+# its cached copy and never asked again, so the shop looked fine. The moment a
+# deploy changed the hash — or a cache was cleared — the browser asked for the
+# real file, was told 404, and the store was a blank white page with no
+# JavaScript at all. Clearing the cache made it worse, never better, which is
+# exactly backwards from how a caching problem behaves and is why it was
+# misread as one.
+#
+# The protection that line was written for already exists where it belongs and
+# is tested: the service worker refuses to store any asset whose body is HTML
+# (`cacheableAsset` in sw.js), so a shell answered under a stylesheet's URL is
+# never cached, however the host chooses to reply.
+#
+# Nothing may be added above this rule that can match /static/*. The check
+# «لا قاعدة تحجب حزمة المتجر عن نفسه» in scripts/verify-layout.mjs enforces it.
 /* /index.html 200

@@ -586,13 +586,9 @@ body {
 }
 
 /* Navigation */
-/* Gold at the wordmark, pale at the far edge — in whichever direction the
-   page runs. A hard 90deg gradient put the gold on the empty side the moment
-   the header stopped being forced LTR. */
-[dir="rtl"] .nav-glass {
-  background: linear-gradient(270deg, var(--color-gold) 0%, var(--color-silver) 100%);
-}
-
+/* Gold under the wordmark. The bar is pinned LTR in every language (the
+   logo is a fixed landmark, by the owner's rule), so the gold starts on the
+   left and stays there — no direction-aware flip. */
 .nav-glass {
   background: linear-gradient(90deg, var(--color-gold) 0%, var(--color-silver) 100%);
   backdrop-filter: blur(6px);

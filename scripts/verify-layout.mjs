@@ -392,10 +392,9 @@ const lira = await page.evaluate(() => {
 });
 check('الليرة التركية قابلة للوصول والنقر في قائمة العملات', lira.ok, lira.why);
 
-// الشريط يجب أن يقرأ باتجاه الصفحة. كان مثبَّتاً قسراً على LTR مهما كانت
-// اللغة، فعلى المتجر العربي — وهو RTL من أعلاه إلى أسفله — يقرأ الشريط
-// وحده بالعكس: الشعار يساراً وكل شيء آخر يميناً. بلاغ المالك: «ما رايك
-// بترتيب الهيد وموقع الشعار... الاحظ انه يوجد مشاكل».
+// قاعدة المالك: الشعار علامة ثابتة لا تتنقّل بتبدّل اللغة — «يجب ان يكون
+// ثابت كما في مجال الانجليزيه حتى لو تغيرت اللغه». الصفحة تنقلب كالمعتاد،
+// وهذا الشريط وحده مثبَّت. الفحص يطالب بموضع واحد في اللغتين، لا بمرآة.
 for (const lang of ['ar', 'en']) {
   await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
   await page.evaluate((l) => localStorage.setItem('language', l), lang);
@@ -414,14 +413,8 @@ for (const lang of ['ar', 'en']) {
   });
   const why = [];
   if (!head) why.push('الشريط أو الشعار غير موجود');
-  else {
-    if (head.rowDir !== head.pageDir) {
-      why.push(`اتجاه الشريط ${head.rowDir} واتجاه الصفحة ${head.pageDir}`);
-    }
-    // العربية: الشعار في النصف الأيمن. الإنجليزية: في الأيسر.
-    if (head.logoOnLeftHalf !== (lang === 'en')) why.push('الشعار في الجهة الخطأ من الشريط');
-  }
-  check(`الشريط يتبع اتجاه الصفحة والشعار في مبدئها (${lang})`, why.length === 0, why.join('، '));
+  else if (!head.logoOnLeftHalf) why.push('الشعار انتقل إلى الجهة الأخرى بتبدّل اللغة');
+  check(`الشعار ثابت في مكانه مهما تبدّلت اللغة (${lang})`, why.length === 0, why.join('، '));
 }
 await page.evaluate(() => localStorage.setItem('language', 'en'));
 

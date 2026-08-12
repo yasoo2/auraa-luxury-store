@@ -392,6 +392,39 @@ const lira = await page.evaluate(() => {
 });
 check('الليرة التركية قابلة للوصول والنقر في قائمة العملات', lira.ok, lira.why);
 
+// الشريط يجب أن يقرأ باتجاه الصفحة. كان مثبَّتاً قسراً على LTR مهما كانت
+// اللغة، فعلى المتجر العربي — وهو RTL من أعلاه إلى أسفله — يقرأ الشريط
+// وحده بالعكس: الشعار يساراً وكل شيء آخر يميناً. بلاغ المالك: «ما رايك
+// بترتيب الهيد وموقع الشعار... الاحظ انه يوجد مشاكل».
+for (const lang of ['ar', 'en']) {
+  await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+  await page.evaluate((l) => localStorage.setItem('language', l), lang);
+  await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(700);
+  const head = await page.evaluate(() => {
+    const row = document.querySelector('nav .relative.flex');
+    const logo = document.querySelector('nav a[href="/"]');
+    if (!row || !logo) return null;
+    const r = logo.getBoundingClientRect();
+    return {
+      pageDir: document.documentElement.dir,
+      rowDir: getComputedStyle(row).direction,
+      logoOnLeftHalf: r.left < document.documentElement.clientWidth / 2,
+    };
+  });
+  const why = [];
+  if (!head) why.push('الشريط أو الشعار غير موجود');
+  else {
+    if (head.rowDir !== head.pageDir) {
+      why.push(`اتجاه الشريط ${head.rowDir} واتجاه الصفحة ${head.pageDir}`);
+    }
+    // العربية: الشعار في النصف الأيمن. الإنجليزية: في الأيسر.
+    if (head.logoOnLeftHalf !== (lang === 'en')) why.push('الشعار في الجهة الخطأ من الشريط');
+  }
+  check(`الشريط يتبع اتجاه الصفحة والشعار في مبدئها (${lang})`, why.length === 0, why.join('، '));
+}
+await page.evaluate(() => localStorage.setItem('language', 'en'));
+
 // صندوق البحث في الشريط: كان ينضغط لشريحة ~٥٤ بكسل ثم «يتمدد» عند النقر
 // بعرض ثابت من CSS تحت زرّ اللغة — لقطة المالك حرفياً. الصندوق يجب أن
 // يكون عريضاً بما يُستعمل، ونقرة مركزه تصيبه هو، ولا يتقاطع مع زرّ اللغة

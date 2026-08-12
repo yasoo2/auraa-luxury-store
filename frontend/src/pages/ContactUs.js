@@ -8,6 +8,7 @@ import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API_BASE_URL } from '../api';
+import { whatsappLink } from '../config/contact';
 
 const API = API_BASE_URL;
 const ContactUs = () => {
@@ -145,7 +146,7 @@ const ContactUs = () => {
                       {isRTL ? 'واتساب' : 'WhatsApp'}
                     </h3>
                     <a 
-                      href="https://wa.me/905013715391" 
+                      href={whatsappLink()} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-gray-600 hover:text-green-600"

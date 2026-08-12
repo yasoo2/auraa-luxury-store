@@ -74,7 +74,13 @@ export const CartProvider = ({ children }) => {
         throw new Error('Authentication required');
       }
 
-      await axios.delete(`${API}/cart/remove?product_id=${productId}`, {
+      // The id goes in the path, not the query. The server route is
+      // DELETE /api/cart/remove/{product_id}; this sent it as ?product_id= and
+      // so asked for /api/cart/remove, which does not exist. Every "remove"
+      // answered 404 — a shopper could put things in the cart and never take
+      // one out, and an item that will not leave the cart is an order that
+      // never gets placed.
+      await axios.delete(`${API}/cart/remove/${encodeURIComponent(productId)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

@@ -426,3 +426,50 @@ async def get_current_user(user: Dict[str, Any] = Depends(get_current_user_doc))
     always got a 401, so the session never survived a page reload.
     """
     return user
+
+
+class ProfileUpdate(BaseModel):
+    """
+    The fields a signed-in person may change about themselves.
+
+    Deliberately not `email`: the address identifies the account and is what a
+    password reset would be sent to, so changing it is an account operation
+    with its own confirmation, not a profile edit. The screen sends it anyway
+    (it renders it in the form) and it is ignored here rather than trusted.
+    """
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[Dict[str, Any]] = None
+
+
+@router.put("/profile")
+async def update_profile(
+    payload: ProfileUpdate,
+    request: Request,
+    user: Dict[str, Any] = Depends(get_current_user_doc),
+):
+    """
+    Save a customer's own details.
+
+    The profile screen has always called PUT /api/auth/profile — for the name,
+    the phone, and the delivery address — and this route did not exist. Every
+    save answered 404, the screen said "failed to update", and a customer could
+    not store the address their order would be shipped to.
+    """
+    db = request.app.state.db
+    updates = {k: v for k, v in payload.model_dump(exclude_none=True).items()}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one({"id": user["id"]}, {"$set": updates})
+
+    saved = await db.users.find_one({"id": user["id"]})
+    if saved:
+        saved.pop("_id", None)
+        saved.pop("password", None)
+        saved.pop("hashed_password", None)
+    # `success` is what the screen checks before it tells the customer their
+    # details were saved.
+    return {"success": True, "user": saved}

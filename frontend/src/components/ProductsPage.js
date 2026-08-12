@@ -11,7 +11,7 @@ import { setSEO } from '../utils/seo';
 import AdvancedSearch from './AdvancedSearch';
 import SmartRecommendations from './SmartRecommendations';
 import ProductComparison from './ProductComparison';
-import LiveChat from './LiveChat';
+import ContactButton from './ContactButton';
 import HeartButton from './HeartButton';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -458,7 +458,7 @@ const ProductsPage = () => {
       )}
       
       {/* Live Chat */}
-      <LiveChat userId={null} productId={null} />
+      <ContactButton />
     </div>
   );
 };

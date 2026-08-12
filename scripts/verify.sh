@@ -75,6 +75,12 @@ step "The app survives a browser that blocks storage" \
 
 # A screen reading a field the API never sends renders `undefined` at best and
 # takes the whole page down at worst — which is what `order.total` did.
+# A screen that calls a path nobody wrote is the repo's first rule broken, and
+# nothing checked it: a 654-line chat widget shipped calling four endpoints that
+# never existed, and "remove from cart" 404'd on every press.
+step "No screen calls a route the server does not have" \
+  node "$ROOT/scripts/verify-no-phantom-routes.mjs" "$ROOT/frontend/src" "$ROOT/backend"
+
 step "No screen reads a field the API does not send" \
   node "$ROOT/scripts/verify-no-phantom-fields.mjs"
 

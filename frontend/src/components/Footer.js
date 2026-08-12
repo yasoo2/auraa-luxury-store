@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import BrandMark from './BrandMark';
+import { whatsappLink } from '../config/contact';
 
 // Every string here follows the language switch. Most of this footer used to
 // be Arabic written straight into the JSX: with the store now opening in
@@ -111,7 +112,7 @@ const Footer = () => {
               <li className="flex items-center gap-2">
                 <MessageCircle className="h-4 w-4 text-amber-400" />
                 <a
-                  href="https://wa.me/905013715391"
+                  href={whatsappLink()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-300 hover:text-amber-400 transition-colors"

@@ -106,7 +106,13 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
         setIsSearching(true);
         
         // Fetch regular suggestions
-        const response = await axios.get(`${API}/search/suggestions?q=${encodeURIComponent(searchQuery)}`);
+        // /search, not /search/suggestions — the second was never written on
+        // the server, so the box's suggestions answered 404 and silently showed
+        // nothing. The real search endpoint returns matching products, which is
+        // what a suggestion list is.
+        const response = await axios.get(
+          `${API}/search?q=${encodeURIComponent(searchQuery)}&limit=6`
+        );
         setSuggestions(response.data || []);
         
         // Generate AI suggestions

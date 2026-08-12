@@ -4432,3 +4432,40 @@ def test_a_stored_list_title_is_repaired_on_the_way_out(client):
     row = next(p for p in client.get("/api/products").json() if p["id"] == "arr-1")
     assert row["name"] == "Mini Dried Flower 6 Bouquets", \
         f"the storefront still prints a data structure: {row['name']!r}"
+
+
+def test_a_customer_can_save_their_own_details_and_address(client):
+    """
+    The profile screen has always sent PUT /api/auth/profile — the name, the
+    phone, and the address an order would ship to — and no such route existed.
+    Every save answered 404 and the screen said "failed to update".
+    """
+    register(client, email="me@b.com", password="Passw0rd!")
+
+    r = client.put("/api/auth/profile", json={
+        "first_name": "يونس", "phone": "+90 501 371 5391",
+        "address": {"city": "Istanbul", "street": "Pınartepe Mah."},
+    })
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["success"] is True
+    assert body["user"]["first_name"] == "يونس"
+    assert body["user"]["address"]["city"] == "Istanbul"
+    # Never hand the password hash back to the browser.
+    assert "password" not in body["user"] and "hashed_password" not in body["user"]
+
+    # It persists — the next page load reads it back.
+    me = client.get("/api/auth/me").json()
+    assert me["first_name"] == "يونس"
+    assert me["phone"] == "+90 501 371 5391"
+
+    # The address survives a later edit that does not mention it.
+    client.put("/api/auth/profile", json={"last_name": "سوادي"})
+    me = client.get("/api/auth/me").json()
+    assert me["address"]["city"] == "Istanbul", "a partial edit wiped the address"
+    assert me["last_name"] == "سوادي"
+
+
+def test_saving_a_profile_needs_a_session(client):
+    r = client.put("/api/auth/profile", json={"first_name": "x"})
+    assert r.status_code in (401, 403), r.status_code

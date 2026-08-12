@@ -99,13 +99,15 @@ const Navbar = () => {
         {/* min-w-0 lets the flex children shrink instead of forcing the row wider
               than the viewport, which pushed the right-hand actions off-screen at
               tablet widths. */}
-        {/* The row follows the page's direction. It used to be pinned to
-            `direction: ltr` whatever the language, so on the Arabic store —
-            an RTL page from top to bottom — the header alone read the other
-            way: the wordmark sat on the LEFT while every other element on
-            every page started from the right. The owner saw it as "something
-            is wrong with the header" without being able to name it. */}
-        <div className="relative flex justify-between items-center gap-2 min-w-0 min-h-16 md:min-h-20 py-2">
+        {/* The header row stays LTR in every language, on the owner's
+            instruction: the wordmark is a fixed landmark and does not hop
+            from one side to the other when a visitor switches language.
+            (I had made it mirror with the page — that is the usual RTL
+            convention, but it is not what this brand wants, and a logo that
+            moves is a logo the eye has to hunt for.)
+            The page body below still flips normally; only this bar is
+            anchored. */}
+        <div className="relative flex justify-between items-center gap-2 min-w-0 min-h-16 md:min-h-20 py-2" style={{ direction: 'ltr' }}>
           {/* Logo (default inline left) - Mobile optimized */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
             <Link to="/" className="flex items-center gap-2 py-1 md:py-2 flex-shrink-0">

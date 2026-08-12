@@ -51,6 +51,11 @@ logger = logging.getLogger(__name__)
 # gone; anything CJ goes through cj_client.
 from services.cj_client import credentials_configured as cj_credentials_configured
 from services.import_service import looks_like_adornment
+from services.product_translation import (
+    translate_title,
+    translate_description,
+    looks_untranslated,
+)
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -3480,6 +3485,78 @@ async def purge_off_niche_products(data: Dict[str, Any], admin: User = Depends(g
         deleted = result.deleted_count
 
     return {"deleted": deleted, "refused": refused}
+
+
+@api_router.get("/admin/products/untranslated")
+async def count_untranslated_products(admin: User = Depends(get_admin_user)):
+    """
+    How much of the catalogue still has no Arabic, and how much can be given it.
+
+    "Untranslated" cannot mean "the field is empty": every product imported
+    before this existed has a populated `name_ar` holding the English title, so
+    an emptiness check reported a fully-English shop as fully translated. The
+    question that finds them is whether the field contains any Arabic letter.
+    """
+    docs = await db.products.find(
+        {}, {"id": 1, "name": 1, "name_en": 1, "name_ar": 1, "description_ar": 1}
+    ).to_list(100000)
+
+    pending = [d for d in docs if looks_untranslated(d.get("name_ar"))]
+    translatable = [
+        d for d in pending
+        if translate_title(d.get("name") or d.get("name_en") or "")
+    ]
+    return {
+        "total": len(docs),
+        "untranslated": len(pending),
+        # Named plainly because it will not be all of them: a title naming no
+        # jewellery term we know has no honest Arabic, and saying so up front
+        # is better than a button that silently does less than it promised.
+        "translatable": len(translatable),
+    }
+
+
+@api_router.post("/admin/products/translate")
+async def translate_products(admin: User = Depends(get_admin_user)):
+    """
+    Give the existing catalogue its Arabic.
+
+    Only touches fields that hold no Arabic — a name the owner wrote himself is
+    left exactly as he wrote it, and running this twice changes nothing the
+    second time. Products whose English names it cannot read are reported, not
+    guessed at.
+    """
+    docs = await db.products.find({}).to_list(100000)
+
+    translated, unreadable = 0, []
+    for doc in docs:
+        english = doc.get("name") or doc.get("name_en") or ""
+        updates: Dict[str, Any] = {}
+
+        if looks_untranslated(doc.get("name_ar")):
+            arabic_name = translate_title(english)
+            if arabic_name:
+                updates["name_ar"] = arabic_name
+            else:
+                unreadable.append({"id": doc.get("id"), "name": english})
+
+        if looks_untranslated(doc.get("description_ar")):
+            arabic_description = translate_description(english, doc.get("description") or "")
+            if arabic_description:
+                updates["description_ar"] = arabic_description
+
+        if updates:
+            updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+            await db.products.update_one({"id": doc["id"]}, {"$set": updates})
+            translated += 1
+
+    return {
+        "translated": translated,
+        "unreadable": len(unreadable),
+        # The list, not just the count: these are the ones the owner has to
+        # name himself, and he cannot do that without knowing which they are.
+        "unreadable_products": unreadable[:100],
+    }
 
 
 @api_router.delete("/admin/products/{product_id}")

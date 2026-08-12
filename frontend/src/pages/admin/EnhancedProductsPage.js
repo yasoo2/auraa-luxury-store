@@ -169,6 +169,33 @@ const EnhancedProductsPage = () => {
     }
   };
 
+  // ---- Arabic for the catalogue ------------------------------------------
+  // Everything imported before the translator existed carries the supplier's
+  // English title in its Arabic field, so switching the store to Arabic left
+  // every product name and description in English. This fills them in, and
+  // reports plainly how many it could not read rather than inventing names.
+  const [translating, setTranslating] = useState(false);
+
+  const translateCatalogue = async () => {
+    setTranslating(true);
+    try {
+      const { data } = await axios.post(`${API_URL}/api/admin/products/translate`);
+      if (data.translated === 0 && data.unreadable === 0) {
+        toast.success(isRTL ? 'كل المنتجات لها أسماء عربية بالفعل' : 'Every product already has an Arabic name');
+      } else {
+        toast.success(isRTL
+          ? `تُرجم ${data.translated} منتجاً${data.unreadable ? ` — و${data.unreadable} يحتاج اسماً تكتبه بنفسك` : ''}`
+          : `Translated ${data.translated}${data.unreadable ? ` — ${data.unreadable} need a name you write yourself` : ''}`);
+      }
+      await fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'فشلت الترجمة — لم يتغيّر شيء' : 'Translation failed — nothing changed'));
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   const handleDeleteProduct = async (productId) => {
     // eslint-disable-next-line no-restricted-globals
     if (!confirm(isRTL ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Are you sure you want to delete this product?')) {
@@ -377,6 +404,21 @@ const EnhancedProductsPage = () => {
             🧹 {scanningOffNiche
               ? (isRTL ? 'جارٍ الفحص…' : 'Scanning…')
               : (isRTL ? 'الدخلاء خارج التخصص' : 'Off-niche intruders')}
+          </Button>
+
+          {/* Fills the Arabic names of everything imported before the store
+              could write any — the reason the language button changed the
+              interface but never the products. */}
+          <Button
+            variant="outline"
+            onClick={translateCatalogue}
+            disabled={translating}
+            data-testid="translate-catalogue"
+            className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          >
+            🌐 {translating
+              ? (isRTL ? 'جارٍ الترجمة…' : 'Translating…')
+              : (isRTL ? 'ترجمة الأسماء للعربية' : 'Translate names to Arabic')}
           </Button>
 
           <Button variant="outline" onClick={removeDuplicates} data-testid="remove-duplicates">

@@ -99,7 +99,13 @@ const Navbar = () => {
         {/* min-w-0 lets the flex children shrink instead of forcing the row wider
               than the viewport, which pushed the right-hand actions off-screen at
               tablet widths. */}
-        <div className="relative flex justify-between items-center gap-2 min-w-0 min-h-16 md:min-h-20 py-2" style={{ direction: 'ltr' }}>
+        {/* The row follows the page's direction. It used to be pinned to
+            `direction: ltr` whatever the language, so on the Arabic store —
+            an RTL page from top to bottom — the header alone read the other
+            way: the wordmark sat on the LEFT while every other element on
+            every page started from the right. The owner saw it as "something
+            is wrong with the header" without being able to name it. */}
+        <div className="relative flex justify-between items-center gap-2 min-w-0 min-h-16 md:min-h-20 py-2">
           {/* Logo (default inline left) - Mobile optimized */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
             <Link to="/" className="flex items-center gap-2 py-1 md:py-2 flex-shrink-0">
@@ -122,7 +128,7 @@ const Navbar = () => {
           )}
 
           {/* Desktop Navigation */}
-          <div className="hidden xl:flex items-center gap-4 px-2" style={{ marginLeft: 'auto' }}>
+          <div className="hidden xl:flex items-center gap-4 px-2 ms-auto">
             {/* Categories Dropdown */}
             <div className="relative">
               <button
@@ -199,7 +205,7 @@ const Navbar = () => {
           {/* gap, not space-x: direction-agnostic, so the RTL reverse dance
               goes — and on a 320px cover display every one of these pixels
               decides whether the row fits or gets clipped. */}
-          <div className="flex items-center min-w-0 gap-1 sm:gap-2 md:gap-4">
+          <div className="flex items-center min-w-0 gap-1 sm:gap-2">
             {/* Language Currency Selector - Hidden on smallest screens */}
             <div className="hidden sm:block">
               <LanguageCurrencySelector />
@@ -207,6 +213,8 @@ const Navbar = () => {
 
             {/* Install corner (wide screens; phones get the drawer row) */}
             <InstallAppButton variant="navbar" />
+
+            <span className="hidden sm:block h-6 w-px bg-black/15 mx-1" aria-hidden="true" />
 
             {/* Cart */}
             <Link to="/cart" className="relative p-3 sm:p-2 text-black hover-text-brand transition-colors duration-200" data-testid="cart-link">
@@ -226,7 +234,7 @@ const Navbar = () => {
 
             {/* User Actions - Responsive */}
             {user ? (
-              <div className="flex items-center space-x-1 sm:space-x-2">
+              <div className="flex items-center gap-1 sm:gap-2 sm:ps-2 sm:ms-1 sm:border-s sm:border-black/15">
                 {/* Profile - Hidden on mobile, shown in menu */}
                 <Link to="/profile" className="hidden sm:block p-1.5 sm:p-2 text-gray-700 hover-text-brand transition-colors duration-200" data-testid="profile-link">
                   <User className="h-5 w-5 sm:h-6 sm:w-6" />

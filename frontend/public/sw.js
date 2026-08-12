@@ -1,7 +1,7 @@
 // Service Worker for Auraa Luxury PWA
 // IMPORTANT: Auto-generated version based on deployment time
 const APP_VERSION = '1.0.9';
-const BUILD_TIMESTAMP = 1786555301550; // Auto-generated on each build
+const BUILD_TIMESTAMP = 1786556634854; // Auto-generated on each build
 const CACHE_NAME = `auraa-luxury-v${APP_VERSION}-${BUILD_TIMESTAMP}`;
 const DATA_CACHE_NAME = `auraa-data-v${APP_VERSION}-${BUILD_TIMESTAMP}`;
 
@@ -94,6 +94,15 @@ function offlineFallback(request, err) {
   const reason = err ? `${err.name}: ${err.message}` : 'unknown';
   const where = request ? new URL(request.url).pathname : '';
   console.warn(`[SW] network fetch failed for ${where} — ${reason}`);
+
+  // An HTML body is an answer only a navigation can use. Handing it to a
+  // <script> tag makes the browser parse "<!doctype html>" as JavaScript: the
+  // bundle never runs, #root stays empty, and the shop is a blank white page —
+  // a worse failure than the network error it was trying to soften, and one
+  // that hides its own cause. Let the request fail as what it is.
+  if (request && request.destination && request.destination !== 'document') {
+    return Response.error();
+  }
 
   // A Response body can be read once, so build a fresh one every time.
   return new Response(

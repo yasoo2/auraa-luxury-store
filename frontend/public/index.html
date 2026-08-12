@@ -2,6 +2,61 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
+
+        <!-- The blank-page watchdog.
+             First script in the document on purpose: when the app fails to
+             start, nothing inside the app bundle can help, because the bundle
+             is the thing that did not run. So the recovery has to live here, in
+             the HTML itself.
+
+             If nothing has been drawn a few seconds after load, the caches and
+             the service worker are cleared and the page is reloaded once — that
+             repairs a stale shell pointing at a bundle that no longer exists,
+             and a script that came back as HTML. It runs at most once per
+             session, so it can never become a reload loop; if the page is still
+             blank afterwards it says so plainly instead of pretending to work. -->
+        <script>
+            (function () {
+                var TRIED = 'auraa-blank-recovery';
+                window.addEventListener('load', function () {
+                    setTimeout(function () {
+                        var root = document.getElementById('root');
+                        if (!root || root.childElementCount > 0) return;
+
+                        var tried;
+                        try { tried = sessionStorage.getItem(TRIED); } catch (e) { tried = '1'; }
+                        if (tried) {
+                            root.innerHTML =
+                                '<div style="font-family:system-ui;text-align:center;padding:3rem;line-height:1.9">'
+                                + '<h1 style="font-size:1.25rem">تعذّر تشغيل المتجر</h1>'
+                                + '<p>The store could not start.</p>'
+                                + '<p style="color:#777;font-size:.9rem">أُفرغت الذاكرة المؤقتة وأُعيد التحميل مرّة، ولم تُحلّ المشكلة.'
+                                + '<br>The cache was cleared and the page reloaded once; that did not fix it.</p>'
+                                + '<button onclick="location.reload()" style="margin-top:1rem;padding:.6rem 1.4rem;'
+                                + 'border:1px solid #bbb;border-radius:.5rem;background:#fff;cursor:pointer">'
+                                + 'إعادة المحاولة / Try again</button></div>';
+                            return;
+                        }
+                        try { sessionStorage.setItem(TRIED, String(Date.now())); } catch (e) { /* private mode */ }
+
+                        var jobs = [];
+                        if (window.caches && caches.keys) {
+                            jobs.push(caches.keys().then(function (keys) {
+                                return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                            }));
+                        }
+                        if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+                            jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+                                return Promise.all(regs.map(function (r) { return r.unregister(); }));
+                            }));
+                        }
+                        var reload = function () { location.reload(); };
+                        Promise.all(jobs).then(reload, reload);
+                    }, 8000);
+                });
+            })();
+        </script>
+
         <link rel="icon" href="%PUBLIC_URL%/favicon.svg?v=2" type="image/svg+xml" />
         <!-- iOS home-screen icons must be PNG; Safari ignores SVG here. -->
         <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon-192.png?v=2" />
@@ -55,11 +110,18 @@
             });
         </script>
         
-        <!--
-        These two scripts have been added for the testing, please do not edit or remove them
-        -->
-        <script src="https://unpkg.com/rrweb@latest/dist/rrweb.min.js"></script>
-        <script src="https://d2adkz2s9zrlge.cloudfront.net/rrweb-recorder-20250919-1.js"></script>
+        <!-- Two session-recording scripts used to sit here, left over from a
+             testing setup and marked "do not edit or remove them". They were
+             synchronous and in the head, so the browser had to download and run
+             both — one of them `rrweb@latest` from unpkg — before it would even
+             parse the body. Whenever that CDN was slow, rate-limited or blocked,
+             the shop was a blank white page: no header, no products, nothing.
+             That is a live store held hostage by a third party it did not need;
+             no code in this app ever called rrweb. Removed.
+
+             Anything added here in future must carry `async` or `defer`. A
+             storefront must never wait on another company's server to draw
+             its first pixel. -->
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>

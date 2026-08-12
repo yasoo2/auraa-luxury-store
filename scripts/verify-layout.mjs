@@ -626,6 +626,37 @@ check('التقويم الميلادي مثبَّت وليس افتراضياً'
   calendars.pinned === 'gregory' && calendars.bare !== 'gregory',
   `ar-SA=${calendars.bare}, pinned=${calendars.pinned}`);
 
+// لا سكربت طرف ثالث يحجب أوّل رسم للمتجر.
+// كان في الترويسة سكربتان متزامنان لتسجيل الجلسات، أحدهما rrweb@latest من
+// unpkg، فالمتصفّح ملزَم بتنزيلهما وتشغيلهما قبل أن يقرأ <body> أصلاً. ويوم
+// بطُؤت تلك الخوادم أو حُجبت، صار المتجر صفحة بيضاء فارغة — لا شعار ولا
+// منتجات — لأن متجراً حيّاً كان ينتظر خادم شركة أخرى ليرسم أوّل نقطة فيه.
+{
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const head = html.slice(0, html.indexOf('</head>') + 1);
+  const blocking = [...head.matchAll(/<script\b([^>]*)\bsrc=["']([^"']+)["']([^>]*)>/gi)]
+    .filter(([, before, src, after]) => {
+      if (!/^https?:\/\//i.test(src)) return false;          // ملفّاتنا نحن
+      const attrs = `${before} ${after}`;
+      return !/\basync\b/i.test(attrs) && !/\bdefer\b/i.test(attrs);
+    })
+    .map(([, , src]) => src);
+  check('لا سكربت خارجي يحجب رسم الصفحة في الترويسة',
+    blocking.length === 0,
+    blocking.length ? blocking.join('، ') : 'كل السكربتات الخارجية async أو defer');
+}
+
+// وشبكة الأمان: صفحة بيضاء يجب أن تُصلح نفسها لا أن تترك صاحب المتجر أمام
+// لا شيء. الحارس مكتوب في الـHTML نفسه لأن الحزمة التي فشلت لا تستطيع إنقاذ
+// نفسها.
+{
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const hasWatchdog = html.includes('auraa-blank-recovery')
+    && html.indexOf('auraa-blank-recovery') < html.indexOf('</head>');
+  check('حارس الصفحة البيضاء موجود في الـHTML قبل أي شيء آخر', hasWatchdog,
+    hasWatchdog ? '' : 'لا حارس — صفحة بيضاء تبقى بيضاء');
+}
+
 // Every date on every screen must use the pinned locale. This is the check
 // with teeth: revert one call site and it fails.
 const sources = [];
@@ -927,6 +958,36 @@ if (signedIn && oauthPage.url().includes('oauth-callback')) {
 check('دخول Google يكتمل ولا يعلق رغم تبدّل سياق المصادقة أثناءه',
   signedIn, signedWhy);
 await oauthCtx.close();
+
+// شبكة الأمان تُختبَر وإلا فهي ليست شبكة.
+// الحزمة تعود HTML بدل JavaScript في التحميل الأول — وهو ما ينتج عن قوقعة
+// قديمة تشير إلى بصمة لم تعد موجودة عند المستضيف. النتيجة صفحة بيضاء تماماً،
+// ولا شيء داخل الحزمة يستطيع إنقاذ نفسه لأن الحزمة هي التي لم تعمل. الحارس
+// يجب أن يُفرغ الذاكرة ويعيد التحميل مرّة واحدة فيعود المتجر.
+const blankCtx = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+await blankCtx.route('**/api/**', (route) =>
+  route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+let bundleServed = 0;
+await blankCtx.route('**/static/js/main.*.js', (route) => {
+  bundleServed += 1;
+  if (bundleServed === 1) {
+    return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><p>not javascript' });
+  }
+  return route.continue();
+});
+const blankPage = await blankCtx.newPage();
+await blankPage.goto(`${base}/products`, { waitUntil: 'domcontentloaded' });
+const blankBefore = await blankPage.evaluate(
+  () => (document.getElementById('root') || {}).childElementCount || 0);
+await blankPage.waitForTimeout(16000);
+const blankAfter = await blankPage.evaluate(
+  () => (document.getElementById('root') || {}).childElementCount || 0);
+const blankOk = blankBefore === 0 && blankAfter > 0;
+check('صفحة بيضاء تُصلح نفسها بدل أن تترك المتجر فارغاً', blankOk,
+  blankOk ? 'بيضاء عند التحميل ثم عادت بنفسها'
+    : (blankBefore !== 0 ? 'لم يُعَد إنتاج الصفحة البيضاء أصلاً — الفحص بلا أسنان'
+                         : 'بقيت بيضاء بعد مهلة الحارس'));
+await blankCtx.close();
 
 await browser.close();
 server.close();

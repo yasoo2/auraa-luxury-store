@@ -18,6 +18,38 @@
         <script>
             (function () {
                 var TRIED = 'auraa-blank-recovery';
+
+                // What actually went wrong, recorded as it happens. The first
+                // version of this watchdog said only "the store could not
+                // start" — true, useless, and the same sin as a spinner that
+                // never explains itself: the owner was left staring at a
+                // sentence that named nothing he could act on, and it could not
+                // be diagnosed from anywhere else because the failure is on his
+                // machine, not on the server.
+                var faults = [];
+                var note = function (text) {
+                    if (text && faults.indexOf(text) === -1 && faults.length < 4) faults.push(text);
+                };
+                window.addEventListener('error', function (e) {
+                    if (e && e.target && e.target !== window && e.target.src) {
+                        // A <script> or <link> that never loaded: the URL is the
+                        // whole diagnosis.
+                        note('لم يُحمَّل / failed to load: ' + String(e.target.src).replace(location.origin, ''));
+                    } else if (e && e.message) {
+                        note(e.message + (e.filename ? ' @ ' + String(e.filename).replace(location.origin, '') : ''));
+                    }
+                }, true);
+                window.addEventListener('unhandledrejection', function (e) {
+                    var r = e && e.reason;
+                    note('promise: ' + ((r && (r.message || r)) || 'unknown'));
+                });
+
+                var esc = function (s) {
+                    return String(s).replace(/[<>&"]/g, function (c) {
+                        return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c];
+                    });
+                };
+
                 window.addEventListener('load', function () {
                     setTimeout(function () {
                         var root = document.getElementById('root');
@@ -26,13 +58,20 @@
                         var tried;
                         try { tried = sessionStorage.getItem(TRIED); } catch (e) { tried = '1'; }
                         if (tried) {
+                            var why = faults.length
+                                ? faults.map(esc).join('<br>')
+                                : 'لم يُبلِّغ المتصفّح عن خطأ — الحزمة حُمِّلت ولم تُشغِّل شيئاً.'
+                                  + '<br>No error was reported: the bundle loaded and rendered nothing.';
                             root.innerHTML =
                                 '<div style="font-family:system-ui;text-align:center;padding:3rem;line-height:1.9">'
                                 + '<h1 style="font-size:1.25rem">تعذّر تشغيل المتجر</h1>'
                                 + '<p>The store could not start.</p>'
                                 + '<p style="color:#777;font-size:.9rem">أُفرغت الذاكرة المؤقتة وأُعيد التحميل مرّة، ولم تُحلّ المشكلة.'
                                 + '<br>The cache was cleared and the page reloaded once; that did not fix it.</p>'
-                                + '<button onclick="location.reload()" style="margin-top:1rem;padding:.6rem 1.4rem;'
+                                + '<pre dir="ltr" style="margin:1.2rem auto;max-width:46rem;text-align:start;'
+                                + 'white-space:pre-wrap;word-break:break-word;background:#f6f6f6;border:1px solid #e3e3e3;'
+                                + 'border-radius:.5rem;padding:.9rem;color:#444;font-size:.8rem">' + why + '</pre>'
+                                + '<button onclick="location.reload()" style="margin-top:.4rem;padding:.6rem 1.4rem;'
                                 + 'border:1px solid #bbb;border-radius:.5rem;background:#fff;cursor:pointer">'
                                 + 'إعادة المحاولة / Try again</button></div>';
                             return;
@@ -50,8 +89,18 @@
                                 return Promise.all(regs.map(function (r) { return r.unregister(); }));
                             }));
                         }
-                        var reload = function () { location.reload(); };
-                        Promise.all(jobs).then(reload, reload);
+                        // location.reload() is served from the HTTP cache, which
+                        // Cache Storage and the service worker have nothing to do
+                        // with. A shell cached there keeps pointing at the same
+                        // dead bundle no matter how much else is cleared, so the
+                        // retry has to ask for a URL the cache has never seen.
+                        var retry = function () {
+                            var url = location.pathname
+                                + (location.search ? location.search + '&' : '?')
+                                + '_retry=' + Date.now() + location.hash;
+                            location.replace(url);
+                        };
+                        Promise.all(jobs).then(retry, retry);
                     }, 8000);
                 });
             })();

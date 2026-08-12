@@ -4469,3 +4469,58 @@ def test_a_customer_can_save_their_own_details_and_address(client):
 def test_saving_a_profile_needs_a_session(client):
     r = client.put("/api/auth/profile", json={"first_name": "x"})
     assert r.status_code in (401, 403), r.status_code
+
+
+def test_a_visitor_message_is_kept_even_when_the_mail_cannot_go(client, monkeypatch):
+    """
+    «اتصل بنا» posted to /api/contact and no such route existed: the page said
+    «تم إرسال رسالتك بنجاح» while the request answered 404. A shop telling a
+    customer it received something it never saw is the worst of the fakes this
+    repo forbids — the customer then waits for a reply that cannot come.
+
+    Stored first and mailed second, on purpose. A message that exists only
+    inside a failed email attempt is a message lost.
+    """
+    import asyncio
+    from services import email_service
+
+    monkeypatch.setattr(email_service, "send_email",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no API key")))
+
+    r = client.post("/api/contact", json={
+        "name": "سارة", "email": "sara@example.com",
+        "phone": "+90 555 000 1122", "message": "هل القلادة متوفّرة بالفضة؟",
+    })
+    assert r.status_code == 200, r.text
+    assert r.json()["success"] is True
+
+    loop = asyncio.get_event_loop()
+    stored = loop.run_until_complete(client._db.contact_messages.find({}).to_list(10))
+    assert len(stored) == 1, "the message was lost when the mail failed"
+    assert stored[0]["message"] == "هل القلادة متوفّرة بالفضة؟"
+    assert stored[0]["emailed"] is False, "it must not claim a mail that never left"
+
+    # And the owner can read it.
+    register(client, email="boss@b.com")
+    make_admin(client, "boss@b.com")
+    listed = client.get("/api/admin/contact-messages").json()
+    assert listed["unread"] == 1
+    assert listed["messages"][0]["name"] == "سارة"
+
+    marked = client.post(f"/api/admin/contact-messages/{stored[0]['id']}/read")
+    assert marked.status_code == 200
+    assert client.get("/api/admin/contact-messages").json()["unread"] == 0
+
+
+def test_the_message_inbox_is_not_public(client):
+    register(client, email="nosy@b.com")
+    r = client.get("/api/admin/contact-messages")
+    assert r.status_code in (401, 403), r.status_code
+
+
+def test_a_contact_message_needs_a_real_address_and_a_body(client):
+    """A blank form must be refused, not stored as an empty row."""
+    assert client.post("/api/contact", json={
+        "name": "x", "email": "not-an-email", "message": "hi"}).status_code == 422
+    assert client.post("/api/contact", json={
+        "name": "x", "email": "a@b.com", "message": ""}).status_code == 422

@@ -101,8 +101,6 @@ function record(raw, file) {
  * the list is meant to shrink.
  */
 const KNOWN_GAPS = {
-  '/api/contact':
-    'نموذج «اتصل بنا» يرسل إلى لا مكان. يحتاج قراراً: صندوق وارد في اللوحة أم بريد.',
   '/api/auth/forgot-password':
     'من نسي كلمة مروره لا يستطيع استعادتها. يحتاج خدمة بريد وقراراً بشأنها.',
   '/api/auth/reset-password':

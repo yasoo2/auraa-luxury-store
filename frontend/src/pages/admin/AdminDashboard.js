@@ -14,6 +14,7 @@ import BulkImportPage from './BulkImportPage';
 import QuickImportPage from './QuickImportPage';
 import PricingPage from './PricingPage';
 import BusinessVerificationPage from './BusinessVerificationPage';
+import ContactMessagesPage from './ContactMessagesPage';
 import CMSPagesManager from './CMSPagesManager';
 import MediaLibrary from './MediaLibrary';
 import ThemeCustomization from './ThemeCustomization';
@@ -37,7 +38,8 @@ import {
   Palette,
   Shield,
   DollarSign,
-  BadgeCheck
+  BadgeCheck,
+  Inbox
 } from 'lucide-react';
 
 const BuildStamp = ({ isRTL }) => {
@@ -125,6 +127,11 @@ const AdminDashboard = () => {
       name: isRTL ? 'توثيق النشاط' : 'Business Verification',
       path: '/admin/business-verification',
       icon: BadgeCheck
+    },
+    {
+      name: isRTL ? 'رسائل العملاء' : 'Customer messages',
+      path: '/admin/contact-messages',
+      icon: Inbox
     },
     {
       name: isRTL ? 'المستخدمون' : 'Users',
@@ -300,6 +307,7 @@ const AdminDashboard = () => {
             <Route path="/quick-import" element={<QuickImportPage />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/business-verification" element={<BusinessVerificationPage />} />
+            <Route path="/contact-messages" element={<ContactMessagesPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />

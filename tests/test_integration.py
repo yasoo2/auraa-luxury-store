@@ -4294,3 +4294,42 @@ def test_the_shop_fills_its_own_arabic_at_startup(client):
     assert ARABIC_LETTER.search(docs["boot-1"]["name_ar"]), docs["boot-1"]["name_ar"]
     assert docs["boot-mine"]["name_ar"] == "خاتم سمّيتُه بنفسي"
     assert docs["boot-mine"]["description_ar"] == "وصف كتبتُه"
+
+
+def test_the_api_actually_sends_the_arabic_name_it_stores(client):
+    """
+    The gap that made #153 invisible on the screen.
+
+    Every storefront file asks for `p.name_ar || p.name`, and the database had
+    the Arabic — but `response_model=List[Product]` filters out every field the
+    model does not declare, and it declared no bilingual fields at all. So the
+    API deleted the Arabic from each reply on its way out, and no amount of
+    translating in the database could ever reach a visitor.
+
+    This asserts on the HTTP response, not on the document. The browser harness
+    cannot catch this class of fault: it stubs the API, so it tests the shape
+    this test is here to pin down.
+    """
+    import asyncio
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_one({
+        "id": "wire-1", "name": "Sterling Silver Butterfly Pendant Necklace",
+        "name_ar": "قلادة بتعليقة فضة إسترليني 925 بتصميم فراشة",
+        "description": "An English description.",
+        "description_ar": "النوع: قلادة · الخامة: فضة إسترليني 925",
+        "price": 120.0, "category": "necklaces", "images": ["https://x/a.jpg"],
+        "in_stock": True, "is_active": True,
+    }))
+
+    listed = client.get("/api/products").json()
+    row = next(p for p in listed if p["id"] == "wire-1")
+    assert ARABIC_LETTER.search(row.get("name_ar") or ""), \
+        f"the API dropped the Arabic name on its way out: {row!r}"
+    assert ARABIC_LETTER.search(row.get("description_ar") or ""), row
+    assert row["name"] == "Sterling Silver Butterfly Pendant Necklace", \
+        "the English must still be there for the English storefront"
+
+    # And the single-product page, which reads the same fields.
+    one = client.get("/api/products/wire-1").json()
+    assert ARABIC_LETTER.search(one.get("name_ar") or ""), one

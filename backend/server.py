@@ -349,6 +349,25 @@ class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: str
+    # The bilingual fields, and the reason they are declared here rather than
+    # left to the database document.
+    #
+    # A response_model does not merely validate — it *filters*. Every field not
+    # named on this model is dropped from the reply. These four were not on it,
+    # so `name_ar` was deleted from every product the API ever sent, while the
+    # storefront asked for exactly that field on line after line:
+    # `p.name_ar || p.name || p.name_en`. The Arabic was in the database, the
+    # screens were reading for it, and the model in between silently removed it
+    # — so filling the column in did nothing a visitor could see.
+    #
+    # Sending both languages, rather than resolving one server-side from a
+    # `?language=` parameter, is deliberate: no caller can forget to pass it,
+    # and switching the language redraws the catalogue instantly instead of
+    # refetching it.
+    name_ar: Optional[str] = None
+    name_en: Optional[str] = None
+    description_ar: Optional[str] = None
+    description_en: Optional[str] = None
     price: float
     original_price: Optional[float] = None
     discount_percentage: Optional[int] = None

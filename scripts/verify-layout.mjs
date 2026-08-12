@@ -661,6 +661,27 @@ check('التقويم الميلادي مثبَّت وليس افتراضياً'
     reports ? '' : 'رسالة بلا سبب لا يُبنى عليها تشخيص');
 }
 
+// لا قاعدة تحجب حزمة المتجر عن نفسه.
+// كانت في ‎_redirects قاعدة ‎`/static/* /index.html 404` كُتبت لتمنع ردّ القوقعة
+// مكان أصلٍ مفقود. لكن Cloudflare Pages يُقيّم قاعدة البدل عند الحافة قبل أن
+// يبحث عن الملف، فصارت تردّ 404 على حزمة جافاسكربت المتجر نفسها في كل طلب.
+// ولم يظهر ذلك ثلاثة أيام لأن ‎/static/* تُخدَّم immutable لسنة: كل متصفّح
+// حمّل الحزمة مرّة لم يسألها ثانية. وأوّل ما تبدّلت البصمة — أو أُفرغت
+// الذاكرة — طُلب الملف حقاً فرُدّ بـ404، والمتجر صفحة بيضاء بلا جافاسكربت.
+{
+  const redirects = fs.readFileSync(path.join(ROOT, '_redirects'), 'utf8');
+  const hostile = redirects.split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .filter((line) => {
+      const [from, , status] = line.split(/\s+/);
+      if (!from || !from.startsWith('/static')) return false;
+      return status !== '200';        // أي ردّ غير الملف نفسه على مسار الحزمة
+    });
+  check('لا قاعدة تحجب حزمة المتجر عن نفسه', hostile.length === 0,
+    hostile.length ? hostile.join(' | ') : '');
+}
+
 // قوقعة الصفحة لا تُخزَّن في ذاكرة المتصفّح. القاعدة ‎/*.html لم تُطابق صفحةً
 // واحدة من هذا المتجر: المتصفّح يطلب ‎/products و‎/admin/orders — مسارات بلا
 // ‎.html — وإعادةُ الكتابة إلى index.html تحدث بعد مطابقة الترويسات لا قبلها.

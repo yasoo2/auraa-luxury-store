@@ -214,7 +214,10 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
           </div>
         );
       case 'number':
-        return value.toLocaleString();
+        // Pinned, not left to the browser: a visitor whose device is set to
+        // Arabic gets ١٢٣٤ from the bare call, and the owner's rule is that
+        // digits stay Western in both languages.
+        return value.toLocaleString('en-US');
       default:
         return value;
     }

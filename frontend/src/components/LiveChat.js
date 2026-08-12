@@ -342,7 +342,7 @@ const LiveChat = ({ userId = null, productId = null }) => {
 
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString(
-      isRTL ? 'ar-SA' : 'en-US', 
+      isRTL ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US', 
       { hour: '2-digit', minute: '2-digit' }
     );
   };

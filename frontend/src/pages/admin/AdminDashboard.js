@@ -59,7 +59,7 @@ const BuildStamp = ({ isRTL }) => {
     <div className="px-4 py-3 mt-4 border-t border-gray-200 text-xs text-gray-500" data-testid="build-stamp">
       <div>{isRTL ? 'إصدار الواجهة' : 'Frontend build'}</div>
       <div dir="ltr" className="font-mono">{info.commit}</div>
-      <div dir="ltr">{Number.isNaN(built.getTime()) ? info.builtAt : built.toLocaleString()}</div>
+      <div dir="ltr">{Number.isNaN(built.getTime()) ? info.builtAt : built.toLocaleString('en-US')}</div>
     </div>
   );
 };

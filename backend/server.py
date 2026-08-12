@@ -3877,5 +3877,53 @@ try:
 except Exception as e:
     logger.error(f"⚠️ Failed to load CJ Admin routes: {e}")
 
+@app.on_event("startup")
+async def fill_missing_arabic_names():
+    """
+    Give any product without Arabic a name in Arabic, once per boot.
+
+    The admin button that does this on demand still exists, but a shop whose
+    catalogue is in the wrong language for half its visitors must not stay that
+    way until somebody remembers to press something. Every import already
+    writes its Arabic; this is what catches the products that predate that, and
+    any that a future supplier route forgets.
+
+    Cheap after the first run: it only reads the two name fields, and only
+    writes to products whose Arabic column holds no Arabic — so a name the
+    owner wrote himself is never touched, and a second boot changes nothing.
+    Failure here must never stop the API from starting: the store selling in
+    English beats the store not answering at all.
+    """
+    try:
+        docs = await db.products.find(
+            {}, {"id": 1, "name": 1, "name_en": 1, "name_ar": 1,
+                 "description": 1, "description_ar": 1}
+        ).to_list(100000)
+
+        filled = 0
+        for doc in docs:
+            english = doc.get("name") or doc.get("name_en") or ""
+            updates: Dict[str, Any] = {}
+
+            if looks_untranslated(doc.get("name_ar")):
+                arabic = translate_title(english)
+                if arabic:
+                    updates["name_ar"] = arabic
+
+            if looks_untranslated(doc.get("description_ar")):
+                arabic = translate_description(english, doc.get("description") or "")
+                if arabic:
+                    updates["description_ar"] = arabic
+
+            if updates:
+                await db.products.update_one({"id": doc["id"]}, {"$set": updates})
+                filled += 1
+
+        if filled:
+            logger.info(f"✅ Arabic names filled in for {filled} product(s) at startup")
+    except Exception as e:
+        logger.error(f"⚠️ Could not fill Arabic product names at startup: {e}")
+
+
 # Include the router in the main app (MUST be after all routes are defined)
 app.include_router(api_router)

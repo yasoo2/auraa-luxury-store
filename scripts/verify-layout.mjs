@@ -718,6 +718,44 @@ for (const file of sources) {
 }
 check('لا شاشة تعرض تاريخاً بالتقويم الهجري', hijri.length === 0, hijri.join(' | '));
 
+// قاعدة المالك: الأرقام تبقى إفرنجية في الوضع العربي.
+// كل لغة تبدأ بـ‎ar تُخرج ٠١٢٣ افتراضاً — من التواريخ ومن Intl.NumberFormat
+// معاً — فيقرأ الزائر ثمناً بأرقام لا يقارنها بما يراه في بطاقته أو في كشف
+// حسابه. اللاحقة ‎-nu-latn وحدها تُثبّت الأرقام مع إبقاء الأسماء عربية.
+{
+  const arabicLocales = [];
+  for (const file of sources) {
+    const text = fs.readFileSync(file, 'utf8');
+    for (const line of text.split('\n')) {
+      if (!/toLocale(?:Date|Time)?String|DateTimeFormat|NumberFormat/.test(line)) continue;
+      // `language === 'ar'` is a comparison, not a locale. Drop the comparison
+      // operands before looking, or the check reports the very ternary that
+      // chooses the correct locale.
+      const args = line.replace(/[=!]==?\s*(['"])ar\1/g, '');
+      for (const [, , tag] of args.matchAll(/(['"])(ar(?:-[A-Za-z0-9-]+)?)\1/g)) {
+        if (!tag.includes('nu-latn')) arabicLocales.push(`${path.basename(file)}: ${tag}`);
+      }
+    }
+  }
+  check('الأرقام إفرنجية في الوضع العربي — كل لغة عربية مثبّتة بـnu-latn',
+    arabicLocales.length === 0, arabicLocales.join(' | '));
+
+  // وأن اللاحقة تفعل ما يُظنّ بها.
+  const digits = await page.evaluate(() => {
+    const d = new Date('2026-08-12T10:00:00Z');
+    return {
+      bare: d.toLocaleDateString('ar-SA-u-ca-gregory', { year: 'numeric', day: 'numeric' }),
+      latin: d.toLocaleDateString('ar-SA-u-ca-gregory-nu-latn', { year: 'numeric', day: 'numeric' }),
+      money: new Intl.NumberFormat('ar-SA-u-nu-latn').format(1234.5),
+    };
+  });
+  const arabicIndic = /[٠-٩]/;
+  check('اللاحقة nu-latn تُخرج أرقاماً إفرنجية فعلاً',
+    !arabicIndic.test(digits.latin) && !arabicIndic.test(digits.money)
+      && arabicIndic.test(digits.bare),
+    `مثبّت=${digits.latin} · مجرّد=${digits.bare}`);
+}
+
 // A Fold's cover display is narrower than anything tested before. 320px is
 // the narrowest common phone width, checked in Arabic — the direction that
 // actually broke: the language menu was pinned by its LEFT corner, so inside

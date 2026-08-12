@@ -4265,3 +4265,32 @@ def test_the_backfill_translates_the_catalogue_and_owns_up_to_what_it_cannot(cli
     # Running it twice must change nothing further.
     again = client.post("/api/admin/products/translate").json()
     assert again["translated"] == 0, again
+
+
+def test_the_shop_fills_its_own_arabic_at_startup(client):
+    """
+    The owner must not have to remember a button for his catalogue to be in
+    the language half his visitors read. Every import already writes Arabic;
+    this catches whatever predates that — and must leave alone anything he
+    named himself.
+    """
+    import asyncio
+    from server import fill_missing_arabic_names
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_many([
+        {"id": "boot-1", "name": "Women Vintage Lace Halo Cubic Zirconia Ring",
+         "name_ar": "Women Vintage Lace Halo Cubic Zirconia Ring",
+         "description": "d", "price": 78.0, "category": "rings", "images": []},
+        {"id": "boot-mine", "name": "Zircon Ring", "name_ar": "خاتم سمّيتُه بنفسي",
+         "description": "d", "description_ar": "وصف كتبتُه", "price": 90.0,
+         "category": "rings", "images": []},
+    ]))
+
+    loop.run_until_complete(fill_missing_arabic_names())
+
+    docs = {d["id"]: d for d in
+            loop.run_until_complete(client._db.products.find({}).to_list(100))}
+    assert ARABIC_LETTER.search(docs["boot-1"]["name_ar"]), docs["boot-1"]["name_ar"]
+    assert docs["boot-mine"]["name_ar"] == "خاتم سمّيتُه بنفسي"
+    assert docs["boot-mine"]["description_ar"] == "وصف كتبتُه"

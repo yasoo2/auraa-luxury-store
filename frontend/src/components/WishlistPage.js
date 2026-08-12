@@ -39,7 +39,7 @@ const WishlistPage = () => {
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString(
-      isRTL ? 'ar-SA' : 'en-US',
+      isRTL ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US',
       { year: 'numeric', month: 'long', day: 'numeric' }
     );
   };

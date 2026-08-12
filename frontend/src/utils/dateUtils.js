@@ -43,7 +43,7 @@ const formatGregorianDate = (date, language, format, includeTime) => {
   // bank statement, a courier's tracking page, or CJ's dashboard, all of which
   // are Gregorian. The `-u-ca-gregory` extension pins the calendar while
   // keeping Arabic month names.
-  const locale = language === 'ar' ? 'ar-SA-u-ca-gregory' : 'en-US';
+  const locale = language === 'ar' ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US';
   
   let options = {};
 

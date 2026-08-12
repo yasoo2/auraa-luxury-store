@@ -74,14 +74,14 @@ const AnalyticsPage = () => {
   const formatCurrency = (amount) => formatMoney(amount);
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
+    return new Date(dateString).toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US', {
       month: 'short',
       day: 'numeric'
     });
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
+    return new Date(dateString).toLocaleString(isRTL ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US', {
       hour: '2-digit',
       minute: '2-digit',
       month: 'short',

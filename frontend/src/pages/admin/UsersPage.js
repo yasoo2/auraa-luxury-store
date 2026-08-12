@@ -118,7 +118,7 @@ const UsersPage = () => {
   const formatDate = (dateString) => {
     if (!dateString) return isRTL ? 'لم يسجل دخول' : 'Never logged in';
     const date = new Date(dateString);
-    return date.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
+    return date.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

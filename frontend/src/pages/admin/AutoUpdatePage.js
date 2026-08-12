@@ -191,7 +191,7 @@ const AutoUpdatePage = () => {
     if (!dateString) return isRTL ? 'غير متوفر' : 'Not available';
     
     const date = new Date(dateString);
-    return date.toLocaleString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
+    return date.toLocaleString(isRTL ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

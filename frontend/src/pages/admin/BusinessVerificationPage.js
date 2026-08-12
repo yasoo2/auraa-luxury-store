@@ -106,7 +106,7 @@ const BusinessVerificationPage = () => {
   const generatedOn = new Date(data.generated_at);
   const generatedText = Number.isNaN(generatedOn.getTime())
     ? data.generated_at
-    : generatedOn.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-GB',
+    : generatedOn.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB',
         { year: 'numeric', month: 'long', day: 'numeric' });
 
   const Row = ({ label, children }) => (

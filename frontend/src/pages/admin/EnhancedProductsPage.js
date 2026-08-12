@@ -335,7 +335,7 @@ const EnhancedProductsPage = () => {
     const converted = currency === 'SAR' ? sar : convert(sar, 'SAR', currency);
     const display = converted === null ? sar : converted;
     const shown = converted === null ? 'SAR' : currency;
-    return new Intl.NumberFormat(isRTL ? 'ar-SA' : 'en-US', {
+    return new Intl.NumberFormat(isRTL ? 'ar-SA-u-nu-latn' : 'en-US', {
       style: 'currency',
       currency: shown,
     }).format(display);

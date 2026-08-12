@@ -359,7 +359,7 @@ const OrdersPage = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory' : 'en-US', {
+    return date.toLocaleDateString(isRTL ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

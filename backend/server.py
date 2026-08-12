@@ -2940,6 +2940,96 @@ async def admin_update_settings(
 # it is worse than none.
 STORE_PUBLIC_URL = os.environ.get("STORE_PUBLIC_URL", "https://auraaluxury.com")
 
+# Where a visitor's message goes. The same address the order mail already comes
+# from, unless the deployment names another.
+CONTACT_INBOX = os.environ.get(
+    "CONTACT_INBOX_EMAIL",
+    os.environ.get("SENDGRID_FROM_EMAIL", "info.auraaluxury@gmail.com"),
+)
+
+
+class ContactMessage(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    email: EmailStr
+    phone: Optional[str] = Field(default=None, max_length=40)
+    message: str = Field(min_length=1, max_length=4000)
+
+
+@api_router.post("/contact")
+async def receive_contact_message(payload: ContactMessage):
+    """
+    A visitor's message to the shop.
+
+    The «اتصل بنا» form has always posted here and this route did not exist:
+    every message answered 404 while the page said «تم إرسال رسالتك بنجاح».
+    A shop telling a customer it received something it never saw is the worst
+    kind of the fake this repo forbids — the customer then waits for a reply
+    that cannot come.
+
+    Stored first, mailed second, and in that order on purpose. Email is the
+    part that can fail — a missing key, a provider outage, a bounced address —
+    and a message that only ever existed inside an email attempt is a message
+    lost. Stored, it is in the admin's inbox screen either way, and whether the
+    mail left is recorded on the message rather than guessed at.
+    """
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": payload.name.strip(),
+        "email": payload.email,
+        "phone": (payload.phone or "").strip() or None,
+        "message": payload.message.strip(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "read": False,
+        "emailed": False,
+    }
+    await db.contact_messages.insert_one(dict(doc))
+
+    try:
+        from services.email_service import send_email
+        body = (
+            f"<p><strong>من:</strong> {doc['name']} &lt;{doc['email']}&gt;</p>"
+            f"<p><strong>الهاتف:</strong> {doc['phone'] or 'غير مذكور'}</p>"
+            f"<hr><p style='white-space:pre-wrap'>{doc['message']}</p>"
+        )
+        sent = send_email(
+            CONTACT_INBOX,
+            f"رسالة جديدة من {doc['name']} — Auraa Luxury",
+            body,
+        )
+        if sent:
+            await db.contact_messages.update_one(
+                {"id": doc["id"]}, {"$set": {"emailed": True}})
+    except Exception as e:
+        # The message is already saved; the mail is the extra. Say so in the
+        # log and carry on rather than telling the customer it failed.
+        logger.error(f"Contact message {doc['id']} stored but not emailed: {e}")
+
+    return {"success": True, "id": doc["id"]}
+
+
+@api_router.get("/admin/contact-messages")
+async def list_contact_messages(admin: User = Depends(get_admin_user)):
+    """
+    Every message a visitor sent, newest first.
+
+    This exists because the mail can fail. Without a screen behind it, storing
+    the messages would only move the black hole from the network into the
+    database.
+    """
+    docs = await db.contact_messages.find({}).sort("created_at", -1).to_list(2000)
+    for d in docs:
+        d.pop("_id", None)
+    return {"messages": docs, "unread": sum(1 for d in docs if not d.get("read"))}
+
+
+@api_router.post("/admin/contact-messages/{message_id}/read")
+async def mark_contact_message_read(message_id: str, admin: User = Depends(get_admin_user)):
+    result = await db.contact_messages.update_one(
+        {"id": message_id}, {"$set": {"read": True}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return {"success": True}
+
 
 @api_router.get("/admin/business-verification")
 async def business_verification(admin: User = Depends(get_admin_user)):

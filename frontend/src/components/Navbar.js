@@ -108,9 +108,20 @@ const Navbar = () => {
             The page body below still flips normally; only this bar is
             anchored. */}
         <div className="relative flex justify-between items-center gap-2 min-w-0 min-h-16 md:min-h-20 py-2" style={{ direction: 'ltr' }}>
-          {/* Logo (default inline left) - Mobile optimized */}
+          {/* Logo (default inline left) - Mobile optimized.
+              The wordmark is given room and a boundary of its own. It sat
+              flush against «تسوق حسب الفئة», so the shop's name read as the
+              first item in the menu rather than as the shop's name — the
+              owner's note. A trailing margin holds the nearest button off, and
+              a hairline rule after it makes the mark a place rather than a
+              link in a row of links. */}
           {!FLAGS.LOGO_BOTTOM_RIGHT && (
-            <Link to="/" className="flex items-center gap-2 py-1 md:py-2 flex-shrink-0">
+            <Link
+              to="/"
+              className="flex items-center gap-2 py-1 md:py-2 flex-shrink-0
+                         pe-2 sm:pe-3 xl:pe-4
+                         xl:border-e xl:border-black/15"
+            >
               {/* The pendant mark joins the wordmark on wider screens; on a
                   narrow phone every pixel of this row is already spoken for. */}
               <img src="/favicon.svg?v=2" alt="" className="hidden sm:block h-9 w-9" />
@@ -130,7 +141,11 @@ const Navbar = () => {
           )}
 
           {/* Desktop Navigation */}
-          <div className="hidden xl:flex items-center gap-4 px-2 ms-auto">
+          {/* gap-3 and no leading padding: the room the wordmark now takes had
+              to come from somewhere, and the guards below said so in pixels.
+              Taken from the spacing *between* menu items, which had more than
+              it needed, rather than from the search box, which had none. */}
+          <div className="hidden xl:flex items-center gap-3 pe-2 ms-auto">
             {/* Categories Dropdown */}
             <div className="relative">
               <button

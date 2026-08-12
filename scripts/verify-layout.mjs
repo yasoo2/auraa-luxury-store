@@ -420,6 +420,42 @@ for (const lang of ['ar', 'en']) {
   else if (!head.logoOnLeftHalf) why.push('الشعار انتقل إلى الجهة الأخرى بتبدّل اللغة');
   check(`الشعار ثابت في مكانه مهما تبدّلت اللغة (${lang})`, why.length === 0, why.join('، '));
 }
+
+// الشعار لا يُلاصق زرّاً. كان ملتصقاً بـ«تسوق حسب الفئة» فيُقرأ كأنه أول
+// عناصر القائمة لا اسمَ المتجر — ملاحظة المالك. تُقاس المسافة الفعلية بين
+// حافّة الشعار وأقرب عنصر بعده، لا المسافة المكتوبة في الصنف.
+await page.setViewportSize({ width: 1440, height: 900 });
+for (const lang of ['ar', 'en']) {
+  await page.evaluate((l) => localStorage.setItem('language', l), lang);
+  await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(600);
+  const gap = await page.evaluate(() => {
+    const logo = document.querySelector('nav a[href="/"]');
+    if (!logo) return null;
+    // The visible ink, not the link box: the link's own padding *is* the
+    // breathing room being asked for, so measuring from outside it counts that
+    // room as zero and the check reads its own fix as a failure.
+    const ink = logo.lastElementChild || logo;
+    const mark = ink.getBoundingClientRect();
+    let nearest = Infinity;
+    for (const el of document.querySelectorAll('nav a, nav button')) {
+      if (el === logo || logo.contains(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      // Only what sits after the mark on the same line as the bar.
+      if (r.left < mark.right) continue;
+      nearest = Math.min(nearest, r.left - mark.right);
+    }
+    return { nearest };
+  });
+  const ok = gap && gap.nearest >= 16;
+  check(`الشعار لا يُلاصق أي زرّ بجانبه (${lang})`, ok,
+    !gap ? 'الشعار غير موجود' : `أقرب عنصر على بُعد ${Math.round(gap.nearest)}px`);
+}
+// Left exactly as this block found it. Resetting to a phone here hid the
+// desktop search box from the check below, which then reported it as 0px wide
+// — a failure invented by the harness, not by the page.
+await page.setViewportSize({ width: 1440, height: 900 });
 await page.evaluate(() => localStorage.setItem('language', 'en'));
 
 // أسماء المنتجات نفسها تتبدّل باللغة، لا الواجهة وحدها.

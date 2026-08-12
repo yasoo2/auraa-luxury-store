@@ -25,7 +25,9 @@ from passlib.context import CryptContext
 from enum import Enum
 
 # Import services
-from services.background_import import ImportJobManager, background_import_cj_products
+from services.background_import import (
+    ImportJobManager, background_import_cj_products, plain_name,
+)
 from services.pricing_service import (
     pricing_service, load_pricing_settings,
     DEFAULT_PROFIT_MARGIN_PERCENT, DEFAULT_MINIMUM_PROFIT_SAR,
@@ -1009,12 +1011,20 @@ def _readable_name(doc: Dict[str, Any]) -> Dict[str, Any]:
     if not (doc.get("imported_from_cj") or doc.get("source") == "cj_dropshipping"):
         return doc
 
-    for field in ("name", "name_ar"):
+    for field in ("name", "name_ar", "name_en"):
         value = doc.get(field)
-        if isinstance(value, str) and len(value) > NAME_MAX:
-            short = _shorten_name(value)
-            if short:
-                doc[field] = short
+        if value is None:
+            continue
+        # Unwrap first: a title CJ sent as a JSON array is stored as the literal
+        # text `["Mini","Dried Flower 6 Bouquets"]`, which is shorter than
+        # NAME_MAX for plenty of products and so was never touched by the
+        # shortening below — it went straight to the product card, brackets and
+        # all, for every shopper to read.
+        text = plain_name(value)
+        if len(text) > NAME_MAX:
+            text = _shorten_name(text) or text
+        if text != value:
+            doc[field] = text
     return doc
 
 
@@ -1027,7 +1037,7 @@ def _shorten_name(raw: str) -> str:
     Kept in step with services/background_import._product_name — same rule,
     applied to rows written before that function existed.
     """
-    text = re.sub(r"\s+", " ", raw or "").strip()
+    text = re.sub(r"\s+", " ", plain_name(raw)).strip()
     if not text:
         return ""
     head = re.split(r"[,\u060c]", text)[0].strip()

@@ -110,6 +110,20 @@ await ctx.route('**/api/**', (route) => {
       || p.endsWith('/api/admin/theme') || p.endsWith('/api/auto-update/status')) {
     return reply({});
   }
+  if (p.endsWith('/api/admin/business-verification')) {
+    return reply({
+      store: { name: 'Auraa Luxury', website: 'https://auraaluxury.com',
+               business_type: 'Online Store / E-commerce', category: 'Luxury Accessories',
+               status: 'active', live_products: 24 },
+      administrator: { full_name: 'Younis Soudi', email: 'younes@example.com',
+                       phone: '+90 501 371 5391', role: 'Super Administrator' },
+      // بريد ناقص عمداً: الصفحة يجب أن تقول «غير مُدخل» لا أن تخترع قيمة.
+      contact: { email: null, phone: '+90 501 371 5391', whatsapp: '+90 501 371 5391',
+                 address: 'Pınartepe Mah.', city: 'Istanbul', country: 'Türkiye',
+                 postal_code: '45000' },
+      generated_at: '2026-08-12T09:00:00Z',
+    });
+  }
   if (p.endsWith('/api/admin/pricing-settings')) {
     return reply({ profit_margin_percent: 200, minimum_profit_sar: 10,
                    defaults: { profit_margin_percent: 200, minimum_profit_sar: 10 } });
@@ -193,6 +207,7 @@ const PAGES = [['الرئيسية', '/'], ['المنتجات', '/products'], ['�
                ['إدارة الطلبات', '/admin/orders'],
                ['إدارة المنتجات', '/admin/products'],
                ['التسعير والربح', '/admin/pricing'],
+               ['توثيق النشاط', '/admin/business-verification'],
                ['إدارة المستخدمين', '/admin/users'],
                ['الاستيراد السريع', '/admin/quick-import'],
                ['الاستيراد المجمّع', '/admin/bulk-import'],
@@ -723,6 +738,54 @@ try {
   installWhy = 'زر التثبيت لم يظهر رغم إعلان المتصفح القابلية';
 }
 check('زرّ «ثبّت التطبيق» في قائمة الهاتف يستدعي المثبّت أيضاً', installOk, installWhy);
+
+// صفحة توثيق النشاط: مستند يُصوَّر ويُرسل لمزوّد دفع. يجب أن يعرض بيانات
+// المسؤول الحقيقية القادمة من الخادم، وأن يقول «غير مُدخل» عن الحقل الناقص
+// بدل اختراع قيمة، وألا يحمل أي رقم سجل أو ضريبة لا يملكها المتجر.
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.goto(`${base}/admin/business-verification`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(900);
+const verif = await page.evaluate(() => {
+  const text = document.body.innerText;
+  return {
+    hasAdmin: text.includes('Younis Soudi'),
+    hasSite: text.includes('auraaluxury.com'),
+    saysMissing: /Not provided|غير مُدخل/.test(text),
+    invented: /registration number|tax number|vergi levhas|trade licen|سجل تجاري|رقم ضريبي/i.test(text),
+    hasPrint: Boolean(document.querySelector('[data-testid="print-verification"]')),
+    hasVisit: Boolean(document.querySelector('[data-testid="visit-store"]')),
+  };
+});
+const vWhy = [];
+if (!verif.hasAdmin) vWhy.push('اسم المسؤول الحقيقي غير معروض');
+if (!verif.hasSite) vWhy.push('عنوان المتجر غير معروض');
+if (!verif.saysMissing) vWhy.push('الحقل الناقص لم يُعلَن «غير مُدخل»');
+if (verif.invented) vWhy.push('المستند يذكر تسجيلاً أو رقماً ضريبياً لا يملكه المتجر');
+if (!verif.hasPrint) vWhy.push('زر الطباعة غير موجود');
+if (!verif.hasVisit) vWhy.push('زر زيارة المتجر غير موجود');
+check('صفحة توثيق النشاط تعرض البيانات الحقيقية وتقرّ بالناقص ولا تخترع تسجيلاً',
+  vWhy.length === 0, vWhy.join('، '));
+
+// النسخة المطبوعة مستند، لا لقطة شاشة للوحة: أول تصيير حقيقي أظهر شريط
+// الكوكيز مطبوعاً فوق صفوف بيانات التواصل يحجبها، وفوتر المتجر بروابطه
+// داخل المستند. تُفحص وسائط الطباعة نفسها لا الشاشة.
+await page.emulateMedia({ media: 'print' });
+await page.waitForTimeout(300);
+const printed = await page.evaluate(() => {
+  const shown = (el) => el && el.getBoundingClientRect().height > 0
+    && getComputedStyle(el).display !== 'none';
+  const bad = [];
+  if (shown(document.querySelector('footer'))) bad.push('فوتر المتجر');
+  if (shown(document.querySelector('nav'))) bad.push('شريط اللوحة');
+  if (shown(document.querySelector('aside'))) bad.push('القائمة الجانبية');
+  if ([...document.querySelectorAll('.no-print')].some(shown)) bad.push('عنصر معلَّم بعدم الطباعة (شريط الكوكيز/أزرار)');
+  return { bad, hasDoc: document.body.innerText.includes('Business Verification')
+                        || document.body.innerText.includes('توثيق النشاط') };
+});
+await page.emulateMedia({ media: null });
+check('النسخة المطبوعة مستند نظيف: لا فوتر ولا قوائم ولا شريط كوكيز فوق البيانات',
+  printed.hasDoc && printed.bad.length === 0,
+  !printed.hasDoc ? 'المستند نفسه غاب عن نسخة الطباعة' : printed.bad.join('، '));
 
 // أخطر عطل واجهه المالك: صفحة محمية تدور إلى الأبد.
 //

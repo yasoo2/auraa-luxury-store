@@ -94,7 +94,7 @@ const CookieConsent = () => {
       ref={bannerRef}
       role="dialog"
       aria-label={t.message}
-      className={`fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-amber-50 to-orange-50 border-t-2 border-brand shadow-2xl transform transition-transform duration-500 ease-out ${
+      className={`no-print fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-amber-50 to-orange-50 border-t-2 border-brand shadow-2xl transform transition-transform duration-500 ease-out ${
         showBanner ? 'translate-y-0' : 'translate-y-full'
       }`}
       style={{

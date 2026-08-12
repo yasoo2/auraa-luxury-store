@@ -994,3 +994,36 @@ header [role="menu"],
     overflow-y: auto !important;
   }
 }
+/* --- Print: the admin becomes a document -----------------------------------
+   The Business Verification page is meant to be saved as a PDF and handed to
+   a payment provider. Printing it used to carry the whole cockpit along —
+   sidebar, top bar, buttons — onto the page. Chrome, sidebar and controls are
+   dropped; the document keeps ink on white at A4. */
+@media print {
+  @page { size: A4; margin: 14mm; }
+
+  html, body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Everything that is chrome rather than content. The storefront footer and
+     the cookie bar both printed INTO the verification document on the first
+     render — the bar landed across the contact rows and hid them. Rendering
+     the print view is the only way that shows up. */
+  nav, aside, footer, .no-print, [data-testid="admin-menu-toggle"],
+  [data-testid="install-banner"], [data-testid="install-app"],
+  .Toastify { display: none !important; }
+
+  .business-verification {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* Sections must not be split across two sheets mid-table. */
+  .business-verification section { break-inside: avoid; page-break-inside: avoid; }
+
+  a[href]:after { content: ""; }
+}

@@ -2553,6 +2553,70 @@ def test_profit_margin_is_a_setting_the_import_obeys(client, monkeypatch):
     assert product["price_breakdown"]["profit_margin_percent_applied"] == 100
 
 
+def test_business_verification_reports_only_real_stored_facts(client):
+    """
+    The page this feeds is screenshotted and sent to a payment provider. It
+    must carry the REAL administrator and the REAL saved store contact — and
+    it must never invent a registration number, a tax id, or a contact value
+    the shop has not actually saved.
+    """
+    import asyncio
+    loop = asyncio.get_event_loop()
+
+    register(client, email="verify@b.com", password="Str0ngPass!24")
+    make_admin(client, "verify@b.com")
+    loop.run_until_complete(client._db.users.update_one(
+        {"email": "verify@b.com"},
+        {"$set": {"name": "Younis Soudi", "phone": "+905013715391"}}))
+
+    # Nothing saved yet: every contact field must come back null, so the page
+    # can say "Not provided" instead of dressing a UI default as stored data.
+    empty = client.get("/api/admin/business-verification")
+    assert empty.status_code == 200, empty.text
+    body = empty.json()
+    assert all(v is None for v in body["contact"].values()), body["contact"]
+    assert body["administrator"]["full_name"] == "Younis Soudi"
+    assert body["administrator"]["email"] == "verify@b.com"
+    assert body["administrator"]["phone"] == "+905013715391"
+    assert body["store"]["status"] == "inactive", "no live products yet"
+
+    # Nothing anywhere in the document may claim a legal registration.
+    flat = str(body).lower()
+    for forbidden in ("registration", "tax_number", "vergi", "trade_licen", "company_number"):
+        assert forbidden not in flat, f"invented legal field: {forbidden}"
+
+    # Now the owner fills settings in, and adds a live product.
+    client.put("/api/admin/settings", json={
+        "contact_email": "younes.sowady2011@gmail.com",
+        "contact_phone": "+905013715391",
+        "whatsapp_number": "+905013715391",
+        "address_line1": "Pınartepe Mah.",
+        "city": "Istanbul", "country": "Türkiye", "postal_code": "45000",
+    })
+    loop.run_until_complete(client._db.products.insert_one({
+        "id": "bv-1", "name": "Ring", "description": "d", "price": 100.0,
+        "category": "rings", "images": [], "staging": False, "is_active": True,
+    }))
+
+    filled = client.get("/api/admin/business-verification").json()
+    assert filled["contact"]["email"] == "younes.sowady2011@gmail.com"
+    assert filled["contact"]["city"] == "Istanbul"
+    assert filled["contact"]["postal_code"] == "45000"
+    assert filled["store"]["status"] == "active", "a live product makes the store active"
+    assert filled["store"]["live_products"] == 1
+
+
+def test_business_verification_is_admin_only(client):
+    """Ownership evidence is not public: a signed-in shopper must be refused."""
+    anon = client.get("/api/admin/business-verification")
+    assert anon.status_code in (401, 403), anon.status_code
+
+    register(client, email="shopper@b.com", password="Str0ngPass!24")
+    shopper = client.get("/api/admin/business-verification")
+    assert shopper.status_code == 403, (
+        f"a plain customer read the owner's verification document: {shopper.status_code}")
+
+
 def test_final_prices_are_whole_numbers_rounded_up():
     """
     «مقربة لأكبر سعر فلا اريد كسور»: the listed price must be a whole number

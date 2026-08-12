@@ -13,6 +13,7 @@ import AutoUpdatePage from './AutoUpdatePage';
 import BulkImportPage from './BulkImportPage';
 import QuickImportPage from './QuickImportPage';
 import PricingPage from './PricingPage';
+import BusinessVerificationPage from './BusinessVerificationPage';
 import CMSPagesManager from './CMSPagesManager';
 import MediaLibrary from './MediaLibrary';
 import ThemeCustomization from './ThemeCustomization';
@@ -27,7 +28,6 @@ import {
   Menu,
   X,
   RefreshCw,
-  ExternalLink,
   Upload,
   BarChart,
   Plug,
@@ -36,7 +36,8 @@ import {
   Image,
   Palette,
   Shield,
-  DollarSign
+  DollarSign,
+  BadgeCheck
 } from 'lucide-react';
 
 const BuildStamp = ({ isRTL }) => {
@@ -65,7 +66,7 @@ const BuildStamp = ({ isRTL }) => {
 
 
 const AdminDashboard = () => {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   // Open where there is room for it. On a phone the 256px sidebar squeezed
@@ -119,6 +120,11 @@ const AdminDashboard = () => {
       name: isRTL ? 'التسعير والربح' : 'Pricing & Profit',
       path: '/admin/pricing',
       icon: DollarSign
+    },
+    {
+      name: isRTL ? 'توثيق النشاط' : 'Business Verification',
+      path: '/admin/business-verification',
+      icon: BadgeCheck
     },
     {
       name: isRTL ? 'المستخدمون' : 'Users',
@@ -293,6 +299,7 @@ const AdminDashboard = () => {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/quick-import" element={<QuickImportPage />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/business-verification" element={<BusinessVerificationPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/integrations" element={<IntegrationsPage />} />

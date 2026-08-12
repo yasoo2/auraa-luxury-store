@@ -2901,6 +2901,74 @@ async def admin_update_settings(
     return await _put_singleton(SETTINGS_DOC_ID, payload)
 
 
+# The public address of this storefront. An environment value, not a guess:
+# the document this feeds is shown to a payment provider, and a wrong URL on
+# it is worse than none.
+STORE_PUBLIC_URL = os.environ.get("STORE_PUBLIC_URL", "https://auraaluxury.com")
+
+
+@api_router.get("/admin/business-verification")
+async def business_verification(admin: User = Depends(get_admin_user)):
+    """
+    The facts this application actually holds about the shop and the person
+    running it — assembled for the owner to show a payment provider.
+
+    Every value is read from the database or from the authenticated session.
+    Nothing here is invented: no registration number, no tax id, no legal
+    entity, and no client-side default dressed up as stored data. A field the
+    shop has not filled in comes back as null, and the page says "Not
+    provided" rather than filling the silence.
+    """
+    settings = await _get_singleton(SETTINGS_DOC_ID)
+
+    def stored(*keys):
+        for key in keys:
+            value = settings.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+            if value not in (None, "", {}, []):
+                return value
+        return None
+
+    full_name = (admin.name or "").strip()
+    if not full_name:
+        full_name = " ".join(
+            part for part in [(admin.first_name or "").strip(),
+                              (admin.last_name or "").strip()] if part
+        ).strip()
+
+    # "Active" is a measured fact, not a badge: the shop is active when it has
+    # products a customer can actually buy right now.
+    live_products = await db.products.count_documents(dict(LIVE_ONLY))
+
+    return {
+        "store": {
+            "name": stored("store_name") or "Auraa Luxury",
+            "website": stored("store_website") or STORE_PUBLIC_URL,
+            "business_type": "Online Store / E-commerce",
+            "category": "Luxury Accessories",
+            "status": "active" if live_products > 0 else "inactive",
+            "live_products": live_products,
+        },
+        "administrator": {
+            "full_name": full_name or None,
+            "email": admin.email,
+            "phone": (admin.phone or "").strip() or None,
+            "role": "Super Administrator" if admin.is_super_admin else "Store Administrator",
+        },
+        "contact": {
+            "email": stored("contact_email"),
+            "phone": stored("contact_phone"),
+            "whatsapp": stored("whatsapp_number"),
+            "address": stored("address_line1"),
+            "city": stored("city"),
+            "country": stored("country"),
+            "postal_code": stored("postal_code"),
+        },
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @api_router.get("/admin/theme")
 async def admin_get_theme(admin: User = Depends(get_admin_user)):
     return await _get_singleton(THEME_DOC_ID)

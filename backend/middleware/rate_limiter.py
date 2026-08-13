@@ -19,6 +19,8 @@ PROTECTED_PATHS = (
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/refresh",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
     "/api/auth/oauth/session",
 )
 

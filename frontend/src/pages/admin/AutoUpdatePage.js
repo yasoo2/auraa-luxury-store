@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   RefreshCw, 
-  Calendar, 
   DollarSign, 
   Package, 
-  Upload, 
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
   Settings,
   Activity,
-  Download
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -19,6 +16,27 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { useLanguage } from '../../context/LanguageContext';
 import { API_BASE_URL } from '../../api';
+
+// The API returns a compact flat status object. Keep support for a nested
+// payload too, but never leave the operator looking at a permanent spinner
+// merely because the response shape evolved.
+const normalizeAutoUpdateStatus = (payload) => {
+  if (!payload || typeof payload !== 'object') return null;
+
+  return {
+    ...payload,
+    scheduler: payload.scheduler || {
+      status: payload.scheduler_running ? 'running' : 'stopped',
+      jobs: Array.isArray(payload.jobs) ? payload.jobs : [],
+    },
+    currency_service: payload.currency_service || {
+      last_update: payload.last_currency_update ?? null,
+      supported_currencies: Array.isArray(payload.supported_currencies)
+        ? payload.supported_currencies
+        : [],
+    },
+  };
+};
 
 const AutoUpdatePage = () => {
   const { language } = useLanguage();
@@ -28,6 +46,7 @@ const AutoUpdatePage = () => {
   const [currencyRates, setCurrencyRates] = useState(null);
   const [scheduledLogs, setScheduledLogs] = useState([]);
   const [bulkImportTasks, setBulkImportTasks] = useState([]);
+  const [statusError, setStatusError] = useState('');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -48,12 +67,16 @@ const AutoUpdatePage = () => {
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        setAutoUpdateStatus(data);
+      if (!response.ok) {
+        throw new Error(`Status request failed (${response.status})`);
       }
+      const data = await response.json();
+      setAutoUpdateStatus(normalizeAutoUpdateStatus(data));
+      setStatusError('');
     } catch (error) {
       console.error('Error fetching auto-update status:', error);
+      setAutoUpdateStatus(null);
+      setStatusError(isRTL ? 'تعذّر تحميل حالة التحديثات' : 'Could not load update status');
     }
   };
 
@@ -187,6 +210,13 @@ const AutoUpdatePage = () => {
     }
   };
 
+  const displayedCurrencies = autoUpdateStatus?.currency_service?.supported_currencies?.length
+    ? autoUpdateStatus.currency_service.supported_currencies
+    : Object.keys(currencyRates?.rates || {});
+  const currencyLastUpdate = autoUpdateStatus?.currency_service?.last_update
+    || currencyRates?.updated_at
+    || currencyRates?.last_updated;
+
   const formatDateTime = (dateString) => {
     if (!dateString) return isRTL ? 'غير متوفر' : 'Not available';
     
@@ -294,7 +324,7 @@ const AutoUpdatePage = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-gray-500">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+                  <div className="text-gray-500">{statusError || (isRTL ? 'جاري التحميل...' : 'Loading...')}</div>
                 )}
               </CardContent>
             </Card>
@@ -313,13 +343,13 @@ const AutoUpdatePage = () => {
                     <div className="text-sm">
                       <strong>{isRTL ? 'آخر تحديث:' : 'Last Update:'}</strong>
                       <div className="text-gray-600 mt-1">
-                        {formatDateTime(autoUpdateStatus.currency_service.last_update)}
+                        {formatDateTime(currencyLastUpdate)}
                       </div>
                     </div>
                     <div className="text-sm">
                       <strong>{isRTL ? 'العملات المدعومة:' : 'Supported Currencies:'}</strong>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {autoUpdateStatus.currency_service.supported_currencies?.map(currency => (
+                        {displayedCurrencies.map(currency => (
                           <Badge key={currency} variant="outline" className="text-xs">
                             {currency}
                           </Badge>
@@ -328,7 +358,7 @@ const AutoUpdatePage = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-gray-500">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+                  <div className="text-gray-500">{statusError || (isRTL ? 'جاري التحميل...' : 'Loading...')}</div>
                 )}
               </CardContent>
             </Card>

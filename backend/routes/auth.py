@@ -2,16 +2,22 @@
 Authentication Routes
 Handles user registration, login, OAuth, and token management
 """
-from fastapi import APIRouter, HTTPException, Depends, Response, Request
-from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, HTTPException, Depends, Response, Request, BackgroundTasks
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
+import hashlib
+import html
 import os
 import logging
 import re
+import secrets
 import uuid
+from urllib.parse import quote
+
+from pymongo import ReturnDocument
 
 from auth.oauth_service import (
     OAuthExchangeError,
@@ -36,6 +42,22 @@ from core.security import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+RESET_TOKEN_EXPIRE_MINUTES = int(os.getenv("RESET_TOKEN_EXPIRE_MINUTES", "30"))
+RESET_TOKEN_BYTES = 32
+PUBLIC_SITE_URL = os.getenv("STORE_PUBLIC_URL", "https://auraaluxury.com").rstrip("/")
+
+
+def _normalise_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _hash_reset_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _reset_expiry() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
 
 
 # Pydantic Models
@@ -76,6 +98,15 @@ class TokenResponse(BaseModel):
     user: Dict[str, Any]
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=32, max_length=256)
+    new_password: str = Field(min_length=8, max_length=256)
+
+
 # Helper Functions
 async def _issue_session(db, response: Response, user: Dict[str, Any]) -> str:
     """
@@ -83,7 +114,11 @@ async def _issue_session(db, response: Response, user: Dict[str, Any]) -> str:
     and set both as HttpOnly cookies. Returns the access token so callers can
     also return it in the body for clients that use the Authorization header.
     """
-    claims = {"sub": user["email"], "user_id": user["id"]}
+    claims = {
+        "sub": user["email"],
+        "user_id": user["id"],
+        "auth_version": int(user.get("auth_version", 0)),
+    }
 
     access_token = create_access_token(claims)
     refresh_token, jti = create_refresh_token(claims)
@@ -163,6 +198,102 @@ async def register(user: UserRegister, request: Request, response: Response):
     except Exception as e:
         logger.error(f"Registration error: {e}")
         raise HTTPException(status_code=500, detail="Registration failed")
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    """
+    Start a password reset without revealing whether the email exists.
+
+    Only a SHA-256 hash of the random token is persisted. The raw token is sent
+    once by email and cannot be recovered from the database if it is exposed.
+    """
+    generic = {
+        "success": True,
+        "message": "If the account exists, a password reset link has been sent.",
+    }
+    email = _normalise_email(str(payload.email))
+    db = request.app.state.db
+
+    user = await db.users.find_one({"email": email})
+    if not user:
+        user = await db.users.find_one(
+            {"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
+        )
+
+    # OAuth-only accounts do not have a password to reset. They receive the same
+    # response so this endpoint cannot be used as an account-enumeration oracle.
+    if not user or not user.get("password") or user.get("is_active") is False:
+        return generic
+
+    raw_token = secrets.token_urlsafe(RESET_TOKEN_BYTES)
+    now = datetime.now(timezone.utc)
+    expires_at = _reset_expiry()
+    await db.password_reset_tokens.delete_many({"user_id": user["id"]})
+    await db.password_reset_tokens.insert_one({
+        "token_hash": _hash_reset_token(raw_token),
+        "user_id": user["id"],
+        "created_at": now,
+        "expires_at": expires_at,
+        "used_at": None,
+    })
+
+    reset_url = f"{PUBLIC_SITE_URL}/reset-password?token={quote(raw_token)}"
+    try:
+        from services.email_service import send_password_reset_email
+        background_tasks.add_task(
+            send_password_reset_email,
+            user.get("email") or email,
+            user.get("name") or email.split("@", 1)[0],
+            reset_url,
+        )
+    except Exception:
+        # Email delivery is best effort; the generic response must remain the
+        # same and the token stays in the database for operational inspection.
+        logger.exception("Could not queue password reset email")
+
+    return generic
+
+
+@router.post("/reset-password")
+async def reset_password(payload: ResetPasswordRequest, request: Request):
+    """Consume one valid reset token and invalidate the user's sessions."""
+    token_hash = _hash_reset_token(payload.token)
+    now = datetime.now(timezone.utc)
+    reset_doc = await request.app.state.db.password_reset_tokens.find_one_and_update(
+        {
+            "token_hash": token_hash,
+            "used_at": None,
+            "expires_at": {"$gt": now},
+        },
+        {"$set": {"used_at": now}},
+        return_document=ReturnDocument.BEFORE,
+    )
+    if not reset_doc:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    db = request.app.state.db
+    user = await db.users.find_one({"id": reset_doc["user_id"]})
+    if not user or user.get("is_active") is False:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    hashed = bcrypt.hashpw(payload.new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "password": hashed,
+            "updated_at": now.isoformat(),
+            # Incrementing the version invalidates every session issued before
+            # this reset. New login/refresh sessions carry the new version.
+            "auth_version": int(user.get("auth_version", 0)) + 1,
+        }},
+    )
+
+    return {"success": True, "message": "Password reset successfully"}
 
 
 @router.post("/login")
@@ -399,6 +530,10 @@ async def refresh_token(request: Request, response: Response):
         user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
+
+        token_version = payload.get("auth_version")
+        if token_version is not None and int(token_version) != int(user.get("auth_version", 0)):
+            raise HTTPException(status_code=401, detail="Session expired; please sign in again")
 
         # Rotate: retire the presented token before issuing its replacement.
         await revoke_refresh_token(db, payload.get("jti"))

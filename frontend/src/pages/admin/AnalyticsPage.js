@@ -34,8 +34,50 @@ import { API_BASE_URL } from '../../api';
 const BACKEND_URL = API_BASE_URL;
 const API = `${BACKEND_URL}/api`;
 
+const finiteNumber = (value, fallback = 0) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+// The backend deliberately returns compact, real metrics in snake_case. This
+// adapter accepts that contract and preserves support for the richer legacy
+// shape, while supplying empty collections rather than invented chart values.
+const normalizeAnalytics = (payload) => {
+  if (!payload || typeof payload !== 'object') return null;
+
+  const overviewSource = payload.overview || payload;
+  const overview = {
+    totalRevenue: finiteNumber(overviewSource.totalRevenue ?? overviewSource.total_revenue),
+    totalOrders: finiteNumber(overviewSource.totalOrders ?? overviewSource.total_orders),
+    totalCustomers: finiteNumber(overviewSource.totalCustomers ?? overviewSource.total_users),
+    totalProducts: finiteNumber(overviewSource.totalProducts ?? overviewSource.total_products),
+    revenueChange: Number.isFinite(Number(overviewSource.revenueChange)) ? Number(overviewSource.revenueChange) : null,
+    ordersChange: Number.isFinite(Number(overviewSource.ordersChange)) ? Number(overviewSource.ordersChange) : null,
+    customersChange: Number.isFinite(Number(overviewSource.customersChange)) ? Number(overviewSource.customersChange) : null,
+    productsChange: Number.isFinite(Number(overviewSource.productsChange)) ? Number(overviewSource.productsChange) : null,
+  };
+
+  const sourceTopProducts = Array.isArray(payload.topProducts)
+    ? payload.topProducts
+    : (Array.isArray(payload.top_products) ? payload.top_products : []);
+
+  return {
+    overview,
+    salesChart: Array.isArray(payload.salesChart) ? payload.salesChart : [],
+    categoryDistribution: Array.isArray(payload.categoryDistribution) ? payload.categoryDistribution : [],
+    topProducts: sourceTopProducts.map((product) => ({
+      name: String(product?.name || '—'),
+      sales: finiteNumber(product?.sales ?? product?.quantity_sold),
+      revenue: Number.isFinite(Number(product?.revenue)) ? Number(product.revenue) : null,
+    })),
+    customerMetrics: payload.customerMetrics || {},
+    geographicData: Array.isArray(payload.geographicData) ? payload.geographicData : [],
+    recentActivity: Array.isArray(payload.recentActivity) ? payload.recentActivity : [],
+  };
+};
+
 const AnalyticsPage = () => {
-  const { t, language, formatMoney } = useLanguage();
+  const { language, formatMoney } = useLanguage();
   const isRTL = language === 'ar';
   
   const [analytics, setAnalytics] = useState(null);
@@ -51,8 +93,9 @@ const AnalyticsPage = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/admin/analytics?range=${dateRange}`);
-      setAnalytics(response.data || null);
-      setLoadError(response.data ? '' : (isRTL ? 'لا توجد بيانات لهذه المدة' : 'No data for this range'));
+      const normalized = normalizeAnalytics(response.data);
+      setAnalytics(normalized);
+      setLoadError(normalized ? '' : (isRTL ? 'لا توجد بيانات لهذه المدة' : 'No data for this range'));
     } catch (error) {
       // This page used to fall back to figures written into the file — an
       // invented revenue of 45,320.50 among them — with nothing on screen to
@@ -153,10 +196,12 @@ const AnalyticsPage = () => {
             <div>
               <p className="text-sm font-medium text-amber-600">{isRTL ? 'إجمالي المبيعات' : 'Total Revenue'}</p>
               <p className="text-2xl font-bold text-amber-900">{formatCurrency(overview.totalRevenue)}</p>
-              <div className="flex items-center mt-1">
-                <TrendingUp className="h-4 w-4 text-green-500 me-1" />
-                <span className="text-sm text-green-600">+{overview.revenueChange}%</span>
-              </div>
+              {overview.revenueChange !== null && (
+                <div className="flex items-center mt-1">
+                  <TrendingUp className="h-4 w-4 text-green-500 me-1" />
+                  <span className="text-sm text-green-600">+{overview.revenueChange}%</span>
+                </div>
+              )}
             </div>
             <DollarSign className="h-8 w-8 text-amber-600" />
           </div>
@@ -167,10 +212,12 @@ const AnalyticsPage = () => {
             <div>
               <p className="text-sm font-medium text-blue-600">{isRTL ? 'إجمالي الطلبات' : 'Total Orders'}</p>
               <p className="text-2xl font-bold text-blue-900">{overview.totalOrders}</p>
-              <div className="flex items-center mt-1">
-                <TrendingUp className="h-4 w-4 text-green-500 me-1" />
-                <span className="text-sm text-green-600">+{overview.ordersChange}%</span>
-              </div>
+              {overview.ordersChange !== null && (
+                <div className="flex items-center mt-1">
+                  <TrendingUp className="h-4 w-4 text-green-500 me-1" />
+                  <span className="text-sm text-green-600">+{overview.ordersChange}%</span>
+                </div>
+              )}
             </div>
             <ShoppingCart className="h-8 w-8 text-blue-600" />
           </div>
@@ -181,10 +228,12 @@ const AnalyticsPage = () => {
             <div>
               <p className="text-sm font-medium text-green-600">{isRTL ? 'إجمالي العملاء' : 'Total Customers'}</p>
               <p className="text-2xl font-bold text-green-900">{overview.totalCustomers}</p>
-              <div className="flex items-center mt-1">
-                <TrendingUp className="h-4 w-4 text-green-500 me-1" />
-                <span className="text-sm text-green-600">+{overview.customersChange}%</span>
-              </div>
+              {overview.customersChange !== null && (
+                <div className="flex items-center mt-1">
+                  <TrendingUp className="h-4 w-4 text-green-500 me-1" />
+                  <span className="text-sm text-green-600">+{overview.customersChange}%</span>
+                </div>
+              )}
             </div>
             <Users className="h-8 w-8 text-green-600" />
           </div>
@@ -195,10 +244,12 @@ const AnalyticsPage = () => {
             <div>
               <p className="text-sm font-medium text-purple-600">{isRTL ? 'إجمالي المنتجات' : 'Total Products'}</p>
               <p className="text-2xl font-bold text-purple-900">{overview.totalProducts}</p>
-              <div className="flex items-center mt-1">
-                <TrendingUp className="h-4 w-4 text-green-500 me-1" />
-                <span className="text-sm text-green-600">+{overview.productsChange}%</span>
-              </div>
+              {overview.productsChange !== null && (
+                <div className="flex items-center mt-1">
+                  <TrendingUp className="h-4 w-4 text-green-500 me-1" />
+                  <span className="text-sm text-green-600">+{overview.productsChange}%</span>
+                </div>
+              )}
             </div>
             <Package className="h-8 w-8 text-purple-600" />
           </div>
@@ -290,9 +341,11 @@ const AnalyticsPage = () => {
                     <p className="text-xs text-gray-500">{product.sales} {isRTL ? 'مبيعة' : 'sold'}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">{formatCurrency(product.revenue)}</p>
-                </div>
+                {product.revenue !== null && (
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(product.revenue)}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, MapPin, User, Phone, Mail, Truck } from 'lucide-react';
 import { Button } from './ui/button';
@@ -17,11 +17,19 @@ import { API_BASE_URL } from '../api';
 const BACKEND_URL = API_BASE_URL;
 const API = `${BACKEND_URL}/api`;
 
+const createOrderRequestKey = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
 const CheckoutPage = () => {
   const { user } = useAuth();
   const { currency, language, formatMoney } = useLanguage();
   const isRTL = language === 'ar' || language === 'he';
   const navigate = useNavigate();
+  const orderRequestKey = useRef(createOrderRequestKey());
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -193,7 +201,9 @@ const CheckoutPage = () => {
         payment_method: formData.paymentMethod
       };
 
-      const response = await axios.post(`${API}/orders`, orderData);
+      const response = await axios.post(`${API}/orders`, orderData, {
+        headers: { 'Idempotency-Key': orderRequestKey.current },
+      });
       const order = response.data;
       
       // Track purchase in GA4

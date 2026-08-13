@@ -57,7 +57,11 @@ const AdminManagement = () => {
         }
       );
 
-      setAdmins(response.data.admins || []);
+      // The API historically returned a bare array, while an intermediate
+      // deployment wrapped it in `{ admins: [...] }`. Accept both shapes so
+      // the table cannot silently become empty when the backend is upgraded.
+      const payload = response.data;
+      setAdmins(Array.isArray(payload) ? payload : (payload?.admins || []));
       setLoading(false);
     } catch (error) {
       console.error('Error fetching admins:', error);

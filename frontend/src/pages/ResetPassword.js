@@ -35,11 +35,11 @@ const ResetPassword = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       toast.error(
         isRTL
-          ? 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل'
-          : 'Password must be at least 6 characters'
+          ? 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل'
+          : 'Password must be at least 8 characters'
       );
       return;
     }
@@ -165,7 +165,7 @@ const ResetPassword = () => {
                 className={isRTL ? 'pr-10' : 'pl-10'}
                 placeholder={isRTL ? 'أدخل كلمة مرور جديدة' : 'Enter new password'}
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
           </div>
@@ -183,7 +183,7 @@ const ResetPassword = () => {
                 className={isRTL ? 'pr-10' : 'pl-10'}
                 placeholder={isRTL ? 'أكد كلمة المرور' : 'Confirm password'}
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
           </div>

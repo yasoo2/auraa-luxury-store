@@ -45,7 +45,7 @@ if $PY -c "import fastapi" 2>/dev/null; then
   # Catches boot-time breakage: bad imports, names used before definition, and
   # the syntax error that once reduced the server from 63 routes to 8.
   step "Backend imports and registers routes" \
-    bash -c "cd '$ROOT/backend' && $PY -c \"import server; n=len(server.app.routes); print(f'{n} routes'); assert n > 40, f'only {n} routes registered'\""
+    bash -c "cd '$ROOT/backend' && $PY '$ROOT/scripts/count-backend-routes.py'"
 
   if $PY -c "import mongomock_motor, pytest" 2>/dev/null; then
     step "Backend integration tests" $PY -m pytest tests/test_integration.py -q

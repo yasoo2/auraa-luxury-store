@@ -18,6 +18,7 @@ import { execFileSync } from 'node:child_process';
 
 const ROOT = process.argv[2] || 'frontend/src';
 const BACKEND = process.argv[3] || 'backend';
+const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
 // ---- what the server registers -------------------------------------------
 let registered;
@@ -25,9 +26,8 @@ try {
   const python = fs.existsSync(path.join(BACKEND, 'venv/bin/python'))
     ? path.resolve(BACKEND, 'venv/bin/python')
     : 'python3';
-  const out = execFileSync(python, ['-c',
-    'import server, json; print(json.dumps(sorted({r.path for r in server.app.routes if hasattr(r, "path")})))',
-  ], {
+  const routeScript = path.join(REPO_ROOT, 'scripts/list-backend-routes.py');
+  const out = execFileSync(python, [routeScript], {
     cwd: BACKEND,
     encoding: 'utf8',
     env: {
@@ -100,12 +100,7 @@ function record(raw, file) {
  * line here is a decision to leave a screen broken — it needs a reason, and
  * the list is meant to shrink.
  */
-const KNOWN_GAPS = {
-  '/api/auth/forgot-password':
-    'من نسي كلمة مروره لا يستطيع استعادتها. يحتاج خدمة بريد وقراراً بشأنها.',
-  '/api/auth/reset-password':
-    'الوجه الآخر من الاستعادة أعلاه.',
-};
+const KNOWN_GAPS = {};
 
 const missing = [];
 const known = [];

@@ -215,6 +215,7 @@ async def bulk_import_products(
                 break
 
             fresh = []
+            unique_before_page = len(seen_pids)
             for product in page_products:
                 pid = str(product.get("pid") or "")
                 if not pid or pid in seen_pids:
@@ -237,6 +238,22 @@ async def bulk_import_products(
                 results["products"].extend(fresh)
                 products_fetched += len(fresh)
                 results["ok"] += len(fresh)
+
+            # A supplier can legitimately return a page full of products we do
+            # not sell; continue so a later page can still yield jewellery.
+            # Re-seeing only products already encountered is different: it is
+            # a repeated page (common in mocks and in a few degraded supplier
+            # responses), so continuing would burn every page and sleep between
+            # them without any chance of progress.
+            new_unique_on_page = len(seen_pids) - unique_before_page
+            if not fresh and new_unique_on_page == 0:
+                results["batches"].append({
+                    "batch": page_num,
+                    "page": page_num,
+                    "size": 0,
+                    "status": "duplicate_page"
+                })
+                break
 
             results["batches"].append({
                 "batch": page_num,

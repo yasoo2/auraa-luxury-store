@@ -73,9 +73,8 @@ services:
       - key: EXCHANGE_RATE_API_KEY
         sync: false
 
-      # Guards /api/setup/create-first-admin on a fresh deployment. Optional,
-      # but without it the first person to reach that endpoint becomes the
-      # super admin.
+      # Required in production. The API refuses first-admin setup when this
+      # value is missing, so the first visitor cannot claim super-admin access.
       - key: ADMIN_SETUP_KEY
         sync: false
 

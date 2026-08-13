@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import DuplicateKeyError
 import os
 import logging
 import asyncio
@@ -18,6 +19,8 @@ import aiofiles
 from PIL import Image
 import io
 import re
+import html
+import hmac
 from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
@@ -1610,9 +1613,26 @@ async def remove_from_wishlist(
 @api_router.post("/orders", response_model=Order)
 async def create_order(
     order_data: OrderCreate,
+    request: Request,
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user)
 ):
+    # The browser may retry after a timeout even when the first request reached
+    # the server. Reusing an Idempotency-Key returns the original order instead
+    # of creating a second payable order. The header is optional for backwards
+    # compatibility with older clients.
+    idempotency_key = request.headers.get("Idempotency-Key", "").strip()
+    if idempotency_key:
+        if not 16 <= len(idempotency_key) <= 128:
+            raise HTTPException(status_code=400, detail="Invalid Idempotency-Key")
+        existing = await db.orders.find_one({
+            "user_id": current_user.id,
+            "idempotency_key": idempotency_key,
+        })
+        if existing:
+            existing.pop("_id", None)
+            return Order(**existing)
+
     cart = await db.carts.find_one({"user_id": current_user.id})
     if not cart or not cart.get("items"):
         raise HTTPException(status_code=400, detail="Cart is empty")
@@ -1697,7 +1717,21 @@ async def create_order(
     # different things at once.
     doc["supplier_status"] = "awaiting_approval"
     doc["supplier_order_id"] = None
-    await db.orders.insert_one(doc)
+    if idempotency_key:
+        doc["idempotency_key"] = idempotency_key
+    try:
+        await db.orders.insert_one(doc)
+    except DuplicateKeyError:
+        # A concurrent request won the unique index race. Return its order;
+        # never empty the cart or send a second notification for this request.
+        existing = await db.orders.find_one({
+            "user_id": current_user.id,
+            "idempotency_key": idempotency_key,
+        })
+        if existing:
+            existing.pop("_id", None)
+            return Order(**existing)
+        raise
 
     # Empty the cart now that its contents belong to the order.
     await db.carts.update_one(
@@ -1917,14 +1951,35 @@ async def iyzico_callback(request: Request, background_tasks: BackgroundTasks):
         }})
         return RedirectResponse(landing, status_code=303)
 
-    # Paid less than we asked is not paid. iyzico is told the amount by us, so
-    # a mismatch means something in between changed it.
+    # A valid provider signature is necessary but not sufficient: the signed
+    # response must also describe this exact order, basket, currency and amount.
+    expected_basket = str(order.get("order_number") or order_id)
+    response_identity_matches = (
+        str(result.get("conversation_id") or "") == order_id
+        and str(result.get("basket_id") or "") == expected_basket
+        and str(result.get("currency") or "").upper() == str(iyzico_client.CURRENCY).upper()
+    )
+    if not response_identity_matches:
+        logger.error("iyzico response did not match order %s", order_id)
+        await db.orders.update_one({"id": order_id}, {"$set": {
+            "payment_error": "Payment response did not match this order",
+        }})
+        return RedirectResponse(landing, status_code=303)
+
+    # The provider was told the amount by us. Require both signed price fields
+    # to be positive and equal to the amount stored before redirecting to iyzico.
     expected = float(order.get("payment_amount_charged") or 0)
     charged = float(result.get("paid_price") or 0)
-    if expected and charged + 0.01 < expected:
-        logger.error("iyzico reports %.2f for order %s, expected %.2f", charged, order_id, expected)
+    provider_price = float(result.get("price") or 0)
+    if expected <= 0 or charged <= 0 or provider_price <= 0 \
+            or abs(charged - expected) > 0.01 \
+            or abs(provider_price - expected) > 0.01:
+        logger.error(
+            "iyzico amount mismatch for %s: charged=%s price=%s expected=%s",
+            order_id, charged, provider_price, expected,
+        )
         await db.orders.update_one({"id": order_id}, {"$set": {
-            "payment_error": f"Amount mismatch: charged {charged}, expected {expected}",
+            "payment_error": "Payment amount mismatch: it did not match the order",
         }})
         return RedirectResponse(landing, status_code=303)
 
@@ -2952,6 +3007,8 @@ class ContactMessage(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     email: EmailStr
     phone: Optional[str] = Field(default=None, max_length=40)
+    orderNumber: Optional[str] = Field(default=None, max_length=80)
+    subject: Optional[str] = Field(default=None, max_length=80)
     message: str = Field(min_length=1, max_length=4000)
 
 
@@ -2977,6 +3034,8 @@ async def receive_contact_message(payload: ContactMessage):
         "name": payload.name.strip(),
         "email": payload.email,
         "phone": (payload.phone or "").strip() or None,
+        "order_number": (payload.orderNumber or "").strip() or None,
+        "subject": (payload.subject or "").strip() or None,
         "message": payload.message.strip(),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "read": False,
@@ -2987,13 +3046,15 @@ async def receive_contact_message(payload: ContactMessage):
     try:
         from services.email_service import send_email
         body = (
-            f"<p><strong>من:</strong> {doc['name']} &lt;{doc['email']}&gt;</p>"
-            f"<p><strong>الهاتف:</strong> {doc['phone'] or 'غير مذكور'}</p>"
-            f"<hr><p style='white-space:pre-wrap'>{doc['message']}</p>"
+            f"<p><strong>من:</strong> {html.escape(doc['name'])} &lt;{html.escape(str(doc['email']))}&gt;</p>"
+            f"<p><strong>الهاتف:</strong> {html.escape(doc['phone'] or 'غير مذكور')}</p>"
+            f"<p><strong>رقم الطلب:</strong> {html.escape(doc['order_number'] or 'غير مذكور')}</p>"
+            f"<p><strong>الموضوع:</strong> {html.escape(doc['subject'] or 'غير محدد')}</p>"
+            f"<hr><p style='white-space:pre-wrap'>{html.escape(doc['message'])}</p>"
         )
         sent = send_email(
             CONTACT_INBOX,
-            f"رسالة جديدة من {doc['name']} — Auraa Luxury",
+            f"رسالة جديدة من {html.escape(doc['name'])} — Auraa Luxury",
             body,
         )
         if sent:
@@ -3334,10 +3395,16 @@ async def create_first_admin(payload: FirstAdminRequest):
     if await db.users.count_documents({"is_admin": True}) > 0:
         raise HTTPException(status_code=403, detail="An admin already exists")
 
-    # Optional shared secret, so a race to this endpoint on a fresh deploy
-    # cannot be won by a stranger.
-    expected_key = os.getenv("ADMIN_SETUP_KEY")
-    if expected_key and payload.setup_key != expected_key:
+    # A fresh production deployment must never let the first stranger become
+    # super admin. Local/test environments may omit the key for convenience,
+    # but production fails closed until the operator configures it.
+    expected_key = os.getenv("ADMIN_SETUP_KEY", "").strip()
+    if os.getenv("ENV", "production").lower() in ("production", "prod") and not expected_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Admin setup is disabled until ADMIN_SETUP_KEY is configured",
+        )
+    if expected_key and not hmac.compare_digest(payload.setup_key or "", expected_key):
         raise HTTPException(status_code=403, detail="Invalid setup key")
 
     if len(payload.password) < 8:
@@ -4014,6 +4081,16 @@ async def fill_missing_arabic_names():
     English beats the store not answering at all.
     """
     try:
+        try:
+            await db.orders.create_index(
+                [("user_id", 1), ("idempotency_key", 1)],
+                unique=True,
+                sparse=True,
+                name="orders_user_id_idempotency_unique",
+            )
+        except Exception:
+            logger.exception("Could not create the non-critical order idempotency index")
+
         docs = await db.products.find(
             {}, {"id": 1, "name": 1, "name_en": 1, "name_ar": 1,
                  "description": 1, "description_ar": 1}

@@ -231,6 +231,7 @@ async def retrieve_checkout_form(*, token: str, conversation_id: str, locale: st
         "payment_status": data.get("paymentStatus"),
         "payment_id": data.get("paymentId"),
         "paid_price": data.get("paidPrice"),
+        "price": data.get("price"),
         "currency": data.get("currency"),
         "basket_id": data.get("basketId"),
         "conversation_id": data.get("conversationId"),

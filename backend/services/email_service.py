@@ -4,6 +4,7 @@ Handles all transactional emails using SendGrid
 """
 
 import os
+import html
 import logging
 from typing import Optional
 from sendgrid import SendGridAPIClient
@@ -62,6 +63,28 @@ def send_email(
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {str(e)}")
         return False
+
+
+def send_password_reset_email(user_email: str, user_name: str, reset_url: str) -> bool:
+    """Send a time-limited password reset link."""
+    safe_name = html.escape(user_name or "Customer")
+    safe_url = html.escape(reset_url, quote=True)
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head><meta charset="UTF-8"><title>Password reset</title></head>
+    <body style="font-family:Arial,sans-serif;line-height:1.6;color:#222">
+      <h2>Auraa Luxury password reset</h2>
+      <p>Hello {safe_name},</p>
+      <p>We received a request to reset your password. This link expires in 30 minutes
+      and can be used only once.</p>
+      <p><a href="{safe_url}" style="display:inline-block;padding:12px 20px;background:#8a6a2f;color:#fff;text-decoration:none;border-radius:6px">Reset password</a></p>
+      <p>If you did not request this, you can safely ignore this message.</p>
+      <p>For your security, never share this link with anyone.</p>
+    </body>
+    </html>
+    """
+    return send_email(user_email, "Reset your Auraa Luxury password", html_content, user_name)
 
 
 def send_welcome_email(user_email: str, user_name: str) -> bool:

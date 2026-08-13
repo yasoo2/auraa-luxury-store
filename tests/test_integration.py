@@ -4526,20 +4526,18 @@ def test_a_title_the_supplier_sent_as_a_list_is_shown_as_a_sentence():
 
 
 def test_a_stored_list_title_is_repaired_on_the_way_out(client):
-    """Rows already in the shop carry the raw array; the read path unwraps it."""
+    """Rows already in the shop carry raw arrays; valid jewellery is unwrapped."""
     import asyncio
-
     loop = asyncio.get_event_loop()
     loop.run_until_complete(client._db.products.insert_one({
         "id": "arr-1", "source": "cj_dropshipping", "external_id": "A1",
         "imported_from_cj": True,
-        "name": '["Mini","Dried Flower 6 Bouquets"]',
-        "description": "d", "price": 39.0, "category": "sets",
+        "name": '["Sterling Silver","Butterfly Necklace"]',
+        "description": "d", "price": 39.0, "category": "necklaces",
         "images": ["https://x/a.jpg"], "in_stock": True, "is_active": True,
     }))
-
     row = next(p for p in client.get("/api/products").json() if p["id"] == "arr-1")
-    assert row["name"] == "Mini Dried Flower 6 Bouquets", \
+    assert row["name"] == "Sterling Silver Butterfly Necklace", \
         f"the storefront still prints a data structure: {row['name']!r}"
 
 

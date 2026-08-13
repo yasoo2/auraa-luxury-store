@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import axios from 'axios';
 import ProductFormModal from '../../components/admin/ProductFormModal';
@@ -56,13 +56,21 @@ const EnhancedProductsPage = () => {
     { value: 'black', label: isRTL ? 'أسود' : 'Black', color: '#000000' }
   ];
 
-  // Filter products based on search term, category, and status
+  // Filter products based on search term, category, and status. Supplier and
+  // legacy products may omit `name_en`, `name_ar`, or `sku`; normalise every
+  // field so a single incomplete record cannot crash the whole admin catalogue.
+  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
   const filteredProducts = products.filter(product => {
-    const matchesSearch = !searchTerm || 
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const searchableFields = [
+      product.name,
+      product.name_ar,
+      product.name_en,
+      product.sku,
+    ].map((value) => String(value ?? '').toLocaleLowerCase());
+    const matchesSearch = !normalizedSearchTerm || searchableFields.some(
+      (value) => value.includes(normalizedSearchTerm)
+    );
+
     const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'active' && product.is_active) ||
@@ -72,12 +80,9 @@ const EnhancedProductsPage = () => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // All the functions from previous implementation
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  // Keep the loader stable so effects and post-mutation refreshes share one
+  // implementation without a stale dependency warning.
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/api/admin/products`);
@@ -93,7 +98,11 @@ const EnhancedProductsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_URL, isRTL]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleSaveProduct = async (productData) => {
     try {

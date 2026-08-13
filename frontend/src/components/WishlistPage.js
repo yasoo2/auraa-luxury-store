@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useLanguage } from '../context/LanguageContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
@@ -44,12 +45,28 @@ const WishlistPage = () => {
     );
   };
 
-  const addAllToCart = () => {
-    // This would integrate with cart functionality
-    wishlistItems.forEach(item => {
-      // Add each item to cart
-      console.log('Adding to cart:', item);
-    });
+  const handleAddToCart = async (productId) => {
+    const result = await addToCart(productId, 1);
+    if (result?.success) {
+      toast.success(isRTL ? 'تمت إضافة المنتج إلى السلة' : 'Item added to cart');
+    } else {
+      toast.error(result?.error || (isRTL ? 'فشلت إضافة المنتج إلى السلة' : 'Could not add item to cart'));
+    }
+  };
+
+  const addAllToCart = async () => {
+    let added = 0;
+    for (const item of wishlistItems) {
+      const result = await addToCart(item.id, 1);
+      if (result?.success) added += 1;
+    }
+    if (added === wishlistItems.length && added > 0) {
+      toast.success(isRTL ? 'تمت إضافة كل المنتجات إلى السلة' : 'All wishlist items added to cart');
+    } else if (added > 0) {
+      toast.warning(isRTL ? `تمت إضافة ${added} من ${wishlistItems.length} منتجات` : `${added} of ${wishlistItems.length} items added to cart`);
+    } else {
+      toast.error(isRTL ? 'فشلت إضافة المنتجات إلى السلة' : 'Could not add wishlist items to cart');
+    }
   };
 
   const shareWishlist = async () => {
@@ -208,7 +225,7 @@ const WishlistPage = () => {
                           point of a wishlist, and this button did nothing. */}
                       <Button
                         size="sm"
-                        onClick={() => addToCart(item.id, 1)}
+                        onClick={() => handleAddToCart(item.id)}
                         data-testid="wishlist-add-to-cart"
                         className="bg-amber-600 hover:bg-amber-700"
                       >
@@ -263,7 +280,7 @@ const WishlistPage = () => {
                   <div className="flex gap-2">
                     <Button 
                       className="flex-1 bg-amber-600 hover:bg-amber-700"
-                      onClick={() => console.log('Add to cart:', item.id)}
+                      onClick={() => handleAddToCart(item.id)}
                     >
                       <ShoppingCart className="h-4 w-4 me-2" />
                       {isRTL ? 'أضف للسلة' : 'Add to Cart'}

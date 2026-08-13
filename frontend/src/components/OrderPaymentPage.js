@@ -142,17 +142,6 @@ const OrderPaymentPage = () => {
                     paying={paying}
                     payError={payError || info.payment_error}
                   />
-                  {info.method?.unavailable && (
-                    <p
-                      role="alert"
-                      data-testid="method-unavailable"
-                      className="mt-3 text-sm text-red-700"
-                    >
-                      {isRTL
-                        ? 'طريقة الدفع المختارة لم تعد متاحة — تواصل معنا لإتمام الدفع.'
-                        : 'The chosen payment method is no longer available — please contact us to settle payment.'}
-                    </p>
-                  )}
                 </>
               )}
 

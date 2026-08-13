@@ -91,10 +91,15 @@ const ProductsPage = () => {
 
   const filterParams = () => {
     const params = new URLSearchParams();
-    if (filters.category) params.append('category', filters.category);
-    if (filters.search) params.append('search', filters.search);
-    if (filters.minPrice) params.append('min_price', filters.minPrice);
-    if (filters.maxPrice) params.append('max_price', filters.maxPrice);
+    const readParam = (...keys) => keys.map((key) => searchParams.get(key)).find((value) => value !== null && value !== '') || '';
+    const category = readParam('category') || filters.category;
+    const search = readParam('search', 'q') || filters.search;
+    const minPrice = readParam('min_price', 'minPrice') || filters.minPrice;
+    const maxPrice = readParam('max_price', 'maxPrice') || filters.maxPrice;
+    if (category) params.append('category', category);
+    if (search) params.append('search', search);
+    if (minPrice) params.append('min_price', minPrice);
+    if (maxPrice) params.append('max_price', maxPrice);
     params.append('limit', String(PAGE_SIZE));
     return params;
   };
@@ -174,6 +179,8 @@ const ProductsPage = () => {
     }
   };
 
+  const activeSearch = searchParams.get('search') || searchParams.get('q') || filters.search;
+
   const addToComparison = (product) => {
     if (comparisonProducts.length >= 4) {
       toast.error(isRTL ? 'يمكنك مقارنة 4 منتجات كحد أقصى' : 'You can compare up to 4 products');
@@ -193,8 +200,8 @@ const ProductsPage = () => {
           <h1 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-4" data-testid="products-page-title">
             {filters.category 
               ? (categories.find(c => c.id === filters.category)?.name_en && !isRTL ? categories.find(c => c.id === filters.category)?.name_en : categories.find(c => c.id === filters.category)?.name) || (isRTL ? 'المنتجات' : 'Products')
-              : filters.search 
-              ? (isRTL ? `البحث عن: ${filters.search}` : `Search: ${filters.search}`)
+              : activeSearch
+              ? (isRTL ? `البحث عن: ${activeSearch}` : `Search: ${activeSearch}`)
               : (isRTL ? 'جميع المنتجات' : 'All Products')
             }
           </h1>

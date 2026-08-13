@@ -5,11 +5,10 @@ import { useLanguage } from '../context/LanguageContext';
 /**
  * What a customer needs in order to actually send the money.
  *
- * The shop has no card gateway, so "pay" means a bank transfer the customer
- * makes themselves. That only works if the details are in front of them,
- * copyable, and carry the reference that lets the owner match the incoming
- * money to this order — a transfer with no reference is money that arrives
- * belonging to nobody.
+ * A shop can offer card payment, bank transfer, or payment on confirmation.
+ * Where a bank transfer is enabled, its details must be copyable and carry the
+ * reference that lets the owner match the incoming money to this order — a
+ * transfer with no reference is money that arrives belonging to nobody.
  *
  * Every value here comes from the server. Nothing about a bank account may be
  * guessed, defaulted or filled in from an example: the failure mode is a
@@ -85,7 +84,7 @@ const PaymentInstructions = ({ method, amount, currency, reference, formatted, o
         {/* The provider does not settle SAR, so the card is charged in another
             currency. Said here, before they leave, rather than discovered on
             a statement. */}
-        {method.charged && (
+        {method.charged && !method.unavailable && (
           <p className="text-sm text-gray-800 bg-white rounded px-3 py-2 mb-3" data-testid="charged-amount">
             {isRTL ? 'سيُخصم من بطاقتك: ' : 'Your card will be charged: '}
             <strong dir="ltr">{method.charged}</strong>
@@ -100,17 +99,29 @@ const PaymentInstructions = ({ method, amount, currency, reference, formatted, o
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={onPayByCard}
-          disabled={paying}
-          data-testid="pay-by-card"
-          className="w-full sm:w-auto px-6 py-3 rounded-lg bg-amber-600 text-white font-semibold hover:bg-amber-700 disabled:opacity-60"
-        >
-          {paying
-            ? (isRTL ? 'جارٍ التحويل إلى صفحة الدفع…' : 'Taking you to the payment page…')
-            : (isRTL ? 'ادفع بالبطاقة الآن' : 'Pay by card now')}
-        </button>
+        {method.unavailable ? (
+          <p
+            role="alert"
+            data-testid="card-payment-unavailable"
+            className="text-sm text-red-800 bg-red-50 border border-red-200 rounded px-3 py-2"
+          >
+            {isRTL
+              ? 'الدفع بالبطاقة غير متاح حالياً. تواصلي معنا لإتمام الطلب دون محاولة خصم.'
+              : 'Card payment is temporarily unavailable. Please contact us to settle the order without attempting a charge.'}
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={onPayByCard}
+            disabled={paying}
+            data-testid="pay-by-card"
+            className="w-full sm:w-auto px-6 py-3 rounded-lg bg-amber-600 text-white font-semibold hover:bg-amber-700 disabled:opacity-60"
+          >
+            {paying
+              ? (isRTL ? 'جارٍ التحويل إلى صفحة الدفع…' : 'Taking you to the payment page…')
+              : (isRTL ? 'ادفع بالبطاقة الآن' : 'Pay by card now')}
+          </button>
+        )}
 
         {payError && (
           <p role="alert" data-testid="pay-error" className="mt-3 text-sm text-red-700">

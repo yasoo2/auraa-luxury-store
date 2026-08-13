@@ -314,7 +314,7 @@ const ProfilePage = () => {
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
                       <div>
                         <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          {isRTL ? 'طلب رقم:' : 'Order no.:'} #{order.id.slice(-8)}
+                          {isRTL ? 'طلب رقم:' : 'Order no.:'} #{order.order_number || order.id || '—'}
                         </h3>
                         <p className="text-gray-600">
                           {isRTL ? 'تاريخ الطلب: ' : 'Order Date: '}
@@ -395,7 +395,20 @@ const ProfilePage = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsEditingAddress(true)}
+                    onClick={() => {
+                      const address = user?.address || {};
+                      setAddressData({
+                        firstName: address.firstName || '',
+                        lastName: address.lastName || '',
+                        phone: address.phone || '',
+                        street: address.street || '',
+                        city: address.city || '',
+                        state: address.state || '',
+                        postalCode: address.postalCode || '',
+                        country: address.country || 'Saudi Arabia',
+                      });
+                      setIsEditingAddress(true);
+                    }}
                     className="text-amber-600 border-amber-600 hover:bg-amber-50"
                   >
                     {isRTL ? 'تعديل' : 'Edit'}
@@ -418,7 +431,19 @@ const ProfilePage = () => {
                 </p>
                 <Button 
                   className="btn-luxury"
-                  onClick={() => setIsEditingAddress(true)}
+                  onClick={() => {
+                    setAddressData({
+                      firstName: '',
+                      lastName: '',
+                      phone: '',
+                      street: '',
+                      city: '',
+                      state: '',
+                      postalCode: '',
+                      country: 'Saudi Arabia',
+                    });
+                    setIsEditingAddress(true);
+                  }}
                 >
                   {isRTL ? 'إضافة عنوان جديد' : 'Add a new address'}
                 </Button>

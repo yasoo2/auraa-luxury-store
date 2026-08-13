@@ -53,6 +53,12 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  const getSuggestionLabel = (suggestion) => {
+    if (typeof suggestion === 'string') return suggestion;
+    const label = suggestion?.name_en || suggestion?.name || suggestion?.name_ar || suggestion?.title || '';
+    return typeof label === 'string' ? label : String(label || '');
+  };
+
   // AI-powered search suggestions
   const generateAISuggestions = (searchQuery) => {
     const baseSuggestions = [
@@ -113,7 +119,10 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
         const response = await axios.get(
           `${API}/search?q=${encodeURIComponent(searchQuery)}&limit=6`
         );
-        setSuggestions(response.data || []);
+        const suggestionItems = Array.isArray(response.data)
+          ? response.data
+          : response.data?.products || [];
+        setSuggestions(suggestionItems.map(getSuggestionLabel).filter(Boolean));
         
         // Generate AI suggestions
         const aiSuggs = generateAISuggestions(searchQuery);
@@ -216,12 +225,16 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
     if (typeof suggestion === 'string') {
       setQuery(suggestion);
       handleSearch(suggestion, filters);
-    } else {
+    } else if (suggestion?.text) {
       // AI suggestion with category
       setQuery(suggestion.text);
       const newFilters = { ...filters, category: suggestion.category };
       setFilters(newFilters);
       handleSearch(suggestion.text, newFilters);
+    } else {
+      const productName = getSuggestionLabel(suggestion);
+      setQuery(productName);
+      handleSearch(productName, filters);
     }
     setShowSuggestions(false);
   };
@@ -318,7 +331,7 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
                     onClick={() => handleSuggestionClick(suggestion)}
                     className="w-full text-left p-2 hover:bg-gray-50 rounded-md transition-colors text-sm text-gray-700"
                   >
-                    {suggestion}
+                    {getSuggestionLabel(suggestion)}
                   </button>
                 ))}
               </div>

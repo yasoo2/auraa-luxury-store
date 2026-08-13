@@ -23,7 +23,7 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      await axios.post(`${API}/auth/forgot-password`, { email });
+      await axios.post(`${API}/api/auth/forgot-password`, { email });
       setSubmitted(true);
       toast.success(
         isRTL

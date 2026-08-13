@@ -6,11 +6,13 @@ const AboutUs = () => {
   const { language } = useLanguage();
   const isRTL = language === 'ar';
 
+  // لا نعرض أرقام مبيعات أو رضا أو وعود تشغيلية لا تدعمها بيانات متحققة.
+  // تبقى الشبكة البصرية نفسها، لكن برسائل مفيدة وصادقة للمتسوق.
   const stats = [
-    { number: '50,000+', label: isRTL ? 'عميل راضٍ' : 'Happy Customers', icon: Users },
-    { number: '10,000+', label: isRTL ? 'قطعة مجوهرات' : 'Jewelry Pieces', icon: Crown },
-    { number: '99.9%', label: isRTL ? 'معدل الرضا' : 'Satisfaction Rate', icon: Heart },
-    { number: '24/7', label: isRTL ? 'خدمة العملاء' : 'Customer Support', icon: Shield }
+    { number: isRTL ? 'مختارات' : 'Curated', label: isRTL ? 'إكسسوارات للعرض' : 'Accessories to explore', icon: Users },
+    { number: isRTL ? 'وصف واضح' : 'Clear details', label: isRTL ? 'معلومات تساعدك على الاختيار' : 'Information for informed choices', icon: Crown },
+    { number: isRTL ? 'تسوّق آمن' : 'Secure shopping', label: isRTL ? 'حماية للحساب والطلب' : 'Account and order protection', icon: Shield },
+    { number: isRTL ? 'متابعة' : 'Support', label: isRTL ? 'قنوات تواصل متاحة' : 'Available contact channels', icon: Heart }
   ];
 
   const values = [
@@ -18,56 +20,53 @@ const AboutUs = () => {
       icon: Crown,
       title: isRTL ? 'الجودة الفائقة' : 'Superior Quality',
       description: isRTL 
-        ? 'نختار بعناية أجود المواد والأحجار الكريمة لضمان قطع تدوم مدى الحياة'
-        : 'We carefully select the finest materials and precious stones to ensure pieces that last a lifetime'
+        ? 'نحرص على تقديم صور ووصف واضحين للمنتج لتتمكني من اتخاذ قرار الشراء بثقة.'
+        : 'We provide clear product photos and descriptions to help you shop with confidence.'
     },
     {
       icon: Sparkles,
       title: isRTL ? 'التصميم المميز' : 'Distinctive Design',
       description: isRTL 
-        ? 'تصاميم حصرية تجمع بين الأناقة الكلاسيكية والعصرية لتناسب جميع الأذواق'
-        : 'Exclusive designs that blend classic and contemporary elegance to suit all tastes'
+        ? 'تجمع مجموعتنا بين أنماط متنوعة لتسهيل العثور على القطعة التي تناسب ذوقك.'
+        : 'Our collection brings together varied styles to help you find a piece that suits your taste.'
     },
     {
       icon: Shield,
       title: isRTL ? 'الثقة والأمان' : 'Trust & Security',
       description: isRTL 
-        ? 'ضمان شامل على جميع منتجاتنا مع خدمة عملاء متميزة وسياسة إرجاع مرنة'
-        : 'Comprehensive warranty on all our products with exceptional customer service and flexible return policy'
+        ? 'نوضح خيارات الطلب والدفع وسياسة الإرجاع، ونحافظ على بيانات الحساب والطلب بعناية.'
+        : 'We make ordering, payment, and return options clear while protecting account and order data.'
     },
     {
       icon: Globe,
       title: isRTL ? 'الوصول العالمي' : 'Global Reach',
       description: isRTL 
-        ? 'نصل إليك أينما كنت في المملكة ودول الخليج مع شحن سريع وآمن'
-        : 'We reach you wherever you are in the Kingdom and Gulf countries with fast and secure shipping'
+        ? 'تابعي تفاصيل الطلب من المتجر، وتواصلي معنا مباشرة عند الحاجة إلى المساعدة.'
+        : 'Follow your order details in the store and contact us directly whenever you need help.'
     }
   ];
 
-  const team = [
+  const experienceHighlights = [
     {
-      name: isRTL ? 'سارة أحمد' : 'Sarah Ahmed',
-      position: isRTL ? 'مؤسسة ومديرة إبداعية' : 'Founder & Creative Director',
-      image: '/api/placeholder/300/300',
-      description: isRTL 
-        ? 'خبرة 15 عام في عالم المجوهرات والتصميم الفاخر'
-        : '15 years experience in jewelry and luxury design'
+      name: isRTL ? 'تصفّح منظم' : 'Organized browsing',
+      position: isRTL ? 'فئات وبحث وفلاتر' : 'Categories, search, and filters',
+      description: isRTL
+        ? 'استخدمي الفئات والبحث والفلاتر للوصول إلى المنتجات بسهولة.'
+        : 'Use categories, search, and filters to find products with ease.'
     },
     {
-      name: isRTL ? 'أحمد محمد' : 'Ahmed Mohammed',
-      position: isRTL ? 'مدير العمليات' : 'Operations Manager',
-      image: '/api/placeholder/300/300',
-      description: isRTL 
-        ? 'متخصص في إدارة سلاسل التوريد والجودة'
-        : 'Specialist in supply chain management and quality'
+      name: isRTL ? 'اختيار مدروس' : 'Thoughtful choices',
+      position: isRTL ? 'مفضلة ومقارنة وسلة' : 'Wishlist, comparison, and cart',
+      description: isRTL
+        ? 'احفظي المنتجات أو قارني بينها قبل إتمام الطلب.'
+        : 'Save products or compare them before completing an order.'
     },
     {
-      name: isRTL ? 'فاطمة علي' : 'Fatima Ali',
-      position: isRTL ? 'مديرة خدمة العملاء' : 'Customer Service Manager',
-      image: '/api/placeholder/300/300',
-      description: isRTL 
-        ? 'ملتزمة بتقديم أفضل تجربة خدمة عملاء'
-        : 'Committed to providing the best customer service experience'
+      name: isRTL ? 'متابعة واضحة' : 'Clear follow-up',
+      position: isRTL ? 'طلبات وتواصل مباشر' : 'Orders and direct contact',
+      description: isRTL
+        ? 'راجعي تفاصيل طلبك وتواصلي مع المتجر من خلال القنوات المتاحة.'
+        : 'Review order details and contact the store through available channels.'
     }
   ];
 
@@ -137,20 +136,20 @@ const AboutUs = () => {
               <div className="space-y-4 text-gray-600 leading-relaxed">
                 <p>
                   {isRTL 
-                    ? 'في عام 2020، وُلدت أورا لاكشري من حلم بسيط: أن نجعل المجوهرات الفاخرة متاحة لكل امرأة عربية تبحث عن التميز والأناقة. بدأنا كفريق صغير يؤمن بقوة الجمال وتأثيره الإيجابي على حياة المرأة.'
-                    : 'In 2020, Auraa Luxury was born from a simple dream: to make luxury jewelry accessible to every Arab woman seeking distinction and elegance. We started as a small team believing in the power of beauty and its positive impact on women\'s lives.'
+                    ? 'Auraa Luxury متجر إلكتروني يتيح استعراض الإكسسوارات والمجوهرات واختيار ما يناسب أسلوبك بسهولة. نعرض المنتجات بتفاصيل تساعدك على المقارنة واتخاذ قرار واضح.'
+                    : 'Auraa Luxury is an online store for exploring jewelry and accessories and choosing what suits your style with ease. We present products with details that support clear comparisons and decisions.'
                   }
                 </p>
                 <p>
                   {isRTL 
-                    ? 'اليوم، نفخر بكوننا وجهة موثوقة للمجوهرات الفاخرة لعملائنا في العالم العربي وحول العالم. نجحنا في بناء مجتمع من العملاء المميزين الذين يثقون بنا لإضافة لمسة من البريق والأناقة إلى حياتهم اليومية.'
-                    : 'Today, we are proud to be a trusted destination for luxury jewelry for customers across the Arab world and beyond. We have successfully built a community of distinguished customers who trust us to add a touch of sparkle and elegance to their daily lives.'
+                    ? 'تُصمّم تجربة المتجر لتكون مباشرة: تصفح المنتجات، أضيفي ما يعجبك إلى المفضلة أو السلة، وراجعي معلومات الطلب في مكان واحد.'
+                    : 'The store experience is designed to be direct: browse products, save favorites or add items to the cart, and review order information in one place.'
                   }
                 </p>
                 <p>
                   {isRTL 
-                    ? 'رؤيتنا تتجاوز بيع المجوهرات، فنحن نؤمن بأن كل قطعة نقدمها تحمل قصة، وكل عميلة تختارنا تصبح جزءاً من عائلة أورا لاكشري الكبيرة.'
-                    : 'Our vision goes beyond selling jewelry; we believe that every piece we offer carries a story, and every customer who chooses us becomes part of the greater Auraa Luxury family.'
+                    ? 'نستمع إلى الملاحظات ونراجع تجربة المتجر باستمرار لنحافظ على رحلة تسوق منظمة وواضحة من الاستكشاف حتى متابعة الطلب.'
+                    : 'We listen to feedback and continually review the storefront experience to keep the journey organized and clear from discovery through order tracking.'
                   }
                 </p>
               </div>
@@ -219,18 +218,18 @@ const AboutUs = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              {isRTL ? 'فريقنا المتميز' : 'Our Distinguished Team'}
+              {isRTL ? 'تجربة تسوق مصممة بوضوح' : 'A clearly designed shopping experience'}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               {isRTL 
-                ? 'نخبة من المتخصصين المتحمسين لتقديم أفضل خدمة وتجربة لعملائنا'
-                : 'A select group of specialists passionate about providing the best service and experience to our customers'
+                ? 'خطوات وأدوات عملية تساعدك على الاستكشاف والاختيار ومتابعة طلبك.'
+                : 'Practical steps and tools for exploring, choosing, and following your order.'
               }
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {team.map((member, index) => (
+            {experienceHighlights.map((member, index) => (
               <div key={index} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                 <div className="h-64 bg-gradient-to-r from-gray-200 to-gray-300 flex items-center justify-center">
                   <Users className="h-20 w-20 text-gray-500" />
@@ -265,8 +264,8 @@ const AboutUs = () => {
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             {isRTL 
-              ? 'اكتشفي مجموعتنا الحصرية من المجوهرات الفاخرة واجعلي كل يوم مناسبة خاصة'
-              : 'Discover our exclusive collection of luxury jewelry and make every day a special occasion'
+              ? 'استعرضي المنتجات المتاحة واختاري القطعة التي تناسب ذوقك.'
+              : 'Explore available products and choose the piece that suits your style.'
             }
           </p>
           <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">

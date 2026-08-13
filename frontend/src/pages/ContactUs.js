@@ -6,11 +6,9 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
-import axios from 'axios';
-import { API_BASE_URL } from '../api';
+import { apiPost } from '../api';
 import { whatsappLink } from '../config/contact';
 
-const API = API_BASE_URL;
 const ContactUs = () => {
   const { language } = useLanguage();
   const isRTL = language === 'ar';
@@ -19,6 +17,8 @@ const ContactUs = () => {
     name: '',
     email: '',
     phone: '',
+    orderNumber: '',
+    subject: '',
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,7 +37,7 @@ const ContactUs = () => {
     setIsSubmitting(true);
 
     try {
-      await axios.post(`${API}/contact`, formData);
+      await apiPost('/api/contact', formData);
       
       setIsSubmitted(true);
       toast.success(isRTL ? 'تم إرسال رسالتك بنجاح! سنتواصل معك قريباً.' : 'Message sent successfully! We will contact you soon.');
@@ -48,6 +48,8 @@ const ContactUs = () => {
           name: '',
           email: '',
           phone: '',
+          orderNumber: '',
+          subject: '',
           message: ''
         });
         setIsSubmitted(false);
@@ -376,6 +378,7 @@ const ContactUs = () => {
                         value={formData.message}
                         onChange={handleInputChange}
                         required
+                        minLength={10}
                         rows={6}
                         placeholder={isRTL 
                           ? 'اكتب رسالتك هنا. كن مفصلاً قدر الإمكان لنتمكن من مساعدتك بشكل أفضل.'

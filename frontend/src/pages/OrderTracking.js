@@ -44,16 +44,17 @@ const OrderTracking = () => {
     }
   };
 
-  const handleTrackByNumber = async () => {
-    if (!trackingNumber && !orderNumber) {
+  const handleTrackByNumber = async (requestedNumber = '') => {
+    const explicitNumber = typeof requestedNumber === 'string' ? requestedNumber : '';
+    const searchParam = (explicitNumber || orderNumber || trackingNumber).trim();
+    if (!searchParam) {
       toast.error(isRTL ? 'يرجى إدخال رقم التتبع أو رقم الطلب' : 'Please enter tracking number or order number');
       return;
     }
 
     setLoading(true);
     try {
-      const searchParam = trackingNumber || orderNumber;
-      const data = await apiGet(`/api/orders/track/${searchParam}`);
+      const data = await apiGet(`/api/orders/track/${encodeURIComponent(searchParam)}`);
       setTrackingData(data);
     } catch (error) {
       console.error('Error tracking order:', error);
@@ -206,7 +207,11 @@ const OrderTracking = () => {
               </label>
               <Input
                 value={trackingNumber}
-                onChange={(e) => setTrackingNumber(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setTrackingNumber(value);
+                  if (value) setOrderNumber('');
+                }}
                 placeholder={isRTL ? 'أدخل رقم التتبع' : 'Enter tracking number'}
               />
             </div>
@@ -217,7 +222,11 @@ const OrderTracking = () => {
               </label>
               <Input
                 value={orderNumber}
-                onChange={(e) => setOrderNumber(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setOrderNumber(value);
+                  if (value) setTrackingNumber('');
+                }}
                 placeholder={isRTL ? 'أدخل رقم الطلب' : 'Enter order number'}
               />
             </div>
@@ -275,10 +284,8 @@ const OrderTracking = () => {
                   {isRTL ? 'عنوان التسليم' : 'Delivery Address'}
                 </h4>
                 <div className="text-sm text-gray-600">
-                  <p>{trackingData.shipping_address?.name}</p>
-                  <p>{trackingData.shipping_address?.address1}</p>
-                  <p>{trackingData.shipping_address?.city}, {trackingData.shipping_address?.country}</p>
-                  <p>{trackingData.shipping_address?.phone}</p>
+                  <p>{trackingData.shipping_address?.city || '—'}{trackingData.shipping_address?.country ? `, ${trackingData.shipping_address.country}` : ''}</p>
+                  <p>{isRTL ? 'عدد العناصر:' : 'Items:'} {trackingData.item_count ?? '—'}</p>
                 </div>
               </div>
             </div>
@@ -332,7 +339,8 @@ const OrderTracking = () => {
                       size="sm"
                       onClick={() => {
                         setOrderNumber(order.order_number);
-                        handleTrackByNumber();
+                        setTrackingNumber('');
+                        handleTrackByNumber(order.order_number);
                       }}
                     >
                       <Eye className="h-4 w-4 me-1" />

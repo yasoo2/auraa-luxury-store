@@ -69,7 +69,7 @@ const CookiesPolicy = () => {
           'Safari: التفضيلات > الخصوصية > إدارة بيانات الموقع',
           'Edge: الإعدادات > الخصوصية > الكوكيز'
         ],
-        note: 'تنبيه: تعطيل الكوكيز الضرورية قد يؤثر على وظائف الموقع الأساسية.'
+        note: 'تعطيل الكوكيز الضرورية قد يؤثر على وظائف الموقع الأساسية.'
       },
       duration: {
         title: 'مدة تخزين الكوكيز',
@@ -151,7 +151,7 @@ const CookiesPolicy = () => {
           'Safari: Preferences > Privacy > Manage Website Data',
           'Edge: Settings > Privacy > Cookies'
         ],
-        note: 'Note: Disabling essential cookies may affect core website functionality.'
+        note: 'Disabling essential cookies may affect core website functionality.'
       },
       duration: {
         title: 'Cookie Storage Duration',
@@ -268,8 +268,8 @@ const CookiesPolicy = () => {
             <h3 className="text-xl font-bold mb-4">{t.contact.title}</h3>
             <p className="mb-4 text-sm sm:text-base">{t.contact.text}</p>
             <div className="space-y-2 text-sm sm:text-base">
-              <p>📧 Email: support@auraaluxury.com</p>
-              <p>📱 WhatsApp: +966 XX XXX XXXX</p>
+              <p>{isRTL ? 'البريد الإلكتروني: ' : 'Email: '}<span dir="ltr">younes.sowady2011@gmail.com</span></p>
+              <p>{isRTL ? 'واتساب: ' : 'WhatsApp: '}<span dir="ltr">+90 501 371 5391</span></p>
             </div>
           </div>
         </div>

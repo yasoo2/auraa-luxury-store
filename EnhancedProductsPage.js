@@ -1,0 +1,966 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
+import axios from 'axios';
+import ProductFormModal from '../../components/admin/ProductFormModal';
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Search,
+  Package,
+  Check,
+  Eye,
+  Download,
+  Star,
+  AlertCircle,
+  Loader2,
+  Grid3x3,
+  List,
+  Palette
+} from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { API_BASE_URL } from '../../api';
+import { toast } from 'sonner';
+
+const EnhancedProductsPage = () => {
+  const { language, currency, convert } = useLanguage();
+  const API_URL = API_BASE_URL;
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('grid'); // grid or list
+  
+  const isRTL = language === 'ar';
+
+  const categories = [
+    { value: 'necklaces', label_ar: 'قلادات', label_en: 'Necklaces', icon: '📿' },
+    { value: 'earrings', label_ar: 'أقراط', label_en: 'Earrings', icon: '💎' },
+    { value: 'rings', label_ar: 'خواتم', label_en: 'Rings', icon: '💍' },
+    { value: 'bracelets', label_ar: 'أساور', label_en: 'Bracelets', icon: '📿' },
+    { value: 'watches', label_ar: 'ساعات', label_en: 'Watches', icon: '⌚' },
+    { value: 'sets', label_ar: 'أطقم', label_en: 'Sets', icon: '✨' }
+  ];
+
+  const colors = [
+    { value: 'gold', label: isRTL ? 'ذهبي' : 'Gold', color: '#FFD700' },
+    { value: 'silver', label: isRTL ? 'فضي' : 'Silver', color: '#C0C0C0' },
+    { value: 'rose-gold', label: isRTL ? 'ذهبي وردي' : 'Rose Gold', color: '#E8B4B8' },
+    { value: 'white', label: isRTL ? 'أبيض' : 'White', color: '#FFFFFF' },
+    { value: 'black', label: isRTL ? 'أسود' : 'Black', color: '#000000' }
+  ];
+
+  // Filter products based on search term, category, and status. Supplier and
+  // legacy products may omit `name_en`, `name_ar`, or `sku`; normalise every
+  // field so a single incomplete record cannot crash the whole admin catalogue.
+  const normalizedSearchTerm = searchTerm.trim().toLocaleLowerCase();
+  const filteredProducts = products.filter(product => {
+    const searchableFields = [
+      product.name,
+      product.name_ar,
+      product.name_en,
+      product.sku,
+    ].map((value) => String(value ?? '').toLocaleLowerCase());
+    const matchesSearch = !normalizedSearchTerm || searchableFields.some(
+      (value) => value.includes(normalizedSearchTerm)
+    );
+
+    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && product.is_active) ||
+      (statusFilter === 'inactive' && !product.is_active) ||
+      (statusFilter === 'featured' && product.is_featured);
+
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
+  // Keep the loader stable so effects and post-mutation refreshes share one
+  // implementation without a stale dependency warning.
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/api/admin/products`);
+      setProducts(response.data || []);
+      setLoadError('');
+    } catch (error) {
+      // Invented products are worse than none: the owner sees a catalogue that
+      // isn't theirs and cannot tell.
+      console.error('Error fetching products:', error);
+      setProducts([]);
+      setLoadError(error.response?.data?.detail
+        || (isRTL ? 'تعذّر تحميل المنتجات' : 'Could not load products'));
+    } finally {
+      setLoading(false);
+    }
+  }, [API_URL, isRTL]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const handleSaveProduct = async (productData) => {
+    try {
+      if (editingProduct) {
+        await axios.put(`${API_URL}/api/products/${editingProduct.id}`, productData);
+      } else {
+        await axios.post(`${API_URL}/api/products`, productData);
+      }
+      // Refresh from the admin listing rather than patching the row with the
+      // save response: that response is filtered through the public Product
+      // model, so patching stripped the admin-only fields — the supplier-cost
+      // line and the storefront-visibility flag vanished from the card until
+      // the next full reload.
+      await fetchProducts();
+      
+      setShowModal(false);
+      setEditingProduct(null);
+    } catch (error) {
+      // This used to add the product to the list anyway, "for demo purposes",
+      // and close the dialog. The save had failed, the shop did not have the
+      // product, and the screen showed it sitting in the catalogue — until
+      // the next refresh made it vanish. Nothing is touched now, the dialog
+      // stays open with the typing still in it, and the reason is said.
+      console.error('Error saving product:', error);
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر حفظ المنتج — لم يُحفظ شيء' : 'Could not save the product — nothing was saved'));
+    }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setShowModal(true);
+  };
+
+  // ---- Off-niche broom: scan → owner confirms → purge -------------------
+  const [scanningOffNiche, setScanningOffNiche] = useState(false);
+  const [offNiche, setOffNiche] = useState(null);   // null = closed, [] = clean
+  const [offNicheChecked, setOffNicheChecked] = useState(new Set());
+  const [purging, setPurging] = useState(false);
+
+  const scanOffNiche = async () => {
+    setScanningOffNiche(true);
+    try {
+      const { data } = await axios.get(`${API_URL}/api/admin/products/off-niche`);
+      const suspects = Array.isArray(data) ? data : [];
+      setOffNiche(suspects);
+      setOffNicheChecked(new Set(suspects.map((s) => s.id)));
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'فشل فحص الدخلاء' : 'Intruder scan failed'));
+    } finally {
+      setScanningOffNiche(false);
+    }
+  };
+
+  const purgeOffNiche = async () => {
+    const ids = [...offNicheChecked];
+    if (!ids.length) return;
+    setPurging(true);
+    try {
+      const { data } = await axios.post(`${API_URL}/api/admin/products/off-niche/purge`, { ids });
+      toast.success(isRTL
+        ? `حُذف ${data.deleted} دخيلاً${data.refused?.length ? ` — ورُفض ${data.refused.length} لم يعد مشتبهاً` : ''}`
+        : `Deleted ${data.deleted} intruders${data.refused?.length ? ` — ${data.refused.length} refused (no longer suspect)` : ''}`);
+      setOffNiche(null);
+      setOffNicheChecked(new Set());
+      await fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'فشل الحذف — لم يُحذف شيء' : 'Purge failed — nothing was deleted'));
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  // ---- Arabic for the catalogue ------------------------------------------
+  // Everything imported before the translator existed carries the supplier's
+  // English title in its Arabic field, so switching the store to Arabic left
+  // every product name and description in English. This fills them in, and
+  // reports plainly how many it could not read rather than inventing names.
+  const [translating, setTranslating] = useState(false);
+
+  const translateCatalogue = async () => {
+    setTranslating(true);
+    try {
+      const { data } = await axios.post(`${API_URL}/api/admin/products/translate`);
+      if (data.translated === 0 && data.unreadable === 0) {
+        toast.success(isRTL ? 'كل المنتجات لها أسماء عربية بالفعل' : 'Every product already has an Arabic name');
+      } else {
+        toast.success(isRTL
+          ? `تُرجم ${data.translated} منتجاً${data.unreadable ? ` — و${data.unreadable} يحتاج اسماً تكتبه بنفسك` : ''}`
+          : `Translated ${data.translated}${data.unreadable ? ` — ${data.unreadable} need a name you write yourself` : ''}`);
+      }
+      await fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'فشلت الترجمة — لم يتغيّر شيء' : 'Translation failed — nothing changed'));
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    // eslint-disable-next-line no-restricted-globals
+    if (!confirm(isRTL ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Are you sure you want to delete this product?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_URL}/api/admin/products/${productId}`);
+      setProducts(products.filter(p => p.id !== productId));
+      toast.success(isRTL ? 'حُذف المنتج' : 'Product deleted');
+    } catch (error) {
+      // It used to drop the row from the table whatever the server said. The
+      // product was still on sale, and the only person who believed otherwise
+      // was the one running the shop.
+      console.error('Error deleting product:', error);
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر حذف المنتج — ما زال معروضاً' : 'Could not delete the product — it is still on sale'));
+    }
+  };
+
+  // Bulk actions. The endpoints have existed all along; the three buttons in
+  // the selection bar were simply never connected to them.
+  const bulkSetActive = async (isActive) => {
+    try {
+      await axios.post(`${API_URL}/api/admin/products/bulk-update`, {
+        ids: selectedProducts,
+        data: { is_active: isActive },
+      });
+      setProducts(products.map(p => (selectedProducts.includes(p.id)
+        ? { ...p, is_active: isActive } : p)));
+      setSelectedProducts([]);
+      toast.success(isActive
+        ? (isRTL ? 'فُعّلت المنتجات المختارة' : 'Selected products activated')
+        : (isRTL ? 'أُلغي تفعيل المنتجات المختارة' : 'Selected products deactivated'));
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر التحديث — لم يتغيّر شيء' : 'Could not update — nothing changed'));
+    }
+  };
+
+  const bulkDelete = async () => {
+    // eslint-disable-next-line no-restricted-globals
+    if (!confirm(isRTL
+      ? `سيُحذف ${selectedProducts.length} منتجاً نهائياً. متأكّد؟`
+      : `${selectedProducts.length} products will be permanently deleted. Sure?`)) {
+      return;
+    }
+    try {
+      await axios.post(`${API_URL}/api/admin/products/bulk-delete`, { ids: selectedProducts });
+      setProducts(products.filter(p => !selectedProducts.includes(p.id)));
+      setSelectedProducts([]);
+      toast.success(isRTL ? 'حُذفت المنتجات المختارة' : 'Selected products deleted');
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر الحذف — لم يُحذف شيء' : 'Could not delete — nothing was deleted'));
+    }
+  };
+
+  // The importer used to re-create the whole catalogue on every run, so a
+  // shop whose owner pressed "استيراد سريع" twice sells every product twice.
+  // The server keeps the copy order history points at, then live over
+  // staging, then the oldest — and re-points carts and wishlists at it.
+  const removeDuplicates = async () => {
+    try {
+      const { data } = await axios.get(`${API_URL}/api/admin/products/duplicates`);
+      if (!data.duplicates) {
+        toast.success(isRTL ? 'لا توجد منتجات مكرّرة' : 'No duplicate products');
+        return;
+      }
+      // eslint-disable-next-line no-restricted-globals
+      if (!confirm(isRTL
+        ? `وُجدت ${data.duplicates} نسخة مكرّرة من ${data.groups.length} منتجاً. تُحذف النسخ الزائدة ويبقى من كل منتج نسخة واحدة. متابعة؟`
+        : `Found ${data.duplicates} duplicate copies across ${data.groups.length} products. Extra copies will be deleted, one of each kept. Continue?`)) {
+        return;
+      }
+      const res = await axios.post(`${API_URL}/api/admin/products/dedupe`);
+      toast.success(isRTL
+        ? `حُذفت ${res.data.removed} نسخة مكرّرة`
+        : `Removed ${res.data.removed} duplicate copies`);
+      fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّرت إزالة المكرّرات — لم يُحذف شيء' : 'Could not remove duplicates — nothing was deleted'));
+    }
+  };
+
+  // Export writes what is on screen, from what the page already holds. No
+  // endpoint is invented for it, and it never claims rows it does not have.
+  const exportCsv = () => {
+    const columns = ['id', 'name', 'sku', 'category', 'price', 'stock_quantity', 'is_active'];
+    const escape = (value) => {
+      const text = value === null || value === undefined ? '' : String(value);
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    };
+    const rows = [columns.join(',')];
+    for (const product of filteredProducts) {
+      rows.push(columns.map(c => escape(product[c])).join(','));
+    }
+    // A BOM, or Excel opens Arabic product names as mojibake.
+    const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `auraa-products-${filteredProducts.length}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
+  const handleSelectProduct = (productId) => {
+    if (selectedProducts.includes(productId)) {
+      setSelectedProducts(selectedProducts.filter(id => id !== productId));
+    } else {
+      setSelectedProducts([...selectedProducts, productId]);
+    }
+  };
+
+  // Catalogue prices are stored in SAR.
+  //
+  // First this stamped the selected currency's symbol onto the untouched
+  // number, so 175 riyals read as "$US 175". Then converting produced
+  // "$US 0.00", because convert() answered 0 whenever the rates had not
+  // arrived — a fabricated price that looks perfectly real.
+  //
+  // A price the owner cannot trust is worse than one in the wrong currency,
+  // so when the rate is unknown this shows the true amount in the currency it
+  // is actually stored in, and says which currency that is.
+  const formatCurrency = (amount) => {
+    const sar = Number(amount) || 0;
+    const converted = currency === 'SAR' ? sar : convert(sar, 'SAR', currency);
+    const display = converted === null ? sar : converted;
+    const shown = converted === null ? 'SAR' : currency;
+    return new Intl.NumberFormat(isRTL ? 'ar-SA-u-nu-latn' : 'en-US', {
+      style: 'currency',
+      currency: shown,
+    }).format(display);
+  };
+
+  const getCategoryLabel = (categoryValue) => {
+    const category = categories.find(cat => cat.value === categoryValue);
+    return category ? (isRTL ? category.label_ar : category.label_en) : categoryValue;
+  };
+
+  const getCategoryIcon = (categoryValue) => {
+    const category = categories.find(cat => cat.value === categoryValue);
+    return category?.icon || '📦';
+  };
+
+  return (
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
+      {loadError && (
+        <div
+          role="alert"
+          data-testid="products-error"
+          className="border border-red-300 bg-red-50 text-red-800 rounded-lg px-4 py-3 text-sm"
+        >
+          {loadError}
+        </div>
+      )}
+
+      {/* Header. Both rows wrap: three buttons next to a title do not fit a
+          phone, and an unwrappable toolbar hung off the screen edge. */}
+      <div className="flex flex-wrap justify-between items-center gap-3">
+        <div className="flex items-center gap-3">
+          <Package className="h-8 w-8 text-amber-600" />
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isRTL ? 'إدارة المنتجات' : 'Products Management'}
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {isRTL ? `${filteredProducts.length} منتج إجمالي` : `${filteredProducts.length} total products`}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            onClick={() => setShowModal(true)}
+            className="bg-amber-600 hover:bg-amber-700"
+          >
+            <Plus className="h-4 w-4 me-2" />
+            {isRTL ? 'إضافة منتج' : 'Add Product'}
+          </Button>
+          
+          <Button variant="outline" onClick={exportCsv} data-testid="export-products">
+            <Download className="h-4 w-4 me-2" />
+            {isRTL ? 'تصدير' : 'Export'}
+          </Button>
+
+          {/* The broom: finds clothes/shoes/decor that entered before the
+              import gate existed, and deletes only what the owner confirms. */}
+          <Button
+            variant="outline"
+            onClick={scanOffNiche}
+            disabled={scanningOffNiche}
+            data-testid="off-niche-scan"
+            className="border-red-300 text-red-700 hover:bg-red-50"
+          >
+            🧹 {scanningOffNiche
+              ? (isRTL ? 'جارٍ الفحص…' : 'Scanning…')
+              : (isRTL ? 'الدخلاء خارج التخصص' : 'Off-niche intruders')}
+          </Button>
+
+          {/* Fills the Arabic names of everything imported before the store
+              could write any — the reason the language button changed the
+              interface but never the products. */}
+          <Button
+            variant="outline"
+            onClick={translateCatalogue}
+            disabled={translating}
+            data-testid="translate-catalogue"
+            className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          >
+            🌐 {translating
+              ? (isRTL ? 'جارٍ الترجمة…' : 'Translating…')
+              : (isRTL ? 'ترجمة الأسماء للعربية' : 'Translate names to Arabic')}
+          </Button>
+
+          <Button variant="outline" onClick={removeDuplicates} data-testid="remove-duplicates">
+            <Trash2 className="h-4 w-4 me-2" />
+            {isRTL ? 'إزالة المكرّرات' : 'Remove duplicates'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-blue-600">{isRTL ? 'إجمالي المنتجات' : 'Total Products'}</p>
+              <p className="text-3xl font-bold text-blue-900">{products.length}</p>
+            </div>
+            <Package className="h-8 w-8 text-blue-600" />
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-green-600">{isRTL ? 'منتجات نشطة' : 'Active Products'}</p>
+              <p className="text-3xl font-bold text-green-900">{products.filter(p => p.is_active).length}</p>
+            </div>
+            <Check className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-amber-50 to-amber-100 p-6 rounded-lg border border-amber-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-amber-600">{isRTL ? 'منتجات مميزة' : 'Featured Products'}</p>
+              <p className="text-3xl font-bold text-amber-900">{products.filter(p => p.is_featured).length}</p>
+            </div>
+            <Star className="h-8 w-8 text-amber-600" />
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-r from-red-50 to-red-100 p-6 rounded-lg border border-red-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-red-600">{isRTL ? 'مخزون منخفض' : 'Low Stock'}</p>
+              <p className="text-3xl font-bold text-red-900">{products.filter(p => p.stock_quantity < 10).length}</p>
+            </div>
+            <AlertCircle className="h-8 w-8 text-red-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex flex-col md:flex-row gap-4 flex-1">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400`} />
+              <Input
+                type="text"
+                placeholder={isRTL ? 'البحث في المنتجات...' : 'Search products...'}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`${isRTL ? 'pr-10' : 'pl-10'} w-full`}
+              />
+            </div>
+            
+            {/* Category Filter */}
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+            >
+              <option value="all">{isRTL ? 'جميع الفئات' : 'All Categories'}</option>
+              {categories.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.icon} {isRTL ? cat.label_ar : cat.label_en}
+                </option>
+              ))}
+            </select>
+            
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+            >
+              <option value="all">{isRTL ? 'جميع الحالات' : 'All Status'}</option>
+              <option value="active">{isRTL ? 'نشط' : 'Active'}</option>
+              <option value="inactive">{isRTL ? 'غير نشط' : 'Inactive'}</option>
+              <option value="featured">{isRTL ? 'مميز' : 'Featured'}</option>
+              <option value="low-stock">{isRTL ? 'مخزون منخفض' : 'Low Stock'}</option>
+            </select>
+          </div>
+          
+          {/* View Mode Toggle */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                viewMode === 'grid' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Grid3x3 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Bulk Actions */}
+        {selectedProducts.length > 0 && (
+          <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-amber-800">
+                  {isRTL ? `تم اختيار ${selectedProducts.length} منتج` : `${selectedProducts.length} products selected`}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => bulkSetActive(true)} data-testid="bulk-activate">
+                  {isRTL ? 'تفعيل' : 'Activate'}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => bulkSetActive(false)} data-testid="bulk-deactivate">
+                  {isRTL ? 'إلغاء تفعيل' : 'Deactivate'}
+                </Button>
+                <Button size="sm" variant="outline" onClick={bulkDelete} data-testid="bulk-delete" className="text-red-600 border-red-300 hover:bg-red-50">
+                  {isRTL ? 'حذف' : 'Delete'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Products Grid/List */}
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
+              {filteredProducts.map((product) => (
+                <div key={product.id} className="group relative bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300">
+                  {/* Selection Checkbox */}
+                  <div className="absolute top-3 left-3 z-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.includes(product.id)}
+                      onChange={() => handleSelectProduct(product.id)}
+                      className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  {/* Product Image */}
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    
+                    {/* Status Badges */}
+                    <div className="absolute top-3 right-3 flex flex-col gap-1">
+                      {!product.is_active && (
+                        <span className="px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">
+                          {isRTL ? 'غير نشط' : 'Inactive'}
+                        </span>
+                      )}
+                      {product.is_featured && (
+                        <span className="px-2 py-1 bg-amber-500 text-white text-xs font-semibold rounded-full">
+                          {isRTL ? 'مميز' : 'Featured'}
+                        </span>
+                      )}
+                      {product.stock_quantity < 10 && (
+                        <span className="px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-full">
+                          {isRTL ? 'مخزون قليل' : 'Low Stock'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => window.open(`/product/${product.id}`, '_blank')}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          className="bg-amber-600 hover:bg-amber-700"
+                          onClick={() => handleEditProduct(product)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Product Info */}
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{getCategoryIcon(product.category)}</span>
+                      <span className="text-xs text-gray-500 uppercase font-semibold">
+                        {getCategoryLabel(product.category)}
+                      </span>
+                    </div>
+                    
+                    <h3 className="font-bold text-lg mb-2 text-gray-900 line-clamp-2">
+                      {product.name}
+                    </h3>
+                    
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs text-gray-500">SKU: {product.sku}</span>
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-3 w-3 ${
+                              i < Math.floor(product.rating || 0)
+                                ? 'text-yellow-400 fill-current'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                        <span className="text-xs text-gray-600 ml-1">({product.reviews_count || 0})</span>
+                      </div>
+                    </div>
+
+                    {/* Price and Stock */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex flex-col">
+                        <span className="text-xl font-bold text-amber-600">
+                          {formatCurrency(product.price)}
+                        </span>
+                        {product.original_price && product.original_price > product.price && (
+                          <span className="text-sm text-gray-500 line-through">
+                            {formatCurrency(product.original_price)}
+                          </span>
+                        )}
+                        {/* Supplier cost, admin eyes only — the public API
+                            never carries this field. */}
+                        {Number(product.supplier_price) > 0 && (
+                          <span className="text-xs text-red-600" data-testid="admin-supplier-cost">
+                            {isRTL ? 'التكلفة ' : 'Cost '}
+                            <span dir="ltr">${Number(product.supplier_price).toFixed(2)}</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {isRTL ? 'المخزون:' : 'Stock:'} {product.stock_quantity}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Material and Color */}
+                    <div className="flex items-center justify-between text-xs text-gray-600 mb-4">
+                      <div className="flex items-center gap-1">
+                        <Palette className="h-3 w-3" />
+                        {product.material}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div 
+                          className="w-3 h-3 rounded-full border border-gray-300"
+                          style={{ 
+                            backgroundColor: colors.find(c => c.value === product.color)?.color || '#gray'
+                          }}
+                        />
+                        {product.color}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1 bg-amber-600 hover:bg-amber-700" 
+                        size="sm"
+                        onClick={() => handleEditProduct(product)}
+                      >
+                        <Edit2 className="h-3 w-3 me-1" />
+                        {isRTL ? 'تعديل' : 'Edit'}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDeleteProduct(product.id)}
+                        aria-label={isRTL ? 'حذف المنتج' : 'Delete product'}
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* List View */
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <input
+                        type="checkbox"
+                        checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                      />
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {isRTL ? 'المنتج' : 'Product'}
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {isRTL ? 'الفئة' : 'Category'}
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {isRTL ? 'السعر' : 'Price'}
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {isRTL ? 'المخزون' : 'Stock'}
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {isRTL ? 'الحالة' : 'Status'}
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {isRTL ? 'الإجراءات' : 'Actions'}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredProducts.map((product) => (
+                    <tr key={product.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedProducts.includes(product.id)}
+                          onChange={() => handleSelectProduct(product.id)}
+                          className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-12 w-12">
+                            <img className="h-12 w-12 rounded-lg object-cover" src={product.images[0]} alt={product.name} />
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                            <div className="text-sm text-gray-500">SKU: {product.sku}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <span className="text-lg mr-2">{getCategoryIcon(product.category)}</span>
+                          <span className="text-sm text-gray-900">{getCategoryLabel(product.category)}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{formatCurrency(product.price)}</div>
+                        {product.original_price && product.original_price > product.price && (
+                          <div className="text-sm text-gray-500 line-through">{formatCurrency(product.original_price)}</div>
+                        )}
+                        {Number(product.supplier_price) > 0 && (
+                          <div className="text-xs text-red-600">
+                            {isRTL ? 'التكلفة ' : 'Cost '}
+                            <span dir="ltr">${Number(product.supplier_price).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className={`text-sm font-medium ${product.stock_quantity < 10 ? 'text-red-600' : 'text-gray-900'}`}>
+                          {product.stock_quantity}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            product.is_active 
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {product.is_active ? (isRTL ? 'نشط' : 'Active') : (isRTL ? 'غير نشط' : 'Inactive')}
+                          </span>
+                          {product.is_featured && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                              {isRTL ? 'مميز' : 'Featured'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => window.open(`/product/${product.id}`, '_blank')}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="text-amber-600 hover:text-amber-900"
+                            onClick={() => handleEditProduct(product)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => handleDeleteProduct(product.id)}
+                            aria-label={isRTL ? 'حذف المنتج' : 'Delete product'}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && filteredProducts.length === 0 && (
+        <div className="text-center py-16 bg-white rounded-lg shadow-sm border border-gray-200">
+          <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {isRTL ? 'لا توجد منتجات' : 'No Products Found'}
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {isRTL ? 'ابدأ بإضافة منتجاتك الأولى' : 'Start by adding your first products'}
+          </p>
+          <Button onClick={() => setShowModal(true)} className="bg-amber-600 hover:bg-amber-700">
+            <Plus className="h-4 w-4 me-2" />
+            {isRTL ? 'إضافة منتج' : 'Add Product'}
+          </Button>
+        </div>
+      )}
+
+      )}
+
+      {/* The edit/create dialog. It was imported, and every «تعديل» click
+          set its state — but the component itself was never placed in the
+          tree, so the button did nothing at all. */}
+      <ProductFormModal
+        isOpen={showModal}
+        onClose={() => { setShowModal(false); setEditingProduct(null); }}
+        product={editingProduct}
+        onSave={handleSaveProduct}
+      />
+
+      {/* Off-niche confirmation: nothing is deleted until the owner looks
+          the list in the eye and presses the red button. */}
+      {offNiche !== null && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" data-testid="off-niche-modal">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+            <div className="p-5 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                🧹 {isRTL ? `دخلاء خارج التخصص (${offNiche.length})` : `Off-niche intruders (${offNiche.length})`}
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {isRTL
+                  ? 'ملابس وأحذية وديكور تسللت قبل وجود حارس الاستيراد. راجع وأزل التحديد عمّا تريد إبقاءه.'
+                  : 'Clothes, shoes and decor that slipped in before the import gate existed. Uncheck anything you want to keep.'}
+              </p>
+            </div>
+            <div className="p-5 overflow-y-auto flex-1">
+              {offNiche.length === 0 ? (
+                <p className="text-green-700 font-semibold">
+                  {isRTL ? '✅ نظيف — لا دخلاء في المتجر.' : '✅ Clean — no intruders in the shop.'}
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {offNiche.map((s) => (
+                    <li key={s.id} className="flex items-center gap-3 p-2 rounded border border-gray-200">
+                      <input
+                        type="checkbox"
+                        checked={offNicheChecked.has(s.id)}
+                        onChange={(e) => {
+                          const next = new Set(offNicheChecked);
+                          if (e.target.checked) next.add(s.id); else next.delete(s.id);
+                          setOffNicheChecked(next);
+                        }}
+                        className="h-4 w-4"
+                      />
+                      {s.image && <img src={s.image} alt="" className="w-12 h-12 object-cover rounded" />}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-gray-900 truncate">{s.name || s.name_ar}</div>
+                        <div className="text-xs text-gray-500">
+                          {s.supplier_category || s.category}
+                          {s.staging
+                            ? (isRTL ? ' · في المراجعة' : ' · in staging')
+                            : (isRTL ? ' · معروض للزبائن' : ' · live in the shop')}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="p-5 border-t border-gray-200 flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => { setOffNiche(null); setOffNicheChecked(new Set()); }}>
+                {isRTL ? 'إغلاق' : 'Close'}
+              </Button>
+              {offNiche.length > 0 && (
+                <Button
+                  onClick={purgeOffNiche}
+                  disabled={purging || offNicheChecked.size === 0}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  data-testid="off-niche-purge"
+                >
+                  {purging
+                    ? (isRTL ? 'جارٍ الحذف…' : 'Deleting…')
+                    : (isRTL ? `حذف المحدد (${offNicheChecked.size})` : `Delete selected (${offNicheChecked.size})`)}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default EnhancedProductsPage;

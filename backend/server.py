@@ -95,7 +95,7 @@ class CustomCORSMiddleware(BaseHTTPMiddleware):
                 response.headers["Access-Control-Allow-Origin"] = origin
                 response.headers["Access-Control-Allow-Credentials"] = "true"
                 response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, User-Agent, X-Requested-With"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept, Origin, User-Agent, X-Requested-With, Idempotency-Key"
                 response.headers["Access-Control-Expose-Headers"] = "*"
                 response.headers["Access-Control-Max-Age"] = "3600"
             return response
@@ -2073,6 +2073,7 @@ async def get_my_orders(current_user: User = Depends(get_current_user)):
             "total_amount": o.get("total_amount", 0.0),
             "currency": o.get("currency", "SAR"),
             "shipping_address": o.get("shipping_address", {}),
+            "items": o.get("items", []),
             # "بانتظار" meant nothing on its own — waiting for what? This is
             # the half the customer can do something about.
             "payment_status": o.get("payment_status", "awaiting_payment"),
@@ -2094,13 +2095,22 @@ async def track_order(search_param: str):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    shipping = order.get("shipping_address") or {}
+    shipping_summary = {
+        "city": shipping.get("city"),
+        "country": shipping.get("country") or shipping.get("country_code"),
+    }
+    item_count = sum(max(1, int(item.get("quantity") or 1)) for item in order.get("items") or [])
+
     return {
         "order_number": order.get("order_number"),
         "tracking_number": order.get("tracking_number"),
         "status": order.get("status", "pending"),
         "created_at": order.get("created_at"),
         "total_amount": order.get("total_amount", 0.0),
-        "currency": order.get("currency", "SAR")
+        "currency": order.get("currency", "SAR"),
+        "shipping_address": shipping_summary,
+        "item_count": item_count,
     }
 
 
@@ -3311,7 +3321,7 @@ async def admin_analytics(
     admin: User = Depends(get_admin_user)
 ):
     """Store metrics over a window, computed from orders/users/products."""
-    days = {"7d": 7, "30d": 30, "90d": 90}.get(range)
+    days = {"1d": 1, "7d": 7, "30d": 30, "90d": 90}.get(range)
     since = datetime.now(timezone.utc) - timedelta(days=days) if days else None
 
     orders = await db.orders.find({}).to_list(length=None)
@@ -3332,16 +3342,23 @@ async def admin_analytics(
         return created >= since
 
     windowed = [o for o in orders if in_window(o)]
-    revenue = sum(o.get("total_amount", 0) or 0 for o in windowed)
+    # A created order is not revenue. Card and transfer attempts stay visible in
+    # the order count, but only confirmed, non-cancelled payments may contribute
+    # to financial metrics or a "best seller" ranking.
+    paid_orders = [
+        o for o in windowed
+        if o.get("payment_status") == "paid" and o.get("status") != "cancelled"
+    ]
+    revenue = sum(o.get("total_amount", 0) or 0 for o in paid_orders)
 
     status_counts: Dict[str, int] = {}
     for o in windowed:
         key = o.get("status", "pending")
         status_counts[key] = status_counts.get(key, 0) + 1
 
-    # Best sellers by quantity across the window.
+    # Best sellers by paid quantity across the window.
     sold: Dict[str, int] = {}
-    for o in windowed:
+    for o in paid_orders:
         for item in o.get("items", []):
             sold[item["product_id"]] = sold.get(item["product_id"], 0) + item.get("quantity", 0)
 
@@ -3358,7 +3375,8 @@ async def admin_analytics(
         "range": range,
         "total_revenue": round(revenue, 2),
         "total_orders": len(windowed),
-        "average_order_value": round(revenue / len(windowed), 2) if windowed else 0,
+        "paid_orders": len(paid_orders),
+        "average_order_value": round(revenue / len(paid_orders), 2) if paid_orders else 0,
         "total_users": await db.users.count_documents({}),
         "total_products": await db.products.count_documents({"staging": {"$ne": True}}),
         "orders_by_status": status_counts,

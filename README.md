@@ -15,7 +15,7 @@ dropshipping model via CJ Dropshipping.
 │ Frontend             │  /api/*   │ Backend                │ motor  │ MongoDB   │
 │ React 18 + CRA/CRACO ├──────────►│ FastAPI (Python 3.11)  ├───────►│ Atlas     │
 │ Tailwind + Radix UI  │           │ uvicorn                │        │           │
-│ Vercel               │           │ Render                 │        │           │
+│ Cloudflare Pages     │           │ Render                 │        │ Atlas     │
 └──────────────────────┘           └────────────────────────┘        └───────────┘
                                               │
                                               ├──► CJ Dropshipping (product import)
@@ -83,15 +83,16 @@ Runs against an in-memory MongoDB; no database or network required.
 | `DB_NAME` | ✅ | Database name |
 | `JWT_SECRET_KEY` | ✅ | مفتاح توقيع الجلسات. **التطبيق يرفض الإقلاع في الإنتاج بدونه** |
 | `CORS_ORIGINS` | — | نطاقات مسموحة، مفصولة بفواصل. الافتراضي نطاقات auraaluxury |
-| `CORS_PREVIEW_REGEX` | — | تعبير نمطي لنطاقات المعاينة. مُقيَّد افتراضياً بمشاريع auraa على Vercel |
+| `CORS_PREVIEW_REGEX` | — | تعبير نمطي اختياري لنطاقات المعاينة عند استخدامها |
 | `COOKIE_SECURE` | — | `false` للتطوير عبر HTTP فقط. الافتراضي `true` |
 | `COOKIE_CROSS_SITE` | — | `true` (الافتراضي) لأن الواجهة والـ API على نطاقين مختلفين |
 | `AUTH_RATE_LIMIT_MAX` | — | محاولات المصادقة لكل IP. الافتراضي 10 |
 | `AUTH_RATE_LIMIT_WINDOW` | — | نافذة التحديد بالثواني. الافتراضي 300 |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | — | عمر جلسة التجديد. الافتراضي 90 يوماً |
+| `ADMIN_SETUP_KEY` | ✅ للإنتاج | مفتاح سري مطلوب لإنشاء أول مدير؛ يرفض الخادم bootstrap إذا كان مفقوداً |
 | `CJ_API_KEY`, `CJ_DROPSHIP_EMAIL` | — | لاستيراد المنتجات من CJ |
 
-### Frontend (Vercel)
+### Frontend (Cloudflare Pages)
 
 | المتغير | الوصف |
 |---------|-------|
@@ -150,8 +151,9 @@ Build output directory: build
 # للتخطي مرة واحدة: git push --no-verify
 ```
 
-> `.github/workflows/ci.yml` باقٍ ويشغّل نفس الفحوصات، لكنه يعمل فقط إن كانت GitHub
-> Actions مُفعّلة على المستودع. `scripts/verify.sh` هو البديل الذي لا يعتمد عليها.
+> لا يعتمد مسار النشر التشغيلي على GitHub Actions أو Vercel. يبقى ملف workflow
+> في المستودع للتوافق التاريخي فقط، بينما Render وCloudflare Pages يتعاملان مع
+> Git مباشرةً. `scripts/verify.sh` هو الفحص المحلي المعتمد قبل الدفع إلى `main`.
 
 - فحص الصحة · Health check: `GET /health`
 - خريطة الموقع · Sitemap: `GET /sitemap.xml`

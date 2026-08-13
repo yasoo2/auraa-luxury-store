@@ -2707,6 +2707,7 @@ async def super_admin_statistics(admin: User = Depends(get_super_admin_user)):
         "total_users": await db.users.count_documents({}),
         "total_admins": await db.users.count_documents({"is_admin": True}),
         "total_super_admins": await db.users.count_documents({"is_super_admin": True}),
+        "active_admins": await db.users.count_documents({"is_admin": True, "is_active": {"$ne": False}}),
         "total_products": await db.products.count_documents({"staging": {"$ne": True}}),
         "total_orders": await db.orders.count_documents({}),
     }

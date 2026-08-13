@@ -43,6 +43,7 @@ import AboutUs from './pages/AboutUs';
 import OrderTracking from './pages/OrderTracking';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import { ShippingInfo, SizeGuide, CareInstructions } from './pages/HelpPages';
 
 // UI Components
 import { Toaster } from './components/ui/sonner';
@@ -100,6 +101,9 @@ function App() {
                     <Route path="/return-policy" element={<ReturnPolicy />} />
                     <Route path="/contact" element={<ContactUs />} />
                     <Route path="/about" element={<AboutUs />} />
+                    <Route path="/shipping-info" element={<ShippingInfo />} />
+                    <Route path="/size-guide" element={<SizeGuide />} />
+                    <Route path="/care-instructions" element={<CareInstructions />} />
 
                     {/* Order Tracking */}
                     <Route path="/order-tracking" element={<OrderTracking />} />

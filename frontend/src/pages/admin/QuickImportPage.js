@@ -32,7 +32,7 @@ const QuickImportPage = () => {
   };
 
   useEffect(() => {
-    checkBackendHealth();
+    checkBackendHealth(false);
     // The staging area lives in the database; the page used to forget it on
     // every visit — import fifty, walk away, come back to an empty screen
     // with the products sitting safely in storage the whole time.
@@ -50,21 +50,21 @@ const QuickImportPage = () => {
     }
   };
 
-  const checkBackendHealth = async () => {
+  const checkBackendHealth = async (notify = false) => {
     try {
       const healthResponse = await apiGet('/api/health');
       const readyResponse = await apiGet('/api/readiness');
       
       if (healthResponse?.status === 'ok' && readyResponse?.status === 'ready') {
         setBackendReady(true);
-        toast.success('✅ الخلفية جاهزة!', { autoClose: 2000 });
+        if (notify) toast.success('✅ الخلفية جاهزة!', { autoClose: 2000 });
       } else {
         setBackendReady(false);
-        toast.warning('⚠️ الخلفية غير جاهزة تماماً', { autoClose: 3000 });
+        if (notify) toast.warning('⚠️ الخلفية غير جاهزة تماماً', { autoClose: 3000 });
       }
     } catch (error) {
       setBackendReady(false);
-      toast.error('❌ فشل الاتصال بالخلفية', { autoClose: 3000 });
+      if (notify) toast.error('❌ فشل الاتصال بالخلفية', { autoClose: 3000 });
     }
   };
 
@@ -249,7 +249,7 @@ const QuickImportPage = () => {
               }
             </span>
             <button
-              onClick={checkBackendHealth}
+              onClick={() => checkBackendHealth(true)}
               className="ml-auto px-3 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 text-sm"
             >
               {language === 'ar' ? 'إعادة الفحص' : 'Recheck'}

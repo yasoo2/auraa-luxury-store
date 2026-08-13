@@ -12,6 +12,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
@@ -217,6 +218,50 @@ def test_an_expired_header_with_no_cookie_is_still_rejected(client):
                    headers={"Authorization": f"Bearer {_expired_bearer()}"})
     assert r.status_code == 401, r.text
     assert "expired" in r.json()["detail"].lower(), r.json()
+
+
+def test_forgot_password_does_not_reveal_unknown_accounts(client):
+    known = client.post("/api/auth/forgot-password", json={"email": "missing@example.com"})
+    unknown = client.post("/api/auth/forgot-password", json={"email": "other@example.com"})
+    assert known.status_code == 200
+    assert unknown.status_code == 200
+    assert known.json() == unknown.json()
+
+
+def test_password_reset_is_single_use_and_revokes_old_password(client, monkeypatch):
+    captured = {}
+
+    def fake_reset_email(user_email, user_name, reset_url):
+        captured["url"] = reset_url
+        return True
+
+    import services.email_service as email_service
+    monkeypatch.setattr(email_service, "send_password_reset_email", fake_reset_email)
+
+    assert register(client, email="reset@b.com", password="old-pass-1").status_code == 200
+    request = client.post("/api/auth/forgot-password", json={"email": "RESET@B.COM"})
+    assert request.status_code == 200
+    assert "url" in captured
+
+    token = parse_qs(urlparse(captured["url"]).query)["token"][0]
+    reset = client.post("/api/auth/reset-password", json={
+        "token": token,
+        "new_password": "new-pass-1",
+    })
+    assert reset.status_code == 200, reset.text
+    assert client.post("/api/auth/reset-password", json={
+        "token": token,
+        "new_password": "new-pass-2",
+    }).status_code == 400
+
+    old_login = client.post("/api/auth/login", json={
+        "identifier": "reset@b.com", "password": "old-pass-1",
+    })
+    new_login = client.post("/api/auth/login", json={
+        "identifier": "reset@b.com", "password": "new-pass-1",
+    })
+    assert old_login.status_code == 401
+    assert new_login.status_code == 200
 
 
 def test_refresh_hands_back_a_token_the_client_can_store(client):
@@ -437,6 +482,22 @@ def test_the_address_the_checkout_page_sends_is_accepted(seeded):
     r = seeded.post("/api/orders", json={
         "shipping_address": SHIPPING, "payment_method": "on_confirmation"})
     assert r.status_code == 200, r.text
+
+
+def test_retrying_checkout_with_same_idempotency_key_returns_same_order(seeded):
+    register(seeded, email="retry@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    headers = {"Idempotency-Key": "retry-key-20260813-001"}
+    first = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "on_confirmation",
+    }, headers=headers)
+    second = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "on_confirmation",
+    }, headers=headers)
+    assert first.status_code == 200, first.text
+    assert second.status_code == 200, second.text
+    assert second.json()["id"] == first.json()["id"]
+    assert len(seeded.get("/api/orders").json()) == 1
 
 
 def test_an_order_is_priced_from_the_catalogue_not_the_cart(seeded):
@@ -724,10 +785,13 @@ class _FakeIyzico:
     def __init__(self, paid=True, paid_price="24.85", sign=True):
         self.paid, self.paid_price, self.sign = paid, paid_price, sign
         self.calls = []
+        self.baskets = {}
+        self.basket_id_override = None
 
     async def post(self, path, payload):
         self.calls.append((path, payload))
         if path.endswith("/initialize/ecom"):
+            self.baskets[payload["conversationId"]] = payload["basketId"]
             body = {"status": "success", "conversationId": payload["conversationId"],
                     "token": "TOK-1", "paymentPageUrl": "https://sandbox-cpp.iyzipay.com/TOK-1"}
             body["signature"] = _iyzico_signature(
@@ -739,7 +803,7 @@ class _FakeIyzico:
             "paymentStatus": "SUCCESS" if self.paid else "FAILURE",
             "paymentId": "PAY-1",
             "currency": "USD",
-            "basketId": "AUR-TEST",
+            "basketId": self.basket_id_override or self.baskets.get(payload["conversationId"], "AUR-TEST"),
             "conversationId": payload["conversationId"],
             "paidPrice": self.paid_price,
             "price": self.paid_price,
@@ -880,6 +944,20 @@ def test_a_signed_success_pays_the_order_and_opens_the_supplier_gate(seeded, car
     info = seeded.get(f"/api/orders/{order['id']}/payment-instructions").json()
     assert info["payment_status"] == "paid", info
     assert info["payment_reference"] == "PAY-1"
+
+
+def test_a_signed_success_with_wrong_basket_does_not_pay(seeded, card_shop):
+    register(seeded, email="wrongbasket@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING, "payment_method": "card"}).json()
+    seeded.post(f"/api/orders/{order['id']}/pay-session")
+    card_shop.basket_id_override = "AUR-WRONG"
+    seeded.post("/api/payments/iyzico/callback", data={"token": "TOK-1"},
+                follow_redirects=False)
+    info = seeded.get(f"/api/orders/{order['id']}/payment-instructions").json()
+    assert info["payment_status"] == "awaiting_payment"
+    assert "match" in (info["payment_error"] or "").lower()
 
 
 def test_a_declined_card_says_so_and_leaves_the_order_unpaid(seeded, card_shop):
@@ -1635,6 +1713,13 @@ def test_first_admin_endpoint_closes_after_first_use(client):
     second = client.post("/api/setup/create-first-admin",
                          json={"email": "attacker@b.com", "password": "strong-pw-2"})
     assert second.status_code == 403
+
+
+def test_first_admin_requires_setup_key_in_production(client, monkeypatch):
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.delenv("ADMIN_SETUP_KEY", raising=False)
+    response = client.post("/api/setup/create-first-admin", json=FIRST_ADMIN)
+    assert response.status_code == 503
 
 
 def test_first_admin_rejects_weak_password(client):

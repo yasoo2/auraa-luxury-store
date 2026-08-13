@@ -184,6 +184,45 @@ from core.security import (
 # ---------------------------------------------------------------------------
 LIVE_ONLY: Dict[str, Any] = {"staging": {"$ne": True}, "is_active": {"$ne": False}}
 
+# Import feeds are never a substitute for catalogue review.  A few historic
+# supplier rows were published with broken JSON title fragments (for example
+# `[\"women ring\"`) or with product types that do not belong in a luxury
+# accessories shop.  Keep those rows available to administrators for repair,
+# but never show them to shoppers, recommendations, or search engines.
+_NON_ACCESSORY_TOKENS = (
+    "dried flower", "flower bouquet", "party decorations", "thank-you gift",
+    "diamond painting", "picture frame", "glass vase", "carnival hat",
+    "oktoberfest", "slip on pumps", "pointed toe pumps", "running shoes",
+)
+
+
+def _catalogue_ready(doc: Dict[str, Any]) -> bool:
+    """Return whether an active product is safe and on-brand to display."""
+    names = [doc.get(field) for field in ("name", "name_en", "name_ar")]
+    usable_names = []
+
+    for raw_name in names:
+        if raw_name is None:
+            continue
+        raw_text = str(raw_name).strip()
+        cleaned = plain_name(raw_name).strip()
+        # A valid JSON array can be unwrapped.  A truncated array fragment
+        # cannot: rendering it would expose supplier data to customers.
+        if raw_text.startswith("[") and cleaned == raw_text:
+            return False
+        if cleaned:
+            usable_names.append(cleaned)
+
+    if not usable_names:
+        return False
+
+    searchable_text = " ".join(
+        str(doc.get(field) or "")
+        for field in ("name", "name_en", "name_ar", "description", "description_en", "description_ar")
+    ).lower()
+    return not any(token in searchable_text for token in _NON_ACCESSORY_TOKENS)
+
+
 # How long the shop tells a customer to expect delivery, in days. A single
 # store-wide window: CJ publishes no lead time per product, and no country
 # configuration in this project has ever set one, so the old
@@ -241,7 +280,8 @@ def missing_shipping_fields(address: Optional[Dict[str, Any]]) -> List[str]:
 
 async def live_product(product_id: str) -> Optional[Dict[str, Any]]:
     """A product a shopper is allowed to see, or None. Staging is invisible."""
-    return await db.products.find_one({"id": product_id, **LIVE_ONLY})
+    product = await db.products.find_one({"id": product_id, **LIVE_ONLY})
+    return product if product and _catalogue_ready(product) else None
 
 
 # =============================================================================
@@ -550,6 +590,7 @@ async def generate_sitemap():
         # Add product pages (fetch from database). Staging products are not
         # submitted to search engines — the owner has not approved them yet.
         products = await db.products.find({"in_stock": True, **LIVE_ONLY}).to_list(length=500)
+        products = [product for product in products if _catalogue_ready(product)]
         
         for product in products:
             url = SubElement(urlset, 'url')
@@ -1110,6 +1151,8 @@ async def get_products(
     # whole listing — imported supplier data is not always well-formed.
     valid_products = []
     for product in products:
+        if not _catalogue_ready(product):
+            continue
         try:
             valid_products.append(Product(**_localize(product, language)))
         except Exception as e:
@@ -1136,6 +1179,8 @@ async def _live_products(query: Dict[str, Any], limit: int, language: Optional[s
     docs = await db.products.find(query).limit(max(1, min(limit, 50))).to_list(length=None)
     out = []
     for doc in docs:
+        if not _catalogue_ready(doc):
+            continue
         try:
             out.append(Product(**_localize(doc, language)))
         except Exception:

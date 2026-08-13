@@ -156,6 +156,12 @@ const Footer = () => {
             <Link to="/return-policy" className="text-gray-400 hover:text-white transition-colors">
               {isRTL ? 'سياسة الإرجاع' : 'Return Policy'}
             </Link>
+            {/* Required by Turkish distance-selling law and named in
+                iyzico's website criteria — it must be reachable from
+                every page, so it lives in the footer beside the rest. */}
+            <Link to="/distance-sales-agreement" className="text-gray-400 hover:text-white transition-colors">
+              {isRTL ? 'عقد البيع عن بُعد' : 'Distance Sales Agreement'}
+            </Link>
             <Link to="/contact" className="text-gray-400 hover:text-white transition-colors">
               {isRTL ? 'اتصل بنا' : 'Contact Us'}
             </Link>

@@ -38,6 +38,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import CookiesPolicy from './pages/CookiesPolicy';
 import ReturnPolicy from './pages/ReturnPolicy';
+import DistanceSalesAgreement from './pages/DistanceSalesAgreement';
 import ContactUs from './pages/ContactUs';
 import AboutUs from './pages/AboutUs';
 import OrderTracking from './pages/OrderTracking';
@@ -99,6 +100,7 @@ function App() {
                     <Route path="/terms-of-service" element={<TermsOfService />} />
                     <Route path="/cookies-policy" element={<CookiesPolicy />} />
                     <Route path="/return-policy" element={<ReturnPolicy />} />
+                    <Route path="/distance-sales-agreement" element={<DistanceSalesAgreement />} />
                     <Route path="/contact" element={<ContactUs />} />
                     <Route path="/about" element={<AboutUs />} />
                     <Route path="/shipping-info" element={<ShippingInfo />} />

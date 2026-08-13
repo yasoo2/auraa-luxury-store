@@ -8,6 +8,7 @@ import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
 import { apiPost } from '../api';
 import { whatsappLink } from '../config/contact';
+import { SELLER, shown } from '../config/seller';
 
 const ContactUs = () => {
   const { language } = useLanguage();
@@ -110,9 +111,21 @@ const ContactUs = () => {
                     <dt className="font-medium text-gray-500">{isRTL ? 'الهاتف' : 'Phone'}</dt>
                     <dd dir="ltr">+90 501 371 5391</dd>
                   </div>
+                  {/* Turkish law requires a merchant's tax number to be
+                      published on a contact page reachable from the home page,
+                      and iyzico checks for exactly it before approving an
+                      account. It renders "—" until the owner fills it in —
+                      visibly missing rather than plausibly wrong, because the
+                      reviewer compares it against his documents. */}
+                  <div>
+                    <dt className="font-medium text-gray-500">
+                      {isRTL ? 'الرقم الضريبي' : 'Vergi Kimlik No'}
+                    </dt>
+                    <dd dir="ltr">{shown(SELLER.taxNumber)}</dd>
+                  </div>
                   <div>
                     <dt className="font-medium text-gray-500">{isRTL ? 'العنوان' : 'Address'}</dt>
-                    <dd dir="ltr">Pınartepe Mah., Istanbul 45000, Türkiye</dd>
+                    <dd dir="ltr">{`${shown(SELLER.address)}, ${shown(SELLER.country)}`}</dd>
                   </div>
                 </dl>
               </Card>

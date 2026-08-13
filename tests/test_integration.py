@@ -1660,10 +1660,16 @@ def test_upload_filename_cannot_traverse_directories(client):
 def test_analytics_reflects_real_orders(seeded):
     register(seeded, email="an@b.com")
     seeded.post("/api/cart/add?product_id=p1&quantity=2")   # 2 x 250 = 500
-    seeded.post("/api/orders", json={"shipping_address": SHIPPING, "payment_method": "on_confirmation"})
+    order = seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING,
+        "payment_method": "on_confirmation",
+    }).json()
     seeded.cookies.clear()
 
+    # Revenue and units sold represent money actually received, not an order
+    # that is merely waiting for a bank/card confirmation.
     as_admin(seeded)
+    _confirm_payment(seeded, order["id"])
     r = seeded.get("/api/admin/analytics?range=30d")
     assert r.status_code == 200, r.text
 
@@ -1674,6 +1680,24 @@ def test_analytics_reflects_real_orders(seeded):
     assert data["orders_by_status"]["pending"] == 1
     assert data["top_products"][0]["product_id"] == "p1"
     assert data["top_products"][0]["quantity_sold"] == 2
+
+
+def test_analytics_excludes_unpaid_orders_from_revenue_and_sold_units(seeded):
+    register(seeded, email="unpaid-an@b.com")
+    seeded.post("/api/cart/add?product_id=p1&quantity=1")
+    seeded.post("/api/orders", json={
+        "shipping_address": SHIPPING,
+        "payment_method": "on_confirmation",
+    })
+    seeded.cookies.clear()
+
+    as_admin(seeded)
+    data = seeded.get("/api/admin/analytics?range=30d").json()
+    assert data["total_orders"] == 1
+    assert data["paid_orders"] == 0
+    assert data["total_revenue"] == 0
+    assert data["average_order_value"] == 0
+    assert data["top_products"] == []
 
 
 def test_analytics_empty_store_does_not_divide_by_zero(client):

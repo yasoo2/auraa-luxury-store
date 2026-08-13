@@ -244,6 +244,13 @@ async def get_current_user_doc(request: Request) -> Dict[str, Any]:
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
+    # Tokens issued after the auth_version hardening carry this claim. A
+    # password reset increments the stored version and invalidates old
+    # sessions without forcing legacy tokens (which lack the claim) to fail.
+    token_version = payload.get("auth_version")
+    if token_version is not None and int(token_version) != int(user.get("auth_version", 0)):
+        raise HTTPException(status_code=401, detail="Session expired; please sign in again")
+
     # A token minted before the account was disabled must stop working too,
     # otherwise disabling only takes effect at the next login.
     if user.get("is_active") is False:

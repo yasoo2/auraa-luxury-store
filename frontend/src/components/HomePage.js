@@ -44,8 +44,8 @@ const HomePage = () => {
       </div>
       <SEOHead 
         title={isRTL ? 'Auraa Luxury - إكسسوارات فاخرة' : 'Auraa Luxury - Premium Accessories'}
-        description={isRTL ? 'اكتشف مجموعة Auraa Luxury الفاخرة من الإكسسوارات الذهبية واللؤلؤية. قلادات، أقراط، أساور وساعات بأجود الخامات والتصاميم العصرية.' : 'Discover Auraa Luxury\'s premium collection of gold and pearl accessories. Necklaces, earrings, bracelets and watches crafted with finest materials and contemporary designs.'}
-        keywords={isRTL ? 'Auraa Luxury، إكسسوارات فاخرة، قلادات ذهبية، أقراط لؤلؤ، أساور، ساعات، مجوهرات' : 'Auraa Luxury, premium accessories, gold necklaces, pearl earrings, bracelets, watches, jewelry'}
+        description={isRTL ? 'إكسسوارات Auraa Luxury: قلادات وأقراط وأساور وخواتم من الستانلس ستيل والمطلي بالذهب، مرصّعة بالزركون، بتصاميم عصرية.' : 'Auraa Luxury accessories: necklaces, earrings, bracelets and rings in stainless steel and gold plating, set with zircon, in contemporary designs.'}
+        keywords={isRTL ? 'Auraa Luxury، إكسسوارات، قلادات مطلية بالذهب، أقراط ستانلس ستيل، أساور، خواتم زركون' : 'Auraa Luxury, accessories, gold plated necklaces, stainless steel earrings, bracelets, zircon rings'}
         type="website"
         breadcrumbs={[
           { name: isRTL ? 'الرئيسية' : 'Home', url: window.location.origin }

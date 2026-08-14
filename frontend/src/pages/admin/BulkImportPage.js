@@ -40,7 +40,7 @@ const BulkImportPage = () => {
   // stops the shop for.
   const csvTemplate = `name_ar,name_en,description_ar,description_en,material_ar,material_en,price,category,images,stock_quantity,sku
 قلادة ذهبية,Gold-Plated Necklace,قلادة مطلية بالذهب,A gold-plated necklace.,مطلي بالذهب,Gold plated,299.99,necklaces,https://example.com/image1.jpg,100,NK001
-أقراط لؤلؤ,Pearl Earrings,أقراط لؤلؤ طبيعي,Freshwater pearl earrings.,لؤلؤ طبيعي,Freshwater pearl,199.99,earrings,https://example.com/image2.jpg,50,ER001`;
+أقراط زركون,Zircon Earrings,أقراط مرصّعة بالزركون,Earrings set with zircon.,ستانلس ستيل,Stainless steel,199.99,earrings,https://example.com/image2.jpg,50,ER001`;
 
   const requiredFields = [
     { key: 'name_ar', label: isRTL ? 'اسم المنتج (عربي)' : 'Product Name (Arabic)' },

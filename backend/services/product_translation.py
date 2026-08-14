@@ -110,20 +110,20 @@ _TYPES: List[Tuple[str, str, str]] = [
 # ── Materials that read as nouns beside the type ─────────────────────────────
 # Arabic puts these in apposition with no preposition: "خاتم فضة", "سوار جلد".
 _MATERIAL_NOUNS: List[Tuple[str, str]] = [
+    # «فضة إسترليني 925» stays a claim about substance, and it is the one
+    # precious metal here that survives the price test: 925 is a hallmark the
+    # supplier states specifically, and a small silver piece genuinely costs a
+    # few dollars wholesale. Bare "Silver" does not survive it — in a CJ title
+    # it means the colour — and it has moved to the colours below.
     ("sterling silver", "فضة إسترليني 925"),
     ("s925", "فضة إسترليني 925"),
     ("925 silver", "فضة إسترليني 925"),
     ("silver 925", "فضة إسترليني 925"),
+    ("925 sterling", "فضة إسترليني 925"),
     ("stainless steel", "ستانلس ستيل"),
     ("surgical steel", "ستانلس ستيل طبي"),
     ("titanium steel", "ستيل تيتانيوم"),
     ("titanium", "تيتانيوم"),
-    ("rose gold", "ذهب وردي"),
-    ("white gold", "ذهب أبيض"),
-    ("yellow gold", "ذهب أصفر"),
-    ("solid gold", "ذهب خالص"),
-    ("silver", "فضة"),
-    ("platinum", "بلاتين"),
     ("leather", "جلد"),
     ("genuine leather", "جلد طبيعي"),
     ("ceramic", "سيراميك"),
@@ -187,8 +187,30 @@ _MATERIAL_ADJECTIVES: List[Tuple[str, Tuple[str, str]]] = [
     ("gold tone", ("بلون الذهب", "بلون الذهب")),
     ("silver color", ("بلون الفضة", "بلون الفضة")),
     ("silver tone", ("بلون الفضة", "بلون الفضة")),
-    ("18k", ("عيار 18", "عيار 18")),
-    ("14k", ("عيار 14", "عيار 14")),
+    # The unqualified precious metals, read as the colour they are.
+    #
+    # These sat in the table above as claims about substance — "Rose Gold"
+    # became «ذهب وردي», solid rose gold, on a bracelet the shop sells for
+    # twenty-six dollars and the supplier for three. Same word, same fault, as
+    # the diamond the composer no longer names.
+    #
+    # Colour rather than silence, which is where the stones went, because the
+    # readings are not alike: a metal's name maps onto a colour a customer can
+    # check against the photograph, and «بلون الذهب» claims nothing about what
+    # is under it. "Diamond" has no such reading — there is no colour called
+    # diamond — so there the shop says nothing at all.
+    ("rose gold", ("بلون الذهب الوردي", "بلون الذهب الوردي")),
+    ("white gold", ("بلون الذهب الأبيض", "بلون الذهب الأبيض")),
+    ("yellow gold", ("بلون الذهب الأصفر", "بلون الذهب الأصفر")),
+    ("solid gold", ("بلون الذهب", "بلون الذهب")),
+    ("platinum", ("بلون البلاتين", "بلون البلاتين")),
+    ("silver", ("بلون الفضة", "بلون الفضة")),
+    # "18K" with no "plated" after it is a purity claim on a piece that has no
+    # purity. Read and dropped, like the stones: the compounds above still
+    # catch "18K Gold Plated", which is the true and common case.
+    ("18k", ("", "")),
+    ("14k", ("", "")),
+    ("24k", ("", "")),
     ("alloy", ("معدني", "معدنية")),
     ("metal", ("معدني", "معدنية")),
     ("crystal", ("كريستالي", "كريستالية")),
@@ -209,43 +231,81 @@ _MATERIALS: List[Tuple[str, object, str]] = (
     + [(key, pair, "adj") for key, pair in _MATERIAL_ADJECTIVES]
 )
 
-# ── Stones ───────────────────────────────────────────────────────────────────
+# ── Stones the shop is willing to name ───────────────────────────────────────
 # Emitted as a prepositional phrase — "مرصّع بالزركون" — which does inflect on
 # the participle, so the two forms are carried here too.
+#
+# Every entry here names a stone that is man-made or costume *by definition*.
+# Cubic zirconia is grown in a furnace; a rhinestone is glass; moissanite is
+# lab silicon carbide. Repeating the supplier's word for one of these cannot
+# overstate what the customer will receive.
 _STONES: List[Tuple[str, str, str]] = [
     ("cubic zirconia", "الزركون المكعّب", "زركون مكعّب"),
     ("cubic zircon", "الزركون المكعّب", "زركون مكعّب"),
     ("moissanite", "المويسانايت", "مويسانايت"),
     ("zirconia", "الزركون", "زركون"),
     ("zircon", "الزركون", "زركون"),
-    ("diamond", "الألماس", "ألماس"),
     ("rhinestone", "الأحجار اللامعة", "أحجار لامعة"),
-    ("freshwater pearl", "اللؤلؤ الطبيعي", "لؤلؤ طبيعي"),
-    ("pearl", "اللؤلؤ", "لؤلؤ"),
-    ("opal", "الأوبال", "أوبال"),
-    ("turquoise", "الفيروز", "فيروز"),
-    ("amethyst", "الجمشت", "جمشت"),
-    ("emerald", "الزمرّد", "زمرّد"),
-    ("ruby", "الياقوت الأحمر", "ياقوت أحمر"),
-    ("sapphire", "الياقوت الأزرق", "ياقوت أزرق"),
-    ("topaz", "التوباز", "توباز"),
-    ("garnet", "العقيق الأحمر", "عقيق أحمر"),
-    ("agate", "العقيق", "عقيق"),
-    ("obsidian", "الأوبسيديان", "أوبسيديان"),
-    ("onyx", "الأونيكس", "أونيكس"),
-    ("jade", "اليشم", "يشم"),
-    ("quartz", "الكوارتز", "كوارتز"),
-    ("tourmaline", "التورمالين", "تورمالين"),
-    ("aquamarine", "الأكوامارين", "أكوامارين"),
-    ("citrine", "السيترين", "سيترين"),
-    ("peridot", "الزبرجد", "زبرجد"),
-    ("moonstone", "حجر القمر", "حجر القمر"),
-    ("gemstone", "الأحجار الكريمة", "أحجار كريمة"),
     ("crystal", "الكريستال", "كريستال"),
     ("enamel", "المينا", "مينا"),
-    ("shell", "الصدف", "صدف"),
-    ("coral", "المرجان", "مرجان"),
 ]
+
+# ── Stones the shop refuses to name ──────────────────────────────────────────
+#
+# This list is the correction of a real deception that reached real customers.
+#
+# The shop offered «خاتم لامع فاخر مرصّع بالألماس» — a luxury ring set with
+# diamonds — for 54 dollars, and under it, on a line of its own, «الخامة:
+# الماس». And a heart ring «مرصّع باللؤلؤ» for 37. Neither is possible: the
+# supplier's cost on those pieces is a few dollars, and no diamond and no pearl
+# exists at that price. The stones are glass and resin, and the shop was
+# telling a buyer otherwise, in writing, at the moment of purchase.
+#
+# The words came from CJ's own titles, where "diamond" and "pearl" are how the
+# trade writes "sparkly" and "white bead". They are marketing, not disclosure —
+# and a shop that repeats them is not quoting a supplier, it is making the
+# claim itself to its own customer.
+#
+# So these are read — they must be, or the word falls through and the motif
+# table prints a shape that is not there — and then dropped. Nothing is emitted
+# in either language. Not «ألماس», which would be a lie, and not «ألماس صناعي»
+# either, which would be a different unverified claim dressed as caution: the
+# supplier's data does not say what the stone is, and neither, therefore, does
+# this shop. The product page shows no stone, the owner sees it in the admin
+# list of products stating no material, and he can write the truth there once
+# he has held one in his hand.
+_UNNAMEABLE_STONES: List[Tuple[str, str, str]] = [
+    ("freshwater pearl", "", ""),
+    ("diamond", "", ""),
+    ("pearl", "", ""),
+    ("opal", "", ""),
+    ("turquoise", "", ""),
+    ("amethyst", "", ""),
+    ("emerald", "", ""),
+    ("ruby", "", ""),
+    ("sapphire", "", ""),
+    ("topaz", "", ""),
+    ("garnet", "", ""),
+    ("agate", "", ""),
+    ("obsidian", "", ""),
+    ("onyx", "", ""),
+    ("jade", "", ""),
+    ("quartz", "", ""),
+    ("tourmaline", "", ""),
+    ("aquamarine", "", ""),
+    ("citrine", "", ""),
+    ("peridot", "", ""),
+    ("moonstone", "", ""),
+    ("gemstone", "", ""),
+    ("shell", "", ""),
+    ("coral", "", ""),
+]
+
+# The claim words, as they appear in a supplier's English title. The shop must
+# not republish these either: the English name shown to an English visitor is
+# CJ's own sentence, and «Luxury Shiny Diamond Zircon Ring» printed on this
+# storefront is this shop's claim, whoever first wrote it.
+_UNNAMEABLE_KEYS = frozenset(key for key, _, _ in _UNNAMEABLE_STONES)
 
 # ── Motifs — what the piece is shaped like ───────────────────────────────────
 _MOTIFS: List[Tuple[str, str]] = [
@@ -397,6 +457,18 @@ _AUDIENCES: List[Tuple[str, str]] = [
 # How many words the composed title may run to before it stops being a heading.
 _MAX_WORDS = 12
 
+# Words that praise the product without describing it.
+#
+# The shop listed a rope-chain bracelet as «سوار فاخر» — luxury bracelet — and
+# nothing else, because a type plus one adjective clears the "more than a bare
+# type" bar. But it does not clear it in the sense the bar was for: the name
+# tells a shopper the category he already clicked and an opinion the seller
+# holds of his own goods. A composed name has to contain at least one fact.
+_PUFFERY = frozenset({
+    "فاخر", "فاخرة", "أنيق", "أنيقة", "لامع", "لامعة", "رقيق", "رقيقة",
+    "بسيط", "بسيطة", "لافت", "لافتة",
+})
+
 
 def _normalise(text: str) -> str:
     """
@@ -534,6 +606,16 @@ _ENGLISH_OVERRIDES: Dict[str, str] = {
     "white gold color": "White gold-tone",
     "silver color": "Silver-tone",
     "silver tone": "Silver-tone",
+    # The unqualified metals, in English as in Arabic. Without these the two
+    # languages disagreed on the same product — «بلون الذهب الوردي» beside
+    # "Rose gold" — and the English half was the claim the Arabic had just
+    # stopped making.
+    "rose gold": "Rose gold-tone",
+    "white gold": "White gold-tone",
+    "yellow gold": "Yellow gold-tone",
+    "solid gold": "Gold-tone",
+    "platinum": "Platinum-tone",
+    "silver": "Silver-tone",
     "gold plating": "Gold plated",
     "pu leather": "PU leather",
     "cubic zircon": "Cubic zirconia",
@@ -582,10 +664,20 @@ def analyse(english_title: str) -> Dict:
     # "Rose Gold" is spent on the metal and cannot be read again as a rose;
     # stones before styles, so "Crystal" is a stone rather than the adjective
     # of the same name.
+    # Read, then filtered: a material with no Arabic behind it is one the shop
+    # refuses to name — "18K" with no "plated" after it — and it is here so it
+    # gets consumed rather than left for another table to misread.
     material_hits = reader.take(_MATERIALS)
-    noun_hits = [(entry, span) for entry, span in material_hits if entry[2] == "noun"]
-    adjective_hits = [(entry, span) for entry, span in material_hits if entry[2] == "adj"]
-    stone_hits = reader.take(_STONES)
+    noun_hits = [(entry, span) for entry, span in material_hits
+                 if entry[2] == "noun" and entry[1]]
+    adjective_hits = [(entry, span) for entry, span in material_hits
+                      if entry[2] == "adj" and entry[1][0]]
+    # Both stone tables are read, and only the nameable half survives. Reading
+    # the other half matters as much as dropping it: leave "Pearl" unconsumed
+    # and the styles table finds nothing but the motif table is still hunting,
+    # and a word we refused to print as a stone comes back as a shape.
+    stone_hits = [(entry, span) for entry, span
+                  in reader.take(_STONES + _UNNAMEABLE_STONES) if entry[1]]
     motif_hits = reader.take(_MOTIFS)
     style_hits = reader.take(_STYLES)
     occasion_hits = reader.take(_OCCASIONS)
@@ -635,6 +727,19 @@ def translate_title(english_title: str) -> Optional[str]:
     """
     facts = analyse(english_title)
     if not facts["type"]:
+        return None
+
+    # Everything the name says beyond the category and the seller's opinion of
+    # his own goods. A title built from these and nothing else is not a name.
+    substantive = (
+        _dedupe(facts["material_nouns"])[:1]
+        + _dedupe(facts["material_adjectives"])[:1]
+        + _dedupe(facts["motifs"])[:1]
+        + _dedupe(facts["stones"])[:1]
+        + [s for s in _dedupe(facts["styles"]) if s not in _PUFFERY]
+        + _dedupe(facts["occasions"])[:1]
+    )
+    if not substantive:
         return None
 
     parts: List[str] = [facts["type"]]
@@ -779,6 +884,112 @@ def material_of(english_title: str, english_description: str = "") -> Optional[D
     if not arabic or not english:
         return None
     return {"ar": "، ".join(arabic), "en": ", ".join(english)}
+
+
+# The Arabic the shop used to print for the words it now refuses. Needed to
+# find the damage already sitting in the database — a product whose name says
+# «مرصّع بالألماس» cannot be found by re-reading its English title, because the
+# fix changes what that reading produces, not what was stored years ago.
+_UNNAMEABLE_ARABIC_WORDS = (
+    "ألماس", "الماس", "ماس", "لؤلؤ", "لؤلؤة", "زمرّد", "زمرد", "ياقوت", "جمشت",
+    "أوبال", "اوبال", "فيروز", "توباز", "عقيق", "يشم", "كوارتز", "تورمالين",
+    "أكوامارين", "سيترين", "زبرجد", "أوبسيديان", "أونيكس", "مرجان", "صدف",
+)
+_UNNAMEABLE_ARABIC_PHRASES = ("حجر القمر", "أحجار كريمة", "الأحجار الكريمة")
+
+# Arabic has no word boundary a regex `\b` can see, and the two places this has
+# to match are exactly the two it would miss: «بالألماس» carries the preposition
+# and the article fused onto the front, and «الماس» is the same word spelled
+# without its hamza — which is how it was printed on the page the owner
+# photographed. Meanwhile a bare substring search for «ماس» finds it inside
+# «حماس» and «الماسية». So: any non-Arabic character in front, then optionally
+# one of the single-letter proclitics, then optionally the article, then the
+# word, and no Arabic letter after it.
+#
+# "Letter" here means letters only, not the whole Arabic block. Written as the
+# block, the class swallowed the Arabic comma — so «الخامة: الماس، زركون», the
+# exact line the owner photographed, read as «الماس» followed by an Arabic
+# character and was declared clean.
+_ARABIC_LETTER = r"ء-يٱ-ۓ"
+_UNNAMEABLE_ARABIC_RE = re.compile(
+    rf"(?:^|[^{_ARABIC_LETTER}])[بوفلك]?(?:ال)?"
+    rf"(?:{'|'.join(_UNNAMEABLE_ARABIC_WORDS)})(?![{_ARABIC_LETTER}])"
+)
+
+
+# The retired metal claims, as they were written into the database.
+#
+# Harder to find than the stones, because the honest replacement contains the
+# same letters: «بلون الذهب الوردي» has «الذهب الوردي» inside it, «فضة إسترليني
+# 925» starts with «فضة», and «مطلي بالذهب عيار 18» ends with «عيار 18». Each
+# pattern therefore says what must NOT be around the word — the article, the
+# hallmark, the plating — so the correction finds the lie and leaves the truth
+# beside it alone.
+_RETIRED_METAL_RE = re.compile(
+    r"ذهب\s+(?:وردي|أبيض|أصفر|خالص)"      # «سوار ذهب وردي» — solid, not plated
+    r"|(?<!ال)بلاتين"                      # bare platinum, but not «بلون البلاتين»
+    r"|(?<!ال)فضة(?!\s+إسترليني)"          # bare silver, but not the 925 hallmark
+    r"|(?<!بالذهب\s)عيار\s*\d"             # a karat with no metal in front of it
+)
+
+
+def states_retired_metal(*values: Optional[str]) -> bool:
+    """True when a string claims a precious metal this shop cannot vouch for."""
+    return any(value and _RETIRED_METAL_RE.search(str(value)) for value in values)
+
+
+def states_unnameable_stone(*values: Optional[str]) -> bool:
+    """
+    True when any of these strings claims a stone this shop will not vouch for.
+
+    Used to find what is already published rather than what would be composed
+    today: the catalogue is full of names this module wrote before it knew
+    better, and re-running the composer on them would produce clean text while
+    the old text sat untouched in the database, on sale.
+    """
+    for value in values:
+        if not value:
+            continue
+        text = str(value)
+        if any(phrase in text for phrase in _UNNAMEABLE_ARABIC_PHRASES):
+            return True
+        if _UNNAMEABLE_ARABIC_RE.search(text):
+            return True
+        if any(f" {key} " in _normalise(text) for key in _UNNAMEABLE_KEYS):
+            return True
+    return False
+
+
+def sanitise_supplier_text(text: Optional[str]) -> str:
+    """
+    A supplier's sentence with the claims this shop will not make removed.
+
+    The English name on a product page is CJ's own title, printed unedited —
+    "Luxury Shiny Diamond Zircon Ring" on a fifty-dollar ring. Whoever first
+    wrote that sentence, the shop displaying it is the one telling a customer
+    there are diamonds in it. So the word comes out, and what remains is the
+    supplier's description of everything it actually is.
+    """
+    if not text:
+        return ""
+    out = str(text)
+    for key in sorted(_UNNAMEABLE_KEYS, key=len, reverse=True):
+        # The claim, and the words that exist only to prop it up: the plural
+        # ("Pearls" is the same claim), the adjective in front of it, and the
+        # conjunction on either side. Removing the noun alone left "Natural
+        # Emerald and Ruby Gemstone Necklace" as "Natural and Necklace".
+        out = re.sub(
+            rf"(?:\b(?:natural|real|genuine|authentic|solid)\s+)?"
+            rf"(?:\band\s+|\bwith\s+|&\s*)?"
+            rf"\b{re.escape(key)}(?:e?s)?\b"
+            rf"(?:\s+and\b|\s*&)?",
+            " ", out, flags=re.IGNORECASE)
+    # Left behind by the removal: doubled spaces, and the stranded punctuation
+    # of a list that has lost a member.
+    out = re.sub(r"\s*([,،/&|-])\s*\1+", r"\1", out)
+    out = re.sub(r"\s+([,،.])", r"\1", out)
+    out = re.sub(r"^[\s,،/&|-]+|[\s,،/&|-]+$", "", out)
+    return re.sub(r"\s{2,}", " ", out).strip()
 
 
 def looks_untranslated(arabic_value: Optional[str]) -> bool:

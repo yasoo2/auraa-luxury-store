@@ -29,25 +29,34 @@ const BulkImportPage = () => {
   const [currentStep, setCurrentStep] = useState('upload'); // upload, preview, import, results
 
   const API_URL = API_BASE_URL;
-  const csvTemplate = `name,name_en,description,price,category,images,stock_quantity,sku,material,color,tags
-قلادة ذهبية,Golden Necklace,قلادة ذهبية فاخرة,299.99,necklaces,https://example.com/image1.jpg,100,NK001,gold,gold,"jewelry,luxury,necklace"
-أقراط لؤلؤ,Pearl Earrings,أقراط لؤلؤية طبيعية,199.99,earrings,https://example.com/image2.jpg,50,ER001,pearl,white,"jewelry,pearl,earrings"`;
+  // The column names are the storage names, and they are not what they were.
+  //
+  // The template's first column was called `name` and asked for Arabic, and
+  // that is the field the English storefront prints — so a shop stocked from
+  // this file showed Arabic product names to English visitors. And `material`,
+  // `color` and `tags` were collected, sent, and dropped by the server, which
+  // declares none of them: the CSV promised to carry a material and the
+  // product arrived stating none, which is precisely what a payment provider
+  // stops the shop for.
+  const csvTemplate = `name_ar,name_en,description_ar,description_en,material_ar,material_en,price,category,images,stock_quantity,sku
+قلادة ذهبية,Gold-Plated Necklace,قلادة مطلية بالذهب,A gold-plated necklace.,مطلي بالذهب,Gold plated,299.99,necklaces,https://example.com/image1.jpg,100,NK001
+أقراط لؤلؤ,Pearl Earrings,أقراط لؤلؤ طبيعي,Freshwater pearl earrings.,لؤلؤ طبيعي,Freshwater pearl,199.99,earrings,https://example.com/image2.jpg,50,ER001`;
 
   const requiredFields = [
-    { key: 'name', label: isRTL ? 'اسم المنتج (عربي)' : 'Product Name (Arabic)' },
+    { key: 'name_ar', label: isRTL ? 'اسم المنتج (عربي)' : 'Product Name (Arabic)' },
     { key: 'name_en', label: isRTL ? 'اسم المنتج (إنجليزي)' : 'Product Name (English)' },
     { key: 'price', label: isRTL ? 'السعر' : 'Price' },
     { key: 'category', label: isRTL ? 'الفئة' : 'Category' }
   ];
 
   const optionalFields = [
-    { key: 'description', label: isRTL ? 'الوصف' : 'Description' },
+    { key: 'description_ar', label: isRTL ? 'الوصف (عربي)' : 'Description (Arabic)' },
+    { key: 'description_en', label: isRTL ? 'الوصف (إنجليزي)' : 'Description (English)' },
+    { key: 'material_ar', label: isRTL ? 'الخامة (عربي)' : 'Material (Arabic)' },
+    { key: 'material_en', label: isRTL ? 'الخامة (إنجليزي)' : 'Material (English)' },
     { key: 'images', label: isRTL ? 'الصور (مفصولة بفاصلة)' : 'Images (comma-separated)' },
     { key: 'stock_quantity', label: isRTL ? 'كمية المخزون' : 'Stock Quantity' },
-    { key: 'sku', label: isRTL ? 'رمز المنتج' : 'SKU' },
-    { key: 'material', label: isRTL ? 'المادة' : 'Material' },
-    { key: 'color', label: isRTL ? 'اللون' : 'Color' },
-    { key: 'tags', label: isRTL ? 'العلامات (مفصولة بفاصلة)' : 'Tags (comma-separated)' }
+    { key: 'sku', label: isRTL ? 'رمز المنتج' : 'SKU' }
   ];
 
   const handleFileUpload = (event) => {
@@ -130,22 +139,25 @@ const BulkImportPage = () => {
       
       try {
         // Prepare product data
+        // `name` is the English one, matching the rest of the shop: the
+        // storefront reads `name_ar || name` in Arabic and `name || name_en`
+        // in English, so putting the Arabic here showed it to everyone.
         const productData = {
-          name: row.name,
+          name: row.name_en,
           name_en: row.name_en,
-          description: row.description || row.name,
-          description_en: row.description || row.name_en,
+          name_ar: row.name_ar,
+          description: row.description_en || row.name_en,
+          description_en: row.description_en || row.name_en,
+          description_ar: row.description_ar || '',
+          material_ar: row.material_ar || '',
+          material_en: row.material_en || '',
           price: parseFloat(row.price),
           category: row.category,
           images: row.images ? row.images.split(',').map(img => img.trim()) : [],
           stock_quantity: parseInt(row.stock_quantity) || 100,
           sku: row.sku || `BULK_${Date.now()}_${i}`,
-          material: row.material || '',
-          color: row.color || '',
-          tags: row.tags ? row.tags.split(',').map(tag => tag.trim()) : [],
           is_featured: false,
           is_active: true,
-          import_source: 'bulk_csv'
         };
 
         // Make API request
@@ -387,7 +399,9 @@ const BulkImportPage = () => {
                           <XCircle className="h-4 w-4 text-red-500" />
                         )}
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{row.name}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {isRTL ? (row.name_ar || row.name_en) : (row.name_en || row.name_ar)}
+                      </td>
                       <td className="px-4 py-2 text-sm text-gray-900">{row.price}</td>
                       <td className="px-4 py-2 text-sm text-gray-900">{row.category}</td>
                       <td className="px-4 py-2 text-sm text-red-600">

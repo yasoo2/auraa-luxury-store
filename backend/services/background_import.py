@@ -12,7 +12,9 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
 from .pricing_service import pricing_service, load_pricing_settings
 from .import_service import bulk_import_products
-from .product_translation import translate_title, translate_description
+from .product_translation import (
+    translate_title, translate_description, describe_in_english, material_of,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -480,6 +482,7 @@ async def background_import_cj_products(
                     product.get('productNameEn') or product.get('productName', '')
                 )
                 english_description = _clean_description(product)
+                material = material_of(english_name, english_description)
 
                 # Create product document (in STAGING area for editing before publish)
                 product_data = {
@@ -501,6 +504,20 @@ async def background_import_cj_products(
                     # on every product page.
                     "description": english_description or (product.get('productNameEn') or ''),
                     "description_ar": translate_description(english_name, english_description),
+                    # The English half of the same specification. CJ's own text
+                    # is keyword padding that names no material, and naming the
+                    # material is what iyzico refused this shop for missing —
+                    # in the language its reviewer reads. None when the title
+                    # states too little, and then the storefront falls back to
+                    # `description` above, which is what it always showed.
+                    "description_en": describe_in_english(english_name, english_description),
+                    # And on a line of its own, because a material buried in a
+                    # sentence is one the shopper skips and the reviewer hunts
+                    # for. None when the supplier named none — the product page
+                    # then shows no material row rather than an invented one,
+                    # and the admin catalogue lists it as needing one.
+                    "material_ar": material["ar"] if material else None,
+                    "material_en": material["en"] if material else None,
                     "price": pricing['final_price_sar'],  # profit + tax + shipping included
                     # Deliberately no "original_price". It used to be set to the
                     # supplier's cost, which the product page renders struck

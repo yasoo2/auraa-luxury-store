@@ -4607,6 +4607,70 @@ def test_an_unqualified_precious_metal_is_read_as_the_colour_it_is():
     assert states_retired_metal("خاتم بلون البلاتين") is False
 
 
+def test_the_material_comes_from_the_suppliers_own_field_not_its_advertising():
+    """
+    The catalogue was built by reading supplier *titles*, and a title is
+    advertising — the place where "diamond" means sparkly, and where most
+    pieces name no material at all. CJ also ships a materials taxonomy whose
+    values are "Stainless Steel", "Zinc Alloy", "Copper", "Iron", "Resin".
+    That is a statement about the goods, and it was being ignored.
+    """
+    from services.product_translation import supplier_material, material_from_supplier
+
+    assert supplier_material({"materialNameEn": "Stainless Steel"}) == "Stainless Steel"
+    # CJ is not consistent across its endpoints, and sends lists as well.
+    assert supplier_material({"materialName": ["Alloy", "Rhinestone"]}) == "Alloy, Rhinestone"
+    assert supplier_material({"productNameEn": "Ring"}) is None
+
+    assert material_from_supplier("Stainless Steel")["ar"] == "ستانلس ستيل"
+    assert material_from_supplier("Zinc Alloy")["ar"] == "سبيكة زنك"
+    assert material_from_supplier("Iron")["ar"] == "حديد"
+    # A composite field names everything the piece is made of, and all of it
+    # is the answer — unlike a title, where the stone follows the metal.
+    assert material_from_supplier("Alloy+Rhinestone")["ar"] == "معدني، أحجار لامعة"
+
+    # The field is better evidence than a title, and still only the supplier's
+    # word: it goes through the same refusal.
+    assert material_from_supplier("Diamond") is None
+    assert material_from_supplier("Pearl") is None
+    assert material_from_supplier("Fashion Jewelry") is None
+
+
+def test_importing_prefers_the_supplier_material_over_the_title(client, monkeypatch):
+    import asyncio
+    from services import background_import as bg
+
+    async def fake_bulk(total_count=1, keyword=None, exclude_ids=None, **_):
+        return {"products": [{
+            "pid": "M-1",
+            # The title says nothing about what it is made of. The field does.
+            "productNameEn": "Luxury Shiny Heart Ring for Women",
+            "productName": "Luxury Shiny Heart Ring for Women",
+            "materialNameEn": "Stainless Steel",
+            "sellPrice": 8.0, "shippingPrice": 2.0, "weight": 0.1,
+            "productImage": "https://example.com/a.jpg",
+            "categoryName": "Jewelry", "productSku": "SKU-M1", "sellQuantity": 5,
+        }], "report": {}}
+
+    monkeypatch.setattr(bg, "bulk_import_products", fake_bulk)
+    register(client, email="mat@b.com")
+    make_admin(client, "mat@b.com")
+
+    loop = asyncio.get_event_loop()
+    manager = bg.ImportJobManager(client._db)
+    job_id = loop.run_until_complete(
+        manager.create_job("bulk", "cj", {"max_products": 1}, "u1"))
+    loop.run_until_complete(bg.background_import_cj_products(
+        job_id=job_id, keyword="ring", category_id=None, max_products=1, db=client._db))
+
+    doc = loop.run_until_complete(client._db.products.find_one({"external_id": "M-1"}))
+    assert doc["material_ar"] == "ستانلس ستيل", \
+        f"the supplier said what it is made of and the import ignored it: {doc!r}"
+    assert doc["material_en"] == "Stainless steel", doc
+    # Stored raw as well, so the claim stays traceable to the thing that said it.
+    assert doc["supplier_material"] == "Stainless Steel", doc
+
+
 def test_the_english_name_stops_repeating_the_suppliers_claim():
     from services.product_translation import sanitise_supplier_text
 

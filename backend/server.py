@@ -65,6 +65,8 @@ from services.product_translation import (
     states_unnameable_stone,
     states_retired_metal,
     sanitise_supplier_text,
+    supplier_material,
+    material_from_supplier,
 )
 
 # MongoDB connection
@@ -4062,6 +4064,84 @@ async def translate_products(admin: User = Depends(get_admin_user)):
         "corrected_claims": corrected,
         "owner_written_claims": len(owner_written_claims),
         "owner_written_claim_products": owner_written_claims[:100],
+    }
+
+
+@api_router.post("/admin/products/refresh-materials")
+async def refresh_materials_from_supplier(
+    limit: int = 200,
+    admin: User = Depends(get_admin_user),
+):
+    """
+    Ask CJ what its own products are made of, and write down the answer.
+
+    The catalogue was built by reading supplier *titles*, which is advertising
+    — the place where "diamond" means sparkly and where most pieces name no
+    material at all. CJ also ships a materials field, a taxonomy whose values
+    are "Stainless Steel", "Zinc Alloy", "Copper", "Iron", "Resin". That is a
+    statement about the goods, and it is the answer to the only question a
+    payment reviewer and a customer both ask.
+
+    Only products that state no material are touched, and only supplier ones —
+    a material the owner typed after holding the piece outranks anything a
+    supplier API says about it. What CJ declares is stored raw beside the
+    translated form so the claim stays traceable to its source.
+    """
+    from services.cj_client import get_product_details, credentials_configured
+
+    if not credentials_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="CJ credentials are not configured on this server",
+        )
+
+    docs = await db.products.find(
+        {"external_id": {"$nin": [None, ""]}},
+        {"id": 1, "external_id": 1, "material_ar": 1, "material_en": 1, "source": 1},
+    ).to_list(100000)
+
+    pending = [
+        d for d in docs
+        if not (d.get("material_ar") or d.get("material_en") or "").strip()
+    ][:max(1, min(limit, 500))]
+
+    filled, silent, failed = 0, [], 0
+    for doc in pending:
+        try:
+            detail = await get_product_details(str(doc["external_id"]))
+        except Exception:
+            # One product's failure is not the job's failure, and a supplier
+            # that rate-limits mid-run must not lose the work already done.
+            failed += 1
+            continue
+
+        payload = (detail or {}).get("data") or {}
+        declared = supplier_material(payload)
+        material = material_from_supplier(declared)
+        if not material:
+            # CJ either said nothing, or said something this shop will not
+            # repeat. Both leave the product needing a human.
+            silent.append({"id": doc.get("id"), "declared": declared})
+            continue
+
+        await db.products.update_one({"id": doc["id"]}, {"$set": {
+            "material_ar": material["ar"],
+            "material_en": material["en"],
+            "supplier_material": declared,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }})
+        filled += 1
+
+    return {
+        "checked": len(pending),
+        "filled": filled,
+        "remaining": max(0, len([
+            d for d in docs
+            if not (d.get("material_ar") or d.get("material_en") or "").strip()
+        ]) - filled),
+        "supplier_said_nothing": len(silent),
+        "supplier_said_nothing_products": silent[:100],
+        "failed": failed,
     }
 
 

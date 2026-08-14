@@ -226,6 +226,44 @@ const EnhancedProductsPage = () => {
     }
   };
 
+  // ---- Materials, from the supplier rather than from its advertising ------
+  const [refreshingMaterials, setRefreshingMaterials] = useState(false);
+
+  const refreshMaterials = async () => {
+    setRefreshingMaterials(true);
+    try {
+      const { data } = await axios.post(`${API_URL}/api/admin/products/refresh-materials`);
+      if (data.filled === 0 && data.checked === 0) {
+        toast.success(isRTL
+          ? 'كل منتج يذكر خامته بالفعل'
+          : 'Every product already states its material');
+      } else {
+        toast.success(isRTL
+          ? `كُتبت خامة ${data.filled} منتجاً من أصل ${data.checked} سُئل عنها`
+          : `Filled the material on ${data.filled} of ${data.checked} asked about`);
+      }
+      // Said separately, because these are the ones no supplier field can
+      // settle: the owner has to hold the piece and write what it is.
+      if (data.supplier_said_nothing) {
+        toast.warning(isRTL
+          ? `${data.supplier_said_nothing} منتجاً لم يذكر المورّد خامته — تكتبها بنفسك`
+          : `${data.supplier_said_nothing} products the supplier did not answer for — write these yourself`,
+          { duration: 8000 });
+      }
+      if (data.remaining) {
+        toast.info(isRTL
+          ? `بقي ${data.remaining} منتجاً — اضغط الزرّ مرّة أخرى للمتابعة`
+          : `${data.remaining} still to go — press again to continue`);
+      }
+      await fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.detail
+        || (isRTL ? 'تعذّر سؤال المورّد — لم يتغيّر شيء' : 'Could not ask the supplier — nothing changed'));
+    } finally {
+      setRefreshingMaterials(false);
+    }
+  };
+
   const handleDeleteProduct = async (productId) => {
     // eslint-disable-next-line no-restricted-globals
     if (!confirm(isRTL ? 'هل أنت متأكد من حذف هذا المنتج؟' : 'Are you sure you want to delete this product?')) {
@@ -449,6 +487,21 @@ const EnhancedProductsPage = () => {
             🌐 {translating
               ? (isRTL ? 'جارٍ الترجمة…' : 'Translating…')
               : (isRTL ? 'ترجمة الأسماء للعربية' : 'Translate names to Arabic')}
+          </Button>
+
+          {/* Asks CJ what its own products are made of. The catalogue was
+              built by reading supplier titles, which is advertising; CJ also
+              ships a materials taxonomy, which is a statement about the goods. */}
+          <Button
+            variant="outline"
+            onClick={refreshMaterials}
+            disabled={refreshingMaterials}
+            data-testid="refresh-materials"
+            className="border-sky-300 text-sky-700 hover:bg-sky-50"
+          >
+            🧪 {refreshingMaterials
+              ? (isRTL ? 'جارٍ السؤال…' : 'Asking supplier…')
+              : (isRTL ? 'جلب الخامات من المورّد' : 'Fetch materials from supplier')}
           </Button>
 
           <Button variant="outline" onClick={removeDuplicates} data-testid="remove-duplicates">

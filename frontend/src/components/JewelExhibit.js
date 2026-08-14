@@ -309,7 +309,7 @@ export const PIECES = [
   { ref: '1 1 7', ar: 'خاتم الوعد', en: 'The Promise Ring', Art: Ring },
   { ref: '2 0 5', ar: 'سوار التنس', en: 'The Tennis Bracelet', Art: Bracelet },
   { ref: '3 3 1', ar: 'أقراط الشلال', en: 'The Cascade Earrings', Art: Earrings },
-  { ref: '4 6 8', ar: 'عقد اللؤلؤ', en: 'The Pearl Strand', Art: Pearls },
+  { ref: '4 6 8', ar: 'العقد', en: 'The Strand', Art: Pearls },
   { ref: '5 9 0', ar: 'طوق الريفييرا', en: 'The Riviera Collar', Art: Riviera },
 ];
 

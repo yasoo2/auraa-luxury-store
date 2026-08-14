@@ -4254,7 +4254,9 @@ def test_a_word_already_spent_is_not_read_a_second_time():
     again as a motif sold a snake bracelet as a flower one.
     """
     title = translate_title("Adjustable Rose Gold Snake Bangle Bracelet Ladies")
-    assert "ذهب وردي" in title
+    # Read as the colour it is — a bracelet the supplier sells for three
+    # dollars is not solid rose gold — but read once, and as the metal.
+    assert "بلون الذهب الوردي" in title, title
     assert "وردة" not in title, f"the metal was read again as a flower: {title}"
     assert "أفعى" in title
 
@@ -4513,15 +4515,184 @@ def test_a_colour_is_not_a_metal_and_a_compound_is_not_its_halves():
 def test_the_material_is_the_stone_when_no_metal_is_named_and_nothing_otherwise():
     from services.product_translation import material_of
 
-    pearl = material_of("Freshwater Pearl Drop Earrings Wedding")
-    assert pearl["en"] == "Freshwater pearl", pearl
-    assert "لؤلؤ طبيعي" in pearl["ar"], pearl
+    stone = material_of("Cubic Zirconia Drop Earrings Wedding")
+    assert stone["en"] == "Cubic zirconia", stone
+    assert "زركون مكعّب" in stone["ar"], stone
 
     # A title naming neither metal nor stone gets no material at all. The row
     # is then absent from the product page and the product is listed in the
     # admin report — an invented material is a false claim about goods on sale.
     assert material_of("Luxury Vintage Ring for Women") is None
     assert material_of("Hot Selling Product 2024") is None
+
+
+# ---------------------------------------------------------------------------
+# The claim the shop will not make
+#
+# The store offered «خاتم لامع فاخر مرصّع بالألماس» — a ring set with diamonds —
+# for fifty-four dollars, with «الخامة: الماس» printed under it on a line of
+# its own, and a heart ring «مرصّع باللؤلؤ» for thirty-seven. The supplier's
+# cost on those is a few dollars. There is no diamond and no pearl in them.
+#
+# The words came from CJ's titles, where "diamond" and "pearl" mean "sparkly"
+# and "white bead". A shop that reprints them is not quoting a supplier — it is
+# making the claim itself, to its own customer, at the moment of purchase.
+# ---------------------------------------------------------------------------
+
+def test_the_shop_never_claims_a_stone_it_cannot_stand_behind():
+    from services.product_translation import (
+        translate_title, translate_description, describe_in_english, material_of,
+    )
+
+    # The exact ring from the owner's screenshot.
+    ring = "Luxury Shiny Diamond Zircon Ring"
+    assert "ألماس" not in (translate_title(ring) or ""), translate_title(ring)
+    assert "الماس" not in (translate_title(ring) or ""), translate_title(ring)
+    assert "Diamond" not in (describe_in_english(ring) or ""), describe_in_english(ring)
+    # The zircon beside it is a real name for a real man-made stone, and stays.
+    assert "زركون" in translate_title(ring)
+    assert material_of(ring)["en"] == "Zircon"
+
+    # And the pearl ring.
+    pearl = "Elegant Luxury Heart Pearl Ring for Women"
+    assert "لؤلؤ" not in (translate_title(pearl) or ""), translate_title(pearl)
+    assert material_of(pearl) is None, "no stone named is better than a false one"
+
+    # Nothing is invented in the cautious direction either: "simulated pearl"
+    # would be a second unverified claim wearing the clothes of honesty.
+    assert "صناعي" not in (translate_description(pearl) or "")
+
+    # A word we refuse to print as a stone must still be consumed, or the motif
+    # table finds it and prints a shape the piece does not have.
+    shell = translate_title("Shell Shape Pearl Pendant Necklace") or ""
+    assert "صدف" not in shell and "لؤلؤ" not in shell, shell
+
+
+def test_an_unqualified_precious_metal_is_read_as_the_colour_it_is():
+    """
+    The same fault as the diamond, one table over. "Rose Gold" became «ذهب
+    وردي» — solid rose gold — on a rope bracelet the shop sells for
+    twenty-six dollars and the supplier for three.
+
+    Colour rather than silence, unlike the stones: a metal's name maps onto a
+    colour the customer can check against the photograph, while "diamond" has
+    no colour reading at all.
+    """
+    from services.product_translation import (
+        translate_title, material_of, states_retired_metal,
+    )
+
+    bracelet = material_of("Luxury Rose Gold Rope Chain Bracelet")
+    assert bracelet["ar"] == "بلون الذهب الوردي", bracelet
+    assert bracelet["en"] == "Rose gold-tone", "the two languages must not disagree"
+
+    assert material_of("Solid Gold Platinum Luxury Ring")["ar"] == "بلون الذهب، بلون البلاتين"
+    assert material_of("Silver Heart Necklace")["ar"] == "بلون الفضة"
+
+    # The one precious metal that survives the price test: a specific hallmark,
+    # and a small 925 piece really does cost a few dollars wholesale.
+    assert material_of("S925 Sterling Silver Ring")["ar"] == "فضة إسترليني 925"
+    # A karat with no metal in front of it claims a purity the piece lacks.
+    assert material_of("18K Gold Ring for Women") is None
+    assert translate_title("18K Gold Ring for Women") is None
+
+    # And the detector that finds what is already stored tells the lie from the
+    # truth beside it — the honest replacement contains the same letters.
+    assert states_retired_metal("سوار ذهب وردي فاخر") is True
+    assert states_retired_metal("خاتم عيار 18") is True
+    assert states_retired_metal("الخامة: فضة") is True
+    assert states_retired_metal("سوار بلون الذهب الوردي فاخر") is False
+    assert states_retired_metal("خاتم مطلي بالذهب عيار 18") is False
+    assert states_retired_metal("قلادة فضة إسترليني 925") is False
+    assert states_retired_metal("خاتم بلون البلاتين") is False
+
+
+def test_the_english_name_stops_repeating_the_suppliers_claim():
+    from services.product_translation import sanitise_supplier_text
+
+    assert sanitise_supplier_text("Luxury Shiny Diamond Zircon Ring") == \
+        "Luxury Shiny Zircon Ring"
+    # The adjective propping the claim up goes with it, and so does the
+    # conjunction — otherwise "Natural Emerald and Ruby Gemstone Necklace"
+    # survives as "Natural and Necklace".
+    assert sanitise_supplier_text("Natural Emerald and Ruby Gemstone Necklace") == "Necklace"
+    # A material that is what it says stays untouched.
+    assert sanitise_supplier_text("Genuine Leather Bracelet") == "Genuine Leather Bracelet"
+
+
+def test_a_claim_already_sitting_in_the_database_is_found_and_taken_down(client):
+    """
+    Correcting the composer does not correct the catalogue.
+
+    The sentences are already written into the database and on sale. The gentle
+    backfill beside this one only fills empty fields, so it would leave every
+    one of them exactly where it is — which is on the product page, above the
+    buy button.
+    """
+    import asyncio
+
+    register(client, email="claims@b.com")
+    make_admin(client, "claims@b.com")
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_many([
+        {"id": "lie-1", "source": "cj_dropshipping", "external_id": "L1",
+         "name": "Luxury Shiny Diamond Zircon Ring",
+         "name_ar": "خاتم لامع فاخر مرصّع بالألماس",
+         "description": "Luxury Shiny Diamond Zircon Ring",
+         "description_ar": "النوع: خاتم · الحجر: الماس، زركون · الطراز: لامع، فاخر",
+         "material_ar": "الماس، زركون", "material_en": "Diamond, Zircon",
+         "price": 54.0, "category": "rings", "images": ["https://x/a.jpg"]},
+        {"id": "mine-pearl", "source": "manual",
+         "name": "Pearl Ring", "name_ar": "خاتم لؤلؤ طبيعي اشتريتُه بنفسي",
+         "description": "d", "price": 300.0, "category": "rings", "images": []},
+    ]))
+
+    report = client.post("/api/admin/products/translate").json()
+    assert report["corrected_claims"] == 1, report
+
+    docs = {d["id"]: d for d in
+            loop.run_until_complete(client._db.products.find({}).to_list(100))}
+
+    supplier = docs["lie-1"]
+    for field in ("name", "name_ar", "description", "description_ar",
+                  "description_en", "material_ar", "material_en"):
+        value = supplier.get(field) or ""
+        assert "ألماس" not in value and "الماس" not in value and "Diamond" not in value, \
+            f"{field} still claims a diamond: {value!r}"
+    # The true half of the title survives the correction.
+    assert "زركون" in supplier["name_ar"], supplier["name_ar"]
+    assert supplier["name"] == "Luxury Shiny Zircon Ring", supplier["name"]
+
+    # A name the owner wrote about a piece he bought himself is not rewritten —
+    # he may know what is in it. It is reported so he can check it.
+    assert docs["mine-pearl"]["name_ar"] == "خاتم لؤلؤ طبيعي اشتريتُه بنفسي"
+    assert report["owner_written_claims"] == 1, report
+    assert report["owner_written_claim_products"][0]["id"] == "mine-pearl"
+
+    # And the boot pass does it too, without waiting for anyone to press a
+    # button: the ring is on sale to somebody right now.
+    loop.run_until_complete(client._db.products.update_one(
+        {"id": "lie-1"}, {"$set": {"name_ar": "خاتم لامع فاخر مرصّع بالألماس"}}))
+    from server import fill_missing_arabic_names
+    loop.run_until_complete(fill_missing_arabic_names())
+    again = loop.run_until_complete(client._db.products.find_one({"id": "lie-1"}))
+    assert "ألماس" not in (again["name_ar"] or ""), again["name_ar"]
+
+
+def test_a_name_that_is_only_a_category_and_a_compliment_is_not_a_name():
+    """
+    The shop listed a rope-chain bracelet as «سوار فاخر» — luxury bracelet —
+    and nothing more: the category the shopper had just clicked, plus the
+    seller's opinion of his own goods.
+    """
+    from services.product_translation import translate_title
+
+    assert translate_title("Luxury Bracelet") is None
+    assert translate_title("Elegant Exquisite Shiny Ring") is None
+    # One fact is enough to make it a name.
+    assert translate_title("Luxury Stainless Steel Bracelet") == "سوار ستانلس ستيل فاخر"
+    assert translate_title("Luxury Heart Bracelet") == "سوار فاخر بتصميم قلب"
 
 
 def test_the_api_sends_the_material_it_stores(client):

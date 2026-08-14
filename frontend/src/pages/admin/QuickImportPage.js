@@ -305,7 +305,7 @@ const QuickImportPage = () => {
                 onChange={(e) => setKeyword(e.target.value)}
                 disabled={isImporting}
                 className="mt-3 w-full px-4 py-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                placeholder={language === 'ar' ? 'مثال: pearl earrings' : 'e.g. pearl earrings'}
+                placeholder={language === 'ar' ? 'مثال: zircon earrings' : 'e.g. zircon earrings'}
                 data-testid="import-keyword-input"
               />
             )}

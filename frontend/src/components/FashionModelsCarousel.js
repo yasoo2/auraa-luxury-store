@@ -71,10 +71,14 @@ const FashionModelsCarousel = () => {
     {
       id: 8,
       url: 'https://images.unsplash.com/photo-1590166223826-12dee1677420?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwzfHxqZXdlbHJ5JTIwbW9kZWw=',
-      alt_ar: 'عارضة بأقراط لؤلؤية فاخرة',
-      alt_en: 'Model with luxury pearl earrings',
-      caption_ar: 'لؤلؤ أصيل',
-      caption_en: 'Authentic Pearls'
+      // «لؤلؤ أصيل» — authentic pearls — was the caption here, on a stock
+      // photograph, above a catalogue whose pieces cost the supplier a few
+      // dollars. The shop does not sell an authentic pearl and must not say
+      // it does, least of all on its own front page in its own voice.
+      alt_ar: 'عارضة ترتدي أقراطاً',
+      alt_en: 'Model wearing earrings',
+      caption_ar: 'تفاصيل الأقراط',
+      caption_en: 'Earring Details'
     },
     {
       id: 9,

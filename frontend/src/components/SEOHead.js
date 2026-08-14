@@ -17,18 +17,22 @@ const SEOHead = ({
   
   const siteName = 'Auraa Luxury';
   const defaultTitle = isRTL ? 'Auraa Luxury - إكسسوارات فاخرة' : 'Auraa Luxury - Premium Accessories';
-  const defaultDescription = isRTL 
-    ? 'اكتشف مجموعة Auraa Luxury الفاخرة من الإكسسوارات الذهبية واللؤلؤية. قلادات، أقراط، أساور وساعات بأجود الخامات والتصاميم العصرية.'
-    : 'Discover Auraa Luxury\'s premium collection of gold and pearl accessories. Necklaces, earrings, bracelets and watches crafted with finest materials and contemporary designs.';
+  // What the shop actually stocks: plated and stainless-steel accessories set
+  // with zircon. It used to say «الإكسسوارات الذهبية واللؤلؤية» — gold and
+  // pearl accessories — which is the whole catalogue described as two
+  // materials it does not contain, in the one sentence search engines quote.
+  const defaultDescription = isRTL
+    ? 'إكسسوارات Auraa Luxury: قلادات وأقراط وأساور وخواتم من الستانلس ستيل والمطلي بالذهب، مرصّعة بالزركون، بتصاميم عصرية.'
+    : 'Auraa Luxury accessories: necklaces, earrings, bracelets and rings in stainless steel and gold plating, set with zircon, in contemporary designs.';
   
   const finalTitle = title ? `${title} | ${siteName}` : defaultTitle;
   const finalDescription = description || defaultDescription;
   const finalUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
   const finalImage = image || '/images/auraa-luxury-og.jpg';
   
-  const defaultKeywords = isRTL 
-    ? 'Auraa Luxury، إكسسوارات فاخرة، قلادات ذهبية، أقراط لؤلؤ، أساور، ساعات، مجوهرات، إكسسوارات نسائية، تسوق أونلاين'
-    : 'Auraa Luxury, premium accessories, gold necklaces, pearl earrings, bracelets, watches, jewelry, women accessories, online shopping';
+  const defaultKeywords = isRTL
+    ? 'Auraa Luxury، إكسسوارات، قلادات مطلية بالذهب، أقراط ستانلس ستيل، أساور، خواتم زركون، إكسسوارات نسائية، تسوق أونلاين'
+    : 'Auraa Luxury, accessories, gold plated necklaces, stainless steel earrings, bracelets, zircon rings, women accessories, online shopping';
   
   const finalKeywords = keywords ? `${keywords}, ${defaultKeywords}` : defaultKeywords;
 

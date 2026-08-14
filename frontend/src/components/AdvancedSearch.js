@@ -11,12 +11,6 @@ import {
   Heart,
   ShoppingCart,
   Eye,
-  Sparkles,
-  Zap,
-  TrendingUp,
-  Palette,
-  Gem,
-  Crown
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -35,7 +29,6 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState([]);
   
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
@@ -56,52 +49,26 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
     return typeof label === 'string' ? label : String(label || '');
   };
 
-  // AI-powered search suggestions
-  const generateAISuggestions = (searchQuery) => {
-    const baseSuggestions = [
-      { 
-        text: isRTL ? 'قلادات ذهبية للمناسبات' : 'Gold necklaces for occasions',
-        category: 'necklaces',
-        icon: Gem,
-        color: 'from-yellow-400 to-amber-500'
-      },
-      { 
-        text: isRTL ? 'أقراط لؤلؤ كلاسيكية' : 'Classic pearl earrings',
-        category: 'earrings',
-        icon: Sparkles,
-        color: 'from-gray-200 to-white'
-      },
-      { 
-        text: isRTL ? 'أساور فضية عصرية' : 'Modern silver bracelets',
-        category: 'bracelets',
-        icon: Crown,
-        color: 'from-gray-300 to-gray-500'
-      },
-      { 
-        text: isRTL ? 'ساعات فاخرة للنساء' : 'Luxury watches for women',
-        category: 'watches',
-        icon: TrendingUp,
-        color: 'from-purple-400 to-pink-500'
-      }
-    ];
+  /*
+    A panel headed «اقتراحات ذكية» — Smart Suggestions, under a lightning bolt
+    — used to open here. Behind it were four sentences typed into this file:
+    «قلادات ذهبية للمناسبات», «أقراط لؤلؤ كلاسيكية», «أساور فضية عصرية»,
+    «ساعات فاخرة للنساء», narrowed by a branch its own author had labelled
+    "Simple AI-like filtering".
 
-    // Simple AI-like filtering based on query
-    if (searchQuery.toLowerCase().includes('gold') || searchQuery.includes('ذهب')) {
-      return baseSuggestions.filter(s => s.text.toLowerCase().includes('gold') || s.text.includes('ذهب'));
-    }
-    if (searchQuery.toLowerCase().includes('pearl') || searchQuery.includes('لؤلؤ')) {
-      return baseSuggestions.filter(s => s.text.toLowerCase().includes('pearl') || s.text.includes('لؤلؤ'));
-    }
-    
-    return baseSuggestions.slice(0, 3);
-  };
+    Nothing about it was smart and nothing about it was true. It offered
+    classic pearl earrings and modern silver bracelets to a shopper of a
+    catalogue that holds neither, and it did so in the shop's own voice rather
+    than the supplier's — the same lie as «مرصّع بالألماس», one screen earlier
+    in the journey. The real suggestion list below it comes from /api/search
+    and contains products that exist.
+  */
 
-  // Debounced search with AI suggestions
+  // Debounced product suggestions, drawn from the catalogue.
   const debouncedSearch = useCallback(
     debounce(async (searchQuery) => {
       if (searchQuery.length < 2) {
         setSuggestions([]);
-        setAiSuggestions([]);
         return;
       }
 
@@ -121,16 +88,9 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
           : response.data?.products || [];
         setSuggestions(suggestionItems.map(getSuggestionLabel).filter(Boolean));
         
-        // Generate AI suggestions
-        const aiSuggs = generateAISuggestions(searchQuery);
-        setAiSuggestions(aiSuggs);
-        
         setShowSuggestions(true);
       } catch (error) {
         console.error('Search suggestions error:', error);
-        // Fallback to AI suggestions only
-        const aiSuggs = generateAISuggestions(searchQuery);
-        setAiSuggestions(aiSuggs);
         setSuggestions([]);
         setShowSuggestions(true);
       } finally {
@@ -146,7 +106,6 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
     } else {
       setShowSuggestions(false);
       setSuggestions([]);
-      setAiSuggestions([]);
     }
   }, [query, debouncedSearch]);
 
@@ -219,12 +178,6 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
     if (typeof suggestion === 'string') {
       setQuery(suggestion);
       handleSearch(suggestion, filters);
-    } else if (suggestion?.text) {
-      // AI suggestion with category
-      setQuery(suggestion.text);
-      const newFilters = { ...filters, category: suggestion.category };
-      setFilters(newFilters);
-      handleSearch(suggestion.text, newFilters);
     } else {
       const productName = getSuggestionLabel(suggestion);
       setQuery(productName);
@@ -283,34 +236,8 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
         </div>
 
         {/* Search Suggestions */}
-        {showSuggestions && (suggestions.length > 0 || aiSuggestions.length > 0) && (
+        {showSuggestions && suggestions.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-80 overflow-y-auto">
-            {aiSuggestions.length > 0 && (
-              <div className="p-3 border-b border-gray-100">
-                <div className="flex items-center mb-2">
-                  <Zap className="h-4 w-4 text-amber-500 me-2" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {isRTL ? 'اقتراحات ذكية' : 'Smart Suggestions'}
-                  </span>
-                </div>
-                {aiSuggestions.map((suggestion, index) => {
-                  const IconComponent = suggestion.icon;
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      className="w-full text-left p-2 hover:bg-amber-50 rounded-md transition-colors flex items-center"
-                    >
-                      <div className={`p-2 rounded-full bg-gradient-to-r ${suggestion.color} mr-3`}>
-                        <IconComponent className="h-4 w-4 text-white" />
-                      </div>
-                      <span className="text-sm text-gray-700">{suggestion.text}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            
             {suggestions.length > 0 && (
               <div className="p-3">
                 <div className="flex items-center mb-2">
@@ -414,7 +341,6 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
                 <option value="gold">{isRTL ? 'ذهب' : 'Gold'}</option>
                 <option value="silver">{isRTL ? 'فضة' : 'Silver'}</option>
                 <option value="steel">{isRTL ? 'ستيل' : 'Steel'}</option>
-                <option value="pearl">{isRTL ? 'لؤلؤ' : 'Pearl'}</option>
                 <option value="zircon">{isRTL ? 'زركون' : 'Zircon'}</option>
               </select>
             </div>

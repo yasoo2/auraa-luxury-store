@@ -84,6 +84,14 @@ step "No screen calls a route the server does not have" \
 step "No screen reads a field the API does not send" \
   node "$ROOT/scripts/verify-no-phantom-fields.mjs"
 
+# The shop sold a ring «مرصّع بالألماس» — set with diamonds — for 54 dollars,
+# with «الخامة: الماس» printed under it. There is no diamond in a piece the
+# supplier sells for three. The composer that wrote that sentence is fixed and
+# the catalogue is corrected at every boot; this guards the other way in — a
+# claim typed straight into a screen, where no composer runs.
+step "No screen claims a material the shop cannot stand behind" \
+  node "$ROOT/scripts/verify-no-false-claims.mjs" "$ROOT/frontend/src"
+
 # A button with no handler is valid React, so nothing else here has an opinion
 # about it. "عرض التفاصيل" sat in the customer's order list doing nothing from
 # the day it was written.

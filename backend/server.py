@@ -62,6 +62,9 @@ from services.product_translation import (
     describe_in_english,
     material_of,
     looks_untranslated,
+    states_unnameable_stone,
+    states_retired_metal,
+    sanitise_supplier_text,
 )
 
 # MongoDB connection
@@ -3895,6 +3898,61 @@ async def count_untranslated_products(admin: User = Depends(get_admin_user)):
     }
 
 
+def states_unbacked_claim(*values: Optional[str]) -> bool:
+    """A stone or a metal this shop cannot vouch for, in any of these strings."""
+    return states_unnameable_stone(*values) or states_retired_metal(*values)
+
+
+def unnameable_stone_corrections(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Strip a material claim this shop cannot stand behind, wherever it is stored.
+
+    This exists because of a real deception that reached real customers. The
+    shop sold «خاتم لامع فاخر مرصّع بالألماس» — a ring set with diamonds — for
+    fifty-four dollars, with «الخامة: الماس» printed under it, and a pearl ring
+    for thirty-seven. The supplier pays a few dollars for those pieces. There
+    is no diamond and no pearl in them, and the shop said there was, in
+    writing, on the page where the customer presses buy.
+
+    Correcting the composer is not enough on its own: the sentences are already
+    written into the database, and the gentle backfill beside this one only
+    fills fields that are empty. This one overwrites — it has to — and it does
+    so only for products that came from the supplier, because a name the owner
+    wrote himself about goods he has held is his to stand behind, not mine to
+    rewrite. Those are reported instead.
+    """
+    english = sanitise_supplier_text(doc.get("name") or doc.get("name_en") or "")
+    english_description = sanitise_supplier_text(doc.get("description") or "")
+    updates: Dict[str, Any] = {}
+
+    for field, value in (("name", doc.get("name")), ("name_en", doc.get("name_en")),
+                         ("description", doc.get("description"))):
+        if value and states_unbacked_claim(value):
+            cleaned = sanitise_supplier_text(value)
+            if cleaned and cleaned != value:
+                updates[field] = cleaned
+
+    if states_unbacked_claim(doc.get("name_ar")):
+        # Recomposed from the cleaned English, not patched: removing a phrase
+        # from Arabic by hand leaves «خاتم لامع فاخر مرصّع ب» behind.
+        updates["name_ar"] = translate_title(english)
+
+    if states_unbacked_claim(doc.get("description_ar")):
+        updates["description_ar"] = translate_description(english, english_description)
+
+    if states_unbacked_claim(doc.get("description_en")):
+        updates["description_en"] = describe_in_english(english, english_description)
+
+    if states_unbacked_claim(doc.get("material_ar"), doc.get("material_en")):
+        material = material_of(english, english_description)
+        updates["material_ar"] = material["ar"] if material else None
+        updates["material_en"] = material["en"] if material else None
+
+    # A recomposition that comes back empty is still a correction: no name is
+    # better than a false one, and the storefront falls back to the English.
+    return {k: v for k, v in updates.items() if k not in ("name",) or v}
+
+
 def catalogue_language_updates(doc: Dict[str, Any]) -> Dict[str, Any]:
     """
     What a product document is still missing in either language.
@@ -3951,9 +4009,28 @@ async def translate_products(admin: User = Depends(get_admin_user)):
     docs = await db.products.find({}).to_list(100000)
 
     translated, unreadable, without_material = 0, [], []
+    corrected, owner_written_claims = 0, []
     for doc in docs:
         english = doc.get("name") or doc.get("name_en") or ""
-        updates = catalogue_language_updates(doc)
+        updates: Dict[str, Any] = {}
+
+        claims = states_unbacked_claim(
+            doc.get("name"), doc.get("name_en"), doc.get("name_ar"),
+            doc.get("description"), doc.get("description_ar"),
+            doc.get("description_en"), doc.get("material_ar"), doc.get("material_en"),
+        )
+        if claims:
+            if (doc.get("source") or "").startswith("cj"):
+                updates.update(unnameable_stone_corrections(doc))
+                doc = {**doc, **updates}
+                english = doc.get("name") or doc.get("name_en") or ""
+                corrected += 1
+            else:
+                # Not rewritten: the owner may have held this piece and known
+                # what is in it. Named so he can check it himself.
+                owner_written_claims.append({"id": doc.get("id"), "name": english})
+
+        updates.update(catalogue_language_updates(doc))
 
         if looks_untranslated(doc.get("name_ar")) and "name_ar" not in updates:
             unreadable.append({"id": doc.get("id"), "name": english})
@@ -3980,6 +4057,11 @@ async def translate_products(admin: User = Depends(get_admin_user)):
         "unreadable_products": unreadable[:100],
         "without_material": len(without_material),
         "without_material_products": without_material[:100],
+        # The false claims that were on sale, and the ones only the owner can
+        # settle because he wrote them.
+        "corrected_claims": corrected,
+        "owner_written_claims": len(owner_written_claims),
+        "owner_written_claim_products": owner_written_claims[:100],
     }
 
 
@@ -4330,18 +4412,35 @@ async def fill_missing_arabic_names():
             logger.exception("Could not create the non-critical order idempotency index")
 
         docs = await db.products.find(
-            {}, {"id": 1, "name": 1, "name_en": 1, "name_ar": 1,
+            {}, {"id": 1, "name": 1, "name_en": 1, "name_ar": 1, "source": 1,
                  "description": 1, "description_ar": 1, "description_en": 1,
                  "material_ar": 1, "material_en": 1}
         ).to_list(100000)
 
-        filled = 0
+        filled, corrected = 0, 0
         for doc in docs:
-            updates = catalogue_language_updates(doc)
+            updates: Dict[str, Any] = {}
+            # First, and on every boot: take down any claim of a material the
+            # shop cannot stand behind. This does not wait for the owner to
+            # press a button — a ring advertised as set with diamonds for
+            # fifty-four dollars is on sale to somebody right now.
+            if (doc.get("source") or "").startswith("cj") and states_unbacked_claim(
+                doc.get("name"), doc.get("name_en"), doc.get("name_ar"),
+                doc.get("description"), doc.get("description_ar"),
+                doc.get("description_en"), doc.get("material_ar"), doc.get("material_en"),
+            ):
+                updates.update(unnameable_stone_corrections(doc))
+                doc = {**doc, **updates}
+                corrected += 1
+
+            updates.update(catalogue_language_updates(doc))
             if updates:
                 await db.products.update_one({"id": doc["id"]}, {"$set": updates})
                 filled += 1
 
+        if corrected:
+            logger.warning(
+                f"🚫 Removed an unverifiable material claim from {corrected} product(s) at startup")
         if filled:
             logger.info(f"✅ Names, specifications and materials filled in for {filled} product(s) at startup")
     except Exception as e:

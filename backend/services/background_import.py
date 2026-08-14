@@ -14,6 +14,7 @@ from .pricing_service import pricing_service, load_pricing_settings
 from .import_service import bulk_import_products
 from .product_translation import (
     translate_title, translate_description, describe_in_english, material_of,
+    supplier_material, material_from_supplier,
 )
 
 logger = logging.getLogger(__name__)
@@ -482,7 +483,15 @@ async def background_import_cj_products(
                     product.get('productNameEn') or product.get('productName', '')
                 )
                 english_description = _clean_description(product)
-                material = material_of(english_name, english_description)
+                # CJ's own materials field first, and the title only when it
+                # sent none. The field is a taxonomy — "Stainless Steel",
+                # "Zinc Alloy", "Copper", "Iron" — while the title is
+                # advertising, and reading the advertising when the taxonomy
+                # was right there is why so much of this catalogue states no
+                # material at all.
+                declared = supplier_material(product)
+                material = material_from_supplier(declared) \
+                    or material_of(english_name, english_description)
 
                 # Create product document (in STAGING area for editing before publish)
                 product_data = {
@@ -518,6 +527,11 @@ async def background_import_cj_products(
                     # and the admin catalogue lists it as needing one.
                     "material_ar": material["ar"] if material else None,
                     "material_en": material["en"] if material else None,
+                    # Kept raw and unread by any screen: when a customer asks
+                    # what a piece is made of, the answer has to be traceable
+                    # to something the supplier actually said, not to a parse
+                    # of its marketing.
+                    "supplier_material": declared,
                     "price": pricing['final_price_sar'],  # profit + tax + shipping included
                     # Deliberately no "original_price". It used to be set to the
                     # supplier's cost, which the product page renders struck

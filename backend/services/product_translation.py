@@ -28,7 +28,7 @@ them since the day it was written; the English one, which is what a Turkish
 reviewer reads, carried CJ's keyword padding and named no material at all.
 """
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # ── Product types ────────────────────────────────────────────────────────────
 # (Arabic noun, agreement class). "f" also covers the broken plurals — أقراط,
@@ -143,6 +143,10 @@ _MATERIAL_NOUNS: List[Tuple[str, str]] = [
     ("zinc alloy", "سبيكة زنك"),
     ("zinc", "زنك"),
     ("steel", "ستيل"),
+    ("iron", "حديد"),
+    ("aluminum", "ألمنيوم"),
+    ("aluminium", "ألمنيوم"),
+    ("tin", "قصدير"),
     ("tungsten", "تنجستن"),
     ("bronze", "برونز"),
     ("pu leather", "جلد صناعي"),
@@ -990,6 +994,69 @@ def sanitise_supplier_text(text: Optional[str]) -> str:
     out = re.sub(r"\s+([,،.])", r"\1", out)
     out = re.sub(r"^[\s,،/&|-]+|[\s,،/&|-]+$", "", out)
     return re.sub(r"\s{2,}", " ", out).strip()
+
+
+# Where CJ states a material, as opposed to advertising one.
+#
+# The composer above reads the product *title*, and a title is marketing: it
+# is where "diamond" means sparkly. But CJ also ships a materials field — a
+# taxonomy, whose values are things like "Stainless Steel", "Zinc Alloy",
+# "Copper", "Iron", "Resin" — and that is a statement about the goods rather
+# than a pitch for them. It is the better source and this shop was ignoring
+# it, which is why so many products end up saying nothing at all.
+#
+# Several spellings because CJ is not consistent across its endpoints, and the
+# list response carries different keys from the detail one.
+_SUPPLIER_MATERIAL_KEYS = (
+    "materialNameEn", "materialName", "materialEn", "material",
+    "materialKey", "productMaterial", "materialNameSet",
+)
+
+
+def supplier_material(product: Dict[str, Any]) -> Optional[str]:
+    """CJ's own material string for a product, if it sent one."""
+    for key in _SUPPLIER_MATERIAL_KEYS:
+        raw = product.get(key)
+        if isinstance(raw, list):
+            raw = ", ".join(str(item) for item in raw if item)
+        if raw and str(raw).strip():
+            return str(raw).strip()
+    return None
+
+
+def material_from_supplier(raw: Optional[str], gender: str = "m") -> Optional[Dict[str, str]]:
+    """
+    Read CJ's materials field into the shop's two languages.
+
+    Put through the same tables as everything else, deliberately: the field is
+    better evidence than a title, but it is still the supplier's word, and if
+    it says "Diamond" on a piece that cost three dollars it is refused here
+    exactly as it would be in a title. What comes back is the honest
+    classification the catalogue was missing — steel, zinc alloy, copper,
+    gold-plated — and None when the field named nothing this shop will state.
+    """
+    if not raw or not str(raw).strip():
+        return None
+
+    reader = _Reader(str(raw))
+    material_hits = reader.take(_MATERIALS)
+    nouns = [e[1] for e, _ in material_hits if e[2] == "noun" and e[1]]
+    adjectives = [_agree(e[1], gender) for e, _ in material_hits if e[2] == "adj" and e[1][0]]
+    stone_hits = [(e, s) for e, s in reader.take(_STONES + _UNNAMEABLE_STONES) if e[1]]
+
+    # Stones sit beside the metals here rather than behind them, unlike the
+    # title reading: CJ's field is a list of what the piece is made of —
+    # "Alloy+Rhinestone" — and dropping the second half would answer half the
+    # question the field exists to answer.
+    arabic = _dedupe(nouns + adjectives + [e[2] for e, _ in stone_hits])[:3]
+    english = _dedupe(
+        [_english(e[0], s) for e, s in material_hits
+         if (e[1][0] if e[2] == "adj" else e[1])]
+        + [_english(e[0], s) for e, s in stone_hits])[:3]
+
+    if not arabic or not english:
+        return None
+    return {"ar": "، ".join(arabic), "en": ", ".join(english)}
 
 
 def looks_untranslated(arabic_value: Optional[str]) -> bool:

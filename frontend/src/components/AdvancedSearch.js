@@ -42,9 +42,6 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
     minPrice: searchParams.get('minPrice') || '',
     maxPrice: searchParams.get('maxPrice') || '',
     material: searchParams.get('material') || '',
-    color: searchParams.get('color') || '',
-    size: searchParams.get('size') || '',
-    brand: searchParams.get('brand') || '',
     rating: searchParams.get('rating') || '',
     inStock: searchParams.get('inStock') === 'true',
     onSale: searchParams.get('onSale') === 'true',
@@ -206,9 +203,6 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
       minPrice: '',
       maxPrice: '',
       material: '',
-      color: '',
-      size: '',
-      brand: '',
       rating: '',
       inStock: false,
       onSale: false,
@@ -407,38 +401,32 @@ const AdvancedSearch = ({ onResults, showFilters = true }) => {
                 onChange={(e) => handleFilterChange('material', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               >
-                <option value="">{isRTL ? 'جميع المواد' : 'All Materials'}</option>
+                {/*
+                  The words this catalogue actually states. "Platinum" and
+                  "Diamond" were on the list and match nothing the shop sells,
+                  while stainless steel — most of the men's range — was not
+                  offered at all. The filter reads the material the product
+                  states, so an option that matches nothing returns an empty
+                  grid, and an empty grid for "Platinum" is a promise the shop
+                  cannot keep.
+                */}
+                <option value="">{isRTL ? 'جميع الخامات' : 'All Materials'}</option>
                 <option value="gold">{isRTL ? 'ذهب' : 'Gold'}</option>
                 <option value="silver">{isRTL ? 'فضة' : 'Silver'}</option>
-                <option value="platinum">{isRTL ? 'بلاتين' : 'Platinum'}</option>
+                <option value="steel">{isRTL ? 'ستيل' : 'Steel'}</option>
                 <option value="pearl">{isRTL ? 'لؤلؤ' : 'Pearl'}</option>
-                <option value="diamond">{isRTL ? 'ماس' : 'Diamond'}</option>
+                <option value="zircon">{isRTL ? 'زركون' : 'Zircon'}</option>
               </select>
             </div>
 
-            {/* Color Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {isRTL ? 'اللون' : 'Color'}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {['gold', 'silver', 'rose-gold', 'black', 'white'].map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => handleFilterChange('color', color === filters.color ? '' : color)}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      filters.color === color ? 'border-amber-500' : 'border-gray-300'
-                    } ${
-                      color === 'gold' ? 'bg-yellow-400' :
-                      color === 'silver' ? 'bg-gray-300' :
-                      color === 'rose-gold' ? 'bg-pink-300' :
-                      color === 'black' ? 'bg-black' :
-                      'bg-white'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
+            {/*
+              A row of colour swatches used to sit here, and a size box beside
+              it. No product in this shop carries a colour or a size — not one
+              imported from the supplier, and no screen that can set one — so
+              picking a swatch narrowed the results by a field that is empty on
+              every row. The filter did nothing, which was the kinder of the
+              two possible outcomes.
+            */}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">

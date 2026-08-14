@@ -47,6 +47,16 @@ const ProductDetailPage = () => {
     return p.description_en || p.description || p.description_ar || '';
   };
 
+  // The other language's material is a real answer when this one is missing —
+  // "Sterling silver 925" tells an Arabic reader what the piece is made of,
+  // and an empty row tells nobody anything. Empty only when the record itself
+  // states no material at all.
+  const getLocalizedMaterial = (p) => {
+    if (!p) return '';
+    if (language === 'ar') return p.material_ar || p.material_en || '';
+    return p.material_en || p.material_ar || '';
+  };
+
   useEffect(() => {
     fetchProduct();
   }, [id]);
@@ -280,6 +290,25 @@ const ProductDetailPage = () => {
                 )}
               </div>
             </div>
+
+            {/*
+              What the piece is made of, on a line of its own.
+
+              Turkish payment providers require it — iyzico refused this shop's
+              application in part because no product page named a material —
+              and it is the first thing a jewellery buyer looks for anyway. The
+              value comes from the product record; when the record does not
+              carry one, this row is absent rather than filled with a guess,
+              and the admin catalogue lists that product as needing one.
+            */}
+            {getLocalizedMaterial(product) && (
+              <div className="flex items-baseline gap-2" data-testid="product-material">
+                <span className="text-sm font-semibold text-gray-900">
+                  {isRTL ? 'الخامة:' : 'Material:'}
+                </span>
+                <span className="text-sm text-gray-700">{getLocalizedMaterial(product)}</span>
+              </div>
+            )}
 
             {/* Description */}
             <div>

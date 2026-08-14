@@ -18,6 +18,14 @@ the supplier actually wrote; nothing is added for flavour. When the title names
 nothing recognisable, `translate_title` returns None and the caller keeps the
 English — an honest English title beats an invented Arabic one, and beats a
 half-translated mangle by more.
+
+The same reading also composes the *English* specification, and that is not
+symmetry for its own sake. iyzico refused this shop's application with, among
+other things: «Ürünlerinizin materyallerini (altın, gümüş, çelik vb. gibi)
+ürün açıklamalarınızda belirtmenizi rica ederiz» — state your products'
+materials in your product descriptions. The Arabic description had been stating
+them since the day it was written; the English one, which is what a Turkish
+reviewer reads, carried CJ's keyword padding and named no material at all.
 """
 import re
 from typing import Dict, List, Optional, Tuple
@@ -127,7 +135,24 @@ _MATERIAL_NOUNS: List[Tuple[str, str]] = [
     ("silicone", "سيليكون"),
     ("velvet", "مخمل"),
     ("satin", "ساتان"),
-    ("lace", "دانتيل"),
+    # Added because a product page that names no material at all is the thing
+    # iyzico refused the shop over, and these are the words CJ uses for the
+    # rest of the catalogue. "steel" on its own sits below the compounds —
+    # `_by_length` guarantees "stainless steel" is read first — so it catches
+    # only the titles that say nothing more precise.
+    ("zinc alloy", "سبيكة زنك"),
+    ("zinc", "زنك"),
+    ("steel", "ستيل"),
+    ("tungsten", "تنجستن"),
+    ("bronze", "برونز"),
+    ("pu leather", "جلد صناعي"),
+    ("faux leather", "جلد صناعي"),
+    ("glass", "زجاج"),
+    ("plastic", "بلاستيك"),
+    ("fabric", "قماش"),
+    ("cotton", "قطن"),
+    ("nylon", "نايلون"),
+    ("rubber", "مطاط"),
 ]
 
 # ── Materials that read as adjectives ────────────────────────────────────────
@@ -144,15 +169,45 @@ _MATERIAL_ADJECTIVES: List[Tuple[str, Tuple[str, str]]] = [
     ("14k gold plated", ("مطلي بالذهب عيار 14", "مطلية بالذهب عيار 14")),
     ("24k gold plated", ("مطلي بالذهب عيار 24", "مطلية بالذهب عيار 24")),
     ("gold plated", ("مطلي بالذهب", "مطلية بالذهب")),
+    ("gold plating", ("مطلي بالذهب", "مطلية بالذهب")),
     ("gold filled", ("مغلّف بالذهب", "مغلّفة بالذهب")),
     ("silver plated", ("مطلي بالفضة", "مطلية بالفضة")),
     ("rhodium plated", ("مطلي بالروديوم", "مطلية بالروديوم")),
+    ("platinum plated", ("مطلي بالبلاتين", "مطلية بالبلاتين")),
+    # "Gold Color" is a claim about the colour, not about the metal, and it has
+    # to be read as one. Left out, "Rose Gold Color Bracelet" spent "rose gold"
+    # on the metals table above and sold a plated bracelet as solid rose gold;
+    # matched as a bare "gold color", it stranded the word "rose" for the motif
+    # table to find and printed a flower that is not on the piece. Each colour
+    # phrase is therefore carried whole.
+    ("rose gold color", ("بلون الذهب الوردي", "بلون الذهب الوردي")),
+    ("rose gold tone", ("بلون الذهب الوردي", "بلون الذهب الوردي")),
+    ("white gold color", ("بلون الذهب الأبيض", "بلون الذهب الأبيض")),
+    ("gold color", ("بلون الذهب", "بلون الذهب")),
+    ("gold tone", ("بلون الذهب", "بلون الذهب")),
+    ("silver color", ("بلون الفضة", "بلون الفضة")),
+    ("silver tone", ("بلون الفضة", "بلون الفضة")),
     ("18k", ("عيار 18", "عيار 18")),
     ("14k", ("عيار 14", "عيار 14")),
     ("alloy", ("معدني", "معدنية")),
     ("metal", ("معدني", "معدنية")),
     ("crystal", ("كريستالي", "كريستالية")),
 ]
+
+# Both material tables, read as one.
+#
+# They used to be read one after the other, adjectives first, and that order
+# was load-bearing: "Rose Gold Plated" had to reach the adjectives before the
+# nouns could match "rose gold" inside it and sell a plated bracelet as solid
+# gold. But an order that protects one compound breaks another — "Zinc Alloy"
+# lost "alloy" to the adjective pass and printed "Material: Zinc, Alloy", two
+# halves of one word. Read together and sorted by length, every compound beats
+# every part of itself whichever table it lives in, and neither table has to
+# know the other exists.
+_MATERIALS: List[Tuple[str, object, str]] = (
+    [(key, arabic, "noun") for key, arabic in _MATERIAL_NOUNS]
+    + [(key, pair, "adj") for key, pair in _MATERIAL_ADJECTIVES]
+)
 
 # ── Stones ───────────────────────────────────────────────────────────────────
 # Emitted as a prepositional phrase — "مرصّع بالزركون" — which does inflect on
@@ -194,6 +249,13 @@ _STONES: List[Tuple[str, str, str]] = [
 
 # ── Motifs — what the piece is shaped like ───────────────────────────────────
 _MOTIFS: List[Tuple[str, str]] = [
+    # "Lace" sat in the materials table until the material was given a line of
+    # its own on the product page, and then it read aloud: "Women Vintage Lace
+    # Halo Cubic Zirconia Ring — Material: lace". The ring is zirconia; lace is
+    # the pattern cut into it. The word is genuinely both in this trade — a
+    # lace choker is fabric — and when the title cannot say which, the shop
+    # must not assert the one that would be a false claim about what it sells.
+    ("lace", "دانتيل"),
     ("tree of life", "شجرة الحياة"),
     ("evil eye", "العين الزرقاء"),
     ("four leaf clover", "البرسيم رباعي الأوراق"),
@@ -344,6 +406,10 @@ def _normalise(text: str) -> str:
     and every pair of earrings in the shop becomes a خاتم.
     """
     low = re.sub(r"[^a-z0-9]+", " ", (text or "").lower())
+    # CJ writes both spellings, and a table cannot hold two of every colour
+    # phrase without one of them quietly falling out of step with the other.
+    low = re.sub(r"\bcolours?\b", "color", low)
+    low = re.sub(r"\bcolors\b", "color", low)
     return f" {re.sub(r'  +', ' ', low).strip()} "
 
 
@@ -386,16 +452,25 @@ class _Reader:
     def __init__(self, text: str):
         self.remaining = _normalise(text)
 
-    def take(self, table: List) -> List:
+    def take(self, table: List) -> List[Tuple[Tuple, str]]:
+        """
+        Every entry the text names, paired with the words that named it.
+
+        The words come back because the English side is built from them: the
+        supplier's own "Stainless Steel" is what an English-reading customer —
+        and the reviewer who asked to see materials — should be shown, rather
+        than a second English vocabulary maintained beside the Arabic one and
+        free to drift away from it.
+        """
         found = []
         for entry in _by_length(table):
             present = _spans(self.remaining, entry[0])
             if present:
-                found.append(entry)
+                found.append((entry, present))
                 self.remaining = self.remaining.replace(f" {present} ", " ")
         return found
 
-    def take_head(self, table: List) -> Optional[Tuple[str, str]]:
+    def take_head(self, table: List) -> Optional[Tuple[Tuple, str]]:
         """
         The product type, read as English reads it: the head noun is the last.
 
@@ -417,9 +492,9 @@ class _Reader:
                 best = (position, present, entry)
         if not best:
             return None
-        _, present, (_, arabic, gender) = best
+        _, present, entry = best
         self.remaining = self.remaining.replace(f" {present} ", " ")
-        return arabic, gender
+        return entry, present
 
 
 def _agree(pair: Tuple[str, str], gender: str) -> str:
@@ -435,6 +510,58 @@ def _dedupe(words: List[str]) -> List[str]:
     return out
 
 
+# ── English display ──────────────────────────────────────────────────────────
+# The supplier's own word, capitalised, is the English display for almost
+# everything: "stainless steel" → "Stainless steel", "butterfly" → "Butterfly".
+# Listed here are only the keys whose own text is not a thing to show a
+# customer — the abbreviations, and the spellings that are two names for one
+# material and must not print as two.
+_ENGLISH_OVERRIDES: Dict[str, str] = {
+    "s925": "Sterling silver 925",
+    "925 silver": "Sterling silver 925",
+    "silver 925": "Sterling silver 925",
+    "sterling silver": "Sterling silver 925",
+    "18k": "18K",
+    "14k": "14K",
+    "24k": "24K",
+    "18k gold plated": "18K gold plated",
+    "14k gold plated": "14K gold plated",
+    "24k gold plated": "24K gold plated",
+    "gold color": "Gold-tone",
+    "gold tone": "Gold-tone",
+    "rose gold color": "Rose gold-tone",
+    "rose gold tone": "Rose gold-tone",
+    "white gold color": "White gold-tone",
+    "silver color": "Silver-tone",
+    "silver tone": "Silver-tone",
+    "gold plating": "Gold plated",
+    "pu leather": "PU leather",
+    "cubic zircon": "Cubic zirconia",
+    "zinc alloy": "Zinc alloy",
+}
+
+# Audiences are canonicalised in Arabic — "womens", "ladies" and "female" are
+# one value — so the English is keyed on that canonical rather than on the word
+# matched. Read from the span instead, "Women's Ladies Necklace" printed
+# "Womens, Ladies" in English beside a single للنساء in Arabic.
+_AUDIENCE_EN: Dict[str, str] = {
+    "للجنسين": "Unisex",
+    "للأزواج": "Couples",
+    "للنساء": "Women",
+    "للفتيات": "Girls",
+    "للرجال": "Men",
+    "للأولاد": "Boys",
+    "للأطفال": "Kids",
+}
+
+
+def _english(key: str, span: str) -> str:
+    """The supplier's own word, made presentable — never a second vocabulary."""
+    if key in _ENGLISH_OVERRIDES:
+        return _ENGLISH_OVERRIDES[key]
+    return span[:1].upper() + span[1:]
+
+
 def analyse(english_title: str) -> Dict:
     """
     Read a supplier title into the attributes it actually names.
@@ -446,32 +573,48 @@ def analyse(english_title: str) -> Dict:
     reader = _Reader(english_title)
 
     head = reader.take_head(_TYPES)
-    arabic_type, gender = head if head else (None, "m")
+    if head:
+        (type_key, arabic_type, gender), type_span = head
+    else:
+        (type_key, arabic_type, gender), type_span = (None, None, "m"), None
 
     # Order matters, because reading consumes: materials before motifs, so
     # "Rose Gold" is spent on the metal and cannot be read again as a rose;
     # stones before styles, so "Crystal" is a stone rather than the adjective
     # of the same name.
-    material_adjectives = [_agree(pair, gender) for _, pair in reader.take(_MATERIAL_ADJECTIVES)]
-    material_nouns = [ar for _, ar in reader.take(_MATERIAL_NOUNS)]
-    stones = [(definite, bare) for _, definite, bare in reader.take(_STONES)]
-    motifs = [ar for _, ar in reader.take(_MOTIFS)]
-    styles = [_agree(pair, gender) for _, pair in reader.take(_STYLES)]
-    occasions = [(phrase, bare) for _, phrase, bare in reader.take(_OCCASIONS)]
-    audiences = [ar for _, ar in reader.take(_AUDIENCES)]
+    material_hits = reader.take(_MATERIALS)
+    noun_hits = [(entry, span) for entry, span in material_hits if entry[2] == "noun"]
+    adjective_hits = [(entry, span) for entry, span in material_hits if entry[2] == "adj"]
+    stone_hits = reader.take(_STONES)
+    motif_hits = reader.take(_MOTIFS)
+    style_hits = reader.take(_STYLES)
+    occasion_hits = reader.take(_OCCASIONS)
+    audience_hits = reader.take(_AUDIENCES)
+
+    audiences = _dedupe([entry[1] for entry, _ in audience_hits])
 
     return {
         "type": arabic_type,
         "gender": gender,
-        "material_nouns": material_nouns,
-        "material_adjectives": material_adjectives,
-        "styles": styles,
-        "motifs": motifs,
-        "stones": [definite for definite, _ in stones],
-        "stones_bare": [bare for _, bare in stones],
-        "occasions": [phrase for phrase, _ in occasions],
-        "occasions_bare": [bare for _, bare in occasions],
+        "material_nouns": [entry[1] for entry, _ in noun_hits],
+        "material_adjectives": [_agree(entry[1], gender) for entry, _ in adjective_hits],
+        "styles": [_agree(entry[1], gender) for entry, _ in style_hits],
+        "motifs": [entry[1] for entry, _ in motif_hits],
+        "stones": [entry[1] for entry, _ in stone_hits],
+        "stones_bare": [entry[2] for entry, _ in stone_hits],
+        "occasions": [entry[1] for entry, _ in occasion_hits],
+        "occasions_bare": [entry[2] for entry, _ in occasion_hits],
         "audiences": audiences,
+        # The same reading in English. Nouns lead the materials so the metal
+        # comes before the plating, which is the order the Arabic prints too.
+        "type_en": _english(type_key, type_span) if type_span else None,
+        "materials_en": _dedupe(
+            [_english(entry[0], span) for entry, span in noun_hits + adjective_hits]),
+        "stones_en": _dedupe([_english(entry[0], span) for entry, span in stone_hits]),
+        "motifs_en": _dedupe([_english(entry[0], span) for entry, span in motif_hits]),
+        "styles_en": _dedupe([_english(entry[0], span) for entry, span in style_hits]),
+        "occasions_en": _dedupe([_english(entry[0], span) for entry, span in occasion_hits]),
+        "audiences_en": _dedupe([_AUDIENCE_EN.get(ar, "") for ar in audiences]),
     }
 
 
@@ -571,6 +714,71 @@ def translate_description(english_title: str, english_description: str = "") -> 
     if len(lines) < 2:
         return None
     return " · ".join(lines)
+
+
+def describe_in_english(english_title: str, english_description: str = "") -> Optional[str]:
+    """
+    The same specification, in English — the half of the shop that had none.
+
+    CJ's own English text is what the storefront fell back to, and it is
+    keyword padding: on most of this catalogue it is the title again, and on
+    none of it does it say what the piece is made of. That is the sentence
+    iyzico asked for and could not find.
+
+    Built from the same reading as the Arabic, so the two cannot disagree — a
+    product whose Arabic says فضة إسترليني 925 and whose English says nothing
+    is exactly the state this repairs. None when fewer than two facts were
+    recognised, and then the caller keeps whatever the supplier wrote.
+    """
+    facts = analyse(f"{english_title} {english_description}")
+
+    lines: List[str] = []
+    if facts["type_en"]:
+        lines.append(f"Type: {facts['type_en']}")
+    if facts["materials_en"]:
+        lines.append("Material: " + ", ".join(facts["materials_en"][:3]))
+    if facts["stones_en"]:
+        lines.append("Stone: " + ", ".join(facts["stones_en"][:3]))
+    if facts["motifs_en"]:
+        lines.append("Design: " + ", ".join(facts["motifs_en"][:3]))
+    if facts["styles_en"]:
+        lines.append("Style: " + ", ".join(facts["styles_en"][:3]))
+    if facts["occasions_en"]:
+        lines.append("Occasion: " + ", ".join(facts["occasions_en"][:2]))
+    if facts["audiences_en"]:
+        lines.append("For: " + facts["audiences_en"][0])
+
+    if len(lines) < 2:
+        return None
+    return " · ".join(lines)
+
+
+def material_of(english_title: str, english_description: str = "") -> Optional[Dict[str, str]]:
+    """
+    What the piece is made of, in both languages, or None when nobody said.
+
+    Kept as its own field rather than left inside the description, because a
+    material buried mid-sentence is a material a reviewer has to hunt for and a
+    customer never reads. The product page gives it a line of its own.
+
+    A stone counts as the material when no metal was named — a freshwater-pearl
+    necklace is made of pearl, and printing "—" beside it while the title says
+    "Pearl" would be the shop failing to read its own words. What it will not
+    do is fill the gap: a title naming no material returns None, the row does
+    not appear, and the product shows up in the admin's list of pieces that
+    still need one.
+    """
+    facts = analyse(f"{english_title} {english_description}")
+
+    arabic = _dedupe(facts["material_nouns"] + facts["material_adjectives"])[:3]
+    english = facts["materials_en"][:3]
+    if not arabic:
+        arabic = _dedupe(facts["stones_bare"])[:3]
+        english = facts["stones_en"][:3]
+
+    if not arabic or not english:
+        return None
+    return {"ar": "، ".join(arabic), "en": ", ".join(english)}
 
 
 def looks_untranslated(arabic_value: Optional[str]) -> bool:

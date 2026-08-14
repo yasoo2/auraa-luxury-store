@@ -70,10 +70,13 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
       key: 'specifications',
       title: isRTL ? 'المواصفات' : 'Specifications',
       icon: Gem,
+      // Colour and size used to have rows here. No product in this shop
+      // carries either field — not one imported from the supplier, and no
+      // screen that can set one — so both columns were a dash on every row of
+      // every comparison, which reads as "we don't know" about a shop that
+      // was never asked.
       fields: [
-        { key: 'material', label: isRTL ? 'المادة' : 'Material', type: 'text' },
-        { key: 'color', label: isRTL ? 'اللون' : 'Color', type: 'color' },
-        { key: 'size', label: isRTL ? 'الحجم' : 'Size', type: 'text' },
+        { key: 'material', label: isRTL ? 'الخامة' : 'Material', type: 'text' },
         { key: 'weight', label: isRTL ? 'الوزن' : 'Weight', type: 'text' }
       ]
     },
@@ -108,7 +111,11 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
   const fetchComparisonData = async () => {
     try {
       const productIds = comparisonProducts.map(p => p.id);
-      const response = await axios.post(`${API}/products/compare`, { productIds });
+      // The language goes with the request: the server resolves one material
+      // string out of the two it stores, and without this it always resolved
+      // the English one — beside an Arabic product name.
+      const response = await axios.post(
+        `${API}/products/compare?language=${language}`, { productIds });
       setComparisonData(response.data || {});
     } catch (error) {
       console.error('Comparison data error:', error);
@@ -197,21 +204,6 @@ const ProductComparison = ({ initialProducts = [], onClose = null, isModal = fal
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[value] || 'text-gray-600 bg-gray-100'}`}>
             {statusLabels[value] || value}
           </span>
-        );
-      case 'color':
-        return (
-          <div className="flex items-center">
-            <div 
-              className="w-4 h-4 rounded-full border border-gray-300 mr-2"
-              style={{ 
-                backgroundColor: value === 'Gold' || value === 'ذهبي' ? '#FFD700' :
-                               value === 'Silver' || value === 'فضي' ? '#C0C0C0' :
-                               value === 'Rose Gold' || value === 'ذهبي وردي' ? '#E8B4B8' :
-                               '#FFFFFF'
-              }}
-            />
-            {value}
-          </div>
         );
       case 'number':
         // Pinned, not left to the browser: a visitor whose device is set to

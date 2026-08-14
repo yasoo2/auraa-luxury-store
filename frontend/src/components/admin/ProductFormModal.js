@@ -11,9 +11,7 @@ import {
   Package,
   Image as ImageIcon,
   Loader2,
-  Star,
-  Eye,
-  EyeOff
+  Star
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -50,20 +48,14 @@ const ProductFormModal = ({
     images: [''],
     stock_quantity: 100,
     sku: '',
-    weight: '',
-    dimensions: '',
-    material: '',
-    color: '',
-    tags: '',
+    material_ar: '',
+    material_en: '',
     is_featured: false,
     is_active: true,
-    meta_title: '',
-    meta_description: ''
   });
 
   const [errors, setErrors] = useState({});
   const [imageUploading, setImageUploading] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Use categories from props, with fallback defaults
   const categoryOptions = categories.length > 0 ? categories : [
@@ -73,23 +65,6 @@ const ProductFormModal = ({
     { value: 'bracelets', label_ar: 'أساور', label_en: 'Bracelets', icon: '📿' },
     { value: 'watches', label_ar: 'ساعات', label_en: 'Watches', icon: '⌚' },
     { value: 'sets', label_ar: 'أطقم', label_en: 'Sets', icon: '✨' }
-  ];
-
-  const materials = [
-    { value: 'gold', label: isRTL ? 'ذهب' : 'Gold' },
-    { value: 'silver', label: isRTL ? 'فضة' : 'Silver' },
-    { value: 'platinum', label: isRTL ? 'بلاتين' : 'Platinum' },
-    { value: 'pearl', label: isRTL ? 'لؤلؤ' : 'Pearl' },
-    { value: 'diamond', label: isRTL ? 'ماس' : 'Diamond' },
-    { value: 'crystal', label: isRTL ? 'كريستال' : 'Crystal' }
-  ];
-
-  const colors = [
-    { value: 'gold', label: isRTL ? 'ذهبي' : 'Gold', color: '#FFD700' },
-    { value: 'silver', label: isRTL ? 'فضي' : 'Silver', color: '#C0C0C0' },
-    { value: 'rose-gold', label: isRTL ? 'ذهبي وردي' : 'Rose Gold', color: '#E8B4B8' },
-    { value: 'white', label: isRTL ? 'أبيض' : 'White', color: '#FFFFFF' },
-    { value: 'black', label: isRTL ? 'أسود' : 'Black', color: '#000000' }
   ];
 
   useEffect(() => {
@@ -107,15 +82,10 @@ const ProductFormModal = ({
         images: product.images || [''],
         stock_quantity: product.stock_quantity || 100,
         sku: product.sku || '',
-        weight: product.weight || '',
-        dimensions: product.dimensions || '',
-        material: product.material || '',
-        color: product.color || '',
-        tags: product.tags ? product.tags.join(', ') : '',
+        material_ar: product.material_ar || '',
+        material_en: product.material_en || '',
         is_featured: product.is_featured || false,
         is_active: product.is_active !== false,
-        meta_title: product.meta_title || '',
-        meta_description: product.meta_description || ''
       });
     } else {
       // Generate new SKU for new product
@@ -235,7 +205,6 @@ const ProductFormModal = ({
       price: parseFloat(formData.price),
       original_price: formData.original_price ? parseFloat(formData.original_price) : null,
       stock_quantity: parseInt(formData.stock_quantity) || 0,
-      tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
       images: formData.images.filter(img => img.trim())
     };
 
@@ -510,75 +479,50 @@ const ProductFormModal = ({
                 {isRTL ? 'المواصفات' : 'Specifications'}
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {isRTL ? 'المادة' : 'Material'}
-                  </label>
-                  <select
-                    value={formData.material}
-                    onChange={(e) => handleInputChange('material', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  >
-                    <option value="">{isRTL ? 'اختر المادة' : 'Select Material'}</option>
-                    {materials.map((material) => (
-                      <option key={material.value} value={material.value}>
-                        {material.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/*
+                The material, in both languages, and typed rather than picked
+                from a list. It used to be a six-option dropdown — ذهب، فضة،
+                بلاتين، لؤلؤ، ماس، كريستال — which could not hold "فضة إسترليني
+                925" or "مطلي بالذهب عيار 18", the values the importer writes
+                for most of this catalogue; opening such a product showed an
+                empty box, and saving it would have wiped what was there.
 
+                Two boxes, not one, because the shop sells in two languages and
+                a single string can only be right in one of them. Left empty on
+                purpose when nobody knows: the product page then shows no
+                material line at all rather than a guess.
+              */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {isRTL ? 'اللون' : 'Color'}
-                  </label>
-                  <select
-                    value={formData.color}
-                    onChange={(e) => handleInputChange('color', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  >
-                    <option value="">{isRTL ? 'اختر اللون' : 'Select Color'}</option>
-                    {colors.map((color) => (
-                      <option key={color.value} value={color.value}>
-                        {color.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {isRTL ? 'الوزن' : 'Weight'}
+                    {isRTL ? 'الخامة (عربي)' : 'Material (Arabic)'}
                   </label>
                   <Input
-                    value={formData.weight}
-                    onChange={(e) => handleInputChange('weight', e.target.value)}
-                    placeholder={isRTL ? 'مثال: 15 جرام' : 'e.g., 15g'}
+                    value={formData.material_ar}
+                    onChange={(e) => handleInputChange('material_ar', e.target.value)}
+                    placeholder={isRTL ? 'مثال: فضة إسترليني 925' : 'e.g. فضة إسترليني 925'}
+                    dir="rtl"
+                    data-testid="product-material-ar"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {isRTL ? 'الأبعاد' : 'Dimensions'}
+                    {isRTL ? 'الخامة (إنجليزي)' : 'Material (English)'}
                   </label>
                   <Input
-                    value={formData.dimensions}
-                    onChange={(e) => handleInputChange('dimensions', e.target.value)}
-                    placeholder={isRTL ? 'مثال: 5x3 سم' : 'e.g., 5x3 cm'}
+                    value={formData.material_en}
+                    onChange={(e) => handleInputChange('material_en', e.target.value)}
+                    placeholder="e.g. Sterling silver 925"
+                    dir="ltr"
+                    data-testid="product-material-en"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {isRTL
+                      ? 'مطلوب من مزوّدي الدفع أن تُذكر الخامة على صفحة كل منتج.'
+                      : 'Payment providers require the material to be stated on every product page.'}
+                  </p>
                 </div>
-              </div>
-
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {isRTL ? 'العلامات (مفصولة بفاصلة)' : 'Tags (comma separated)'}
-                </label>
-                <Input
-                  value={formData.tags}
-                  onChange={(e) => handleInputChange('tags', e.target.value)}
-                  placeholder={isRTL ? 'فاخر, ذهب, عصري' : 'luxury, gold, modern'}
-                />
               </div>
             </div>
 
@@ -616,54 +560,18 @@ const ProductFormModal = ({
               </div>
             </div>
 
-            {/* Advanced SEO Section */}
-            <div className="border-t pt-6">
-              <Button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                variant="ghost"
-                className="mb-4"
-              >
-                {showAdvanced ? <EyeOff className="h-4 w-4 me-2" /> : <Eye className="h-4 w-4 me-2" />}
-                {isRTL ? 'إعدادات SEO المتقدمة' : 'Advanced SEO Settings'}
-              </Button>
-
-              {showAdvanced && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {isRTL ? 'عنوان SEO' : 'SEO Title'}
-                    </label>
-                    <Input
-                      value={formData.meta_title}
-                      onChange={(e) => handleInputChange('meta_title', e.target.value)}
-                      placeholder={isRTL ? 'عنوان محسن لمحركات البحث' : 'SEO optimized title'}
-                      maxLength={60}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formData.meta_title.length}/60 {isRTL ? 'حرف' : 'characters'}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {isRTL ? 'وصف SEO' : 'SEO Description'}
-                    </label>
-                    <textarea
-                      value={formData.meta_description}
-                      onChange={(e) => handleInputChange('meta_description', e.target.value)}
-                      rows={3}
-                      placeholder={isRTL ? 'وصف محسن لمحركات البحث' : 'SEO optimized description'}
-                      maxLength={160}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {formData.meta_description.length}/160 {isRTL ? 'حرف' : 'characters'}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/*
+              An "Advanced SEO Settings" panel used to sit here, with a title
+              box and a description box that counted their characters up to 60
+              and 160. Nothing read either field — not the product page, not
+              the sitemap, not the JSON-LD the detail page injects — and the
+              server never stored them, so the counter was the only part of it
+              that did anything at all. Removed rather than wired up: the page
+              already derives its title and its meta description from the
+              product's own name and description, in whichever language the
+              visitor is reading, and a second hand-written copy of both would
+              only be a third place for them to disagree.
+            */}
           </div>
 
           {/* Footer */}

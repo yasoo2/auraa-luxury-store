@@ -75,7 +75,12 @@ const products = Array.from({ length: 30 }, (_, i) => ({
   name_en: `18K Gold-Plated Stainless Steel Earring Set, Luxury Design No. ${i + 1}`,
   name_ar: `طقم أقراط ستانلس ستيل مطلي بالذهب عيار 18 فاخر رقم ${i + 1}`,
   description: 'A long English description for the luxury earring set.',
-  description_ar: 'وصف عربي طويل لطقم الأقراط الفاخر.',
+  description_ar: 'النوع: أقراط · الخامة: ستانلس ستيل، مطلي بالذهب عيار 18',
+  description_en: 'Type: Earrings · Material: Stainless steel, 18K gold plated',
+  // The material, as the importer writes it. Left off the fixture, the check
+  // below would pass on a page that simply never renders the row.
+  material_ar: 'ستانلس ستيل، مطلي بالذهب عيار 18',
+  material_en: 'Stainless steel, 18K gold plated',
   price: 93.11 + i, supplier_price: 8.5, category: 'earrings', images: [IMG], image: IMG,
   rating: 4.5, reviews_count: 12, in_stock: true, stock_quantity: 25,
   is_active: true, sku: `SKU-${i + 1}`,
@@ -479,6 +484,34 @@ for (const lang of ['ar', 'en']) {
     `أسماء المنتجات تتبدّل مع اللغة لا الواجهة وحدها (${lang})`,
     ok,
     titles.length === 0 ? 'لم يُعثر على عناوين منتجات' : `المتوقّع ${wanted}: ${titles[0]}`,
+  );
+}
+await page.evaluate(() => localStorage.setItem('language', 'en'));
+
+// خامة المنتج مذكورة على صفحته، وباللغتين.
+//
+// «Ürünlerinizin materyallerini (altın, gümüş, çelik vb. gibi) ürün
+// açıklamalarınızda belirtmenizi rica ederiz» — هذا نصّ ردّ iyzico حين
+// رفضت طلب المتجر. الوصف العربي كان يذكر الخامة منذ كُتب، والإنجليزي —
+// وهو ما يقرؤه المراجع التركي — كان يحمل حشو المورّد ولا يذكر خامةً قطّ.
+// والفحص على النصّ المرئي فعلاً في الصفحة، لا على وجود الحقل في البيانات.
+for (const [lang, expected] of [['ar', 'ستانلس ستيل'], ['en', 'Stainless steel']]) {
+  await page.evaluate((l) => localStorage.setItem('language', l), lang);
+  await page.goto(`${base}/product/p1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(600);
+
+  const stated = await page.evaluate(() => {
+    const row = document.querySelector('[data-testid="product-material"]');
+    if (!row) return { shown: false, text: '' };
+    const r = row.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return { shown: false, text: 'الصف موجود لكنه بلا مساحة' };
+    return { shown: true, text: (row.textContent || '').trim() };
+  });
+
+  check(
+    `خامة المنتج مذكورة على صفحته (${lang})`,
+    stated.shown && stated.text.includes(expected),
+    stated.shown ? `المكتوب: «${stated.text}»` : (stated.text || 'لا صفّ خامة على الصفحة'),
   );
 }
 await page.evaluate(() => localStorage.setItem('language', 'en'));

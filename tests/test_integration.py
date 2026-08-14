@@ -4357,7 +4357,10 @@ def test_the_backfill_translates_the_catalogue_and_owns_up_to_what_it_cannot(cli
     assert pending["translatable"] == 1, "the count must not promise what it cannot do"
 
     report = client.post("/api/admin/products/translate").json()
-    assert report["translated"] == 1, report
+    # Two documents change: the English-named ring gains Arabic, and the ring
+    # the owner named himself gains the English specification and the material
+    # he never wrote. Neither of his own sentences is touched.
+    assert report["translated"] == 2, report
     assert report["unreadable"] == 1
     assert report["unreadable_products"][0]["id"] == "opaque-1"
 
@@ -4370,6 +4373,18 @@ def test_the_backfill_translates_the_catalogue_and_owns_up_to_what_it_cannot(cli
         "nor a description he wrote"
     assert docs["opaque-1"]["name_ar"] == "Hot Selling New Arrival 2024", \
         "an unreadable title must keep its English, not gain an invented Arabic"
+
+    # The material, which is what a payment provider looks for on the page.
+    assert docs["en-1"]["material_en"] == "Cubic zirconia", docs["en-1"]
+    assert "زركون مكعّب" in docs["en-1"]["material_ar"], docs["en-1"]
+    assert "Material" in docs["en-1"]["description_en"] \
+        or "Stone" in docs["en-1"]["description_en"], docs["en-1"]["description_en"]
+
+    # And the honest gap: a title naming no material gets none, and is named
+    # in the report so the owner knows which products he has to fill in.
+    assert docs["opaque-1"].get("material_en") in (None, ""), docs["opaque-1"]
+    assert report["without_material"] == 1, report
+    assert report["without_material_products"][0]["id"] == "opaque-1"
 
     # Running it twice must change nothing further.
     again = client.post("/api/admin/products/translate").json()
@@ -4442,6 +4457,172 @@ def test_the_api_actually_sends_the_arabic_name_it_stores(client):
     # And the single-product page, which reads the same fields.
     one = client.get("/api/products/wire-1").json()
     assert ARABIC_LETTER.search(one.get("name_ar") or ""), one
+
+
+# ---------------------------------------------------------------------------
+# The material, stated
+#
+# iyzico refused this shop's application in part with: «Ürünlerinizin
+# materyallerini (altın, gümüş, çelik vb. gibi) ürün açıklamalarınızda
+# belirtmenizi rica ederiz». The Arabic description had been naming the
+# material since it was written; the English one — the one their reviewer
+# opens — carried the supplier's keyword padding and named none.
+# ---------------------------------------------------------------------------
+
+def test_the_english_description_states_the_material():
+    from services.product_translation import describe_in_english
+
+    described = describe_in_english("S925 Sterling Silver Butterfly Pendant Necklace for Women")
+    assert "Material: Sterling silver 925" in described, described
+    assert "Type: Pendant necklace" in described, described
+
+    steel = describe_in_english("Stainless Steel Cuban Chain Bracelet for Men")
+    assert "Material: Stainless steel" in steel, steel
+
+    plated = describe_in_english("18K Gold Plated Cubic Zirconia Heart Ring")
+    assert "Material: 18K gold plated" in plated, plated
+    assert "Stone: Cubic zirconia" in plated, plated
+
+    # Nothing invented for a title that names nothing.
+    assert describe_in_english("Hot Selling Product 2024 New Arrival") is None
+
+
+def test_a_colour_is_not_a_metal_and_a_compound_is_not_its_halves():
+    """
+    Two readings that would each put a false material on a product page.
+
+    "Rose Gold Color" is a claim about the colour; read as the metal it sells a
+    plated bracelet as solid rose gold, and read as a bare "gold color" it
+    strands the word "rose" for the motif table to print as a flower. And
+    "Zinc Alloy" is one material: the two material tables used to be read one
+    after the other, so "alloy" was taken by the first pass and the page said
+    "Material: Zinc, Alloy".
+    """
+    from services.product_translation import material_of, translate_title
+
+    tone = material_of("Rose Gold Color Zinc Alloy Flower Earrings for Women")
+    assert tone["en"] == "Zinc alloy, Rose gold-tone", tone
+    assert "ذهب وردي" not in tone["ar"], f"a colour was sold as solid gold: {tone}"
+    assert "وردة" not in (translate_title(
+        "Rose Gold Color Zinc Alloy Snake Bangle") or ""), "the metal was read again as a flower"
+
+    # The British spelling reaches the same reading.
+    assert material_of("Gold Colour Pearl Hair Clip")["en"] == "Gold-tone"
+
+
+def test_the_material_is_the_stone_when_no_metal_is_named_and_nothing_otherwise():
+    from services.product_translation import material_of
+
+    pearl = material_of("Freshwater Pearl Drop Earrings Wedding")
+    assert pearl["en"] == "Freshwater pearl", pearl
+    assert "لؤلؤ طبيعي" in pearl["ar"], pearl
+
+    # A title naming neither metal nor stone gets no material at all. The row
+    # is then absent from the product page and the product is listed in the
+    # admin report — an invented material is a false claim about goods on sale.
+    assert material_of("Luxury Vintage Ring for Women") is None
+    assert material_of("Hot Selling Product 2024") is None
+
+
+def test_the_api_sends_the_material_it_stores(client):
+    """
+    The same trap that hid the Arabic: a field the response model does not
+    declare is deleted from every reply, however faithfully it is stored.
+    """
+    import asyncio
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_one({
+        "id": "mat-1", "name": "Stainless Steel Evil Eye Bracelet",
+        "description": "d", "price": 60.0, "category": "bracelets",
+        "images": ["https://x/a.jpg"], "in_stock": True, "is_active": True,
+        "material_ar": "ستانلس ستيل", "material_en": "Stainless steel",
+    }))
+
+    one = client.get("/api/products/mat-1").json()
+    assert one.get("material_en") == "Stainless steel", \
+        f"the API dropped the material on its way out: {one!r}"
+    assert one.get("material_ar") == "ستانلس ستيل", one
+
+
+def test_the_admin_form_actually_saves_what_the_owner_typed(client):
+    """
+    The one screen built for correcting a bad import corrected nothing.
+
+    The form has always sent the Arabic name, both descriptions and the
+    material. `ProductCreate` declared none of them, and a model drops what it
+    does not declare — so the request succeeded, the toast said "saved", and
+    every one of those values stayed exactly as it was.
+    """
+    import asyncio
+
+    register(client, email="edit@b.com")
+    make_admin(client, "edit@b.com")
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_one({
+        "id": "edit-1", "name": "Alloy Ring", "name_ar": "Alloy Ring",
+        "description": "d", "price": 50.0, "category": "rings", "images": [],
+    }))
+
+    saved = client.put("/api/products/edit-1", json={
+        "name": "Handmade Silver Ring",
+        "name_ar": "خاتم فضة يدوي الصنع",
+        "description": "A ring.",
+        "description_ar": "خاتم فضة مصنوع يدوياً.",
+        "material_ar": "فضة إسترليني 925",
+        "material_en": "Sterling silver 925",
+        "price": 50.0, "category": "rings", "images": [],
+    })
+    assert saved.status_code == 200, saved.text
+
+    doc = loop.run_until_complete(client._db.products.find_one({"id": "edit-1"}))
+    assert doc["name_ar"] == "خاتم فضة يدوي الصنع", \
+        f"the Arabic name the owner typed was discarded: {doc!r}"
+    assert doc["description_ar"] == "خاتم فضة مصنوع يدوياً.", doc
+    assert doc["material_en"] == "Sterling silver 925", doc
+    assert doc["material_ar"] == "فضة إسترليني 925", doc
+
+
+def test_the_storefront_filters_actually_filter(client):
+    """
+    The filter panel sent category, price, material, rating, "in stock" and a
+    sort order to an endpoint that read the search term and nothing else. A
+    visitor picking "Silver" got the whole shop back — and picking a filter
+    without typing a word sent no `q` at all to a `q`-is-required endpoint, so
+    the request failed validation and the catalogue rendered empty.
+    """
+    import asyncio
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(client._db.products.insert_many([
+        {"id": "f-silver", "name": "Sterling Silver Ring", "description": "d",
+         "material_en": "Sterling silver 925", "price": 100.0, "category": "rings",
+         "images": ["https://x/a.jpg"], "in_stock": True, "is_active": True},
+        {"id": "f-steel", "name": "Stainless Steel Bracelet", "description": "d",
+         "material_en": "Stainless steel", "price": 40.0, "category": "bracelets",
+         "images": ["https://x/b.jpg"], "in_stock": True, "is_active": True},
+    ]))
+
+    # Filters alone, with no search term at all.
+    everything = client.get("/api/search")
+    assert everything.status_code == 200, everything.text
+    assert len(everything.json()) == 2, everything.json()
+
+    silver = client.get("/api/search?material=silver").json()
+    assert [p["id"] for p in silver] == ["f-silver"], silver
+
+    by_category = client.get("/api/search?category=bracelets").json()
+    assert [p["id"] for p in by_category] == ["f-steel"], by_category
+
+    cheapest_first = client.get("/api/search?sortBy=price-low-high").json()
+    assert [p["id"] for p in cheapest_first] == ["f-steel", "f-silver"], cheapest_first
+
+    assert client.get("/api/search?minPrice=60").json()[0]["id"] == "f-silver"
+
+    # And the search term still works beside them.
+    both = client.get("/api/search?q=ring&material=silver").json()
+    assert [p["id"] for p in both] == ["f-silver"], both
 
 
 def test_the_broom_keeps_a_ring_with_a_flower_on_it():

@@ -72,10 +72,20 @@ const EnhancedProductsPage = () => {
     );
 
     const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-    const matchesStatus = statusFilter === 'all' || 
+    // "Low Stock" was on the dropdown and in no branch of this condition, so
+    // choosing it matched nothing and the catalogue went blank — a shop with
+    // products in it reporting that it had none.
+    const stock = Number(product.stock_quantity ?? product.stock ?? 0);
+    const statedMaterial = String(product.material_ar || product.material_en || '').trim();
+    const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'active' && product.is_active) ||
       (statusFilter === 'inactive' && !product.is_active) ||
-      (statusFilter === 'featured' && product.is_featured);
+      (statusFilter === 'featured' && product.is_featured) ||
+      (statusFilter === 'low-stock' && stock <= 5) ||
+      // The products a payment provider will stop on: no material stated, in
+      // either language. The translate button counts them; this is how the
+      // owner reaches them one by one to write the material himself.
+      (statusFilter === 'no-material' && !statedMaterial);
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
@@ -195,6 +205,17 @@ const EnhancedProductsPage = () => {
         toast.success(isRTL
           ? `تُرجم ${data.translated} منتجاً${data.unreadable ? ` — و${data.unreadable} يحتاج اسماً تكتبه بنفسك` : ''}`
           : `Translated ${data.translated}${data.unreadable ? ` — ${data.unreadable} need a name you write yourself` : ''}`);
+      }
+      // Separate from the count above, and said out loud, because it is the
+      // one that blocks the shop: a payment provider looks for the material on
+      // the product page, and these are the products that state none. Nothing
+      // can be composed for them — the supplier's title never named a
+      // material — so they need the owner to type one.
+      if (data.without_material) {
+        toast.warning(isRTL
+          ? `${data.without_material} منتجاً لا يذكر خامته — افتح المنتج واكتب الخامة`
+          : `${data.without_material} products state no material — open each one and type it`,
+          { duration: 8000 });
       }
       await fetchProducts();
     } catch (error) {
@@ -521,6 +542,7 @@ const EnhancedProductsPage = () => {
               <option value="inactive">{isRTL ? 'غير نشط' : 'Inactive'}</option>
               <option value="featured">{isRTL ? 'مميز' : 'Featured'}</option>
               <option value="low-stock">{isRTL ? 'مخزون منخفض' : 'Low Stock'}</option>
+              <option value="no-material">{isRTL ? 'بلا خامة مذكورة' : 'No material stated'}</option>
             </select>
           </div>
           

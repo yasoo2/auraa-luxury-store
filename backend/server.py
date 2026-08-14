@@ -11,7 +11,7 @@ import logging
 import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from collections import defaultdict
 import uuid
 import shutil
@@ -59,6 +59,8 @@ from services.import_service import looks_like_adornment
 from services.product_translation import (
     translate_title,
     translate_description,
+    describe_in_english,
+    material_of,
     looks_untranslated,
 )
 
@@ -413,6 +415,14 @@ class Product(BaseModel):
     name_en: Optional[str] = None
     description_ar: Optional[str] = None
     description_en: Optional[str] = None
+    # What the piece is made of, stated rather than implied. iyzico refused the
+    # shop's application partly over this: «ürünlerinizin materyallerini
+    # (altın, gümüş, çelik vb. gibi) ürün açıklamalarınızda belirtmenizi rica
+    # ederiz». Declared here for the same reason as the four fields above — a
+    # field missing from this model is a field the API silently deletes on the
+    # way out, however faithfully the database holds it.
+    material_ar: Optional[str] = None
+    material_en: Optional[str] = None
     price: float
     original_price: Optional[float] = None
     discount_percentage: Optional[int] = None
@@ -435,6 +445,26 @@ class Product(BaseModel):
 class ProductCreate(BaseModel):
     name: str
     description: str
+    # Everything the admin product form actually sends.
+    #
+    # It sent all of this before too, and none of it arrived: a model drops
+    # what it does not declare, so the owner could type an Arabic name, pick a
+    # material, tick "active", press Save, watch the toast say it was saved —
+    # and the database kept every one of the old values. The one screen built
+    # for correcting a bad import silently corrected nothing.
+    #
+    # Fields not listed here are not accepted, and the form no longer offers
+    # boxes for them: an input that stores nothing is the same lie in a
+    # smaller font.
+    name_ar: Optional[str] = None
+    name_en: Optional[str] = None
+    description_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    material_ar: Optional[str] = None
+    material_en: Optional[str] = None
+    sku: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_featured: Optional[bool] = None
     price: float
     original_price: Optional[float] = None
     discount_percentage: Optional[int] = None
@@ -825,8 +855,8 @@ async def update_staging_product(
     # so any key — staging, id, supplier_price — could be overwritten.
     EDITABLE = {
         "name", "name_ar", "name_en", "description", "description_ar",
-        "description_en", "price", "images", "category", "in_stock",
-        "stock_quantity",
+        "description_en", "material_ar", "material_en", "price", "images",
+        "category", "in_stock", "stock_quantity",
     }
     updates = {k: v for k, v in updates.items() if k in EDITABLE}
     if not updates:
@@ -1099,11 +1129,19 @@ def _localize(doc: Dict[str, Any], language: Optional[str]) -> Dict[str, Any]:
     """Pick the localized name/description, falling back across languages."""
     doc = _sane_reference_price(doc)
     doc = _readable_name(doc)
+
+    primary = "ar" if (language or "").startswith("ar") else "en"
+    secondary = "en" if primary == "ar" else "ar"
+
+    # The material, resolved even when no language was asked for — the
+    # comparison table sends none, and it was reading a plain `material` key
+    # that nothing has ever written, so the row was a dash on every product.
+    doc["material"] = (
+        doc.get(f"material_{primary}") or doc.get(f"material_{secondary}") or None
+    )
+
     if not language:
         return doc
-
-    primary = "ar" if language.startswith("ar") else "en"
-    secondary = "en" if primary == "ar" else "ar"
 
     doc["name"] = (
         doc.get(f"name_{primary}") or doc.get("name") or doc.get(f"name_{secondary}")
@@ -1112,6 +1150,12 @@ def _localize(doc: Dict[str, Any], language: Optional[str]) -> Dict[str, Any]:
         doc.get(f"description_{primary}")
         or doc.get("description")
         or doc.get(f"description_{secondary}")
+    )
+    # The material too, for the callers that ask for one resolved field rather
+    # than both — the comparison table among them, which was reading a plain
+    # `material` key that nothing has ever written.
+    doc["material"] = (
+        doc.get(f"material_{primary}") or doc.get(f"material_{secondary}") or None
     )
     return doc
 
@@ -1173,10 +1217,24 @@ async def get_products(
 RECOMMENDATION_TYPES = ("personalized", "similar", "trending", "bestsellers", "complements")
 
 
-async def _live_products(query: Dict[str, Any], limit: int, language: Optional[str] = None):
-    """Fetch live products for `query`, skipping any that fail validation."""
+async def _live_products(
+    query: Dict[str, Any],
+    limit: int,
+    language: Optional[str] = None,
+    sort: Optional[List[Tuple[str, int]]] = None,
+):
+    """
+    Fetch live products for `query`, skipping any that fail validation.
+
+    The sort belongs to the database call, not to the caller afterwards: the
+    limit is applied here, so ordering a page that has already been truncated
+    sorts an arbitrary handful rather than the cheapest products in the shop.
+    """
     query = {**query, "staging": {"$ne": True}}
-    docs = await db.products.find(query).limit(max(1, min(limit, 50))).to_list(length=None)
+    cursor = db.products.find(query)
+    if sort:
+        cursor = cursor.sort(sort)
+    docs = await cursor.limit(max(1, min(limit, 50))).to_list(length=None)
     out = []
     for doc in docs:
         if not _catalogue_ready(doc):
@@ -1410,20 +1468,83 @@ async def compare_products(payload: CompareRequest, language: Optional[str] = Qu
     return out
 
 
+# Where a material is stated. The dedicated columns first, then the places the
+# specification is written out — a shopper asking for pearl means the piece,
+# not the column it happens to be recorded in.
+_MATERIAL_FIELDS = ("material_en", "material_ar", "description_en",
+                    "description_ar", "name", "name_en")
+
+_SORTS = {
+    "price-low-high": [("price", 1)],
+    "price-high-low": [("price", -1)],
+    "rating": [("rating", -1)],
+    "newest": [("created_at", -1)],
+    "popular": [("reviews_count", -1)],
+    "relevance": None,
+}
+
+
 @api_router.get("/search", response_model=List[Product])
 async def search_products(
-    q: str = Query(..., min_length=1),
-    limit: int = 10,
+    q: Optional[str] = Query(None),
+    limit: int = 24,
     language: Optional[str] = Query(None),
+    category: Optional[CategoryType] = None,
+    minPrice: Optional[float] = None,
+    maxPrice: Optional[float] = None,
+    material: Optional[str] = None,
+    rating: Optional[float] = None,
+    inStock: Optional[bool] = None,
+    onSale: Optional[bool] = None,
+    sortBy: Optional[str] = None,
 ):
-    """Search live products by name and description, in both languages."""
-    fields = ("name", "description", "name_en", "name_ar", "description_en",
-              "description_ar", "sku", "category")
-    escaped = re.escape(q.strip())
-    return await _live_products(
-        {"$or": [{f: {"$regex": escaped, "$options": "i"}} for f in fields]},
-        limit, language,
-    )
+    """
+    Search live products by name, description and specification.
+
+    Every parameter here exists because the storefront's filter panel was
+    already sending it. It sent category, price range, material, rating, "in
+    stock only", "on sale" and a sort order to an endpoint that read the search
+    term and nothing else, so a visitor could pick "Silver", watch the page
+    reload, and get the same unfiltered grid back. Worse, picking a filter
+    without typing a word sent no `q` at all to a `q`-is-required endpoint: the
+    request failed validation and the shop rendered an empty catalogue.
+
+    Filters the shop has no data for are not accepted, and the panel no longer
+    offers them — a colour swatch no product carries is a promise to sort by
+    something nobody recorded.
+    """
+    conditions: List[Dict[str, Any]] = []
+
+    if q and q.strip():
+        fields = ("name", "description", "name_en", "name_ar", "description_en",
+                  "description_ar", "material_en", "material_ar", "sku", "category")
+        escaped = re.escape(q.strip())
+        conditions.append(
+            {"$or": [{f: {"$regex": escaped, "$options": "i"}} for f in fields]})
+
+    if material and material.strip():
+        escaped = re.escape(material.strip())
+        conditions.append(
+            {"$or": [{f: {"$regex": escaped, "$options": "i"}} for f in _MATERIAL_FIELDS]})
+
+    query: Dict[str, Any] = {"$and": conditions} if conditions else {}
+    if category:
+        query["category"] = category
+    if minPrice is not None:
+        query.setdefault("price", {})["$gte"] = minPrice
+    if maxPrice is not None:
+        query.setdefault("price", {})["$lte"] = maxPrice
+    if rating is not None:
+        query["rating"] = {"$gte": rating}
+    if inStock:
+        query["in_stock"] = True
+    if onSale:
+        # A real discount, which in this shop means the owner lowered a price
+        # himself: the importer deliberately sets no reference price, so
+        # nothing arrives from the supplier already "on sale".
+        query["discount_percentage"] = {"$gt": 0}
+
+    return await _live_products(query, limit, language, sort=_SORTS.get(sortBy or ""))
 
 
 @api_router.get("/categories")
@@ -1453,8 +1574,16 @@ async def get_product(product_id: str, language: Optional[str] = Query(None)):
 
 @api_router.post("/products", response_model=Product)
 async def create_product(product_data: ProductCreate, admin: User = Depends(get_admin_user)):
-    product = Product(**product_data.model_dump())
-    await db.products.insert_one(product.model_dump())
+    # `exclude_none` because the optional fields default to None and the
+    # product model has real defaults behind them — passing is_active=None
+    # through failed validation and answered a 500 to a perfectly good form.
+    submitted = product_data.model_dump(exclude_none=True)
+    product = Product(**submitted)
+    # The stored document keeps the fields the model does not declare — the
+    # SKU and the featured flag among them — because the admin catalogue reads
+    # the raw document and would otherwise show a product it had just been
+    # given a SKU for as having none.
+    await db.products.insert_one({**submitted, **product.model_dump()})
     return product
 
 
@@ -3766,39 +3895,82 @@ async def count_untranslated_products(admin: User = Depends(get_admin_user)):
     }
 
 
+def catalogue_language_updates(doc: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    What a product document is still missing in either language.
+
+    One function because there are two callers — the admin's button and the
+    boot-time pass — and they were separate copies of the same loop. The copies
+    had already begun to differ, and the next field added to one of them would
+    have been missing from the other.
+
+    Nothing here overwrites. A field the owner filled in himself is left as he
+    wrote it, and running this twice changes nothing the second time.
+    """
+    english = doc.get("name") or doc.get("name_en") or ""
+    english_description = doc.get("description") or ""
+    updates: Dict[str, Any] = {}
+
+    if looks_untranslated(doc.get("name_ar")):
+        arabic_name = translate_title(english)
+        if arabic_name:
+            updates["name_ar"] = arabic_name
+
+    if looks_untranslated(doc.get("description_ar")):
+        arabic_description = translate_description(english, english_description)
+        if arabic_description:
+            updates["description_ar"] = arabic_description
+
+    # The English specification, and the material on a line of its own. This is
+    # the half iyzico asked for: the Arabic description had been naming the
+    # material since the day it was written, and the English one — the one a
+    # Turkish reviewer opens — named none.
+    if not (doc.get("description_en") or "").strip():
+        english_specification = describe_in_english(english, english_description)
+        if english_specification:
+            updates["description_en"] = english_specification
+
+    if not (doc.get("material_ar") or "").strip() and not (doc.get("material_en") or "").strip():
+        material = material_of(english, english_description)
+        if material:
+            updates["material_ar"] = material["ar"]
+            updates["material_en"] = material["en"]
+
+    return updates
+
+
 @api_router.post("/admin/products/translate")
 async def translate_products(admin: User = Depends(get_admin_user)):
     """
-    Give the existing catalogue its Arabic.
+    Give the existing catalogue its Arabic, and its English specification.
 
-    Only touches fields that hold no Arabic — a name the owner wrote himself is
-    left exactly as he wrote it, and running this twice changes nothing the
-    second time. Products whose English names it cannot read are reported, not
-    guessed at.
+    Products whose English names it cannot read are reported, not guessed at —
+    and so are the ones that name no material, because those are the ones the
+    owner has to state himself before a payment provider will look at the shop.
     """
     docs = await db.products.find({}).to_list(100000)
 
-    translated, unreadable = 0, []
+    translated, unreadable, without_material = 0, [], []
     for doc in docs:
         english = doc.get("name") or doc.get("name_en") or ""
-        updates: Dict[str, Any] = {}
+        updates = catalogue_language_updates(doc)
 
-        if looks_untranslated(doc.get("name_ar")):
-            arabic_name = translate_title(english)
-            if arabic_name:
-                updates["name_ar"] = arabic_name
-            else:
-                unreadable.append({"id": doc.get("id"), "name": english})
-
-        if looks_untranslated(doc.get("description_ar")):
-            arabic_description = translate_description(english, doc.get("description") or "")
-            if arabic_description:
-                updates["description_ar"] = arabic_description
+        if looks_untranslated(doc.get("name_ar")) and "name_ar" not in updates:
+            unreadable.append({"id": doc.get("id"), "name": english})
 
         if updates:
             updates["updated_at"] = datetime.now(timezone.utc).isoformat()
             await db.products.update_one({"id": doc["id"]}, {"$set": updates})
             translated += 1
+
+        stated = (
+            updates.get("material_ar")
+            or doc.get("material_ar")
+            or updates.get("material_en")
+            or doc.get("material_en")
+        )
+        if not (stated or "").strip():
+            without_material.append({"id": doc.get("id"), "name": english})
 
     return {
         "translated": translated,
@@ -3806,6 +3978,8 @@ async def translate_products(admin: User = Depends(get_admin_user)):
         # The list, not just the count: these are the ones the owner has to
         # name himself, and he cannot do that without knowing which they are.
         "unreadable_products": unreadable[:100],
+        "without_material": len(without_material),
+        "without_material_products": without_material[:100],
     }
 
 
@@ -4157,30 +4331,19 @@ async def fill_missing_arabic_names():
 
         docs = await db.products.find(
             {}, {"id": 1, "name": 1, "name_en": 1, "name_ar": 1,
-                 "description": 1, "description_ar": 1}
+                 "description": 1, "description_ar": 1, "description_en": 1,
+                 "material_ar": 1, "material_en": 1}
         ).to_list(100000)
 
         filled = 0
         for doc in docs:
-            english = doc.get("name") or doc.get("name_en") or ""
-            updates: Dict[str, Any] = {}
-
-            if looks_untranslated(doc.get("name_ar")):
-                arabic = translate_title(english)
-                if arabic:
-                    updates["name_ar"] = arabic
-
-            if looks_untranslated(doc.get("description_ar")):
-                arabic = translate_description(english, doc.get("description") or "")
-                if arabic:
-                    updates["description_ar"] = arabic
-
+            updates = catalogue_language_updates(doc)
             if updates:
                 await db.products.update_one({"id": doc["id"]}, {"$set": updates})
                 filled += 1
 
         if filled:
-            logger.info(f"✅ Arabic names filled in for {filled} product(s) at startup")
+            logger.info(f"✅ Names, specifications and materials filled in for {filled} product(s) at startup")
     except Exception as e:
         logger.error(f"⚠️ Could not fill Arabic product names at startup: {e}")
 

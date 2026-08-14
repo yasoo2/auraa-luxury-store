@@ -879,6 +879,32 @@ check('التقويم الميلادي مثبَّت وليس افتراضياً'
       : versions.map((v) => `v=${v} (${[...new Set(seen.get(v))].join('، ')})`).join(' — '));
 }
 
+// هويّة البائع منشورة كما يفرض القانون التركي.
+// iyzico يفحص هذا بالحرف قبل الموافقة: «esnaf ve sanatkâr için adı ve soyadı,
+// vergi kimlik numarası ve merkez adresi». وكان الرقم الضريبي غائباً وعقد
+// البيع عن بُعد غير موجود أصلاً — وهما ما قد يكون أسقط الطلب السابق.
+// والفحص يطالب بقيمة حقيقية لا بوجود الحقل: «—» تعني ناقصاً.
+for (const [route, testid] of [['/contact', null], ['/distance-sales-agreement', 'distance-sales-agreement']]) {
+  await page.goto(`${base}${route}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(500);
+  const found = await page.evaluate((id) => {
+    const root = id ? document.querySelector(`[data-testid="${id}"]`) : document.body;
+    const text = (root && root.innerText) || '';
+    return {
+      hasPage: Boolean(root) && text.length > 200,
+      taxNumber: /\b\d{10}\b/.test(text),
+      postcode: text.includes('34500'),
+    };
+  }, testid);
+  const why = [];
+  if (!found.hasPage) why.push('الصفحة لم تُعرض');
+  else {
+    if (!found.taxNumber) why.push('لا رقم ضريبي منشور');
+    if (!found.postcode) why.push('لا رمز بريدي في العنوان');
+  }
+  check(`هويّة البائع منشورة كما يطلبها القانون (${route})`, why.length === 0, why.join('، '));
+}
+
 // لا قاعدة تحجب حزمة المتجر عن نفسه.
 // كانت في ‎_redirects قاعدة ‎`/static/* /index.html 404` كُتبت لتمنع ردّ القوقعة
 // مكان أصلٍ مفقود. لكن Cloudflare Pages يُقيّم قاعدة البدل عند الحافة قبل أن

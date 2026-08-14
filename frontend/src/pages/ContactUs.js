@@ -8,7 +8,7 @@ import { Card } from '../components/ui/card';
 import { toast } from 'sonner';
 import { apiPost } from '../api';
 import { whatsappLink } from '../config/contact';
-import { SELLER, shown } from '../config/seller';
+import { SELLER, shown, fullAddress } from '../config/seller';
 
 const ContactUs = () => {
   const { language } = useLanguage();
@@ -125,7 +125,7 @@ const ContactUs = () => {
                   </div>
                   <div>
                     <dt className="font-medium text-gray-500">{isRTL ? 'العنوان' : 'Address'}</dt>
-                    <dd dir="ltr">{`${shown(SELLER.address)}, ${shown(SELLER.country)}`}</dd>
+                    <dd dir="ltr">{fullAddress()}</dd>
                   </div>
                 </dl>
               </Card>

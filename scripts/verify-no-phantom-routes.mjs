@@ -77,6 +77,13 @@ for (const file of sources) {
     record(m[1], file);
   }
   for (const m of text.matchAll(/\$\{API\}(\/[a-zA-Z0-9/_${}.-]*)/g)) {
+    // `API` means two different things across this codebase: in Navbar.js it is
+    // `${BACKEND_URL}/api`, so `${API}/products` is /api/products; in
+    // ForgotPassword.js it is the bare host, and the file writes
+    // `${API}/api/auth/...` itself. Prefixing that second form produced the
+    // phantom `/api/api/auth/forgot-password` and failed the gate on a path
+    // that is perfectly correct — the checker's bug, not the shop's.
+    if (m[1].startsWith('/api/')) continue;   // pass one already recorded it
     record(`/api${m[1]}`, file);
   }
 }
@@ -116,8 +123,12 @@ if (known.length) {
   console.log(`\n⚠️  ${known.length} ثغرة معروفة ما تزال مفتوحة:`);
   for (const k of known) console.log(`   ${k}`);
 }
+// الثغرة تُغلَق بأحد أمرين: أن يُكتب المسار في الخادم، أو أن تكفّ الواجهة
+// عن ندائه. كان هذا يفحص الثاني وحده، فيبقى المسار مذكوراً في القائمة بعد
+// كتابته — والقائمة التي لا تنكمش تصير مكاناً يُخبّأ فيه.
 for (const p of Object.keys(KNOWN_GAPS)) {
-  if (!called.has(p)) {
+  const stillOpen = known.some((line) => line.startsWith(`${p}  ←`));
+  if (!stillOpen) {
     console.log(`\n🎉 ثغرة أُغلقت — احذف «${p}» من KNOWN_GAPS في هذا الملف.`);
   }
 }

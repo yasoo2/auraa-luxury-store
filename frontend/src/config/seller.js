@@ -18,20 +18,31 @@
  */
 export const SELLER = {
   legalName: 'Younis Soudi',
-  // ⚠️ المطلوب من المالك: الرقم الضريبي (Vergi Kimlik Numarası).
-  // بلا هذا الرقم يرفض iyzico الطلب — وهو معلومة عامة بحكم القانون التركي،
-  // تُنشر على الموقع ولا تُعدّ سرّاً. يُكتب هنا كما هو في الوثيقة.
-  taxNumber: '',
-  address: 'Pınartepe Mah., Istanbul, Türkiye',
-  // ⚠️ الرمز البريدي السابق كان 45000 وهو رمز مانيسا لا إسطنبول. أُزيل بدل
-  // أن يُخمَّن: المراجع يقارن العنوان بهويّة المالك.
-  postalCode: '',
+  // الرقم الضريبي (Vergi Kimlik Numarası) — عشرة أرقام، من المالك.
+  // معلومة عامة بحكم القانون التركي: تُنشر على الموقع ولا تُعدّ سرّاً،
+  // بخلاف المفاتيح وكلمات المرور التي لا تدخل هذا المستودع أبداً.
+  taxNumber: '7750869742',
+  // الشارع/الحيّ فقط. المدينة والدولة حقلان مستقلّان، ودمجهما هنا كان
+  // ينتج «… Istanbul, Türkiye, 34500, İstanbul, Türkiye» عند التركيب.
+  address: 'Pınartepe Mah.',
+  // 34500 — بويوك تشكمجه بإسطنبول، وهي التي فيها حيّ بينارتيبه. وكان
+  // المكتوب 45000 وهو رمز مانيسا: عنوانٌ لا يطابق الهويّة أمام مراجع
+  // يقابل الاثنين.
+  postalCode: '34500',
   city: 'İstanbul',
   country: 'Türkiye',
   email: 'younes.sowady2011@gmail.com',
   phone: '+90 501 371 5391',
   tradeName: 'Auraa Luxury',
 };
+
+/**
+ * The address as one line, so the contact page and the contract cannot print
+ * it two different ways — a reviewer reads both.
+ */
+export const fullAddress = () => [
+  SELLER.address, SELLER.postalCode, SELLER.city, SELLER.country,
+].filter(Boolean).join(', ');
 
 /** A value for the screen, or an honest dash when it has not been provided. */
 export const shown = (value) => (value && String(value).trim()) || '—';

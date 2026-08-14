@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
-import { SELLER, shown } from '../config/seller';
+import { SELLER, shown, fullAddress } from '../config/seller';
 import { WHATSAPP_DISPLAY } from '../config/contact';
 
 /**
@@ -57,7 +57,7 @@ const DistanceSalesAgreement = () => {
           <Row label="Satıcı / Seller" value={shown(SELLER.legalName)} />
           <Row label="İşletme Adı" value={shown(SELLER.tradeName)} />
           <Row label="Vergi Kimlik No" value={shown(SELLER.taxNumber)} />
-          <Row label="Adres" value={`${shown(SELLER.address)}, ${shown(SELLER.city)}, ${shown(SELLER.country)}`} />
+          <Row label="Adres" value={fullAddress()} />
           <Row label="E-posta" value={shown(SELLER.email)} />
           <Row label="Telefon" value={shown(SELLER.phone)} />
           <Row label="WhatsApp" value={WHATSAPP_DISPLAY} />

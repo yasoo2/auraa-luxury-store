@@ -205,7 +205,7 @@ const pageContent = {
 
 const HelpPage = ({ pageKey }) => {
   const { language } = useLanguage();
-  const isRTL = language === 'ar' || language === 'he';
+  const isRTL = language === 'ar';
   const page = pageContent[pageKey];
   const t = page[isRTL ? 'ar' : 'en'];
   const PageIcon = page.icon;

@@ -22,7 +22,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { language } = useLanguage();
-  const isRTL = language === 'ar' || language === 'he';
+  const isRTL = language === 'ar';
   const { getWishlistCount, clearWishlist } = useWishlist();
   const { cartCount, clearCart } = useCart();
 

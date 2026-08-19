@@ -22,7 +22,7 @@ const ProductDetailPage = () => {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { currency, language, formatMoney } = useLanguage();
-  const isRTL = language === 'ar' || language === 'he';
+  const isRTL = language === 'ar';
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);

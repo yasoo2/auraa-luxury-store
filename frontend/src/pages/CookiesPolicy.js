@@ -4,7 +4,7 @@ import { Cookie, Shield, BarChart, Target, Settings } from 'lucide-react';
 
 const CookiesPolicy = () => {
   const { language } = useLanguage();
-  const isRTL = language === 'ar' || language === 'he';
+  const isRTL = language === 'ar';
 
   const content = {
     ar: {

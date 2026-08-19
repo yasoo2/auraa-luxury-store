@@ -27,7 +27,7 @@ const createOrderRequestKey = () => {
 const CheckoutPage = () => {
   const { user } = useAuth();
   const { currency, language, formatMoney } = useLanguage();
-  const isRTL = language === 'ar' || language === 'he';
+  const isRTL = language === 'ar';
   const navigate = useNavigate();
   const orderRequestKey = useRef(createOrderRequestKey());
   const [cart, setCart] = useState(null);

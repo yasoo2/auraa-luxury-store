@@ -16,11 +16,35 @@ const LANGUAGES = {
   en: { name: 'English', dir: 'ltr', flag: '🇬🇧' },
   tr: { name: 'Türkçe', dir: 'ltr', flag: '🇹🇷' },
   hi: { name: 'हिन्दी', dir: 'ltr', flag: '🇮🇳' },
-  he: { name: 'עברית', dir: 'rtl', flag: '🇮🇱' },
   es: { name: 'Español', dir: 'ltr', flag: '🇪🇸' },
   fr: { name: 'Français', dir: 'ltr', flag: '🇫🇷' },
   ru: { name: 'Русский', dir: 'ltr', flag: '🇷🇺' },
   de: { name: 'Deutsch', dir: 'ltr', flag: '🇩🇪' }
+};
+
+const DEFAULT_LANGUAGE = 'en';
+
+/**
+ * The stored choice, but only if the shop still offers it.
+ *
+ * A language removed from the list above does not disappear from the browsers
+ * that already chose it: the code read `localStorage.getItem('language')` and
+ * trusted it, so a visitor left holding a retired code would have kept it
+ * forever — `LANGUAGES[language]` undefined, the text direction silently
+ * falling back to ltr on what may be an rtl language, `<html lang>` set to a
+ * language nothing renders, and no way back except clearing site data.
+ *
+ * Reading it through the list closes that: an unknown code is dropped and the
+ * visitor lands on the default, which is also what a fresh visitor gets.
+ */
+const storedLanguage = () => {
+  try {
+    const saved = localStorage.getItem('language');
+    return LANGUAGES[saved] ? saved : DEFAULT_LANGUAGE;
+  } catch {
+    // Storage can be blocked outright; the shop still has to open.
+    return DEFAULT_LANGUAGE;
+  }
 };
 
 // Global Currencies with proper decimal places
@@ -62,7 +86,6 @@ const translations = {
   en: { language: 'Language', currency: 'Currency' },
   tr: { language: 'Dil', currency: 'Para Birimi' },
   hi: { language: 'भाषा', currency: 'मुद्रा' },
-  he: { language: 'שפה', currency: 'מטבע' },
   es: { language: 'Idioma', currency: 'Moneda' },
   fr: { language: 'Langue', currency: 'Devise' },
   ru: { language: 'Язык', currency: 'Валюта' },
@@ -72,8 +95,9 @@ const translations = {
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
     // English for first-time visitors — the owner's call for a storefront
-    // selling worldwide. A visitor's own choice persists and always wins.
-    return localStorage.getItem('language') || 'en';
+    // selling worldwide. A visitor's own choice persists and always wins,
+    // for as long as the shop still offers it.
+    return storedLanguage();
   });
   
   const [currency, setCurrency] = useState(() => {

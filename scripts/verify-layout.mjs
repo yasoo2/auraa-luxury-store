@@ -1078,6 +1078,38 @@ if (!narrow) narrow = await page.evaluate(() => {
 check('قائمة اللغات كاملة وقابلة للنقر على أضيق شاشة هاتف (320px) بالوضع العربي',
   narrow.ok, narrow.why);
 
+// العبرية أُزيلت من المتجر نهائياً بطلب المالك.
+//
+// والفحص شقّان لأن الحذف وحده لا يكفي: مَن سبق أن اختار لغةً محذوفة يبقى
+// «he» مخزّناً في متصفّحه، وكان الرمز يُقرأ ويُصدَّق كما هو — فينتهي الزائر
+// إلى لغة لا يعرفها المتجر، واتجاه الصفحة يسقط إلى ltr على لغة من اليمين
+// إلى اليسار، ولا مخرج له إلا مسح بيانات الموقع.
+const hebrewGone = await page.evaluate(() => {
+  const menu = document.querySelector('[data-testid="language-menu"]');
+  const text = menu ? menu.textContent : '';
+  return { listed: /עברית|Hebrew|🇮🇱/.test(text), opened: Boolean(menu) };
+});
+check('العبرية غير معروضة في قائمة اللغات',
+  hebrewGone.opened && !hebrewGone.listed,
+  !hebrewGone.opened ? 'تعذّر فتح القائمة للفحص'
+    : 'العبرية ما تزال معروضة في القائمة');
+
+await page.evaluate(() => localStorage.setItem('language', 'he'));
+await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(800);
+const retired = await page.evaluate(() => ({
+  stored: localStorage.getItem('language'),
+  dir: document.documentElement.dir,
+  lang: document.documentElement.lang,
+  hasHebrewLetters: /[֐-׿]/.test(document.body.innerText),
+}));
+check('زائرٌ يحمل لغةً محذوفة في متصفّحه يعود إلى لغة يعرفها المتجر',
+  retired.stored !== 'he' && retired.lang !== 'he'
+    && ['rtl', 'ltr'].includes(retired.dir) && !retired.hasHebrewLetters,
+  `المخزّن=${retired.stored} · lang=${retired.lang} · dir=${retired.dir}`
+    + (retired.hasHebrewLetters ? ' · وحروف عبرية ظاهرة على الصفحة' : ''));
+await page.evaluate(() => localStorage.setItem('language', 'ar'));
+
 // منطقة المراجعة تعيش في قاعدة البيانات، والصفحة كانت تنساها عند كل دخول:
 // استورد المالك، غادر، عاد — فوجد الشاشة فارغة والمنتجات قابعة في التخزين
 // («ارى ان المنتجات اختفت»). الدخول يجب أن يعرض كل ما ينتظر النشر.

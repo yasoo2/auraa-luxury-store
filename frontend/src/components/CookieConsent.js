@@ -7,7 +7,7 @@ const CookieConsent = () => {
   const [showBanner, setShowBanner] = useState(false);
   const bannerRef = useRef(null);
   const { language } = useLanguage();
-  const isRTL = language === 'ar' || language === 'he';
+  const isRTL = language === 'ar';
 
   useEffect(() => {
     // Check if user has already consented

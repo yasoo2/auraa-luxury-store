@@ -12,7 +12,7 @@ import { API_BASE_URL } from '../api';
 const API = API_BASE_URL;
 const ForgotPassword = () => {
   const { language } = useLanguage();
-  const isRTL = language === 'ar' || language === 'he';
+  const isRTL = language === 'ar';
   
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);

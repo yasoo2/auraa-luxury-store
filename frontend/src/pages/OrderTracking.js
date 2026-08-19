@@ -14,7 +14,7 @@ import { API_BASE_URL } from '../api';
 const OrderTracking = () => {
   const { language } = useLanguage();
   const { user, isAuthenticated } = useAuth();
-  const isRTL = language === 'ar' || language === 'he';
+  const isRTL = language === 'ar';
 
   const [trackingNumber, setTrackingNumber] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
